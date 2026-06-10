@@ -36,8 +36,11 @@ export default defineConfig(
 		languageOptions: {
 			parserOptions: {
 				projectService: true,
-				extraFileExtensions: [".svelte"],
+				extraFileExtensions: [".svelte", ".svelte.ts", ".svelte.ts"],
 				parser: ts.parser,
+				svelteFeatures: {
+					experimentalGenerics: true
+				},
 				svelteConfig
 			}
 		}
@@ -45,6 +48,8 @@ export default defineConfig(
 	{
 		// Override or add rule settings here, such as:
 		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			"@typescript-eslint/consistent-type-definitions": ["error", "type"]
+		}
 	}
 );
