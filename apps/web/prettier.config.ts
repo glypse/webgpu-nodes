@@ -12,7 +12,8 @@ const config: Config = {
 				parser: "svelte"
 			}
 		}
-	]
+	],
+	tailwindStylesheet: "./src/routes/layout.css"
 };
 
 export default config;

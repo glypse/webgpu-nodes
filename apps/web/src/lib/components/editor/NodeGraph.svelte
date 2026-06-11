@@ -28,6 +28,7 @@
 		void edges.length;
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
 	type MyNode = FloatNodeType | AddNodeType | CombineVec4fNodeType | OutputNodeType;
 
 	let nodes = $state.raw<MyNode[]>([

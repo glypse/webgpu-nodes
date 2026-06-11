@@ -1,9 +1,22 @@
-# Package Managers
-package-lock.json
-pnpm-lock.yaml
-yarn.lock
-bun.lock
-bun.lockb
+# Add files here to ignore them from prettier formatting
+/coverage
+/.nx/cache
+/.nx/workspace-data
+.nx/self-healing
+.agents
+.claude
+.codex
+.cursor
+.gemini
+.github/agents
+.github/prompts
+.github/skills
+.opencode
+.agents/skills
 
-# Miscellaneous
-/static/
+# Package Managers
+**/package-lock.json
+**/pnpm-lock.yaml
+**/yarn.lock
+**/bun.lock
+**/bun.lockb

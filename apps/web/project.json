@@ -1,0 +1,63 @@
+{
+	"name": "web",
+	"projectType": "application",
+	"root": "apps/web",
+	"sourceRoot": "apps/web/src",
+	"targets": {
+		"prepare": {
+			"executor": "nx:run-commands",
+			"outputs": [],
+			"options": {
+				"command": "bun --bun svelte-kit sync || echo ''",
+				"cwd": "{projectRoot}"
+			}
+		},
+		"build": {
+			"executor": "nx:run-commands",
+			"dependsOn": ["prepare", "^build"],
+			"outputs": ["{projectRoot}/.svelte-kit", "{projectRoot}/build"],
+			"options": {
+				"command": "bun --bun vite build",
+				"cwd": "{projectRoot}"
+			}
+		},
+		"dev": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["bun --bun vite dev"],
+				"cwd": "{projectRoot}",
+				"parallel": true,
+				"forwardAllArgs": false
+			}
+		},
+		"preview": {
+			"executor": "nx:run-commands",
+			"dependsOn": ["build"],
+			"options": {
+				"command": "bun --bun vite preview",
+				"cwd": "{projectRoot}"
+			}
+		},
+		"check": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "bun --bun svelte-check --tsconfig ./tsconfig.json",
+				"cwd": "{projectRoot}"
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"inputs": [
+				"{projectRoot}/**/*",
+				"!{projectRoot}/.svelte-kit/**/*",
+				"!{projectRoot}/.wrangler/**/*",
+				"!{projectRoot}/node_modules/**/*"
+			],
+			"outputs": [],
+			"options": {
+				"command": "bun --bun prettier --check . && bun --bun eslint .",
+				"cwd": "{projectRoot}"
+			}
+		}
+	}
+}

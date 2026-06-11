@@ -1,54 +1,63 @@
-import prettier from "eslint-config-prettier";
-import path from "node:path";
-import { includeIgnoreFile } from "@eslint/config-helpers";
 import js from "@eslint/js";
+import nx from "@nx/eslint-plugin";
 import svelte from "eslint-plugin-svelte";
-import { defineConfig } from "eslint/config";
-import globals from "globals";
+import { includeIgnoreFile, defineConfig } from "eslint/config";
+import path from "node:path";
 import ts from "typescript-eslint";
-import svelteConfig from "./svelte.config";
 
 const gitignorePath = path.resolve(import.meta.dirname, ".gitignore");
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
+	// Core recommended + Nx workspace rules — apply to all files
 	js.configs.recommended,
-	ts.configs.strictTypeChecked,
-	ts.configs.stylisticTypeChecked,
-	svelte.configs.recommended,
-	prettier,
-	svelte.configs.prettier,
+	...nx.configs["flat/base"],
+	...ts.configs.strictTypeChecked,
+	...ts.configs.stylisticTypeChecked,
+	// Svelte recommended rules — shared across all Svelte apps
+	...svelte.configs.recommended,
+	...svelte.configs.prettier,
 	{
+		ignores: ["**/dist", "**/out-tsc", "**/vite.config.*.timestamp*"]
+	},
+	// TypeScript-aware parser for all non-JSON files that have ts/js in them
+	// (includes .svelte, .svelte.ts, etc. via the svelte config's extraFileExtensions)
+	{
+		files: [
+			"**/*.ts",
+			"**/*.tsx",
+			"**/*.cts",
+			"**/*.mts",
+			"**/*.js",
+			"**/*.jsx",
+			"**/*.cjs",
+			"**/*.mjs",
+			"**/*.svelte",
+			"**/*.svelte.ts",
+			"**/*.svelte.js"
+		],
 		languageOptions: {
-			globals: { ...globals.browser, ...globals.node },
 			parserOptions: {
 				projectService: true
 			}
 		},
 		rules: {
-			// typescript-eslint strongly recommend that you do not use the no-undef lint rule on TypeScript projects.
-			// see: https://typescript-eslint.io/troubleshooting/faqs/eslint/#i-get-errors-from-the-no-undef-rule-about-global-variables-not-being-defined-even-though-there-are-no-typescript-errors
-			"no-undef": "off"
-		}
-	},
-	{
-		files: ["**/*.svelte", "**/*.svelte.ts", "**/*.svelte.js"],
-		languageOptions: {
-			parserOptions: {
-				projectService: true,
-				extraFileExtensions: [".svelte", ".svelte.ts", ".svelte.ts"],
-				parser: ts.parser,
-				svelteFeatures: {
-					experimentalGenerics: true
-				},
-				svelteConfig
-			}
-		}
-	},
-	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {
+			"@nx/enforce-module-boundaries": [
+				"error",
+				{
+					enforceBuildableLibDependency: true,
+					allow: [
+						// Allow importing eslint config files, with or without file extension
+						"^.*/eslint(\\.base)?\\.config(\\.[cm]?[jt]s)?$"
+					],
+					depConstraints: [
+						{
+							sourceTag: "*",
+							onlyDependOnLibsWithTags: ["*"]
+						}
+					]
+				}
+			],
 			"@typescript-eslint/consistent-type-definitions": ["error", "type"]
 		}
 	}

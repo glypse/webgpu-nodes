@@ -10,4 +10,4 @@ If you're reading this, this project is in its earliest of early stages - there'
 - Svelte Flow
 - Motion GPU
 
-Thank you very much to all contributors of all technologies used in this project, see [package.json](./package.json)
+Thank you very much to all contributors of all technologies used in this project, see [apps/web/package.json](apps/web/package.json)

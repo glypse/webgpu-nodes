@@ -1,0 +1,35 @@
+{
+	"$schema": "./node_modules/nx/schemas/nx-schema.json",
+	"targetDefaults": {
+		"build": {
+			"cache": true,
+			"inputs": ["production", "^production", { "externalDependencies": ["vite"] }]
+		},
+		"prepare": {
+			"cache": true,
+			"inputs": ["{projectRoot}/**/*", "!{projectRoot}/.svelte-kit/**/*"],
+			"outputs": ["{projectRoot}/.svelte-kit"]
+		},
+		"check": {
+			"cache": true,
+			"inputs": ["production", "^production"]
+		},
+		"lint": {
+			"cache": true
+		}
+	},
+	"namedInputs": {
+		"default": ["{projectRoot}/**/*", "sharedGlobals"],
+		"production": [
+			"default",
+			"!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
+			"!{projectRoot}/tsconfig.spec.json",
+			"!{projectRoot}/src/test-setup.[jt]s",
+			"!{projectRoot}/.eslintrc.json",
+			"!{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}"
+		],
+		"sharedGlobals": []
+	},
+	"plugins": [],
+	"analytics": true
+}
