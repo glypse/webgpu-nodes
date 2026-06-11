@@ -14,10 +14,10 @@
 	);
 </script>
 
-<div class="w-dvw h-dvh bg-red-600">
+<div class="w-dvw h-dvh">
 	<Resizable.PaneGroup direction="horizontal" class="size-full">
 		<Resizable.Pane defaultSize={50}>
-			<div class="size-full">
+			<div class="size-full notexture">
 				<FragCanvas
 					{material}
 					color={{ outputEncoding: "srgb", dynamicRange: "auto", canvasColorSpace: "srgb" }}
@@ -30,3 +30,9 @@
 		</Resizable.Pane>
 	</Resizable.PaneGroup>
 </div>
+
+<style>
+	.notexture {
+		background: repeating-conic-gradient(fuchsia 0 25%, black 0 50%) 50% / 40px 40px;
+	}
+</style>
