@@ -1,4 +1,4 @@
-import adapter from "@sveltejs/adapter-auto";
+import adapter from "@sveltejs/adapter-static";
 import { type Config } from "@sveltejs/kit";
 
 const config: Config = {
@@ -11,6 +11,10 @@ const config: Config = {
 		// If your environment is not supported, or you settled on a specific environment, switch out the adapter.
 		// See https://svelte.dev/docs/kit/adapters for more information about adapters.
 		adapter: adapter(),
+		paths: {
+			// @ts-expect-error This is how the Svelte docs say to do it for GitHub pages, it works, so I believe them 🙏
+			base: process.argv.includes("dev") ? "" : process.env.BASE_PATH
+		},
 		typescript: {
 			config: (config: Record<string, unknown>) => {
 				const include = (config as { include: string[] }).include;

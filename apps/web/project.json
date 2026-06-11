@@ -6,7 +6,6 @@
 	"targets": {
 		"prepare": {
 			"executor": "nx:run-commands",
-			"outputs": [],
 			"options": {
 				"command": "bun --bun svelte-kit sync || echo ''",
 				"cwd": "{projectRoot}"
@@ -14,7 +13,7 @@
 		},
 		"build": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["prepare", "^build"],
+			"dependsOn": ["^build"],
 			"outputs": ["{projectRoot}/.svelte-kit", "{projectRoot}/build"],
 			"options": {
 				"command": "bun --bun vite build",
@@ -24,10 +23,8 @@
 		"dev": {
 			"executor": "nx:run-commands",
 			"options": {
-				"commands": ["bun --bun vite dev"],
-				"cwd": "{projectRoot}",
-				"parallel": true,
-				"forwardAllArgs": false
+				"command": "bun --bun vite dev",
+				"cwd": "{projectRoot}"
 			}
 		},
 		"preview": {
@@ -47,15 +44,15 @@
 		},
 		"lint": {
 			"executor": "nx:run-commands",
-			"inputs": [
-				"{projectRoot}/**/*",
-				"!{projectRoot}/.svelte-kit/**/*",
-				"!{projectRoot}/.wrangler/**/*",
-				"!{projectRoot}/node_modules/**/*"
-			],
-			"outputs": [],
 			"options": {
-				"command": "bun --bun prettier --check . && bun --bun eslint .",
+				"commands": ["bun --bun prettier --check .", "bun --bun eslint ."],
+				"cwd": "{projectRoot}"
+			}
+		},
+		"lint:fix": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "bun --bun prettier . --write && bun --bun eslint . --fix",
 				"cwd": "{projectRoot}"
 			}
 		}

@@ -9,19 +9,13 @@ const gitignorePath = path.resolve(import.meta.dirname, ".gitignore");
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
-	// Core recommended + Nx workspace rules — apply to all files
 	js.configs.recommended,
 	...nx.configs["flat/base"],
 	...ts.configs.strictTypeChecked,
 	...ts.configs.stylisticTypeChecked,
-	// Svelte recommended rules — shared across all Svelte apps
+
 	...svelte.configs.recommended,
 	...svelte.configs.prettier,
-	{
-		ignores: ["**/dist", "**/out-tsc", "**/vite.config.*.timestamp*"]
-	},
-	// TypeScript-aware parser for all non-JSON files that have ts/js in them
-	// (includes .svelte, .svelte.ts, etc. via the svelte config's extraFileExtensions)
 	{
 		files: [
 			"**/*.ts",
