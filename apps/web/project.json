@@ -1,10 +1,13 @@
 {
+	"$schema": "../../node_modules/nx/schemas/project-schema.json",
 	"name": "web",
 	"projectType": "application",
 	"root": "apps/web",
 	"sourceRoot": "apps/web/src",
 	"targets": {
 		"prepare": {
+			"inputs": ["{projectRoot}/**/*", "!{projectRoot}/.svelte-kit/**/*"],
+			"outputs": ["{projectRoot}/.svelte-kit"],
 			"executor": "nx:run-commands",
 			"options": {
 				"command": "bun --bun svelte-kit sync || echo ''",

@@ -3,12 +3,10 @@
 	"targetDefaults": {
 		"build": {
 			"cache": true,
-			"inputs": ["production", "^production", { "externalDependencies": ["vite"] }]
+			"inputs": ["production", "^production"]
 		},
 		"prepare": {
-			"cache": true,
-			"inputs": ["{projectRoot}/**/*", "!{projectRoot}/.svelte-kit/**/*"],
-			"outputs": ["{projectRoot}/.svelte-kit"]
+			"cache": true
 		},
 		"check": {
 			"cache": true,
@@ -19,7 +17,7 @@
 		}
 	},
 	"namedInputs": {
-		"default": ["{projectRoot}/**/*", "sharedGlobals"],
+		"default": ["{projectRoot}/**/*", "{projectRoot}/package.json"],
 		"production": [
 			"default",
 			"!{projectRoot}/**/?(*.)+(spec|test).[jt]s?(x)?(.snap)",
@@ -27,9 +25,7 @@
 			"!{projectRoot}/src/test-setup.[jt]s",
 			"!{projectRoot}/.eslintrc.json",
 			"!{projectRoot}/eslint.config.{js,cjs,mjs,ts,cts,mts}"
-		],
-		"sharedGlobals": []
+		]
 	},
-	"plugins": [],
 	"analytics": true
 }
