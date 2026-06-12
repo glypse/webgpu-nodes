@@ -2,6 +2,8 @@
 	"name": "@org/source",
 	"version": "0.0.0",
 	"devDependencies": {
+		"@changesets/changelog-github": "^0.7.0",
+		"@changesets/cli": "^2.31.0",
 		"@eslint/js": "^10.0.1",
 		"@nx/eslint-plugin": "22.7.5",
 		"@types/node": "^25.9.3",
@@ -27,7 +29,8 @@
 		"lint:root": "bunx eslint prettier.config.ts eslint.config.ts",
 		"format": "bun --bun prettier . --write",
 		"format:check": "bun --bun prettier . --check",
-		"prepare": "bun --bun nx run-many -t prepare"
+		"prepare": "bun --bun nx run-many -t prepare",
+		"tag": "changeset tag"
 	},
 	"type": "module",
 	"workspaces": [
