@@ -22,7 +22,7 @@
       },
     },
     "apps/web": {
-      "name": "webgpu-nodes",
+      "name": "@org/web",
       "version": "0.0.1",
       "dependencies": {
         "@motion-core/motion-gpu": "^0.10.0",
@@ -432,6 +432,8 @@
     "@nx/nx-win32-x64-msvc": ["@nx/nx-win32-x64-msvc@22.7.5", "", { "os": "win32", "cpu": "x64" }, "sha512-ngcMyHdBJ9FSz2nHdbZ7gtJlFq0O2b05sPAsVMkZ18CKzdaA1qrBDJfsMO49hPCny505eiT766+CkKdaCDl5kA=="],
 
     "@nx/workspace": ["@nx/workspace@22.7.5", "", { "dependencies": { "@nx/devkit": "22.7.5", "@zkochan/js-yaml": "0.0.7", "chalk": "^4.1.0", "enquirer": "~2.3.6", "nx": "22.7.5", "picomatch": "4.0.4", "semver": "^7.6.3", "tslib": "^2.3.0", "yargs-parser": "21.1.1" } }, "sha512-f3zx8EAOl0ANd2UXZIniBoHfDvNvi2Uy65R9Rp6emdcx7rxsuTU5Eaidryleo9wIQ5cZAcMx7Wvzp5Srj8diKA=="],
+
+    "@org/web": ["@org/web@workspace:apps/web"],
 
     "@oxc-project/types": ["@oxc-project/types@0.133.0", "", {}, "sha512-KzkdCd6Uxqnf6l3HOw1xfatAlUURA0g14cvBYFyJ5SaNOQbOUvBr9PKArcPcrNIeRsBdgcUzOGrhKveVpvOIGA=="],
 
@@ -1314,8 +1316,6 @@
     "vitefu": ["vitefu@1.1.3", "", { "peerDependencies": { "vite": "^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0" }, "optionalPeers": ["vite"] }, "sha512-ub4okH7Z5KLjb6hDyjqrGXqWtWvoYdU3IGm/NorpgHncKoLTCfRIbvlhBm7r0YstIaQRYlp4yEbFqDcKSzXSSg=="],
 
     "wcwidth": ["wcwidth@1.0.1", "", { "dependencies": { "defaults": "^1.0.3" } }, "sha512-XHPEwS0q6TaxcvG85+8EYkbiCux2XtWG2mkc47Ng2A77BQu9+DqIOJldST4HgPkuea7dvKSj5VgX3P1d4rW8Tg=="],
-
-    "webgpu-nodes": ["webgpu-nodes@workspace:apps/web"],
 
     "webidl-conversions": ["webidl-conversions@3.0.1", "", {}, "sha512-2JAn3z8AR6rjK8Sm8orRC0h/bcl/DqL7tRPdGZ4I1CjdF+EaMLmYxBHyXuKL849eucPFhvBoxMsflfOb8kxaeQ=="],
 
