@@ -29,8 +29,7 @@
 		"lint:root": "bunx eslint prettier.config.ts eslint.config.ts",
 		"format": "bun --bun prettier . --write",
 		"format:check": "bun --bun prettier . --check",
-		"prepare": "bun --bun nx run-many -t prepare",
-		"tag": "changeset tag"
+		"prepare": "bun --bun nx run-many -t prepare"
 	},
 	"type": "module",
 	"workspaces": [
