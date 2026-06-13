@@ -9,11 +9,15 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   release:
-    name: Release
     runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.should-release.outputs.release }}
+
     steps:
       - uses: actions/checkout@v6
 
@@ -26,11 +30,49 @@ jobs:
         uses: changesets/action@v1
         with:
           version: bunx changeset version
+          publish: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag release
+      - name: Check if release should happen
+        id: should-release
         if: startsWith(github.event.head_commit.message, 'Version Packages') && steps.changesets.outputs.hasChangesets == 'false'
-        run: bun run tag
+        run: echo "release=true" >> "$GITHUB_OUTPUT"
+
+      - name: Tag release
+        if: steps.should-release.outputs.published == 'true'
+        run: bunx changeset tag
+
+      - name: Build web app
+        if: steps.should-release.outputs.release == 'true'
+        env:
+          BASE_PATH: "/${{ github.event.repository.name }}"
+        run: bun run build
+
+      - name: Upload Pages artifact
+        if: steps.should-release.outputs.release == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: "apps/web/build/"
+
+      - name: Create GitHub Release
+        if: steps.should-release.outputs.release == 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG=$(git describe --tags --abbrev=0)
+          # Extract the latest changelog entry for release notes
+          awk '/^## /{if(++c>1)exit}c==1' apps/web/CHANGELOG.md \
+            | gh release create "$TAG" --notes-file -
+
+  deploy:
+    needs: release
+    if: needs.release.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
