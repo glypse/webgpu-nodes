@@ -101,10 +101,18 @@ export function generateShader(nodes: ShaderNode[], edges: Edge[]): string {
 			}
 
 			case "combineVec4f": {
-				const inputs = [0, 1, 2, 3].map((_, i) =>
-					i < incoming.length ? getVarName(incoming[i].source) : "f32(0.0)"
+				const sourceByHandle = new Map<string, string>();
+				for (const edge of incoming) {
+					const handle = edge.targetHandle ?? "";
+					sourceByHandle.set(handle, edge.source);
+				}
+				const getInput = (handle: string): string => {
+					const src = sourceByHandle.get(handle);
+					return src ? getVarName(src) : "f32(0.0)";
+				};
+				lines.push(
+					`  let ${varName} = vec4f(${getInput("x")}, ${getInput("y")}, ${getInput("z")}, ${getInput("w")});`
 				);
-				lines.push(`  let ${varName} = vec4f(${inputs.join(", ")});`);
 				break;
 			}
 
