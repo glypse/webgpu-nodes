@@ -30,7 +30,7 @@
 		"format": "bun --bun prettier . --write",
 		"format:check": "bun --bun prettier . --check",
 		"prepare": "bun --bun nx run-many -t prepare",
-		"tag": "changeset tag"
+		"release": "changeset tag"
 	},
 	"type": "module",
 	"workspaces": [

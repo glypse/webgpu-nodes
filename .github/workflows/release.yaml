@@ -9,28 +9,53 @@ concurrency: ${{ github.workflow }}-${{ github.ref }}
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   release:
-    name: Release
     runs-on: ubuntu-latest
+    outputs:
+      should_deploy: ${{ steps.changesets.outputs.published }}
+
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
       - uses: oven-sh/setup-bun@v2
 
       - run: bun install --frozen-lockfile
 
-      - name: Create or update Version PR
+      - name: Create Release Pull Request or Publish
         id: changesets
         uses: changesets/action@v1
         with:
           version: bunx changeset version
+          publish: bun run release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Tag release
-        if: startsWith(github.event.head_commit.message, 'Version Packages') && steps.changesets.outputs.hasChangesets == 'false'
-        run: bun run tag
+      - name: Build web app
+        if: steps.changesets.outputs.published == 'true'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BASE_PATH: "/${{ github.event.repository.name }}"
+        run: bun run build
+
+      - name: Upload Pages artifact
+        if: steps.changesets.outputs.published == 'true'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: "apps/web/build/"
+
+  deploy:
+    needs: release
+    if: needs.release.outputs.should_deploy == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v5
