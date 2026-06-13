@@ -90,8 +90,8 @@ export function generateShader(nodes: ShaderNode[], edges: Edge[]): string {
 			}
 
 			case "add": {
-				if (incoming.length < 2) {
-					lines.push(`  // Add node "${nodeId}" needs at least 2 inputs`);
+				if (incoming.length < 1) {
+					lines.push(`  // Add node "${nodeId}" needs at least 1 input`);
 					lines.push(`  let ${varName} = f32(0.0);`);
 				} else {
 					const operands = incoming.map((e) => getVarName(e.source)).join(" + ");

@@ -20,20 +20,21 @@
 	"license": "MIT",
 	"private": true,
 	"scripts": {
-		"dev": "bun nx run web:dev",
-		"build": "bun nx run web:build",
-		"preview": "bun nx run web:preview",
-		"check": "bun nx run web:check",
+		"dev": "bun nx run-many -t dev",
+		"build": "bun nx run-many -t build",
+		"preview": "bun nx run-many -t preview",
+		"check": "bun nx run-many -t check",
 		"check:root": "bunx tsc --noEmit -p tsconfig.json",
-		"lint": "bun nx run web:lint",
+		"lint": "bun nx run-many -t lint",
 		"lint:root": "bunx eslint prettier.config.ts eslint.config.ts",
 		"format": "bun --bun prettier . --write",
 		"format:check": "bun --bun prettier . --check",
-		"prepare": "bun --bun nx run-many -t prepare",
+		"prepare": "bun nx run-many -t prepare",
 		"release": "changeset tag"
 	},
 	"type": "module",
 	"workspaces": [
-		"apps/*"
+		"apps/*",
+		"packages/*"
 	]
 }

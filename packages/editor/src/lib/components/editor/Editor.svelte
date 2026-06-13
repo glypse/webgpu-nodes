@@ -1,6 +1,7 @@
 <script lang="ts">
+	/* import "../../styles.css"; */
 	import { FragCanvas, defineMaterial } from "@motion-core/motion-gpu/svelte";
-	import * as Resizable from "$lib/components/ui/resizable/index.js";
+	import * as Resizable from "$editor/components/ui/resizable";
 	import NodeGraph from "./NodeGraph.svelte";
 
 	const DEFAULT_SHADER = `fn frag(uv: vec2f) -> vec4f {\n\treturn vec4f(0.0, 1.0, 1.0, 1.0);\n}`;

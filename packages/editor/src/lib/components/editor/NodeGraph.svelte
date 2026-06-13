@@ -2,15 +2,14 @@
 	import { SvelteFlow, Controls, Background, type Edge } from "@xyflow/svelte";
 	import "@xyflow/svelte/dist/style.css";
 	import "./xy-theme.css";
-	import { cn } from "$lib/utils";
-	import { dev } from "$app/environment";
+	import { cn } from "$editor/utils";
 
 	import FloatNode, { type FloatNodeType } from "./FloatNode.svelte";
 	import AddNode, { type AddNodeType } from "./AddNode.svelte";
 	import CombineVec4fNode, { type CombineVec4fNodeType } from "./CombineVec4fNode.svelte";
 	import OutputNode, { type OutputNodeType } from "./OutputNode.svelte";
-	import { generateShader } from "./codegen.js";
-	import type { ShaderNode } from "./types.js";
+	import { generateShader } from "./codegen";
+	import type { ShaderNode } from "./types";
 
 	const nodeTypes = {
 		float: FloatNode,
@@ -51,6 +50,12 @@
 			position: { x: -300, y: 200 }
 		},
 		{
+			id: "b2",
+			type: "float",
+			data: { value: 0.4 },
+			position: { x: -300, y: 125 }
+		},
+		{
 			id: "d",
 			type: "float",
 			data: { value: 0.0 },
@@ -83,8 +88,8 @@
 	]);
 
 	let edges = $state.raw<Edge[]>([
-		{ id: "e-a-add1", source: "a", target: "add1", targetHandle: "a" },
-		{ id: "e-b-add1", source: "b", target: "add1", targetHandle: "b" },
+		{ id: "e-a-add1", source: "a", target: "add1" },
+		{ id: "e-b-add1", source: "b", target: "add1" },
 		{ id: "e-add1-combine1", source: "add1", target: "combine1", targetHandle: "x" },
 		{ id: "e-c-combine1", source: "c", target: "combine1", targetHandle: "y" },
 		{ id: "e-d-combine1", source: "d", target: "combine1", targetHandle: "z" },
@@ -106,7 +111,7 @@
 	colorMode="system"
 	fitView
 	class={cn("h-full", className)}
-	proOptions={{ hideAttribution: !dev }}
+	proOptions={{ hideAttribution: true }}
 >
 	<Controls showLock={false} showZoom={false} />
 	<Background />

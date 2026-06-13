@@ -1,9 +1,9 @@
 {
 	"$schema": "../../node_modules/nx/schemas/project-schema.json",
-	"name": "web",
-	"projectType": "application",
-	"root": "apps/web",
-	"sourceRoot": "apps/web/src",
+	"name": "editor",
+	"projectType": "library",
+	"root": "packages/editor",
+	"sourceRoot": "packages/editor/src",
 	"targets": {
 		"prepare": {
 			"inputs": ["{projectRoot}/**/*", "!{projectRoot}/.svelte-kit/**/*"],
@@ -16,31 +16,15 @@
 		},
 		"build": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["^build"],
+			"dependsOn": ["^build", "prepare"],
 			"outputs": ["{projectRoot}/.svelte-kit", "{projectRoot}/build"],
 			"options": {
-				"command": "bun --bun vite build",
-				"cwd": "{projectRoot}"
-			}
-		},
-		"dev": {
-			"executor": "nx:run-commands",
-			"options": {
-				"command": "bun --bun vite dev",
-				"cwd": "{projectRoot}"
-			}
-		},
-		"preview": {
-			"executor": "nx:run-commands",
-			"dependsOn": ["build"],
-			"options": {
-				"command": "bun --bun vite preview",
+				"command": "bun --bun svelte-package",
 				"cwd": "{projectRoot}"
 			}
 		},
 		"check": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["^build"],
 			"options": {
 				"command": "bun --bun svelte-check --tsconfig ./tsconfig.json",
 				"cwd": "{projectRoot}"
