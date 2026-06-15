@@ -1,11 +1,11 @@
-import type { Edge } from "@xyflow/svelte";
-import type { ShaderNode } from "./types";
+import type { Edge, Node } from "@xyflow/svelte";
+import { nodeRegistry } from "./registry";
 
 /**
  * Topological sort of node IDs.
  * Works on a DAG; throws if a cycle is detected.
  */
-function topologicalSort(nodes: Map<string, ShaderNode>, edges: Edge[]): string[] {
+function topologicalSort(nodes: Map<string, Node>, edges: Edge[]): string[] {
 	const adjacency = new Map<string, string[]>();
 	const inDegree = new Map<string, number>();
 
@@ -49,15 +49,41 @@ function topologicalSort(nodes: Map<string, ShaderNode>, edges: Edge[]): string[
  * Each variable is a valid WGSL identifier.
  */
 function getVarName(nodeId: string): string {
-	// Replace hyphens and periods with underscores to make valid WGSL identifiers
 	return `v_${nodeId.replace(/[.-]/g, "_")}`;
+}
+
+export function debugSort(nodes: Node[], edges: Edge[]): string[] {
+	const nodeMap = new Map<string, Node>();
+	for (const node of nodes) {
+		nodeMap.set(node.id, node);
+	}
+	return topologicalSort(nodeMap, edges);
+}
+
+/**
+ * Resolve the WGSL variable name for a given edge's source.
+ * Single-output sources: just `v_nodeId`.
+ * Multi-output sources: `v_nodeId_outputName` — the sourceHandle tells us which output.
+ */
+function getSourceVar(edge: Edge, nodes: Map<string, Node>): string {
+	const base = getVarName(edge.source);
+	// Only append a suffix if the source node has multiple outputs.
+	// Single-output nodes get no suffix even if sourceHandle is set (SvelteFlow always sets it).
+	const sourceNode = nodes.get(edge.source);
+	if (edge.sourceHandle && sourceNode?.type) {
+		const sourceDescriptor = nodeRegistry[sourceNode.type];
+		if (sourceDescriptor.outputs.length > 1) {
+			return base + "_" + edge.sourceHandle;
+		}
+	}
+	return base;
 }
 
 /**
  * Emit the full WGSL fragment shader source from the graph.
  */
-export function generateShader(nodes: ShaderNode[], edges: Edge[]): string {
-	const nodeMap = new Map<string, ShaderNode>();
+export function generateShader(nodes: Node[], edges: Edge[]): string {
+	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
 		nodeMap.set(node.id, node);
 	}
@@ -79,57 +105,57 @@ export function generateShader(nodes: ShaderNode[], edges: Edge[]): string {
 		const node = nodeMap.get(nodeId);
 		if (!node) continue;
 
+		if (!node.type) continue;
+		const descriptor = nodeRegistry[node.type];
+
 		const varName = getVarName(nodeId);
 		const incoming = targetEdgeMap.get(nodeId) ?? [];
 
-		switch (node.type) {
-			case "float": {
-				const { value: val } = node.data;
-				lines.push(`  let ${varName} = f32(${String(val)});`);
-				break;
+		const outputVars: Record<string, string> = {};
+		for (const outputDef of descriptor.outputs) {
+			if (descriptor.outputs.length === 1) {
+				outputVars[outputDef.name] = varName; // single output: no suffix (backwards compat)
+			} else {
+				outputVars[outputDef.name] = varName + "_" + outputDef.name;
 			}
+		}
 
-			case "add": {
-				if (incoming.length < 1) {
-					lines.push(`  // Add node "${nodeId}" needs at least 1 input`);
-					lines.push(`  let ${varName} = f32(0.0);`);
-				} else {
-					const operands = incoming.map((e) => getVarName(e.source)).join(" + ");
-					lines.push(`  let ${varName} = ${operands};`);
+		// Resolve inputs per descriptor definition
+		const resolvedInputs: Record<string, string[]> = {};
+		for (const inputDef of descriptor.inputs) {
+			// If a node has only one input, SvelteFlow omits targetHandle on edges.
+			// Match unlabeled edges to the sole input definition.
+			const edgesForHandle = incoming.filter(
+				(e) =>
+					e.targetHandle === inputDef.name || (descriptor.inputs.length === 1 && !e.targetHandle)
+			);
+			const upstreamVars: string[] = [];
+
+			if (inputDef.variadic) {
+				for (const edge of edgesForHandle) {
+					upstreamVars.push(getSourceVar(edge, nodeMap));
 				}
-				break;
+			} else if (edgesForHandle.length > 0) {
+				upstreamVars.push(getSourceVar(edgesForHandle[0], nodeMap));
 			}
 
-			case "combineVec4f": {
-				const sourceByHandle = new Map<string, string>();
-				for (const edge of incoming) {
-					const handle = edge.targetHandle ?? "";
-					sourceByHandle.set(handle, edge.source);
-				}
-				const getInput = (handle: string): string => {
-					const src = sourceByHandle.get(handle);
-					return src ? getVarName(src) : "f32(0.0)";
-				};
-				lines.push(
-					`  let ${varName} = vec4f(${getInput("x")}, ${getInput("y")}, ${getInput("z")}, ${getInput("w")});`
-				);
-				break;
-			}
+			resolvedInputs[inputDef.name] = upstreamVars;
+		}
 
-			case "output": {
-				resultVariable = varName;
-				if (incoming.length > 0) {
-					const sourceVar = getVarName(incoming[0].source);
-					lines.push(`  let ${varName} = ${sourceVar};`);
-				} else {
-					lines.push(`  let ${varName} = vec4f(0.0, 0.0, 0.0, 1.0);`);
-				}
-				break;
-			}
+		const wgslLines = descriptor.wgsl({
+			varName,
+			outputVars,
+			data: node.data,
+			inputs: resolvedInputs
+		});
 
-			default:
-				lines.push(`  // Unknown node type: ${(node as ShaderNode).type}`);
-				break;
+		for (const line of wgslLines) {
+			lines.push(`  ${line}`);
+		}
+
+		// Track which node produces the output
+		if (node.type === "output") {
+			resultVariable = varName;
 		}
 	}
 

@@ -1,36 +1,45 @@
 <script lang="ts">
-	import { SvelteFlow, Controls, Background, type Edge } from "@xyflow/svelte";
+	import { SvelteFlow, Controls, Background, type Edge, type Node } from "@xyflow/svelte";
 	import "@xyflow/svelte/dist/style.css";
 	import "./xy-theme.css";
 	import { cn } from "$editor/utils";
 
-	import FloatNode, { type FloatNodeType } from "./FloatNode.svelte";
-	import AddNode, { type AddNodeType } from "./AddNode.svelte";
-	import CombineVec4fNode, { type CombineVec4fNodeType } from "./CombineVec4fNode.svelte";
-	import OutputNode, { type OutputNodeType } from "./OutputNode.svelte";
-	import { generateShader } from "./codegen";
-	import type { ShaderNode } from "./types";
+	import NodeShell from "./NodeShell.svelte";
+	import { generateShader, debugSort } from "./codegen";
+	import { nodeRegistry, defaultDataForType } from "./registry";
 
-	const nodeTypes = {
-		float: FloatNode,
-		add: AddNode,
-		combineVec4f: CombineVec4fNode,
-		output: OutputNode
-	};
+	/**
+	 * nodeTypes for SvelteFlow:
+	 * Nodes that need custom UI (interactive controls) get their own .svelte component.
+	 * All other nodes use the generic NodeShell.
+	 */
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow nodeTypes accepts any Svelte component
+	const nodeTypes: Record<string, any> = {};
 
-	// eslint-disable-next-line no-useless-assignment -- frag is used in the parent
-	let { class: className, frag = $bindable() }: { class?: string; frag?: string } = $props();
-
-	// Used inside $effect to track reactive node/edge changes
-	function track(): void {
-		void nodes.length;
-		void edges.length;
+	// Auto-register all other nodes from the registry with the generic shell
+	for (const type of Object.keys(nodeRegistry)) {
+		if (!(type in nodeTypes)) {
+			nodeTypes[type] = NodeShell;
+		}
 	}
 
-	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-	type MyNode = FloatNodeType | AddNodeType | CombineVec4fNodeType | OutputNodeType;
+	let debug = $state(true);
 
-	let nodes = $state.raw<MyNode[]>([
+	let { class: className, frag = $bindable() }: { class?: string; frag?: string } = $props();
+
+	let nodes = $state.raw<Node[]>([
+		{
+			id: "uvNode",
+			type: "uv",
+			data: defaultDataForType("uv"),
+			position: { x: -300, y: -200 }
+		},
+		{
+			id: "separateUvs",
+			type: "separateVec2f",
+			data: defaultDataForType("separateVec2f"),
+			position: { x: -100, y: -200 }
+		},
 		{
 			id: "a",
 			type: "float",
@@ -70,19 +79,19 @@
 		{
 			id: "add1",
 			type: "add",
-			data: {},
+			data: defaultDataForType("add"),
 			position: { x: -50, y: 0 }
 		},
 		{
-			id: "combine1",
-			type: "combineVec4f",
-			data: {},
+			id: "vec4f1",
+			type: "vec4f",
+			data: defaultDataForType("vec4f"),
 			position: { x: 200, y: 50 }
 		},
 		{
 			id: "out1",
 			type: "output",
-			data: {},
+			data: defaultDataForType("output"),
 			position: { x: 450, y: 150 }
 		}
 	]);
@@ -90,18 +99,36 @@
 	let edges = $state.raw<Edge[]>([
 		{ id: "e-a-add1", source: "a", target: "add1" },
 		{ id: "e-b-add1", source: "b", target: "add1" },
-		{ id: "e-add1-combine1", source: "add1", target: "combine1", targetHandle: "x" },
-		{ id: "e-c-combine1", source: "c", target: "combine1", targetHandle: "y" },
-		{ id: "e-d-combine1", source: "d", target: "combine1", targetHandle: "z" },
-		{ id: "e-opacity-combine1", source: "opacity", target: "combine1", targetHandle: "w" },
-		{ id: "e-combine1-out1", source: "combine1", target: "out1" }
+		{ id: "e-add1-vec4f1", source: "add1", target: "vec4f1", targetHandle: "x" },
+		{ id: "e-c-vec4f1", source: "c", target: "vec4f1", targetHandle: "y" },
+		{ id: "e-d-vec4f1", source: "d", target: "vec4f1", targetHandle: "z" },
+		{ id: "e-opacity-vec4f1", source: "opacity", target: "vec4f1", targetHandle: "w" },
+		{ id: "e-vec4f1-out1", source: "vec4f1", target: "out1" }
 	]);
 
-	// Re-generate the shader whenever nodes or edges change
+	function track(): void {
+		void nodes.length;
+		void edges.length;
+	}
+
 	$effect(() => {
 		track();
-		frag = generateShader(nodes as ShaderNode[], edges);
+		frag = generateShader(nodes, edges);
+
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+		if (debug) {
+			const sortedIds = debugSort(nodes, edges);
+			console.group("[shader debug]");
+			console.log("Compiled fragment shader: ", frag);
+			console.log("Sorted order:", sortedIds.toString());
+			console.log("Nodes:", JSON.stringify(nodes));
+			console.log("Edges:", JSON.stringify(edges));
+			console.groupEnd();
+		}
 	});
+
+	// eslint-disable-next-line svelte/no-inspect
+	$inspect(frag).with(console.log);
 </script>
 
 <SvelteFlow
