@@ -10,6 +10,7 @@
 		"eslint": "^10.4.1",
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.19.0",
+		"husky": "^9.1.7",
 		"nx": "22.7.5",
 		"prettier": "^3.8.4",
 		"prettier-plugin-svelte": "^4.1.0",
@@ -29,7 +30,7 @@
 		"lint:root": "bunx eslint prettier.config.ts eslint.config.ts",
 		"format": "bun --bun prettier . --write",
 		"format:check": "bun --bun prettier . --check",
-		"prepare": "bun nx run-many -t prepare",
+		"prepare": "husky && bun nx run-many -t prepare",
 		"release": "changeset tag"
 	},
 	"type": "module",
