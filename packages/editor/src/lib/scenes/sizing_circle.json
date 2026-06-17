@@ -1,0 +1,656 @@
+{
+	"nodes": [
+		{
+			"id": "separateUvs",
+			"type": "separateVec2f",
+			"data": {
+				"x": 0,
+				"y": 0
+			},
+			"position": {
+				"x": -436.2292524009497,
+				"y": -245.49058849153616
+			}
+		},
+		{
+			"id": "vec4f1",
+			"type": "vec4f",
+			"data": {
+				"x": 0,
+				"y": 0,
+				"z": 0,
+				"w": 1
+			},
+			"position": {
+				"x": 731.9794335199821,
+				"y": -62.03361016305873
+			}
+		},
+		{
+			"id": "out1",
+			"type": "output",
+			"data": {},
+			"position": {
+				"x": 912.020905446942,
+				"y": -82.61026361056331
+			}
+		},
+		{
+			"id": "node-2",
+			"type": "pow",
+			"data": {
+				"e1": 0,
+				"e2": 2
+			},
+			"position": {
+				"x": -235.09153684288333,
+				"y": -294.8888011203166
+			}
+		},
+		{
+			"id": "node-3",
+			"type": "pow",
+			"data": {
+				"e1": 0,
+				"e2": 2
+			},
+			"position": {
+				"x": -233.9572515269754,
+				"y": -150.56438340744924
+			}
+		},
+		{
+			"id": "node-4",
+			"type": "add",
+			"data": {},
+			"position": {
+				"x": -53.38934286699558,
+				"y": -228.22526435441767
+			}
+		},
+		{
+			"id": "node-5",
+			"type": "pow",
+			"data": {
+				"e1": 0,
+				"e2": 0.5
+			},
+			"position": {
+				"x": 69.99342781812142,
+				"y": -251.5120067693433
+			}
+		},
+		{
+			"id": "node-8",
+			"type": "remap",
+			"data": {
+				"e": 0,
+				"in_min": 0.499,
+				"in_max": 0.501,
+				"out_min": 0,
+				"out_max": 1
+			},
+			"position": {
+				"x": 268.41391209615057,
+				"y": -94.66695245256257
+			}
+		},
+		{
+			"id": "node-9",
+			"type": "clamp",
+			"data": {
+				"e": 0,
+				"low": 0,
+				"high": 1
+			},
+			"position": {
+				"x": 491.84323977531074,
+				"y": -58.27710099555356
+			}
+		},
+		{
+			"id": "node-10",
+			"type": "time",
+			"data": {},
+			"position": {
+				"x": -648.1534280502349,
+				"y": 227.21480418222194
+			}
+		},
+		{
+			"id": "node-11",
+			"type": "sin",
+			"data": {
+				"e": 0
+			},
+			"position": {
+				"x": -367.9441129911882,
+				"y": 202.17482283651987
+			}
+		},
+		{
+			"id": "node-12",
+			"type": "remap",
+			"data": {
+				"e": 0,
+				"in_min": -1,
+				"in_max": 1,
+				"out_min": 0.05,
+				"out_max": 0.405
+			},
+			"position": {
+				"x": -222.4737451733001,
+				"y": 153.28724020919685
+			}
+		},
+		{
+			"id": "node-13",
+			"type": "add",
+			"data": {},
+			"position": {
+				"x": 75.62127084696232,
+				"y": 129.43963892757586
+			}
+		},
+		{
+			"id": "node-14",
+			"type": "float",
+			"data": {
+				"value": 0.0005
+			},
+			"position": {
+				"x": -220.08898504513803,
+				"y": 23.31781322436241
+			}
+		},
+		{
+			"id": "node-15",
+			"type": "sub",
+			"data": {
+				"a": 0,
+				"b": 0
+			},
+			"position": {
+				"x": 44.61938918085494,
+				"y": -56.5716510690679
+			}
+		},
+		{
+			"id": "node-16",
+			"type": "mul",
+			"data": {},
+			"position": {
+				"x": -518.1840010654005,
+				"y": 226.02242411814083
+			}
+		},
+		{
+			"id": "node-17",
+			"type": "float",
+			"data": {
+				"value": 0.5
+			},
+			"position": {
+				"x": -730.4276524718273,
+				"y": 347.64519065440794
+			}
+		},
+		{
+			"id": "node-18",
+			"type": "resolution",
+			"data": {},
+			"position": {
+				"x": -1995.5284683025895,
+				"y": -664.182965810184
+			}
+		},
+		{
+			"id": "node-19",
+			"type": "div",
+			"data": {
+				"a": 0,
+				"b": 0
+			},
+			"position": {
+				"x": -1485.5415300161565,
+				"y": -667.1264257993502
+			}
+		},
+		{
+			"id": "node-20",
+			"type": "separateVec2f",
+			"data": {
+				"x": 0,
+				"y": 0
+			},
+			"position": {
+				"x": -1820.3946329647492,
+				"y": -693.054304078188
+			}
+		},
+		{
+			"id": "node-21",
+			"type": "max",
+			"data": {
+				"e1": 0,
+				"e2": 1
+			},
+			"position": {
+				"x": -1667.8941265990863,
+				"y": -584.7955750585304
+			}
+		},
+		{
+			"id": "node-24",
+			"type": "mix",
+			"data": {
+				"e1": 0,
+				"e2": 1,
+				"e3": 0
+			},
+			"position": {
+				"x": -1059.13903314223,
+				"y": -771.3519434872421
+			}
+		},
+		{
+			"id": "node-25",
+			"type": "max",
+			"data": {
+				"e1": 0,
+				"e2": 1
+			},
+			"position": {
+				"x": -1314.58540794732,
+				"y": -602.3677353698706
+			}
+		},
+		{
+			"id": "node-27",
+			"type": "mix",
+			"data": {
+				"e1": 1,
+				"e2": 0,
+				"e3": 0
+			},
+			"position": {
+				"x": -1070.6144133000953,
+				"y": -547.7780064474518
+			}
+		},
+		{
+			"id": "node-28",
+			"type": "div",
+			"data": {
+				"a": 1,
+				"b": 0
+			},
+			"position": {
+				"x": -1327.1058749667711,
+				"y": -450.49475662119545
+			}
+		},
+		{
+			"id": "node-29",
+			"type": "sub",
+			"data": {
+				"a": 0,
+				"b": 0.5
+			},
+			"position": {
+				"x": -1044.7810525000905,
+				"y": -948.3690268281516
+			}
+		},
+		{
+			"id": "node-30",
+			"type": "sub",
+			"data": {
+				"a": 0,
+				"b": 0.5
+			},
+			"position": {
+				"x": -1080.6509875644324,
+				"y": -312.10684951642577
+			}
+		},
+		{
+			"id": "node-31",
+			"type": "mul",
+			"data": {},
+			"position": {
+				"x": -837.2791926400846,
+				"y": -654.272932536356
+			}
+		},
+		{
+			"id": "node-34",
+			"type": "mul",
+			"data": {},
+			"position": {
+				"x": -847.1242089616887,
+				"y": -432.0932546703629
+			}
+		},
+		{
+			"id": "node-36",
+			"type": "vec2f",
+			"data": {
+				"x": 0,
+				"y": 0
+			},
+			"position": {
+				"x": -700.7295776243161,
+				"y": -578.7214036175545
+			}
+		},
+		{
+			"id": "node-37",
+			"type": "uv",
+			"data": {},
+			"position": {
+				"x": -1962.239338510872,
+				"y": -393.8518818783666
+			}
+		},
+		{
+			"id": "node-38",
+			"type": "separateVec2f",
+			"data": {
+				"x": 0,
+				"y": 0
+			},
+			"position": {
+				"x": -1837.5886554263188,
+				"y": -414.64928839754884
+			}
+		}
+	],
+	"edges": [
+		{
+			"id": "e-vec4f1-out1",
+			"source": "vec4f1",
+			"target": "out1"
+		},
+		{
+			"id": "xy-edge__node-2result-node-4operands",
+			"source": "node-2",
+			"target": "node-4",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-3result-node-4operands",
+			"source": "node-3",
+			"target": "node-4",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-4result-node-5e1",
+			"source": "node-4",
+			"target": "node-5",
+			"sourceHandle": "result",
+			"targetHandle": "e1"
+		},
+		{
+			"id": "xy-edge__node-5result-node-8e",
+			"source": "node-5",
+			"target": "node-8",
+			"sourceHandle": "result",
+			"targetHandle": "e"
+		},
+		{
+			"id": "xy-edge__node-8result-node-9e",
+			"source": "node-8",
+			"target": "node-9",
+			"sourceHandle": "result",
+			"targetHandle": "e"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1x",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "x"
+		},
+		{
+			"id": "xy-edge__node-11result-node-12e",
+			"source": "node-11",
+			"target": "node-12",
+			"sourceHandle": "result",
+			"targetHandle": "e"
+		},
+		{
+			"id": "xy-edge__node-12result-node-13operands",
+			"source": "node-12",
+			"target": "node-13",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-14value-node-13operands",
+			"source": "node-14",
+			"target": "node-13",
+			"sourceHandle": "value",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-12result-node-15a",
+			"source": "node-12",
+			"target": "node-15",
+			"sourceHandle": "result",
+			"targetHandle": "a"
+		},
+		{
+			"id": "xy-edge__node-14value-node-15b",
+			"source": "node-14",
+			"target": "node-15",
+			"sourceHandle": "value",
+			"targetHandle": "b"
+		},
+		{
+			"id": "xy-edge__node-15result-node-8in_min",
+			"source": "node-15",
+			"target": "node-8",
+			"sourceHandle": "result",
+			"targetHandle": "in_min"
+		},
+		{
+			"id": "xy-edge__node-13result-node-8in_max",
+			"source": "node-13",
+			"target": "node-8",
+			"sourceHandle": "result",
+			"targetHandle": "in_max"
+		},
+		{
+			"id": "xy-edge__node-10time-node-16operands",
+			"source": "node-10",
+			"target": "node-16",
+			"sourceHandle": "time",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-16result-node-11e",
+			"source": "node-16",
+			"target": "node-11",
+			"sourceHandle": "result",
+			"targetHandle": "e"
+		},
+		{
+			"id": "xy-edge__node-17value-node-16operands",
+			"source": "node-17",
+			"target": "node-16",
+			"sourceHandle": "value",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1y",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "y"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1z",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "z"
+		},
+		{
+			"id": "xy-edge__node-18resolution-node-20xy",
+			"source": "node-18",
+			"target": "node-20",
+			"sourceHandle": "resolution",
+			"targetHandle": "xy"
+		},
+		{
+			"id": "xy-edge__node-20x-node-19a",
+			"source": "node-20",
+			"target": "node-19",
+			"sourceHandle": "x",
+			"targetHandle": "a"
+		},
+		{
+			"id": "xy-edge__node-20y-node-21e1",
+			"source": "node-20",
+			"target": "node-21",
+			"sourceHandle": "y",
+			"targetHandle": "e1"
+		},
+		{
+			"id": "xy-edge__node-21result-node-19b",
+			"source": "node-21",
+			"target": "node-19",
+			"sourceHandle": "result",
+			"targetHandle": "b"
+		},
+		{
+			"id": "xy-edge__node-19result-node-24e1",
+			"source": "node-19",
+			"target": "node-24",
+			"sourceHandle": "result",
+			"targetHandle": "e1"
+		},
+		{
+			"id": "xy-edge__node-19result-node-25e1",
+			"source": "node-19",
+			"target": "node-25",
+			"sourceHandle": "result",
+			"targetHandle": "e1"
+		},
+		{
+			"id": "xy-edge__node-25result-node-24e3",
+			"source": "node-25",
+			"target": "node-24",
+			"sourceHandle": "result",
+			"targetHandle": "e3"
+		},
+		{
+			"id": "xy-edge__node-19result-node-28b",
+			"source": "node-19",
+			"target": "node-28",
+			"sourceHandle": "result",
+			"targetHandle": "b"
+		},
+		{
+			"id": "xy-edge__node-28result-node-27e2",
+			"source": "node-28",
+			"target": "node-27",
+			"sourceHandle": "result",
+			"targetHandle": "e2"
+		},
+		{
+			"id": "xy-edge__node-25result-node-27e3",
+			"source": "node-25",
+			"target": "node-27",
+			"sourceHandle": "result",
+			"targetHandle": "e3"
+		},
+		{
+			"id": "xy-edge__node-24result-node-31operands",
+			"source": "node-24",
+			"target": "node-31",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-29result-node-31operands",
+			"source": "node-29",
+			"target": "node-31",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-27result-node-34operands",
+			"source": "node-27",
+			"target": "node-34",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-30result-node-34operands",
+			"source": "node-30",
+			"target": "node-34",
+			"sourceHandle": "result",
+			"targetHandle": "operands"
+		},
+		{
+			"id": "xy-edge__node-36value-separateUvsxy",
+			"source": "node-36",
+			"target": "separateUvs",
+			"sourceHandle": "value",
+			"targetHandle": "xy"
+		},
+		{
+			"id": "xy-edge__node-37uv-node-38xy",
+			"source": "node-37",
+			"target": "node-38",
+			"sourceHandle": "uv",
+			"targetHandle": "xy"
+		},
+		{
+			"id": "xy-edge__node-38x-node-29a",
+			"source": "node-38",
+			"target": "node-29",
+			"sourceHandle": "x",
+			"targetHandle": "a"
+		},
+		{
+			"id": "xy-edge__node-38y-node-30a",
+			"source": "node-38",
+			"target": "node-30",
+			"sourceHandle": "y",
+			"targetHandle": "a"
+		},
+		{
+			"id": "xy-edge__separateUvsx-node-2e1",
+			"source": "separateUvs",
+			"target": "node-2",
+			"sourceHandle": "x",
+			"targetHandle": "e1"
+		},
+		{
+			"id": "xy-edge__separateUvsy-node-3e1",
+			"source": "separateUvs",
+			"target": "node-3",
+			"sourceHandle": "y",
+			"targetHandle": "e1"
+		},
+		{
+			"id": "xy-edge__node-31result-node-36x",
+			"source": "node-31",
+			"target": "node-36",
+			"sourceHandle": "result",
+			"targetHandle": "x"
+		},
+		{
+			"id": "xy-edge__node-34result-node-36y",
+			"source": "node-34",
+			"target": "node-36",
+			"sourceHandle": "result",
+			"targetHandle": "y"
+		}
+	]
+}

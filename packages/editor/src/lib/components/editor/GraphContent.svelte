@@ -29,12 +29,14 @@
 		class: className,
 		nodes = $bindable([]),
 		edges = $bindable([]),
-		frag = $bindable("")
+		frag = $bindable(""),
+		nodeIdCounter = $bindable(nodes.length + 1)
 	}: {
 		class?: string;
 		nodes?: Node[];
 		edges?: Edge[];
 		frag?: string;
+		nodeIdCounter?: number;
 	} = $props();
 
 	const categoryMap = $derived(nodesByCategory());
@@ -42,8 +44,6 @@
 	const { screenToFlowPosition } = useSvelteFlow();
 
 	let contextMenuPosition = $state({ x: 0, y: 0 });
-
-	let nodeIdCounter = $state.raw(nodes.length + 1);
 
 	function addNode(type: string) {
 		const id = `node-${String(nodeIdCounter++)}`;
