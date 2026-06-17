@@ -5,6 +5,5 @@ main_branch="main"
 branch="$(git rev-parse --abbrev-ref HEAD)"
 
 if [ "$branch" = "$main_branch" ]; then
-  bun run check
-  bun run lint
+    bun nx run-many --targets=check,lint --no-tui
 fi
