@@ -96,7 +96,6 @@
 		padding-bottom: 6px;
 		border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 		margin-bottom: 6px;
-		text-transform: uppercase;
 		letter-spacing: 0.5px;
 	}
 

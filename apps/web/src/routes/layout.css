@@ -3,6 +3,7 @@
 @import "shadcn-svelte/tailwind.css";
 @import "@fontsource-variable/jetbrains-mono";
 @source "../../node_modules/@org/editor/dist";
+@source "../../../../packages/editor/src";
 @custom-variant dark (&:is(.dark *));
 
 :root {

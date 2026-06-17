@@ -1,29 +1,8 @@
 <script lang="ts">
-	import { SvelteFlow, Controls, Background, type Edge, type Node } from "@xyflow/svelte";
-	import "@xyflow/svelte/dist/style.css";
-	import "./xy-theme.css";
-	import { cn } from "$editor/utils";
-
-	import NodeShell from "./NodeShell.svelte";
-	import { generateShader, debugSort } from "./codegen";
-	import { nodeRegistry, defaultDataForType } from "./registry";
-
-	/**
-	 * nodeTypes for SvelteFlow:
-	 * Nodes that need custom UI (interactive controls) get their own .svelte component.
-	 * All other nodes use the generic NodeShell.
-	 */
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow nodeTypes accepts any Svelte component
-	const nodeTypes: Record<string, any> = {};
-
-	// Auto-register all other nodes from the registry with the generic shell
-	for (const type of Object.keys(nodeRegistry)) {
-		if (!(type in nodeTypes)) {
-			nodeTypes[type] = NodeShell;
-		}
-	}
-
-	let debug = $state(true);
+	import { SvelteFlowProvider } from "@xyflow/svelte";
+	import type { Edge, Node } from "@xyflow/svelte";
+	import GraphContent from "./GraphContent.svelte";
+	import { defaultDataForType } from "./registry";
 
 	let { class: className, frag = $bindable() }: { class?: string; frag?: string } = $props();
 
@@ -105,41 +84,8 @@
 		{ id: "e-opacity-vec4f1", source: "opacity", target: "vec4f1", targetHandle: "w" },
 		{ id: "e-vec4f1-out1", source: "vec4f1", target: "out1" }
 	]);
-
-	function track(): void {
-		void nodes.length;
-		void edges.length;
-	}
-
-	$effect(() => {
-		track();
-		frag = generateShader(nodes, edges);
-
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-		if (debug) {
-			const sortedIds = debugSort(nodes, edges);
-			console.group("[shader debug]");
-			console.log("Compiled fragment shader: ", frag);
-			console.log("Sorted order:", sortedIds.toString());
-			console.log("Nodes:", JSON.stringify(nodes));
-			console.log("Edges:", JSON.stringify(edges));
-			console.groupEnd();
-		}
-	});
-
-	// eslint-disable-next-line svelte/no-inspect
-	$inspect(frag).with(console.log);
 </script>
 
-<SvelteFlow
-	bind:nodes
-	bind:edges
-	{nodeTypes}
-	colorMode="system"
-	fitView
-	class={cn("h-full", className)}
-	proOptions={{ hideAttribution: true }}
->
-	<Controls showLock={false} showZoom={false} />
-	<Background />
-</SvelteFlow>
+<SvelteFlowProvider>
+	<GraphContent bind:nodes bind:edges bind:frag class={className} />
+</SvelteFlowProvider>

@@ -6,7 +6,7 @@ import path from "node:path";
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
 	ssr: {
-		noExternal: ["paneforge", "svelte-toolbelt", "runed"]
+		noExternal: ["paneforge", "svelte-toolbelt", "runed", "bits-ui"]
 	},
 	resolve: {
 		alias: {

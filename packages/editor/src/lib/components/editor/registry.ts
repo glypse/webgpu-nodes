@@ -6,6 +6,18 @@ import { vec4fNode } from "./nodes/vec4f.node";
 import { outputNode } from "./nodes/output.node";
 import { uvNode } from "./nodes/uv.node";
 import { separateVec2fNode } from "./nodes/separateVec2f.node";
+import { subNode } from "./nodes/sub.node";
+import { mulNode } from "./nodes/mul.node";
+import { divNode } from "./nodes/div.node";
+import { mixNode } from "./nodes/select.node";
+import { absNode } from "./nodes/abs.node";
+import { minNode } from "./nodes/min.node";
+import { maxNode } from "./nodes/max.node";
+import { clampNode } from "./nodes/clamp.node";
+import { powNode } from "./nodes/pow.node";
+import { remapNode } from "./nodes/remap.node";
+import { vec2fNode } from "./nodes/vec2f.node";
+import { vec3fNode } from "./nodes/vec3f.node";
 
 /**
  * The global node registry.
@@ -18,7 +30,19 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	vec4f: vec4fNode,
 	output: outputNode,
 	uv: uvNode,
-	separateVec2f: separateVec2fNode
+	separateVec2f: separateVec2fNode,
+	sub: subNode,
+	mul: mulNode,
+	div: divNode,
+	mix: mixNode,
+	abs: absNode,
+	min: minNode,
+	max: maxNode,
+	clamp: clampNode,
+	pow: powNode,
+	remap: remapNode,
+	vec2f: vec2fNode,
+	vec3f: vec3fNode
 };
 
 /** Helper: produce default node data for a registered type. */

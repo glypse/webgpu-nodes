@@ -160,7 +160,17 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 	}
 
 	// Build the fragment body
-	const body: string[] = ["fn frag(uv: vec2f) -> vec4f {"];
+	const body: string[] = [
+		"// ---------- Common libraries ----------",
+		"",
+		"fn safeDivF32(a: f32, b:f32) -> f32 {",
+		"   return select(a / b, 0.0, b == 0.0);",
+		"}",
+		"",
+		"// ---------- User code ----------",
+		"",
+		"fn frag(uv: vec2f) -> vec4f {"
+	];
 
 	for (const line of lines) {
 		body.push(line);
