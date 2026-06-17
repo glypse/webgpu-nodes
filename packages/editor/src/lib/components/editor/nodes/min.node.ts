@@ -9,10 +9,10 @@ export const minNode = {
 		{ name: "e2", type: "f32" }
 	],
 	outputs: [{ name: "result", type: "f32" }],
-	defaultData: {},
+	defaultData: { e1: 0, e2: 0 },
 	wgsl: ({ varName, inputs }) => {
-		const e1 = inputs.e1[0] ?? "f32(0.0)";
-		const e2 = inputs.e2[0] ?? "f32(0.0)";
+		const e1 = inputs.e1[0];
+		const e2 = inputs.e2[0];
 		return [`let ${varName} = min(${e1}, ${e2});`];
 	}
 } satisfies NodeDescriptor;

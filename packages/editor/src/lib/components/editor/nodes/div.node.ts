@@ -9,10 +9,10 @@ export const divNode = {
 		{ name: "b", type: "f32" }
 	],
 	outputs: [{ name: "result", type: "f32" }],
-	defaultData: {},
+	defaultData: { a: 0, b: 0 },
 	wgsl: ({ varName, inputs }) => {
-		const a = inputs.a[0] ?? "f32(0.0)";
-		const b = inputs.b[0] ?? "f32(0.0)";
+		const a = inputs.a[0];
+		const b = inputs.b[0];
 		return [`let ${varName} = safeDivF32(${a}, ${b});`];
 	}
 } satisfies NodeDescriptor;

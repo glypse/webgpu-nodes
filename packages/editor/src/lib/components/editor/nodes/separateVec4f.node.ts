@@ -11,7 +11,7 @@ export const separateVec4fNode = {
 		{ name: "z", type: "f32" },
 		{ name: "w", type: "f32" }
 	],
-	defaultData: { x: 0, y: 0, z: 0 },
+	defaultData: { x: 0, y: 0, z: 0, w: 0 },
 	wgsl: ({ outputVars, inputs }) => {
 		const src = inputs.xyzw[0] ?? "vec4f(0.0)";
 		return [

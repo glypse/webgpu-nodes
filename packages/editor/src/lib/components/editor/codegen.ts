@@ -1,5 +1,37 @@
 import type { Edge, Node } from "@xyflow/svelte";
 import { nodeRegistry } from "./registry";
+import type { WgslType } from "./types";
+import { WGSL_DEFAULTS } from "./types";
+
+/**
+ * Safely convert an unknown value to a numeric WGSL literal component.
+ */
+function toNum(v: unknown, fallback: number): string {
+	const n = Number(v);
+	return String(Number.isFinite(n) ? n : fallback);
+}
+
+/**
+ * Format a data value as a WGSL literal for a given type.
+ */
+function formatWgslLiteral(type: WgslType, value: unknown): string {
+	if (type === "f32") {
+		return `f32(${toNum(value, 0)})`;
+	}
+	// For vector types, try to read individual components from the data object
+	if (typeof value === "object" && value !== null) {
+		const obj = value as Record<string, unknown>;
+		switch (type) {
+			case "vec2f":
+				return `vec2f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}))`;
+			case "vec3f":
+				return `vec3f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}))`;
+			case "vec4f":
+				return `vec4f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}), f32(${toNum(obj.w, 1)}))`;
+		}
+	}
+	return WGSL_DEFAULTS[type];
+}
 
 /**
  * Walk backwards from output nodes through edges to find all node IDs
@@ -200,6 +232,11 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 				}
 			} else if (edgesForHandle.length > 0) {
 				upstreamVars.push(getSourceVar(edgesForHandle[0], nodeMap));
+			} else {
+				// No connection → emit the node's own data value as a WGSL literal
+				const dataVal: unknown = node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
+				const literal = formatWgslLiteral(inputDef.type, dataVal);
+				upstreamVars.push(literal);
 			}
 
 			resolvedInputs[inputDef.name] = upstreamVars;

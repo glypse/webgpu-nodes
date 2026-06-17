@@ -6,9 +6,9 @@ export const absNode = {
 	category: "math",
 	inputs: [{ name: "e", type: "f32" }],
 	outputs: [{ name: "result", type: "f32" }],
-	defaultData: {},
+	defaultData: { e: 0 },
 	wgsl: ({ varName, inputs }) => {
-		const e = inputs.e[0] ?? "f32(0.0)";
+		const e = inputs.e[0];
 		return [`let ${varName} = abs(${e});`];
 	}
 } satisfies NodeDescriptor;
