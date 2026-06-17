@@ -18,6 +18,14 @@ import { powNode } from "./nodes/pow.node";
 import { remapNode } from "./nodes/remap.node";
 import { vec2fNode } from "./nodes/vec2f.node";
 import { vec3fNode } from "./nodes/vec3f.node";
+import { separateVec4fNode } from "./nodes/separateVec4f.node";
+import { separateVec3fNode } from "./nodes/separateVec3f.node";
+import { timeNode } from "./nodes/time.node";
+import { deltaNode } from "./nodes/delta.node";
+import { resolutionNode } from "./nodes/resolution.node";
+import { sinNode } from "./nodes/sin.node";
+import { cosNode } from "./nodes/cos.node";
+import { tanNode } from "./nodes/tan.node";
 
 /**
  * The global node registry.
@@ -25,12 +33,15 @@ import { vec3fNode } from "./nodes/vec3f.node";
  * exported descriptors from a directory, or accept addon registrations.
  */
 export const nodeRegistry: Record<string, NodeDescriptor> = {
+	// Input
 	float: floatNode,
-	add: addNode,
-	vec4f: vec4fNode,
-	output: outputNode,
 	uv: uvNode,
-	separateVec2f: separateVec2fNode,
+	time: timeNode,
+	delta: deltaNode,
+	resolution: resolutionNode,
+
+	// Math
+	add: addNode,
 	sub: subNode,
 	mul: mulNode,
 	div: divNode,
@@ -41,8 +52,20 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	clamp: clampNode,
 	pow: powNode,
 	remap: remapNode,
+	sin: sinNode,
+	cos: cosNode,
+	tan: tanNode,
+
+	// Vector
 	vec2f: vec2fNode,
-	vec3f: vec3fNode
+	vec3f: vec3fNode,
+	vec4f: vec4fNode,
+	separateVec2f: separateVec2fNode,
+	separateVec3f: separateVec3fNode,
+	separateVec4f: separateVec4fNode,
+
+	// Output
+	output: outputNode
 };
 
 /** Helper: produce default node data for a registered type. */
