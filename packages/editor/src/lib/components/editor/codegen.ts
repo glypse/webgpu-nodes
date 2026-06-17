@@ -2,6 +2,47 @@ import type { Edge, Node } from "@xyflow/svelte";
 import { nodeRegistry } from "./registry";
 
 /**
+ * Walk backwards from output nodes through edges to find all node IDs
+ * that contribute to the final shader output.
+ * Nodes not connected (directly or transitively) to any output node are excluded.
+ */
+function findReachableNodeIds(nodes: Map<string, Node>, edges: Edge[]): Set<string> {
+	// Build reverse adjacency: target -> sources feeding into it
+	const reverseAdj = new Map<string, string[]>();
+	for (const node of nodes.values()) {
+		reverseAdj.set(node.id, []);
+	}
+	for (const edge of edges) {
+		const sources = reverseAdj.get(edge.target);
+		if (sources) sources.push(edge.source);
+	}
+
+	const reachable = new Set<string>();
+	const queue: string[] = [];
+
+	// Seed the BFS from all output nodes
+	for (const node of nodes.values()) {
+		if (node.type === "output") {
+			reachable.add(node.id);
+			queue.push(node.id);
+		}
+	}
+
+	while (queue.length > 0) {
+		const current = queue.shift();
+		if (!current) break; // should never happen given the length check
+		for (const source of reverseAdj.get(current) ?? []) {
+			if (!reachable.has(source)) {
+				reachable.add(source);
+				queue.push(source);
+			}
+		}
+	}
+
+	return reachable;
+}
+
+/**
  * Topological sort of node IDs.
  * Works on a DAG; throws if a cycle is detected.
  */
@@ -80,6 +121,22 @@ function getSourceVar(edge: Edge, nodes: Map<string, Node>): string {
 }
 
 /**
+ * Compute a stable hash from the graph state that actually affects the shader output.
+ * Position changes, for example, produce the same hash — skipping rebuilds on drag.
+ */
+export function shaderHash(nodes: Node[], edges: Edge[]): string {
+	return JSON.stringify({
+		nodes: nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+		edges: edges.map((e) => ({
+			source: e.source,
+			target: e.target,
+			sourceHandle: e.sourceHandle,
+			targetHandle: e.targetHandle
+		}))
+	});
+}
+
+/**
  * Emit the full WGSL fragment shader source from the graph.
  */
 export function generateShader(nodes: Node[], edges: Edge[]): string {
@@ -88,11 +145,17 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 		nodeMap.set(node.id, node);
 	}
 
-	const sortedIds = topologicalSort(nodeMap, edges);
+	// Only keep nodes that contribute (directly or transitively) to an output node
+	const reachableIds = findReachableNodeIds(nodeMap, edges);
+	const filteredEdges = edges.filter(
+		(e) => reachableIds.has(e.source) && reachableIds.has(e.target)
+	);
 
-	// Build reverse map: target -> incoming edges
+	const sortedIds = topologicalSort(nodeMap, filteredEdges).filter((id) => reachableIds.has(id));
+
+	// Build reverse map: target -> incoming edges (only from the reachable subgraph)
 	const targetEdgeMap = new Map<string, Edge[]>();
-	for (const edge of edges) {
+	for (const edge of filteredEdges) {
 		const list = targetEdgeMap.get(edge.target) ?? [];
 		list.push(edge);
 		targetEdgeMap.set(edge.target, list);
