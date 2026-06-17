@@ -1,11 +1,11 @@
 <script lang="ts">
-	import { Handle, Position, useSvelteFlow } from "@xyflow/svelte";
+	import { Handle, Position, useSvelteFlow, useNodeConnections } from "@xyflow/svelte";
 	import { nodeRegistry } from "./registry";
 	import type { NodeDescriptor } from "./types";
 
 	let {
 		id,
-		data,
+		data: rawData,
 		type: nodeType
 	}: {
 		id: string;
@@ -13,12 +13,19 @@
 		type: string;
 	} = $props();
 
+	// Shallow-clone the prop so changes to data trigger fine-grained reactivity
+	let data = $derived({ ...rawData });
+
 	const { updateNodeData } = useSvelteFlow();
 
 	const descriptor = $derived(nodeRegistry[nodeType]) as NodeDescriptor | undefined;
 	const inputs = $derived(descriptor?.inputs ?? []);
 	const outputs = $derived(descriptor?.outputs ?? []);
 	const label = $derived(descriptor?.label ?? nodeType);
+
+	// Track which target handles are connected (hook must be called at top level)
+	const connections = useNodeConnections({ handleType: "target" });
+	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
 	// Compute handle positions: spread them evenly within [20%, 80%]
 	function handleTop(index: number, count: number): string {
@@ -43,7 +50,7 @@
 						/>
 						<span class="node-shell__handle-label">{inputDef.name}: {inputDef.type}</span>
 
-						{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined}
+						{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined && !connectedHandles.has(inputDef.name)}
 							<input
 								type="number"
 								class="nodrag node-shell__input"

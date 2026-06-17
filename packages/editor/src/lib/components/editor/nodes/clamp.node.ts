@@ -10,11 +10,11 @@ export const clampNode = {
 		{ name: "high", type: "f32" }
 	],
 	outputs: [{ name: "result", type: "f32" }],
-	defaultData: {},
+	defaultData: { e: 0, low: 0, high: 1 },
 	wgsl: ({ varName, inputs }) => {
-		const e = inputs.e[0] ?? "f32(0.0)";
-		const low = inputs.low[0] ?? "f32(0.0)";
-		const high = inputs.high[0] ?? "f32(0.0)";
+		const e = inputs.e[0];
+		const low = inputs.low[0];
+		const high = inputs.high[0];
 		return [`let ${varName} = clamp(${e}, ${low}, ${high});`];
 	}
 } satisfies NodeDescriptor;

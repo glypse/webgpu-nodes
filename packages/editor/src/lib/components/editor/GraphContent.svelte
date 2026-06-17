@@ -13,7 +13,7 @@
 	import * as ContextMenu from "$editor/components/ui/context-menu/index.js";
 
 	import NodeShell from "./NodeShell.svelte";
-	import { generateShader, debugSort } from "./codegen";
+	import { generateShader, debugSort, shaderHash } from "./codegen";
 	import { nodeRegistry, defaultDataForType, nodesByCategory } from "./registry";
 	import type { NodeCategory } from "./types";
 
@@ -29,12 +29,14 @@
 		class: className,
 		nodes = $bindable([]),
 		edges = $bindable([]),
-		frag = $bindable("")
+		frag = $bindable(""),
+		nodeIdCounter = $bindable(nodes.length + 1)
 	}: {
 		class?: string;
 		nodes?: Node[];
 		edges?: Edge[];
 		frag?: string;
+		nodeIdCounter?: number;
 	} = $props();
 
 	const categoryMap = $derived(nodesByCategory());
@@ -42,8 +44,6 @@
 	const { screenToFlowPosition } = useSvelteFlow();
 
 	let contextMenuPosition = $state({ x: 0, y: 0 });
-
-	let nodeIdCounter = $state.raw(nodes.length + 1);
 
 	function addNode(type: string) {
 		const id = `node-${String(nodeIdCounter++)}`;
@@ -62,9 +62,13 @@
 		];
 	}
 
+	// Track the shader-relevant hash to avoid rebuilding on position changes
+	let prevHash = $state("");
+
 	$effect(() => {
-		void nodes.length;
-		void edges.length;
+		const hash = shaderHash(nodes, edges);
+		if (hash === prevHash) return;
+		prevHash = hash;
 		frag = generateShader(nodes, edges);
 
 		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
