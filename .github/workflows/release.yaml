@@ -15,6 +15,8 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
     outputs:
       should_deploy: ${{ steps.changesets.outputs.published }}
 
