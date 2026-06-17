@@ -5,18 +5,9 @@
 	"root": "packages/editor",
 	"sourceRoot": "packages/editor/src",
 	"targets": {
-		"prepare": {
-			"inputs": ["{projectRoot}/**/*", "!{projectRoot}/.svelte-kit/**/*"],
-			"outputs": ["{projectRoot}/.svelte-kit"],
-			"executor": "nx:run-commands",
-			"options": {
-				"command": "bun --bun svelte-kit sync || echo ''",
-				"cwd": "{projectRoot}"
-			}
-		},
 		"build": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["^build", "prepare"],
+			"dependsOn": ["^build"],
 			"outputs": ["{projectRoot}/.svelte-kit", "{projectRoot}/build"],
 			"options": {
 				"command": "bun --bun svelte-package",
