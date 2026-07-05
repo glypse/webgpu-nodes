@@ -3,5 +3,37 @@
 	"name": "theme",
 	"projectType": "library",
 	"root": "packages/theme",
-	"sourceRoot": "packages/theme/src"
+	"sourceRoot": "packages/theme/src",
+	"targets": {
+		"build": {
+			"executor": "nx:run-commands",
+			"dependsOn": ["^build"],
+			"outputs": ["{projectRoot}/.svelte-kit", "{projectRoot}/build"],
+			"options": {
+				"command": "bun --bun svelte-package",
+				"cwd": "{projectRoot}"
+			}
+		},
+		"check": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "bun --bun svelte-check --tsconfig ./tsconfig.json",
+				"cwd": "{projectRoot}"
+			}
+		},
+		"lint": {
+			"executor": "nx:run-commands",
+			"options": {
+				"commands": ["bun --bun prettier --check .", "bun --bun eslint ."],
+				"cwd": "{projectRoot}"
+			}
+		},
+		"lint:fix": {
+			"executor": "nx:run-commands",
+			"options": {
+				"command": "bun --bun prettier . --write && bun --bun eslint . --fix",
+				"cwd": "{projectRoot}"
+			}
+		}
+	}
 }

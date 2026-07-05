@@ -9,7 +9,8 @@ export default defineConfig({
 		alias: {
 			// This allows the @org/editor package to use `$editor` like this web app uses `$lib`,
 			// and still work in this web app dev mode.
-			$editor: path.resolve(__dirname, "../../packages/editor/src/lib")
+			$editor: path.resolve(__dirname, "../../packages/editor/src/lib"),
+			$theme: path.resolve(__dirname, "../../packages/theme/src/lib")
 		}
 	}
 });

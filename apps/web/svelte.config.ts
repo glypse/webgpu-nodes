@@ -3,7 +3,7 @@ import { type Config } from "@sveltejs/kit";
 
 const config: Config = {
 	vitePlugin: {
-		prebundleSvelteLibraries: false
+		prebundleSvelteLibraries: true
 	},
 	compilerOptions: {
 		// Force runes mode for the project, except for libraries. Can be removed in svelte 6.

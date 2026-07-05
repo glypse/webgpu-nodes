@@ -1,5 +1,6 @@
 {
 	"compilerOptions": {
+		"customConditions": ["development"],
 		"allowJs": true,
 		"checkJs": true,
 		"esModuleInterop": true,
@@ -16,7 +17,9 @@
 		"verbatimModuleSyntax": true,
 		"paths": {
 			"$editor": ["./src/lib"],
-			"$editor/*": ["./src/lib/*"]
+			"$editor/*": ["./src/lib/*"],
+			"$theme": ["../theme/src/lib"],
+			"$theme/*": ["../theme/src/lib/*"]
 		},
 		"types": ["svelte"]
 	},

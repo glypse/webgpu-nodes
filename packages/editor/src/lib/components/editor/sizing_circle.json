@@ -16,9 +16,9 @@
 			"id": "vec4f1",
 			"type": "vec4f",
 			"data": {
-				"x": 0,
-				"y": 0,
-				"z": 0,
+				"x": 1,
+				"y": 1,
+				"z": 1,
 				"w": 1
 			},
 			"position": {
@@ -637,27 +637,6 @@
 			"target": "vec4f1",
 			"sourceHandle": "result",
 			"targetHandle": "w"
-		},
-		{
-			"id": "xy-edge__node-9result-vec4f1x",
-			"source": "node-9",
-			"target": "vec4f1",
-			"sourceHandle": "result",
-			"targetHandle": "x"
-		},
-		{
-			"id": "xy-edge__node-9result-vec4f1y",
-			"source": "node-9",
-			"target": "vec4f1",
-			"sourceHandle": "result",
-			"targetHandle": "y"
-		},
-		{
-			"id": "xy-edge__node-9result-vec4f1z",
-			"source": "node-9",
-			"target": "vec4f1",
-			"sourceHandle": "result",
-			"targetHandle": "z"
 		}
 	]
 }

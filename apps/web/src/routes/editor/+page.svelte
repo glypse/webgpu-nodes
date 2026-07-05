@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Editor, GraphManager, setGraphManager } from "@org/editor";
-	import * as Menubar from "$lib/components/ui/menubar";
+	import { Menubar } from "@org/theme/components/ui";
 	import { toggleMode } from "mode-watcher";
 
 	const graph = new GraphManager();

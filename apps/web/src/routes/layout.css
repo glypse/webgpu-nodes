@@ -1,2 +1,3 @@
 @import "@org/theme/css";
 @source "../../../../packages/editor/src";
+@source "../../../../packages/theme/src";

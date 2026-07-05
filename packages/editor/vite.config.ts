@@ -7,7 +7,8 @@ export default defineConfig({
 	plugins: [tailwindcss(), svelte()],
 	resolve: {
 		alias: {
-			$editor: path.resolve("./src/lib")
+			$editor: path.resolve("./src/lib"),
+			$theme: path.resolve("../theme/src/lib")
 		}
 	}
 });
