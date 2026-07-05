@@ -1,24 +1,32 @@
-/* xyflow theme files. Delete these to start from our base */
+/* xyflow theme – centralised styles */
+@reference "@org/theme/css";
 
-/* Customizing Default Theming */
+/* =============================================
+   Custom variables
+   ============================================= */
+
+:root {
+	--color-nodes-primary: #ff4000;
+	--color-nodes-background: #fefefe;
+	--color-nodes-hover-bg: #f6f6f6;
+	--color-nodes-disabled: #76797e;
+}
+
+/* =============================================
+   xyflow base style overrides
+   ============================================= */
 
 .svelte-flow__node {
+	@apply bg-accent flex flex-col items-center justify-center p-2.5 text-center text-xs;
 	border-radius: var(--xy-node-border-radius-default);
 	background-color: var(--xy-node-background-color-default);
-	display: flex;
-	justify-content: center;
-	align-items: center;
-	text-align: center;
-	padding: 10px;
-	font-size: 12px;
-	flex-direction: column;
 	border: var(--xy-node-border-default);
 	color: var(--xy-node-color, var(--xy-node-color-default));
 }
 
 .svelte-flow__node.selectable:focus {
+	@apply border-[#d9d9d9];
 	box-shadow: 0px 0px 0px 4px var(--xy-theme-color-focus);
-	border-color: #d9d9d9;
 }
 
 .svelte-flow__node.selectable:hover,
@@ -31,8 +39,7 @@
 }
 
 .svelte-flow__node-group {
-	background-color: rgba(207, 182, 255, 0.4);
-	border-color: #9e86ed;
+	@apply border-[#9e86ed] bg-[rgba(207,182,255,0.4)];
 }
 
 .svelte-flow__handle {
@@ -40,9 +47,8 @@
 }
 
 .svelte-flow__handle.connectionindicator:hover {
-	pointer-events: all;
+	@apply pointer-events-auto bg-white;
 	border-color: var(--xy-theme-edge-hover);
-	background-color: white;
 }
 
 .svelte-flow__handle.connectionindicator:focus,
@@ -52,82 +58,90 @@
 }
 
 .svelte-flow__node:has(.svelte-flow__resize-control.line) {
-	border-radius: 0;
+	@apply rounded-none;
 }
 
 .svelte-flow__resize-control.handle {
-	border: none;
-	border-radius: 0;
-	width: 5px;
-	height: 5px;
+	@apply h-1.25 w-1.25 rounded-none border-none;
 }
 
 .svelte-flow__edge-label {
-	background: #f7f9fb;
+	@apply bg-[#f7f9fb];
 }
 
-/*
-  Custom Example CSS  - This CSS is to improve the example experience.
-  You can remove it if you want to use the default styles.
+/* =============================================
+   NodeShell component styles
+   ============================================= */
 
-  New Theme Classes:
-    .xy-theme__button   - Styles for buttons.
-    .xy-theme__input    - Styles for text inputs.
-    .xy-theme__checkbox - Styles for checkboxes.
-    .xy-theme__select   - Styles for dropdown selects.
-    .xy-theme__label    - Styles for labels.
-
-  Use these classes to apply consistent theming across your components.
-*/
-
-:root {
-	--color-nodes-primary: #ff4000;
-	--color-nodes-background: #fefefe;
-	--color-nodes-hover-bg: #f6f6f6;
-	--color-nodes-disabled: #76797e;
+.node-shell--unknown {
+	@apply border-[#f38ba8] text-[#f38ba8];
 }
 
-/* Custom Button Styling */
+.node-shell__label {
+	@apply mb-1.5 border-b border-white/10 pb-1.5 text-center text-xs font-semibold tracking-[0.5px];
+}
+
+.node-shell__body {
+	@apply flex flex-col gap-1;
+}
+
+.node-shell__inputs,
+.node-shell__outputs {
+	@apply flex flex-col gap-1;
+}
+
+.node-shell__row {
+	@apply flex min-h-6 items-center gap-1.5;
+}
+
+.node-shell__row--right {
+	@apply justify-end;
+}
+
+.node-shell__handle-label {
+	@apply text-[10px] whitespace-nowrap opacity-70;
+}
+
+.node-shell__input {
+	@apply w-15 rounded border border-white/15 bg-black/30 px-1 py-0.5 text-right text-[10px];
+	color: inherit;
+	font-family: inherit;
+}
+
+.node-shell__input:focus {
+	@apply border-(--xy-theme-color-focus,#89b4fa) outline-none;
+}
+
+/* =============================================
+   XY Theme UI component styles
+   ============================================= */
+
+/* Button group */
 .xy-theme__button-group {
-	display: flex;
-	align-items: center;
+	@apply flex items-center;
 
-	.xy-theme__button:first-child {
-		border-radius: 100px 0 0 100px;
+	& .xy-theme__button:first-child {
+		@apply rounded-l-full;
 	}
 
-	.xy-theme__button:last-child {
-		border-radius: 0 100px 100px 0;
-		margin: 0;
+	& .xy-theme__button:last-child {
+		@apply m-0 rounded-r-full;
 	}
 }
 
 .xy-theme__button {
-	cursor: pointer;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	height: 2.5rem;
-	padding: 0 1rem;
-	border-radius: 100px;
+	@apply inline-flex h-10 cursor-pointer items-center justify-center rounded-full bg-(--color-nodes-background) px-4 text-(--color-nodes-primary) transition-colors duration-200 ease-in-out;
 	border: 1px solid var(--color-nodes-primary);
-	background-color: var(--color-nodes-background);
-	color: var(--color-nodes-primary);
-	transition:
-		background-color 0.2s ease,
-		border-color 0.2s ease;
 }
 
 .xy-theme__button.active {
-	background-color: var(--color-nodes-primary);
-	color: white;
+	@apply bg-(--color-nodes-primary) text-white;
 	border-color: var(--color-nodes-primary);
 }
 
 .xy-theme__button.active:hover,
 .xy-theme__button.active:active {
-	background-color: var(--color-nodes-primary);
-	opacity: 0.9;
+	@apply bg-(--color-nodes-primary) opacity-90;
 }
 
 .xy-theme__button:hover {
@@ -139,56 +153,36 @@
 }
 
 .xy-theme__button:disabled {
+	@apply cursor-not-allowed opacity-80;
 	color: var(--color-nodes-disabled);
-	opacity: 0.8;
-	cursor: not-allowed;
 	border: 1px solid var(--color-nodes-disabled);
 }
 
 .xy-theme__button > span {
-	margin-right: 0.2rem;
+	@apply mr-0.5;
 }
 
-/* Add gap between adjacent buttons */
 .xy-theme__button + .xy-theme__button {
-	margin-left: 0.3rem;
+	@apply ml-1.5;
 }
 
-/* Example Input Styling */
+/* Input */
 .xy-theme__input {
-	padding: 0.5rem 0.75rem;
+	@apply rounded-lg bg-(--color-nodes-background) px-3 py-2 text-base transition-colors duration-200 ease-in-out;
 	border: 1px solid var(--color-nodes-primary);
-	border-radius: 7px;
-	background-color: var(--color-nodes-background);
-	transition:
-		background-color 0.2s ease,
-		border-color 0.2s ease;
-	font-size: 1rem;
 	color: inherit;
 }
 
 .xy-theme__input:focus {
-	outline: none;
+	@apply outline-none;
 	border-color: var(--color-nodes-primary);
 	box-shadow: 0 0 0 2px rgba(255, 0, 115, 0.3);
 }
 
-/* Specific Checkbox Styling */
+/* Checkbox */
 .xy-theme__checkbox {
-	appearance: none;
-	-webkit-appearance: none;
-	width: 1.25rem;
-	height: 1.25rem;
-	border-radius: 7px;
+	@apply mr-2 inline-block h-5 w-5 cursor-pointer appearance-none rounded-lg bg-(--color-nodes-background) align-middle transition-colors duration-200 ease-in-out;
 	border: 2px solid var(--color-nodes-primary);
-	background-color: var(--color-nodes-background);
-	transition:
-		background-color 0.2s ease,
-		border-color 0.2s ease;
-	cursor: pointer;
-	display: inline-block;
-	vertical-align: middle;
-	margin-right: 0.5rem;
 }
 
 .xy-theme__checkbox:checked {
@@ -197,32 +191,24 @@
 }
 
 .xy-theme__checkbox:focus {
-	outline: none;
+	@apply outline-none;
 	box-shadow: 0 0 0 2px rgba(255, 0, 115, 0.3);
 }
 
-/* Dropdown Styling */
+/* Select */
 .xy-theme__select {
-	padding: 0.5rem 0.75rem;
+	@apply mr-2 rounded-full bg-(--color-nodes-background) px-3 py-2 text-base transition-colors duration-200 ease-in-out;
 	border: 1px solid var(--color-nodes-primary);
-	border-radius: 50px;
-	background-color: var(--color-nodes-background);
-	transition:
-		background-color 0.2s ease,
-		border-color 0.2s ease;
-	font-size: 1rem;
 	color: inherit;
-	margin-right: 0.5rem;
 }
 
 .xy-theme__select:focus {
-	outline: none;
+	@apply outline-none;
 	border-color: var(--color-nodes-primary);
 	box-shadow: 0 0 0 2px rgba(255, 0, 115, 0.3);
 }
 
+/* Label */
 .xy-theme__label {
-	margin-top: 10px;
-	margin-bottom: 3px;
-	display: inline-block;
+	@apply mt-2.5 mb-0.75 inline-block;
 }

@@ -1,0 +1,15 @@
+{
+	"name": "@org/theme",
+	"version": "0.1.0",
+	"type": "module",
+	"exports": {
+		"./css": "./src/index.css"
+	},
+	"sideEffects": ["**/*.css"],
+	"devDependencies": {
+		"tailwindcss": "^4.3.2"
+	},
+	"peerDependencies": {
+		"tailwindcss": "^4.3.2"
+	}
+}
