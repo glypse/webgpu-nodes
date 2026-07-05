@@ -35,11 +35,6 @@
 	border-color: #9e86ed;
 }
 
-.svelte-flow__edge.selectable:hover .svelte-flow__edge-path,
-.svelte-flow__edge.selectable.selected .svelte-flow__edge-path {
-	stroke: var(--xy-theme-edge-hover);
-}
-
 .svelte-flow__handle {
 	background-color: var(--xy-handle-background-color-default);
 }

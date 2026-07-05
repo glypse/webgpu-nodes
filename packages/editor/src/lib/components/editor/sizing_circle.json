@@ -87,8 +87,8 @@
 				"e": 0,
 				"in_min": 0.499,
 				"in_max": 0.501,
-				"out_min": 0,
-				"out_max": 1
+				"out_min": 1,
+				"out_max": 0
 			},
 			"position": {
 				"x": 268.41391209615057,
@@ -408,13 +408,6 @@
 			"targetHandle": "e"
 		},
 		{
-			"id": "xy-edge__node-9result-vec4f1x",
-			"source": "node-9",
-			"target": "vec4f1",
-			"sourceHandle": "result",
-			"targetHandle": "x"
-		},
-		{
 			"id": "xy-edge__node-11result-node-12e",
 			"source": "node-11",
 			"target": "node-12",
@@ -483,20 +476,6 @@
 			"target": "node-16",
 			"sourceHandle": "value",
 			"targetHandle": "operands"
-		},
-		{
-			"id": "xy-edge__node-9result-vec4f1y",
-			"source": "node-9",
-			"target": "vec4f1",
-			"sourceHandle": "result",
-			"targetHandle": "y"
-		},
-		{
-			"id": "xy-edge__node-9result-vec4f1z",
-			"source": "node-9",
-			"target": "vec4f1",
-			"sourceHandle": "result",
-			"targetHandle": "z"
 		},
 		{
 			"id": "xy-edge__node-18resolution-node-20xy",
@@ -651,6 +630,34 @@
 			"target": "node-36",
 			"sourceHandle": "result",
 			"targetHandle": "y"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1w",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "w"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1x",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "x"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1y",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "y"
+		},
+		{
+			"id": "xy-edge__node-9result-vec4f1z",
+			"source": "node-9",
+			"target": "vec4f1",
+			"sourceHandle": "result",
+			"targetHandle": "z"
 		}
 	]
 }
