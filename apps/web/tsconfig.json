@@ -1,6 +1,7 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
 	"compilerOptions": {
+		"customConditions": ["development"],
 		"rewriteRelativeImportExtensions": true,
 		"allowJs": true,
 		"checkJs": true,
