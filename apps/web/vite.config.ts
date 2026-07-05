@@ -5,9 +5,6 @@ import path from "node:path";
 
 export default defineConfig({
 	plugins: [tailwindcss(), sveltekit()],
-	ssr: {
-		noExternal: ["paneforge", "svelte-toolbelt", "runed", "bits-ui"]
-	},
 	resolve: {
 		alias: {
 			// This allows the @org/editor package to use `$editor` like this web app uses `$lib`,
