@@ -1,5 +1,5 @@
 {
-	"name": "@org/theme",
+	"name": "$theme",
 	"version": "0.1.0",
 	"type": "module",
 	"exports": {
@@ -9,6 +9,7 @@
 		},
 		"./css": "./src/index.css",
 		"./utils": "./src/lib/utils.ts",
+		"./utils.js": "./src/lib/utils.ts",
 		"./components/ui": "./src/lib/components/ui/index.ts",
 		"./components/ui/*": "./src/lib/components/ui/*/index.ts"
 	},
@@ -26,6 +27,7 @@
 		"@types/node": "^26.1.0",
 		"globals": "^17.7.0",
 		"svelte": "^5.56.4",
+		"svelte-check": "^4.7.1",
 		"tailwindcss": "^4.3.2",
 		"vite": "^8.1.3"
 	},

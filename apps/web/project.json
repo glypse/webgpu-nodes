@@ -40,9 +40,8 @@
 		},
 		"check": {
 			"executor": "nx:run-commands",
-			"dependsOn": ["^build"],
 			"options": {
-				"command": "bun --bun svelte-check --tsconfig ./tsconfig.json",
+				"command": "bun --bun svelte-check --tsgo --tsconfig ./tsconfig.json",
 				"cwd": "{projectRoot}"
 			}
 		},

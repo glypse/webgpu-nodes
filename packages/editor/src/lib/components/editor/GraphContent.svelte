@@ -9,8 +9,8 @@
 	} from "@xyflow/svelte";
 	import "@xyflow/svelte/dist/style.css";
 	import "./xy-theme.css";
-	import { cn } from "@org/theme/utils";
-	import { ContextMenu } from "@org/theme/components/ui";
+	import { cn } from "$theme/utils";
+	import { ContextMenu } from "$theme/components/ui";
 
 	import NodeShell from "./NodeShell.svelte";
 	import { generateShader, debugSort, shaderHash } from "./codegen";

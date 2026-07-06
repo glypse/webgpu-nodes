@@ -1,3 +1,3 @@
-# @org/web
+# $web
 
-The website-shell around [@org/editor](packages/editor/).
+The website-shell around [$editor](packages/editor/).

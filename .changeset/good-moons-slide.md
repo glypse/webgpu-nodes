@@ -1,5 +1,5 @@
 ---
-"@org/editor": patch
+"$editor": patch
 ---
 
 Change UI font

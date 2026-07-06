@@ -1,4 +1,4 @@
-# @org/editor
+# $editor
 
 ## 0.2.0
 

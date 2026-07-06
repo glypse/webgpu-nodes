@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Menubar as MenubarPrimitive } from "bits-ui";
-	import { cn, type WithoutChildrenOrChild } from "$theme/utils.js";
+	import { cn, type WithoutChildrenOrChild } from "../../../utils.js";
 	import type { Snippet } from "svelte";
 	import MinusIcon from "phosphor-svelte/lib/MinusIcon";
 	import CheckIcon from "phosphor-svelte/lib/CheckIcon";

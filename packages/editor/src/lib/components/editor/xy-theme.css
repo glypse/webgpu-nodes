@@ -1,5 +1,5 @@
 /* xyflow theme – centralised styles */
-@reference "@org/theme/css";
+@reference "$theme/css";
 
 /* =============================================
    Custom variables

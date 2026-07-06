@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { FragCanvas, defineMaterial } from "@motion-core/motion-gpu/svelte";
-	import { Resizable } from "@org/theme/components/ui";
+	import { Resizable } from "$theme/components/ui";
 	import NodeGraph from "./NodeGraph.svelte";
 	import type { PaneGroupProps } from "paneforge";
 

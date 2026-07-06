@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { ContextMenu as ContextMenuPrimitive } from "bits-ui";
-	import { cn, type WithoutChild } from "$theme/utils.js";
+	import { cn, type WithoutChild } from "../../../utils.js";
 	import CaretRightIcon from "phosphor-svelte/lib/CaretRightIcon";
 
 	let {
