@@ -6,7 +6,7 @@ export const vec2fNode = {
 	category: "vector",
 	inputs: [
 		{ name: "x", type: "f32" },
-		{ name: "y", type: "f32" }
+		{ name: "y", type: "f32" },
 	],
 	outputs: [{ name: "value", type: "vec2f" }],
 	defaultData: { x: 0, y: 0 },
@@ -14,5 +14,5 @@ export const vec2fNode = {
 		const x = inputs.x[0];
 		const y = inputs.y[0];
 		return [`let ${varName} = vec2f(${x}, ${y});`];
-	}
+	},
 } satisfies NodeDescriptor;

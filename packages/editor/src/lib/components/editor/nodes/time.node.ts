@@ -7,5 +7,5 @@ export const timeNode = {
 	inputs: [],
 	outputs: [{ name: "time", type: "f32" }],
 	defaultData: {},
-	wgsl: ({ varName }) => [`let ${varName}: f32 = motiongpuFrame.time;`]
+	wgsl: ({ varName }) => [`let ${varName}: f32 = motiongpuFrame.time;`],
 } satisfies NodeDescriptor;

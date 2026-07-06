@@ -1,31 +1,30 @@
-import type { NodeDescriptor, NodeCategory } from "./types";
-
-import { floatNode } from "./nodes/float.node";
-import { addNode } from "./nodes/add.node";
-import { vec4fNode } from "./nodes/vec4f.node";
-import { outputNode } from "./nodes/output.node";
-import { uvNode } from "./nodes/uv.node";
-import { separateVec2fNode } from "./nodes/separateVec2f.node";
-import { subNode } from "./nodes/sub.node";
-import { mulNode } from "./nodes/mul.node";
-import { divNode } from "./nodes/div.node";
-import { mixNode } from "./nodes/select.node";
 import { absNode } from "./nodes/abs.node";
-import { minNode } from "./nodes/min.node";
-import { maxNode } from "./nodes/max.node";
+import { addNode } from "./nodes/add.node";
 import { clampNode } from "./nodes/clamp.node";
+import { cosNode } from "./nodes/cos.node";
+import { deltaNode } from "./nodes/delta.node";
+import { divNode } from "./nodes/div.node";
+import { floatNode } from "./nodes/float.node";
+import { maxNode } from "./nodes/max.node";
+import { minNode } from "./nodes/min.node";
+import { mulNode } from "./nodes/mul.node";
+import { outputNode } from "./nodes/output.node";
 import { powNode } from "./nodes/pow.node";
 import { remapNode } from "./nodes/remap.node";
+import { resolutionNode } from "./nodes/resolution.node";
+import { mixNode } from "./nodes/select.node";
+import { separateVec2fNode } from "./nodes/separateVec2f.node";
+import { separateVec3fNode } from "./nodes/separateVec3f.node";
+import { separateVec4fNode } from "./nodes/separateVec4f.node";
+import { sinNode } from "./nodes/sin.node";
+import { subNode } from "./nodes/sub.node";
+import { tanNode } from "./nodes/tan.node";
+import { timeNode } from "./nodes/time.node";
+import { uvNode } from "./nodes/uv.node";
 import { vec2fNode } from "./nodes/vec2f.node";
 import { vec3fNode } from "./nodes/vec3f.node";
-import { separateVec4fNode } from "./nodes/separateVec4f.node";
-import { separateVec3fNode } from "./nodes/separateVec3f.node";
-import { timeNode } from "./nodes/time.node";
-import { deltaNode } from "./nodes/delta.node";
-import { resolutionNode } from "./nodes/resolution.node";
-import { sinNode } from "./nodes/sin.node";
-import { cosNode } from "./nodes/cos.node";
-import { tanNode } from "./nodes/tan.node";
+import { vec4fNode } from "./nodes/vec4f.node";
+import type { NodeDescriptor, NodeCategory } from "./types";
 
 /**
  * The global node registry.
@@ -65,7 +64,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	separateVec4f: separateVec4fNode,
 
 	// Output
-	output: outputNode
+	output: outputNode,
 };
 
 /** Helper: produce default node data for a registered type. */

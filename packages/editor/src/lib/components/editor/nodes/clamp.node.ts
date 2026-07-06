@@ -7,7 +7,7 @@ export const clampNode = {
 	inputs: [
 		{ name: "e", type: "f32" },
 		{ name: "low", type: "f32" },
-		{ name: "high", type: "f32" }
+		{ name: "high", type: "f32" },
 	],
 	outputs: [{ name: "result", type: "f32" }],
 	defaultData: { e: 0, low: 0, high: 1 },
@@ -16,5 +16,5 @@ export const clampNode = {
 		const low = inputs.low[0];
 		const high = inputs.high[0];
 		return [`let ${varName} = clamp(${e}, ${low}, ${high});`];
-	}
+	},
 } satisfies NodeDescriptor;

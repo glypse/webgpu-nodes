@@ -26,8 +26,8 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="w-dvw h-dvh flex flex-col">
-	<Menubar.Root class="rounded-none border-t-0 border-l-0 border-r-0 p-2 gap-1 h-auto">
+<div class="flex h-dvh w-dvw flex-col">
+	<Menubar.Root class="h-auto gap-1 rounded-none border-t-0 border-r-0 border-l-0 p-2">
 		<Menubar.Menu>
 			<Menubar.Trigger>File</Menubar.Trigger>
 			<Menubar.Content>
@@ -56,5 +56,5 @@
 		</Menubar.Menu>
 	</Menubar.Root>
 
-	<Editor class="flex-1 min-h-0" />
+	<Editor class="min-h-0 flex-1" />
 </div>

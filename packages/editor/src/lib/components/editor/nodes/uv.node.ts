@@ -7,5 +7,5 @@ export const uvNode = {
 	inputs: [],
 	outputs: [{ name: "uv", type: "vec2f" }],
 	defaultData: {},
-	wgsl: ({ varName }) => [`let ${varName} = uv;`]
+	wgsl: ({ varName }) => [`let ${varName} = uv;`],
 } satisfies NodeDescriptor;

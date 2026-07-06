@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { SvelteFlowProvider } from "@xyflow/svelte";
-	import GraphContent from "./GraphContent.svelte";
+
 	import { getGraphManager } from "./graph-state.svelte";
+	import GraphContent from "./GraphContent.svelte";
 
 	const graph = getGraphManager();
 

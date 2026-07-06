@@ -9,7 +9,7 @@ export const separateVec4fNode = {
 		{ name: "x", type: "f32" },
 		{ name: "y", type: "f32" },
 		{ name: "z", type: "f32" },
-		{ name: "w", type: "f32" }
+		{ name: "w", type: "f32" },
 	],
 	defaultData: { x: 0, y: 0, z: 0, w: 0 },
 	wgsl: ({ outputVars, inputs }) => {
@@ -18,7 +18,7 @@ export const separateVec4fNode = {
 			`let ${outputVars.x} = ${src}.x;`,
 			`let ${outputVars.y} = ${src}.y;`,
 			`let ${outputVars.z} = ${src}.z;`,
-			`let ${outputVars.w} = ${src}.w;`
+			`let ${outputVars.w} = ${src}.w;`,
 		];
-	}
+	},
 } satisfies NodeDescriptor;

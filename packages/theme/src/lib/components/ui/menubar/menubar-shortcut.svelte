@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { HTMLAttributes } from "svelte/elements";
+
 	import { cn, type WithElementRef } from "../../../utils.js";
 
 	let {
@@ -14,8 +15,8 @@
 	bind:this={ref}
 	data-slot="menubar-shortcut"
 	class={cn(
-		"text-muted-foreground group-focus/menubar-item:text-accent-foreground text-xs tracking-widest ml-auto",
-		className
+		"text-muted-foreground group-focus/menubar-item:text-accent-foreground ml-auto text-xs tracking-widest",
+		className,
 	)}
 	{...restProps}
 >

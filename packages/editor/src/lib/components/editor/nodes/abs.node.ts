@@ -10,5 +10,5 @@ export const absNode = {
 	wgsl: ({ varName, inputs }) => {
 		const e = inputs.e[0];
 		return [`let ${varName} = abs(${e});`];
-	}
+	},
 } satisfies NodeDescriptor;

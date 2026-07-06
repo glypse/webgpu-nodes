@@ -5,7 +5,7 @@
 	},
 	"include": [
 		"src/**/*",
-		"prettier.config.ts",
+		"oxfmt.config.ts",
 		"svelte.config.ts",
 		"vite.config.ts",
 		"eslint.config.ts"

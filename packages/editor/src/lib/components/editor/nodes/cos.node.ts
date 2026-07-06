@@ -10,5 +10,5 @@ export const cosNode = {
 	wgsl: ({ varName, inputs }) => {
 		const e = inputs.e[0];
 		return [`let ${varName} = cos(${e});`];
-	}
+	},
 } satisfies NodeDescriptor;
