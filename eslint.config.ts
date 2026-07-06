@@ -16,7 +16,6 @@ export default defineConfig(
 	...ts.configs.stylisticTypeChecked,
 
 	...svelte.configs.recommended,
-	...svelte.configs.prettier,
 	{
 		files: [
 			"**/*.ts",

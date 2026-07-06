@@ -1,6 +1,5 @@
 import path from "node:path";
 
-import prettier from "eslint-config-prettier";
 import { defineConfig, includeIgnoreFile } from "eslint/config";
 import globals from "globals";
 import ts from "typescript-eslint";
@@ -13,7 +12,6 @@ const appGitignorePath = path.resolve(import.meta.dirname, ".gitignore");
 export default defineConfig(
 	includeIgnoreFile(appGitignorePath),
 	...rootConfig,
-	prettier,
 	{
 		languageOptions: {
 			globals: { ...globals.browser, ...globals.node },
