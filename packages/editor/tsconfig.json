@@ -1,24 +1,7 @@
 {
+	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"allowJs": true,
-		"checkJs": true,
-		"esModuleInterop": true,
-		"forceConsistentCasingInFileNames": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-		"sourceMap": true,
-		"strict": true,
-		"lib": ["esnext", "DOM", "DOM.Iterable"],
-		"module": "esnext",
-		"moduleResolution": "bundler",
-		"isolatedModules": true,
-		"target": "esnext",
-		"verbatimModuleSyntax": true,
-		"paths": {
-			"$editor": ["./src/lib"],
-			"$editor/*": ["./src/lib/*"]
-		},
-		"types": ["svelte"]
+		"types": ["svelte", "vite/client"]
 	},
 	"include": [
 		"src/**/*",

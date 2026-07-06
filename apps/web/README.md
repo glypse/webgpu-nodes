@@ -1,1 +1,3 @@
-The main web app of webgpu-nodes, for now
+# $web
+
+The website-shell around [$editor](packages/editor/).

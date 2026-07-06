@@ -1,0 +1,14 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"types": ["svelte", "vite/client"]
+	},
+	"include": [
+		"src/**/*",
+		"prettier.config.ts",
+		"svelte.config.ts",
+		"vite.config.ts",
+		"eslint.config.ts"
+	],
+	"exclude": ["../node_modules/**"]
+}

@@ -9,13 +9,14 @@
 	} from "@xyflow/svelte";
 	import "@xyflow/svelte/dist/style.css";
 	import "./xy-theme.css";
-	import { cn } from "$editor/utils";
-	import * as ContextMenu from "$editor/components/ui/context-menu/index.js";
+	import { cn } from "$theme/utils";
+	import { ContextMenu } from "$theme/components/ui";
 
 	import NodeShell from "./NodeShell.svelte";
 	import { generateShader, debugSort, shaderHash } from "./codegen";
 	import { nodeRegistry, defaultDataForType, nodesByCategory } from "./registry";
 	import type { NodeCategory } from "./types";
+	import { mode } from "mode-watcher";
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow node types accept any component
 	const nodeTypes: Record<string, any> = {};
@@ -107,7 +108,7 @@
 				bind:nodes
 				bind:edges
 				{nodeTypes}
-				colorMode="system"
+				colorMode={mode.current}
 				fitView
 				minZoom={0.1}
 				maxZoom={3}

@@ -1,15 +1,14 @@
 {
 	"extends": "./tsconfig.base.json",
-	"compileOnSave": false,
-	"files": [],
-	"references": [],
-	"include": ["eslint.config.ts", "prettier.config.ts"],
 	"compilerOptions": {
-		"types": ["node"],
 		"composite": false,
 		"declaration": false,
 		"declarationMap": false,
 		"emitDeclarationOnly": false,
-		"noEmit": true
-	}
+		"noEmit": true,
+		"types": ["node"]
+	},
+	"files": [],
+	"references": [],
+	"include": ["eslint.config.ts", "prettier.config.ts"]
 }
