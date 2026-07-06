@@ -1,5 +1,15 @@
 # $editor
 
+## 0.3.0
+
+### Minor Changes
+
+- [#21](https://github.com/glypse/webgpu-nodes/pull/21) [`879a21f`](https://github.com/glypse/webgpu-nodes/commit/879a21f8a19beea24c482b346204fa19465e4bfe) Thanks [@glypse](https://github.com/glypse)! - Add menubar with save and load and theme switch
+
+### Patch Changes
+
+- [#21](https://github.com/glypse/webgpu-nodes/pull/21) [`879a21f`](https://github.com/glypse/webgpu-nodes/commit/879a21f8a19beea24c482b346204fa19465e4bfe) Thanks [@glypse](https://github.com/glypse)! - Change UI font
+
 ## 0.2.0
 
 ### Minor Changes
