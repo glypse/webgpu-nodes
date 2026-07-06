@@ -1,9 +1,10 @@
 <script lang="ts">
 	import { Menubar as MenubarPrimitive } from "bits-ui";
-	import { cn, type WithoutChildrenOrChild } from "../../../utils.js";
-	import type { Snippet } from "svelte";
-	import MinusIcon from "phosphor-svelte/lib/MinusIcon";
 	import CheckIcon from "phosphor-svelte/lib/CheckIcon";
+	import MinusIcon from "phosphor-svelte/lib/MinusIcon";
+	import type { Snippet } from "svelte";
+
+	import { cn, type WithoutChildrenOrChild } from "../../../utils.js";
 
 	let {
 		ref = $bindable(null),
@@ -26,14 +27,14 @@
 	data-slot="menubar-checkbox-item"
 	data-inset={inset}
 	class={cn(
-		"focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground gap-1.5 rounded-md py-1 pr-1.5 pl-7 text-sm data-inset:pl-7 relative flex cursor-default items-center outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
-		className
+		"focus:bg-accent focus:text-accent-foreground focus:**:text-accent-foreground relative flex cursor-default items-center gap-1.5 rounded-md py-1 pr-1.5 pl-7 text-sm outline-hidden select-none data-disabled:pointer-events-none data-disabled:opacity-50 data-inset:pl-7 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+		className,
 	)}
 	{...restProps}
 >
 	{#snippet children({ checked: checked, indeterminate: indeterminate })}
 		<span
-			class="left-1.5 size-4 [&_svg:not([class*='size-'])]:size-4 pointer-events-none absolute flex items-center justify-center"
+			class="pointer-events-none absolute left-1.5 flex size-4 items-center justify-center [&_svg:not([class*='size-'])]:size-4"
 		>
 			{#if indeterminate}
 				<MinusIcon />

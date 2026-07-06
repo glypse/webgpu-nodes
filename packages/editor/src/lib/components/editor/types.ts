@@ -5,7 +5,7 @@ export const WGSL_DEFAULTS: Record<WgslType, string> = {
 	f32: "f32(0.0)",
 	vec2f: "vec2f(0.0, 0.0)",
 	vec3f: "vec3f(0.0, 0.0, 0.0)",
-	vec4f: "vec4f(0.0, 0.0, 0.0, 1.0)"
+	vec4f: "vec4f(0.0, 0.0, 0.0, 1.0)",
 };
 
 // ─── Descriptor types ────────────────────────────────────────

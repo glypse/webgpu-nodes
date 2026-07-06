@@ -10,5 +10,5 @@ export const sinNode = {
 	wgsl: ({ varName, inputs }) => {
 		const e = inputs.e[0];
 		return [`let ${varName} = sin(${e});`];
-	}
+	},
 } satisfies NodeDescriptor;

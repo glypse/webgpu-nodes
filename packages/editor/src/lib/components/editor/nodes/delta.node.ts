@@ -7,5 +7,5 @@ export const deltaNode = {
 	inputs: [],
 	outputs: [{ name: "delta", type: "f32" }],
 	defaultData: {},
-	wgsl: ({ varName }) => [`let ${varName}: f32 = motiongpuFrame.delta;`]
+	wgsl: ({ varName }) => [`let ${varName}: f32 = motiongpuFrame.delta;`],
 } satisfies NodeDescriptor;

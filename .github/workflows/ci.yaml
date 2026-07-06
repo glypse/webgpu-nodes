@@ -1,31 +1,31 @@
 name: CI
 
 on:
-  push:
-    branches: [main]
-  pull_request:
+    push:
+        branches: [main]
+    pull_request:
 
 permissions:
-  contents: read
+    contents: read
 
 jobs:
-  ci:
-    name: CI
-    runs-on: ubuntu-latest
-    env:
-      HUSKY: 0
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+    ci:
+        name: CI
+        runs-on: ubuntu-latest
+        env:
+            HUSKY: 0
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v6
 
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
+            - name: Install Bun
+              uses: oven-sh/setup-bun@v2
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
 
-      - name: Type check
-        run: bun run check
+            - name: Type check
+              run: bun run check
 
-      - name: Lint check
-        run: bun run lint
+            - name: Lint check
+              run: bun run lint

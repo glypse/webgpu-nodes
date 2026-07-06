@@ -1,22 +1,23 @@
 <script lang="ts">
+	import { ContextMenu } from "$theme/components/ui";
+
+	import "@xyflow/svelte/dist/style.css";
+	import "./xy-theme.css";
+	import { cn } from "$theme/utils";
 	import {
 		SvelteFlow,
 		useSvelteFlow,
 		Controls,
 		Background,
 		type Edge,
-		type Node
+		type Node,
 	} from "@xyflow/svelte";
-	import "@xyflow/svelte/dist/style.css";
-	import "./xy-theme.css";
-	import { cn } from "$theme/utils";
-	import { ContextMenu } from "$theme/components/ui";
+	import { mode } from "mode-watcher";
 
-	import NodeShell from "./NodeShell.svelte";
 	import { generateShader, debugSort, shaderHash } from "./codegen";
+	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, defaultDataForType, nodesByCategory } from "./registry";
 	import type { NodeCategory } from "./types";
-	import { mode } from "mode-watcher";
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow node types accept any component
 	const nodeTypes: Record<string, any> = {};
@@ -31,7 +32,7 @@
 		nodes = $bindable([]),
 		edges = $bindable([]),
 		frag = $bindable(""),
-		nodeIdCounter = $bindable(nodes.length + 1)
+		nodeIdCounter = $bindable(nodes.length + 1),
 	}: {
 		class?: string;
 		nodes?: Node[];
@@ -50,7 +51,7 @@
 		const id = `node-${String(nodeIdCounter++)}`;
 		const position = screenToFlowPosition({
 			x: contextMenuPosition.x,
-			y: contextMenuPosition.y
+			y: contextMenuPosition.y,
 		});
 		nodes = [
 			...nodes,
@@ -58,8 +59,8 @@
 				id,
 				type,
 				data: defaultDataForType(type),
-				position
-			}
+				position,
+			},
 		];
 	}
 
@@ -90,7 +91,7 @@
 			input: "Input",
 			output: "Output",
 			color: "Color",
-			vector: "Vector"
+			vector: "Vector",
 		};
 		return labels[category];
 	}

@@ -10,5 +10,5 @@ export const tanNode = {
 	wgsl: ({ varName, inputs }) => {
 		const e = inputs.e[0];
 		return [`let ${varName} = tan(${e});`];
-	}
+	},
 } satisfies NodeDescriptor;

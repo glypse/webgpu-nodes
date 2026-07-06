@@ -8,7 +8,7 @@ export const vec4fNode = {
 		{ name: "x", type: "f32" },
 		{ name: "y", type: "f32" },
 		{ name: "z", type: "f32" },
-		{ name: "w", type: "f32" }
+		{ name: "w", type: "f32" },
 	],
 	outputs: [{ name: "value", type: "vec4f" }],
 	defaultData: { x: 0, y: 0, z: 0, w: 1 },
@@ -18,5 +18,5 @@ export const vec4fNode = {
 		const z = inputs.z[0];
 		const w = inputs.w[0];
 		return [`let ${varName} = vec4f(${x}, ${y}, ${z}, ${w});`];
-	}
+	},
 } satisfies NodeDescriptor;

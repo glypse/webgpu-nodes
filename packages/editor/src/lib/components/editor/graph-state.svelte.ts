@@ -1,5 +1,6 @@
-import { getContext, setContext } from "svelte";
 import type { Node, Edge } from "@xyflow/svelte";
+import { getContext, setContext } from "svelte";
+
 import { nodeRegistry } from "./registry";
 import defaultScene from "./sizing_circle.json";
 
@@ -46,7 +47,7 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 		}
 		nodes.push({
 			...n,
-			data: { ...desc.defaultData, ...n.data }
+			data: { ...desc.defaultData, ...n.data },
 		});
 	}
 	return { nodes, edges: doc.edges };
@@ -67,7 +68,7 @@ export function hydrateDocument(doc: GraphDocument): {
 		id: n.id,
 		type: n.type,
 		data: n.data,
-		position: n.position
+		position: n.position,
 	}));
 
 	const edges: Edge[] = normalised.edges.map((e) => ({
@@ -75,7 +76,7 @@ export function hydrateDocument(doc: GraphDocument): {
 		source: e.source,
 		target: e.target,
 		sourceHandle: e.sourceHandle ?? undefined,
-		targetHandle: e.targetHandle ?? undefined
+		targetHandle: e.targetHandle ?? undefined,
 	}));
 
 	// Find the next id counter
@@ -97,15 +98,15 @@ export function serialiseDocument(nodes: Node[], edges: Edge[]): GraphDocument {
 			id,
 			type: type ?? "",
 			data,
-			position
+			position,
 		})),
 		edges: edges.map((e) => ({
 			id: e.id,
 			source: e.source,
 			target: e.target,
 			sourceHandle: e.sourceHandle ?? undefined,
-			targetHandle: e.targetHandle ?? undefined
-		}))
+			targetHandle: e.targetHandle ?? undefined,
+		})),
 	};
 }
 

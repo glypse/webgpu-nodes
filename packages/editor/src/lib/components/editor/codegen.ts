@@ -1,4 +1,5 @@
 import type { Edge, Node } from "@xyflow/svelte";
+
 import { nodeRegistry } from "./registry";
 import type { WgslType } from "./types";
 import { WGSL_DEFAULTS } from "./types";
@@ -163,8 +164,8 @@ export function shaderHash(nodes: Node[], edges: Edge[]): string {
 			source: e.source,
 			target: e.target,
 			sourceHandle: e.sourceHandle,
-			targetHandle: e.targetHandle
-		}))
+			targetHandle: e.targetHandle,
+		})),
 	});
 }
 
@@ -180,7 +181,7 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 	// Only keep nodes that contribute (directly or transitively) to an output node
 	const reachableIds = findReachableNodeIds(nodeMap, edges);
 	const filteredEdges = edges.filter(
-		(e) => reachableIds.has(e.source) && reachableIds.has(e.target)
+		(e) => reachableIds.has(e.source) && reachableIds.has(e.target),
 	);
 
 	const sortedIds = topologicalSort(nodeMap, filteredEdges).filter((id) => reachableIds.has(id));
@@ -222,7 +223,8 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 			// Match unlabeled edges to the sole input definition.
 			const edgesForHandle = incoming.filter(
 				(e) =>
-					e.targetHandle === inputDef.name || (descriptor.inputs.length === 1 && !e.targetHandle)
+					e.targetHandle === inputDef.name ||
+					(descriptor.inputs.length === 1 && !e.targetHandle),
 			);
 			const upstreamVars: string[] = [];
 
@@ -234,7 +236,8 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 				upstreamVars.push(getSourceVar(edgesForHandle[0], nodeMap));
 			} else {
 				// No connection → emit the node's own data value as a WGSL literal
-				const dataVal: unknown = node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
+				const dataVal: unknown =
+					node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
 				const literal = formatWgslLiteral(inputDef.type, dataVal);
 				upstreamVars.push(literal);
 			}
@@ -246,7 +249,7 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 			varName,
 			outputVars,
 			data: node.data,
-			inputs: resolvedInputs
+			inputs: resolvedInputs,
 		});
 
 		for (const line of wgslLines) {
@@ -269,7 +272,7 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 		"",
 		"// ---------- User code ----------",
 		"",
-		"fn frag(uv: vec2f) -> vec4f {"
+		"fn frag(uv: vec2f) -> vec4f {",
 	];
 
 	for (const line of lines) {

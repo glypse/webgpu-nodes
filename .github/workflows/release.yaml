@@ -1,63 +1,63 @@
 name: Release
 
 on:
-  push:
-    branches: [main]
+    push:
+        branches: [main]
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
-  contents: write
-  pull-requests: write
-  pages: write
-  id-token: write
+    contents: write
+    pull-requests: write
+    pages: write
+    id-token: write
 
 jobs:
-  release:
-    runs-on: ubuntu-latest
-    env:
-      HUSKY: 0
-    outputs:
-      should_deploy: ${{ steps.changesets.outputs.published }}
-
-    steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
-
-      - uses: oven-sh/setup-bun@v2
-
-      - run: bun install --frozen-lockfile
-
-      - name: Create Release Pull Request or Publish
-        id: changesets
-        uses: changesets/action@v1
-        with:
-          version: bunx changeset version
-          publish: bun run release
+    release:
+        runs-on: ubuntu-latest
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            HUSKY: 0
+        outputs:
+            should_deploy: ${{ steps.changesets.outputs.published }}
 
-      - name: Build web app
-        if: steps.changesets.outputs.published == 'true'
-        env:
-          BASE_PATH: "/${{ github.event.repository.name }}"
-        run: bun run build
+        steps:
+            - uses: actions/checkout@v6
+              with:
+                  fetch-depth: 0
 
-      - name: Upload Pages artifact
-        if: steps.changesets.outputs.published == 'true'
-        uses: actions/upload-pages-artifact@v5
-        with:
-          path: "apps/web/build/"
+            - uses: oven-sh/setup-bun@v2
 
-  deploy:
-    needs: release
-    if: needs.release.outputs.should_deploy == 'true'
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy
-        id: deployment
-        uses: actions/deploy-pages@v5
+            - run: bun install --frozen-lockfile
+
+            - name: Create Release Pull Request or Publish
+              id: changesets
+              uses: changesets/action@v1
+              with:
+                  version: bunx changeset version
+                  publish: bun run release
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Build web app
+              if: steps.changesets.outputs.published == 'true'
+              env:
+                  BASE_PATH: "/${{ github.event.repository.name }}"
+              run: bun run build
+
+            - name: Upload Pages artifact
+              if: steps.changesets.outputs.published == 'true'
+              uses: actions/upload-pages-artifact@v5
+              with:
+                  path: "apps/web/build/"
+
+    deploy:
+        needs: release
+        if: needs.release.outputs.should_deploy == 'true'
+        runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        steps:
+            - name: Deploy
+              id: deployment
+              uses: actions/deploy-pages@v5

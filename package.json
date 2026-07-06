@@ -1,6 +1,25 @@
 {
 	"name": "@org/source",
 	"version": "0.0.0",
+	"private": true,
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"type": "module",
+	"scripts": {
+		"dev": "bun nx run-many -t dev",
+		"build": "bun nx run-many -t build",
+		"preview": "bun nx run-many -t preview",
+		"check": "bun nx run-many -t check",
+		"check:root": "bunx tsc --noEmit -p tsconfig.json",
+		"lint": "bun nx run-many -t lint",
+		"lint:root": "bunx eslint oxfmt.config.ts eslint.config.ts",
+		"format": "bun --bun oxfmt",
+		"format:check": "bun --bun oxfmt --check",
+		"prepare": "husky && bun nx run-many -t prepare",
+		"release": "changeset tag"
+	},
 	"devDependencies": {
 		"@changesets/changelog-github": "^0.7.0",
 		"@changesets/cli": "^2.31.0",
@@ -13,29 +32,7 @@
 		"eslint-plugin-svelte": "^3.20.0",
 		"husky": "^9.1.7",
 		"nx": "23.0.1",
-		"prettier": "^3.9.4",
-		"prettier-plugin-svelte": "^4.1.1",
-		"prettier-plugin-tailwindcss": "^0.8.0",
+		"oxfmt": "^0.57.0",
 		"typescript-eslint": "^8.62.1"
-	},
-	"license": "MIT",
-	"private": true,
-	"scripts": {
-		"dev": "bun nx run-many -t dev",
-		"build": "bun nx run-many -t build",
-		"preview": "bun nx run-many -t preview",
-		"check": "bun nx run-many -t check",
-		"check:root": "bunx tsc --noEmit -p tsconfig.json",
-		"lint": "bun nx run-many -t lint",
-		"lint:root": "bunx eslint prettier.config.ts eslint.config.ts",
-		"format": "bun --bun prettier . --write",
-		"format:check": "bun --bun prettier . --check",
-		"prepare": "husky && bun nx run-many -t prepare",
-		"release": "changeset tag"
-	},
-	"type": "module",
-	"workspaces": [
-		"apps/*",
-		"packages/*"
-	]
+	}
 }

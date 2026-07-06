@@ -10,5 +10,5 @@ export const outputNode = {
 	wgsl: ({ varName, inputs }) => {
 		const color = inputs.color[0] ?? "vec4f(0.0, 0.0, 0.0, 1.0)";
 		return [`let ${varName} = ${color};`];
-	}
+	},
 } satisfies NodeDescriptor;

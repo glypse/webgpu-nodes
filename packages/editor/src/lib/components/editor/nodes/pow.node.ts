@@ -6,7 +6,7 @@ export const powNode = {
 	category: "math",
 	inputs: [
 		{ name: "e1", type: "f32" },
-		{ name: "e2", type: "f32" }
+		{ name: "e2", type: "f32" },
 	],
 	outputs: [{ name: "result", type: "f32" }],
 	defaultData: { e1: 0, e2: 0 },
@@ -20,7 +20,7 @@ export const powNode = {
 			`  ${varName} = f32(0.0);`,
 			`} else {`,
 			`  ${varName} = pow(${e1}, _e2_${varName});`,
-			`}`
+			`}`,
 		];
-	}
+	},
 } satisfies NodeDescriptor;

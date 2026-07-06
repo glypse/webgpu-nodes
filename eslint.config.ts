@@ -1,8 +1,9 @@
+import path from "node:path";
+
 import js from "@eslint/js";
 import nx from "@nx/eslint-plugin";
 import svelte from "eslint-plugin-svelte";
 import { includeIgnoreFile, defineConfig } from "eslint/config";
-import path from "node:path";
 import ts from "typescript-eslint";
 
 const gitignorePath = path.resolve(import.meta.dirname, ".gitignore");
@@ -28,12 +29,12 @@ export default defineConfig(
 			"**/*.mjs",
 			"**/*.svelte",
 			"**/*.svelte.ts",
-			"**/*.svelte.js"
+			"**/*.svelte.js",
 		],
 		languageOptions: {
 			parserOptions: {
-				projectService: true
-			}
+				projectService: true,
+			},
 		},
 		rules: {
 			"@nx/enforce-module-boundaries": [
@@ -42,17 +43,17 @@ export default defineConfig(
 					enforceBuildableLibDependency: true,
 					allow: [
 						// Allow importing eslint config files, with or without file extension
-						"^.*/eslint(\\.base)?\\.config(\\.[cm]?[jt]s)?$"
+						"^.*/eslint(\\.base)?\\.config(\\.[cm]?[jt]s)?$",
 					],
 					depConstraints: [
 						{
 							sourceTag: "*",
-							onlyDependOnLibsWithTags: ["*"]
-						}
-					]
-				}
+							onlyDependOnLibsWithTags: ["*"],
+						},
+					],
+				},
 			],
-			"@typescript-eslint/consistent-type-definitions": ["error", "type"]
-		}
-	}
+			"@typescript-eslint/consistent-type-definitions": ["error", "type"],
+		},
+	},
 );

@@ -9,7 +9,7 @@ export const remapNode = {
 		{ name: "in_min", type: "f32" },
 		{ name: "in_max", type: "f32" },
 		{ name: "out_min", type: "f32" },
-		{ name: "out_max", type: "f32" }
+		{ name: "out_max", type: "f32" },
 	],
 	outputs: [{ name: "result", type: "f32" }],
 	defaultData: { e: 0, in_min: 0, in_max: 1, out_min: 0, out_max: 1 },
@@ -20,7 +20,7 @@ export const remapNode = {
 		const out_min = inputs.out_min[0];
 		const out_max = inputs.out_max[0];
 		return [
-			`let ${varName} = ${out_min} + (${e} - ${in_min}) * safeDivF32((${out_max} - ${out_min}), (${in_max} - ${in_min}));`
+			`let ${varName} = ${out_min} + (${e} - ${in_min}) * safeDivF32((${out_max} - ${out_min}), (${in_max} - ${in_min}));`,
 		];
-	}
+	},
 } satisfies NodeDescriptor;

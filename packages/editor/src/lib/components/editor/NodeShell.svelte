@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { Handle, Position, useSvelteFlow, useNodeConnections } from "@xyflow/svelte";
+
 	import { nodeRegistry } from "./registry";
 	import type { NodeDescriptor } from "./types";
 
 	let {
 		id,
 		data: rawData,
-		type: nodeType
+		type: nodeType,
 	}: {
 		id: string;
 		data: Record<string, unknown>;
@@ -48,7 +49,9 @@
 							id={inputDef.name}
 							style={`top: ${handleTop(i, inputs.length)}`}
 						/>
-						<span class="node-shell__handle-label">{inputDef.name}: {inputDef.type}</span>
+						<span class="node-shell__handle-label"
+							>{inputDef.name}: {inputDef.type}</span
+						>
 
 						{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined && !connectedHandles.has(inputDef.name)}
 							<input
@@ -60,7 +63,7 @@
 									const val = parseFloat(e.currentTarget.value) || 0;
 									updateNodeData(id, {
 										...data,
-										[inputDef.name]: val
+										[inputDef.name]: val,
 									});
 								}}
 							/>
@@ -72,7 +75,9 @@
 			<div class="node-shell__outputs">
 				{#each outputs as outputDef, i (outputDef.name)}
 					<div class="node-shell__row node-shell__row--right">
-						<span class="node-shell__handle-label">{outputDef.name}: {outputDef.type}</span>
+						<span class="node-shell__handle-label"
+							>{outputDef.name}: {outputDef.type}</span
+						>
 						<Handle
 							type="source"
 							position={Position.Right}

@@ -13,5 +13,5 @@ export const mulNode = {
 			return [`let ${varName} = f32(0.0);`];
 		}
 		return [`let ${varName} = ${list.join(" * ")};`];
-	}
+	},
 } satisfies NodeDescriptor;
