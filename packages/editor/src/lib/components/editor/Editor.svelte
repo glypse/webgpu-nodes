@@ -1,12 +1,10 @@
 <script lang="ts">
 	import { Resizable } from "$theme/components/ui";
 	import { FragCanvas, defineMaterial } from "@motion-core/motion-gpu/svelte";
-	import type { PaneGroupProps } from "paneforge";
 
 	import NodeGraph from "./NodeGraph.svelte";
 
-	let { class: className, ...restProps }: { class?: string; restProps?: PaneGroupProps } =
-		$props();
+	let { class: className }: { class?: string } = $props();
 
 	const DEFAULT_SHADER = `fn frag(uv: vec2f) -> vec4f {\n\treturn vec4f(0.0, 1.0, 1.0, 1.0);\n}`;
 
@@ -19,7 +17,7 @@
 	);
 </script>
 
-<Resizable.PaneGroup direction="horizontal" class={className} {...restProps}>
+<Resizable.PaneGroup direction="horizontal" class={className}>
 	<Resizable.Pane defaultSize={50}>
 		<div class="notexture size-full">
 			<FragCanvas
