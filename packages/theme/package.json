@@ -17,7 +17,7 @@
 		"./components/ui/*": "./src/lib/components/ui/*/index.ts"
 	},
 	"dependencies": {
-		"@fontsource-variable/atkinson-hyperlegible-next": "catalog:",
+		"@fontsource-variable/atkinson-hyperlegible-next": "^5.2.6",
 		"bits-ui": "^2.16.3",
 		"clsx": "^2.1.1",
 		"paneforge": "^1.0.2",
@@ -31,7 +31,6 @@
 		"@sveltejs/package": "catalog:",
 		"@sveltejs/vite-plugin-svelte": "catalog:",
 		"@tailwindcss/vite": "catalog:",
-		"@types/node": "catalog:",
 		"globals": "catalog:",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",

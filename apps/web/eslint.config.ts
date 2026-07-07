@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import { defineConfig, includeIgnoreFile } from "eslint/config";
 import globals from "globals";
 import ts from "typescript-eslint";
@@ -7,7 +5,7 @@ import ts from "typescript-eslint";
 import rootConfig from "../../eslint.config";
 import svelteConfig from "./svelte.config";
 
-const appGitignorePath = path.resolve(import.meta.dirname, ".gitignore");
+const appGitignorePath = new URL("./.gitignore", import.meta.url).pathname;
 
 export default defineConfig(
 	includeIgnoreFile(appGitignorePath),
