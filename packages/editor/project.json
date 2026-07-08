@@ -8,7 +8,7 @@
 		"build": {
 			"executor": "nx:run-commands",
 			"dependsOn": ["^build"],
-			"outputs": ["{projectRoot}/.svelte-kit", "{projectRoot}/build"],
+			"outputs": ["{projectRoot}/dist"],
 			"options": {
 				"command": "bun --bun svelte-package",
 				"cwd": "{projectRoot}"
