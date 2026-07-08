@@ -1,12 +1,10 @@
-import path from "node:path";
-
 import js from "@eslint/js";
 import nx from "@nx/eslint-plugin";
 import svelte from "eslint-plugin-svelte";
 import { includeIgnoreFile, defineConfig } from "eslint/config";
 import ts from "typescript-eslint";
 
-const gitignorePath = path.resolve(import.meta.dirname, ".gitignore");
+const gitignorePath = new URL("./.gitignore", import.meta.url).pathname;
 
 export default defineConfig(
 	includeIgnoreFile(gitignorePath),
@@ -53,6 +51,16 @@ export default defineConfig(
 				},
 			],
 			"@typescript-eslint/consistent-type-definitions": ["error", "type"],
+			"@typescript-eslint/consistent-type-imports": [
+				"error",
+				{ fixStyle: "inline-type-imports" },
+			],
+		},
+	},
+	{
+		files: ["**/*.svelte"],
+		rules: {
+			"@typescript-eslint/no-confusing-void-expression": "off",
 		},
 	},
 );

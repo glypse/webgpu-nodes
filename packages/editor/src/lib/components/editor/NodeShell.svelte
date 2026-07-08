@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Handle, Position, useSvelteFlow, useNodeConnections } from "@xyflow/svelte";
+	import { Scrubbable } from "$theme/components/ui/scrubbable";
+	import { Handle, Position, useNodeConnections, useSvelteFlow } from "@xyflow/svelte";
 
 	import { nodeRegistry } from "./registry";
 	import type { NodeDescriptor } from "./types";
@@ -14,7 +15,6 @@
 		type: string;
 	} = $props();
 
-	// Shallow-clone the prop so changes to data trigger fine-grained reactivity
 	let data = $derived({ ...rawData });
 
 	const { updateNodeData } = useSvelteFlow();
@@ -24,56 +24,21 @@
 	const outputs = $derived(descriptor?.outputs ?? []);
 	const label = $derived(descriptor?.label ?? nodeType);
 
-	// Track which target handles are connected (hook must be called at top level)
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
-
-	// Compute handle positions: spread them evenly within [20%, 80%]
-	function handleTop(index: number, count: number): string {
-		if (count <= 1) return "50%";
-		return String(20 + (index / (count - 1)) * 60) + "%";
-	}
 </script>
 
 {#if descriptor}
-	<div class="node-shell">
-		<div class="node-shell__label">{label}</div>
+	<div class="w-45">
+		<div class="node-shell__label">
+			<span>
+				{label}
+			</span>
+		</div>
 
 		<div class="node-shell__body">
-			<div class="node-shell__inputs">
-				{#each inputs as inputDef, i (inputDef.name)}
-					<div class="node-shell__row">
-						<Handle
-							type="target"
-							position={Position.Left}
-							id={inputDef.name}
-							style={`top: ${handleTop(i, inputs.length)}`}
-						/>
-						<span class="node-shell__handle-label"
-							>{inputDef.name}: {inputDef.type}</span
-						>
-
-						{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined && !connectedHandles.has(inputDef.name)}
-							<input
-								type="number"
-								class="nodrag node-shell__input"
-								step="0.01"
-								value={data[inputDef.name]}
-								oninput={(e) => {
-									const val = parseFloat(e.currentTarget.value) || 0;
-									updateNodeData(id, {
-										...data,
-										[inputDef.name]: val,
-									});
-								}}
-							/>
-						{/if}
-					</div>
-				{/each}
-			</div>
-
 			<div class="node-shell__outputs">
-				{#each outputs as outputDef, i (outputDef.name)}
+				{#each outputs as outputDef (outputDef.name)}
 					<div class="node-shell__row node-shell__row--right">
 						<span class="node-shell__handle-label"
 							>{outputDef.name}: {outputDef.type}</span
@@ -82,8 +47,42 @@
 							type="source"
 							position={Position.Right}
 							id={outputDef.name}
-							style={`top: ${handleTop(i, outputs.length)}`}
+							class="node-shell__handle node-shell__handle--right"
 						/>
+					</div>
+				{/each}
+			</div>
+
+			<div class="node-shell__inputs">
+				{#each inputs as inputDef (inputDef.name)}
+					<div class="node-shell__row">
+						<Handle
+							type="target"
+							position={Position.Left}
+							id={inputDef.name}
+							class="node-shell__handle node-shell__handle--left"
+						/>
+						{#if inputDef.type !== "f32"}
+							<span class="node-shell__handle-label"
+								>{inputDef.name}: {inputDef.type}</span
+							>
+						{/if}
+
+						{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined}
+							<Scrubbable
+								class="node-shell__input"
+								label={inputDef.name}
+								readonly={connectedHandles.has(inputDef.name)}
+								value={data[inputDef.name] as number}
+								oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+									const val = parseFloat(e.currentTarget.value) || 0;
+									updateNodeData(id, {
+										...data,
+										[inputDef.name]: val,
+									});
+								}}
+							/>
+						{/if}
 					</div>
 				{/each}
 			</div>

@@ -17,7 +17,7 @@
 		"check": {
 			"executor": "nx:run-commands",
 			"options": {
-				"command": "bun --bun svelte-check --tsgo --tsconfig ./tsconfig.json",
+				"command": "bun --bun svelte-check --tsconfig ./tsconfig.json",
 				"cwd": "{projectRoot}"
 			}
 		},

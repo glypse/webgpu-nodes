@@ -1,7 +1,7 @@
 import type { NodeDescriptor } from "../types";
 
 export const outputNode = {
-	type: "output",
+	type: "frag-output",
 	label: "Output",
 	category: "output",
 	inputs: [{ name: "color", type: "vec4f" }],

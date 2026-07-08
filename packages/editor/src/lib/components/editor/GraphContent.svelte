@@ -1,7 +1,6 @@
 <script lang="ts">
 	import { ContextMenu } from "$theme/components/ui";
 
-	import "@xyflow/svelte/dist/style.css";
 	import "./xy-theme.css";
 	import { cn } from "$theme/utils";
 	import {
@@ -113,7 +112,7 @@
 				fitView
 				minZoom={0.1}
 				maxZoom={3}
-				class={cn("h-full", className)}
+				class={cn("", className)}
 				proOptions={{ hideAttribution: false }}
 			>
 				<Controls showLock={false} showZoom={false} />
