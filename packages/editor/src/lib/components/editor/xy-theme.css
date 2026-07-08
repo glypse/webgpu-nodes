@@ -1,60 +1,61 @@
 /* xyflow theme – centralised styles */
-@reference "$theme/css";
 
-/* =============================================
-   Custom variables
-   ============================================= */
+@import "@xyflow/svelte/dist/style.css" layer(base);
 
 :root {
-	--color-nodes-primary: #ff4000;
-	--color-nodes-background: #fefefe;
-	--color-nodes-hover-bg: #f6f6f6;
-	--color-nodes-disabled: #76797e;
+	--xy-background-color-default: transparent;
 }
+
+.dark {
+	--xy-background-color-default: transparent;
+}
+
+@reference "$theme/css";
 
 /* =============================================
    xyflow base style overrides
    ============================================= */
 
 .svelte-flow__node {
-	@apply bg-accent flex flex-col items-center justify-center p-2.5 text-center text-xs;
-	border-radius: var(--xy-node-border-radius-default);
-	background-color: var(--xy-node-background-color-default);
-	border: var(--xy-node-border-default);
-	color: var(--xy-node-color, var(--xy-node-color-default));
+	@apply bg-card justify-center rounded-sm;
+	box-shadow: 0 0 10px var(--background);
+}
+
+.node-shell__label {
+	@apply border-b px-3 pt-3 pb-2;
+}
+
+.node-shell__body {
+	@apply p-3;
 }
 
 .svelte-flow__node.selectable:focus {
-	@apply border-[#d9d9d9];
-	box-shadow: 0px 0px 0px 4px var(--xy-theme-color-focus);
+	@apply outline-ring outline;
 }
 
 .svelte-flow__node.selectable:hover,
 .svelte-flow__node.draggable:hover {
-	border-color: var(--xy-theme-hover);
-}
-
-.svelte-flow__node.selectable.selected {
-	border-color: var(--xy-theme-selected);
-}
-
-.svelte-flow__node-group {
-	@apply border-[#9e86ed] bg-[rgba(207,182,255,0.4)];
+	border-color: var(--ring);
 }
 
 .svelte-flow__handle {
-	background-color: var(--xy-handle-background-color-default);
+	@apply border-card -mx-3 size-2 rounded-full;
+}
+
+.svelte-flow__node.selectable.selected {
+	border-color: var(--primary);
+}
+
+.svelte-flow__node-group {
+	@apply border-accent bg-accent/40;
+}
+
+.svelte-flow__handle {
+	background-color: var(--muted-foreground);
 }
 
 .svelte-flow__handle.connectionindicator:hover {
-	@apply pointer-events-auto bg-white;
-	border-color: var(--xy-theme-edge-hover);
-}
-
-.svelte-flow__handle.connectionindicator:focus,
-.svelte-flow__handle.connectingfrom,
-.svelte-flow__handle.connectingto {
-	border-color: var(--xy-theme-edge-hover);
+	@apply bg-foreground pointer-events-auto;
 }
 
 .svelte-flow__node:has(.svelte-flow__resize-control.line) {
@@ -66,7 +67,7 @@
 }
 
 .svelte-flow__edge-label {
-	@apply bg-[#f7f9fb];
+	@apply bg-card;
 }
 
 /* =============================================
@@ -74,11 +75,7 @@
    ============================================= */
 
 .node-shell--unknown {
-	@apply border-[#f38ba8] text-[#f38ba8];
-}
-
-.node-shell__label {
-	@apply mb-1.5 border-b border-white/10 pb-1.5 text-center text-xs font-semibold tracking-[0.5px];
+	@apply text-destructive;
 }
 
 .node-shell__body {
@@ -91,7 +88,7 @@
 }
 
 .node-shell__row {
-	@apply flex min-h-6 items-center gap-1.5;
+	@apply relative flex min-h-6 items-center gap-1.5;
 }
 
 .node-shell__row--right {
@@ -99,116 +96,5 @@
 }
 
 .node-shell__handle-label {
-	@apply text-[10px] whitespace-nowrap opacity-70;
-}
-
-.node-shell__input {
-	@apply w-15 rounded border border-white/15 bg-black/30 px-1 py-0.5 text-right text-[10px];
-	color: inherit;
-	font-family: inherit;
-}
-
-.node-shell__input:focus {
-	@apply border-(--xy-theme-color-focus,#89b4fa) outline-none;
-}
-
-/* =============================================
-   XY Theme UI component styles
-   ============================================= */
-
-/* Button group */
-.xy-theme__button-group {
-	@apply flex items-center;
-
-	& .xy-theme__button:first-child {
-		@apply rounded-l-full;
-	}
-
-	& .xy-theme__button:last-child {
-		@apply m-0 rounded-r-full;
-	}
-}
-
-.xy-theme__button {
-	@apply inline-flex h-10 cursor-pointer items-center justify-center rounded-full bg-(--color-nodes-background) px-4 text-(--color-nodes-primary) transition-colors duration-200 ease-in-out;
-	border: 1px solid var(--color-nodes-primary);
-}
-
-.xy-theme__button.active {
-	@apply bg-(--color-nodes-primary) text-white;
-	border-color: var(--color-nodes-primary);
-}
-
-.xy-theme__button.active:hover,
-.xy-theme__button.active:active {
-	@apply bg-(--color-nodes-primary) opacity-90;
-}
-
-.xy-theme__button:hover {
-	background-color: var(--xy-controls-button-background-color-hover-default);
-}
-
-.xy-theme__button:active {
-	background-color: var(--color-nodes-hover-bg);
-}
-
-.xy-theme__button:disabled {
-	@apply cursor-not-allowed opacity-80;
-	color: var(--color-nodes-disabled);
-	border: 1px solid var(--color-nodes-disabled);
-}
-
-.xy-theme__button > span {
-	@apply mr-0.5;
-}
-
-.xy-theme__button + .xy-theme__button {
-	@apply ml-1.5;
-}
-
-/* Input */
-.xy-theme__input {
-	@apply rounded-lg bg-(--color-nodes-background) px-3 py-2 text-base transition-colors duration-200 ease-in-out;
-	border: 1px solid var(--color-nodes-primary);
-	color: inherit;
-}
-
-.xy-theme__input:focus {
-	@apply outline-none;
-	border-color: var(--color-nodes-primary);
-	box-shadow: 0 0 0 2px rgba(255, 0, 115, 0.3);
-}
-
-/* Checkbox */
-.xy-theme__checkbox {
-	@apply mr-2 inline-block h-5 w-5 cursor-pointer appearance-none rounded-lg bg-(--color-nodes-background) align-middle transition-colors duration-200 ease-in-out;
-	border: 2px solid var(--color-nodes-primary);
-}
-
-.xy-theme__checkbox:checked {
-	background-color: var(--color-nodes-primary);
-	border-color: var(--color-nodes-primary);
-}
-
-.xy-theme__checkbox:focus {
-	@apply outline-none;
-	box-shadow: 0 0 0 2px rgba(255, 0, 115, 0.3);
-}
-
-/* Select */
-.xy-theme__select {
-	@apply mr-2 rounded-full bg-(--color-nodes-background) px-3 py-2 text-base transition-colors duration-200 ease-in-out;
-	border: 1px solid var(--color-nodes-primary);
-	color: inherit;
-}
-
-.xy-theme__select:focus {
-	@apply outline-none;
-	border-color: var(--color-nodes-primary);
-	box-shadow: 0 0 0 2px rgba(255, 0, 115, 0.3);
-}
-
-/* Label */
-.xy-theme__label {
-	@apply mt-2.5 mb-0.75 inline-block;
+	@apply text-muted-foreground text-xs whitespace-nowrap;
 }

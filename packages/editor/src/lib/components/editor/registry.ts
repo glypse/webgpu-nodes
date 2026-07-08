@@ -64,7 +64,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	separateVec4f: separateVec4fNode,
 
 	// Output
-	output: outputNode,
+	"frag-output": outputNode,
 };
 
 /** Helper: produce default node data for a registered type. */

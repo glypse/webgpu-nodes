@@ -18,7 +18,7 @@
 </script>
 
 <Resizable.PaneGroup direction="horizontal" class={className}>
-	<Resizable.Pane defaultSize={50}>
+	<Resizable.Pane defaultSize={30}>
 		<div class="notexture size-full">
 			<FragCanvas
 				{material}
@@ -27,7 +27,7 @@
 		</div>
 	</Resizable.Pane>
 	<Resizable.Handle />
-	<Resizable.Pane defaultSize={50}>
+	<Resizable.Pane defaultSize={70}>
 		<NodeGraph bind:frag />
 	</Resizable.Pane>
 </Resizable.PaneGroup>

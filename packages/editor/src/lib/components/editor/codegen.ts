@@ -55,7 +55,7 @@ function findReachableNodeIds(nodes: Map<string, Node>, edges: Edge[]): Set<stri
 
 	// Seed the BFS from all output nodes
 	for (const node of nodes.values()) {
-		if (node.type === "output") {
+		if (node.type === "frag-output") {
 			reachable.add(node.id);
 			queue.push(node.id);
 		}
@@ -257,7 +257,7 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 		}
 
 		// Track which node produces the output
-		if (node.type === "output") {
+		if (node.type === "frag-output") {
 			resultVariable = varName;
 		}
 	}
