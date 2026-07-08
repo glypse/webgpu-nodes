@@ -51,6 +51,16 @@ export default defineConfig(
 				},
 			],
 			"@typescript-eslint/consistent-type-definitions": ["error", "type"],
+			"@typescript-eslint/consistent-type-imports": [
+				"error",
+				{ fixStyle: "inline-type-imports" },
+			],
+		},
+	},
+	{
+		files: ["**/*.svelte"],
+		rules: {
+			"@typescript-eslint/no-confusing-void-expression": "off",
 		},
 	},
 );
