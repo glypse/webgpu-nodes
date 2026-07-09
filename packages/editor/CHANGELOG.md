@@ -1,5 +1,14 @@
 # $editor
 
+## 0.3.2
+
+### Patch Changes
+
+- [`f1444ce`](https://github.com/glypse/webgpu-nodes/commit/f1444cecac4f7c68f1e2e2ba66308fb602ac189d) Thanks [@glypse](https://github.com/glypse)! - Nodes visual redesign
+
+- Updated dependencies [[`f1444ce`](https://github.com/glypse/webgpu-nodes/commit/f1444cecac4f7c68f1e2e2ba66308fb602ac189d)]:
+  - $theme@0.1.2
+
 ## 0.3.1
 
 ### Patch Changes
