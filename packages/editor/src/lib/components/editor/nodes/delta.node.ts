@@ -7,5 +7,9 @@ export const deltaNode = {
 	inputs: [],
 	outputs: [{ name: "delta", type: "f32" }],
 	defaultData: {},
-	wgsl: ({ varName }) => [`let ${varName}: f32 = motiongpuFrame.delta;`],
+	globals: [{ name: "delta", type: "f32", wgslRef: "motiongpuFrame.delta" }],
+	wgsl: ({ varName, globalOverrides }) => {
+		const ref = globalOverrides?.delta ?? "motiongpuFrame.delta";
+		return [`let ${varName}: f32 = ${ref};`];
+	},
 } satisfies NodeDescriptor;

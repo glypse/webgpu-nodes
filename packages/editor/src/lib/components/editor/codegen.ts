@@ -226,7 +226,13 @@ export function projectHash(project: {
  */
 type GroupDecls = Map<
 	string,
-	{ structDecl: string; fnDecl: string; fnName: string; structName: string }
+	{
+		structDecl: string;
+		fnDecl: string;
+		fnName: string;
+		structName: string;
+		globals?: { name: string; type: WgslType; wgslRef: string }[];
+	}
 >;
 
 /**
@@ -245,6 +251,7 @@ function generateBody(
 	groupDecls: GroupDecls,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
+	globalOverrides?: Record<string, string>,
 ): { lines: string[]; seedNodeVarName: string | null } {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
@@ -290,7 +297,7 @@ function generateBody(
 				const decl = groupDecls.get(definitionRef);
 				if (decl) {
 					const descriptor = resolveDescriptor(groupedNode);
-					const callArgs = descriptor.inputs.map((inputDef) => {
+					const inputArgs = descriptor.inputs.map((inputDef) => {
 						const edgesForHandle = incoming.filter(
 							(e) =>
 								e.targetHandle === inputDef.name ||
@@ -302,6 +309,9 @@ function generateBody(
 							node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
 						return formatWgslLiteral(inputDef.type, dataVal);
 					});
+					// Append global arguments (e.g. uv, motiongpuFrame.time)
+					const globalArgs = (decl.globals ?? []).map((g) => g.wgslRef);
+					const callArgs = [...inputArgs, ...globalArgs];
 					lines.push(`  let ${varName} = ${decl.fnName}(${callArgs.join(", ")});`);
 				}
 			}
@@ -351,6 +361,7 @@ function generateBody(
 			outputVars,
 			data: node.data,
 			inputs: resolvedInputs,
+			globalOverrides,
 		});
 		for (const line of wgslLines) lines.push(`  ${line}`);
 
@@ -383,6 +394,20 @@ function emitGroupFunctionIfNeeded(
 	const fnName = `group_${ident}`;
 	const structName = `GroupOutputs_${ident}`;
 
+	// Read globals from the group-input node's metadata
+	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
+	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+	const globals =
+		(groupInputNode?.data.globals as
+			| { name: string; type: WgslType; wgslRef: string }[]
+			| undefined) ?? [];
+
+	// Build globalOverrides: maps raw WGSL ref (e.g. "uv") to parameter name (e.g. "h_<uuid>")
+	const globalOverrides: Record<string, string> = {};
+	for (const g of globals) {
+		globalOverrides[g.wgslRef] = sanitizeIdent(g.name);
+	}
+
 	const { lines } = generateBody(
 		definition.nodes,
 		definition.edges,
@@ -390,6 +415,7 @@ function emitGroupFunctionIfNeeded(
 		groupDecls,
 		resolveDescriptor,
 		getGroupDefinition,
+		Object.keys(globalOverrides).length > 0 ? globalOverrides : undefined,
 	);
 
 	// The group-output node itself never emits a `let` (it's a sink, not computed) —
@@ -406,10 +432,10 @@ function emitGroupFunctionIfNeeded(
 	const structFields = handles.map((h) => `  ${sanitizeIdent(h.id)}: ${h.type},`).join("\n");
 	const structDecl = `struct ${structName} {\n${structFields}\n}`;
 
-	// Group's inputs (its parameters) come from the group-input node's handles.
-	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
-	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
-	const params = inputHandles.map((h) => `${sanitizeIdent(h.id)}: ${h.type}`).join(", ");
+	// Group's inputs: regular handles + global handles
+	const regularParams = inputHandles.map((h) => `${sanitizeIdent(h.id)}: ${h.type}`);
+	const globalParams = globals.map((g) => `${sanitizeIdent(g.name)}: ${g.type}`);
+	const params = [...regularParams, ...globalParams].join(", ");
 
 	const fnDecl = [
 		`fn ${fnName}(${params}) -> ${structName} {`,
@@ -418,7 +444,7 @@ function emitGroupFunctionIfNeeded(
 		`}`,
 	].join("\n");
 
-	groupDecls.set(definitionRef, { structDecl, fnDecl, fnName, structName });
+	groupDecls.set(definitionRef, { structDecl, fnDecl, fnName, structName, globals });
 }
 
 /**

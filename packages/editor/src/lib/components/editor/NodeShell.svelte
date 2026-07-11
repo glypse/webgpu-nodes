@@ -21,6 +21,8 @@
 	const { updateNodeData } = useSvelteFlow();
 	const graph = getGraphManager();
 
+	const isLocked = $derived(graph.isLocked);
+
 	const fullNode = $derived(graph.activeDocument.nodes.find((n) => n.id === id));
 	const descriptor = $derived(fullNode ? graph.resolveDescriptor(fullNode) : undefined);
 
@@ -71,7 +73,7 @@
 				</div>
 			{/each}
 
-			{#if nodeType === "group-input"}
+			{#if nodeType === "group-input" && !isLocked}
 				{@render addHandleButton()}
 			{/if}
 		</div>
@@ -95,7 +97,7 @@
 						<Scrubbable
 							class="node-shell__input"
 							label={inputDef.name}
-							readonly={connectedHandles.has(inputDef.name)}
+							readonly={isLocked || connectedHandles.has(inputDef.name)}
 							value={data[inputDef.name] as number}
 							oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
 								const val = parseFloat(e.currentTarget.value) || 0;
@@ -109,7 +111,7 @@
 				</div>
 			{/each}
 
-			{#if nodeType === "group-output"}
+			{#if nodeType === "group-output" && !isLocked}
 				{@render addHandleButton()}
 			{/if}
 		</div>

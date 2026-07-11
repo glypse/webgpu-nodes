@@ -7,5 +7,9 @@ export const timeNode = {
 	inputs: [],
 	outputs: [{ name: "time", type: "f32" }],
 	defaultData: {},
-	wgsl: ({ varName }) => [`let ${varName}: f32 = motiongpuFrame.time;`],
+	globals: [{ name: "time", type: "f32", wgslRef: "motiongpuFrame.time" }],
+	wgsl: ({ varName, globalOverrides }) => {
+		const ref = globalOverrides?.time ?? "motiongpuFrame.time";
+		return [`let ${varName}: f32 = ${ref};`];
+	},
 } satisfies NodeDescriptor;

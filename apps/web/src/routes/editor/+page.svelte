@@ -18,6 +18,46 @@
 		input.click();
 	}
 
+	function handleExportGroup() {
+		const ref = graph.selectedGroupRef;
+		if (!ref) return;
+		graph.exportGroup(ref);
+	}
+
+	function handleImportGroups() {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = ".json";
+		input.multiple = true;
+		input.onchange = async () => {
+			if (!input.files) return;
+			const files = Array.from(input.files);
+			const entries: {
+				id?: string;
+				name?: string;
+				category?: string;
+				dependencies?: string[];
+				definition?: { nodes: unknown[]; edges: unknown[] };
+			}[] = await Promise.all(
+				files.map(async (file) => {
+					const text = await file.text();
+					return JSON.parse(text) as {
+						id?: string;
+						name?: string;
+						category?: string;
+						dependencies?: string[];
+						definition?: { nodes: unknown[]; edges: unknown[] };
+					};
+				}),
+			);
+			const result = graph.importGroups(entries);
+			if (result.missing.length > 0) {
+				console.warn("Import completed with missing dependencies:", result.missing);
+			}
+		};
+		input.click();
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === "m" && (event.metaKey || event.ctrlKey)) {
 			event.preventDefault();
@@ -41,6 +81,11 @@
 					Save
 				</Menubar.Item>
 				<Menubar.Item onSelect={handleUpload}>Upload</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item onSelect={handleExportGroup} disabled={!graph.selectedGroupRef}>
+					Export selected group
+				</Menubar.Item>
+				<Menubar.Item onSelect={handleImportGroups}>Import groups</Menubar.Item>
 			</Menubar.Content>
 		</Menubar.Menu>
 

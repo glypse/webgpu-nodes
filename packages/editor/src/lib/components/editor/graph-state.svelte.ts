@@ -6,6 +6,7 @@ import { buildGroupInputDescriptor } from "./nodes/groupInput.node";
 import { buildGroupOutputDescriptor } from "./nodes/groupOutput.node";
 import { nodeRegistry } from "./registry";
 import defaultScene from "./sizing_circle.json";
+import standardLibraryIndex from "./standard-library.json";
 import { type GroupedNode, type HandleDef, type NodeDescriptor, type WgslType } from "./types";
 
 // ── Serialisable document types ──────────────────────────────────────────────
@@ -15,6 +16,24 @@ export type GraphDocument = {
 	nodes: GraphDocumentNode[];
 	edges: GraphDocumentEdge[];
 };
+
+// ── Standard library per-file imports ────────────────────────────────────────
+
+const libraryModules = import.meta.glob<{
+	default: {
+		id: string;
+		name: string;
+		category: string;
+		dependencies: string[];
+		definition: GraphDocument;
+	};
+}>("./standard-library/*.json", { eager: true });
+
+const libraryDefinitions: Record<string, GraphDocument> = {};
+for (const [, mod] of Object.entries(libraryModules)) {
+	const entry = mod.default;
+	libraryDefinitions[entry.id] = entry.definition;
+}
 
 export type GraphDocumentNode = {
 	id: string;
@@ -193,6 +212,14 @@ export function serialiseDocument(nodes: Node[], edges: Edge[]): GraphDocument {
 
 // ── Reactive state manager ───────────────────────────────────────────────────
 
+export type StandardLibraryEntry = {
+	id: string;
+	name: string;
+	category: string;
+	dependencies: string[];
+	definition: GraphDocument;
+};
+
 export class GraphManager {
 	/** The entire project tree. */
 	project = $state<HydratedGraphProject>({ definitions: {}, root: { nodes: [], edges: [] } });
@@ -204,9 +231,24 @@ export class GraphManager {
 	 */
 	path = $state<string[]>([]);
 
+	/** Currently selected node IDs in SvelteFlow. */
+	selectedNodeIds = $state<string[]>([]);
+
+	/** Read-only standard library entries for browsing. */
+	library: StandardLibraryEntry[] = standardLibraryIndex.library.map((meta) => ({
+		...meta,
+		definition: libraryDefinitions[meta.id] ?? { nodes: [], edges: [] },
+	}));
+
 	constructor(defaults?: GraphProject) {
 		const project: GraphProject = defaults ?? defaultScene;
 		this.project = hydrateProject(project);
+
+		// Register standard library definitions so they can be referenced by group nodes
+		for (const entry of this.library) {
+			const def = normaliseDocument(entry.definition);
+			this.project.definitions[entry.id] = hydrateDocument(def);
+		}
 	}
 
 	get activeDocument(): HydratedGraphDocument {
@@ -246,6 +288,31 @@ export class GraphManager {
 	}
 	set edges(value: Edge[]) {
 		this.activeDocument.edges = value;
+	}
+
+	/** Whether the currently-viewed subgraph (or any of its ancestors) is locked. */
+	get isLocked(): boolean {
+		let current: HydratedGraphDocument = this.project.root;
+		for (const nodeId of this.path) {
+			const node = current.nodes.find((n) => n.id === nodeId);
+			if (!node?.group) return false;
+			if (node.group.locked) return true;
+			const definition = this.project.definitions[node.group.definitionRef];
+			if (!definition) return false;
+			current = definition;
+		}
+		return false;
+	}
+
+	/** The definitionRef of the first selected group node, if any. */
+	get selectedGroupRef(): string | undefined {
+		for (const id of this.selectedNodeIds) {
+			const node = this.activeDocument.nodes.find((n) => n.id === id);
+			if (node?.type === "node-group" && node.group) {
+				return node.group.definitionRef;
+			}
+		}
+		return undefined;
 	}
 
 	/** Labels for each segment of the breadcrumb path, suitable for rendering. */
@@ -292,6 +359,12 @@ export class GraphManager {
 	loadProject(project: GraphProject) {
 		this.project = hydrateProject(project);
 		this.path = [];
+
+		// Re-register standard library definitions after loading
+		for (const entry of this.library) {
+			const def = normaliseDocument(entry.definition);
+			this.project.definitions[entry.id] = hydrateDocument(def);
+		}
 	}
 
 	getProjectJson(): string {
@@ -335,6 +408,148 @@ export class GraphManager {
 		}
 	}
 
+	// ── Export / Import ───────────────────────────────────────────────────────
+
+	/** Check if a definitionRef belongs to the standard library. */
+	private isStandardLibrary(definitionRef: string): boolean {
+		return this.library.some((e) => e.id === definitionRef);
+	}
+
+	/**
+	 * Collect all nested group definitionRefs referenced by a definition.
+	 * Does NOT include standard library refs (they're always available).
+	 */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure algorithm helper, not reactive state
+	private collectNestedRefs(definitionRef: string, visited = new Set<string>()): string[] {
+		if (visited.has(definitionRef) || this.isStandardLibrary(definitionRef)) return [];
+		visited.add(definitionRef);
+
+		const def = this.project.definitions[definitionRef];
+		if (!def) return [];
+
+		const refs: string[] = [];
+		for (const node of def.nodes) {
+			if (node.type === "node-group" && node.group) {
+				refs.push(node.group.definitionRef);
+				refs.push(...this.collectNestedRefs(node.group.definitionRef, visited));
+			}
+		}
+		return refs;
+	}
+
+	/**
+	 * Build the metadata for a single group definition export.
+	 * The definitionRef is used as the stable id.
+	 */
+	private buildExportEntry(definitionRef: string):
+		| {
+				id: string;
+				name: string;
+				category: string;
+				dependencies: string[];
+				definition: GraphDocument;
+		  }
+		| undefined {
+		const def = this.project.definitions[definitionRef];
+		if (!def) return undefined;
+
+		const deps = this.collectNestedRefs(definitionRef);
+		const entry = this.library.find((e) => e.id === definitionRef);
+
+		return {
+			id: definitionRef,
+			name: entry?.name ?? "Group",
+			category: entry?.category ?? "group",
+			dependencies: deps,
+			definition: {
+				nodes: def.nodes.map((n) => ({
+					id: n.id,
+					type: n.type ?? "",
+					data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
+					position: { ...n.position },
+					...(n.group ? { group: { ...n.group } } : {}),
+				})),
+				edges: def.edges.map((e) => ({
+					id: e.id,
+					source: e.source,
+					target: e.target,
+					sourceHandle: e.sourceHandle ?? undefined,
+					targetHandle: e.targetHandle ?? undefined,
+				})),
+			},
+		};
+	}
+
+	/** Trigger a browser download of a single JSON file. */
+	private downloadJson(filename: string, data: unknown) {
+		const blob = new Blob([JSON.stringify(data, null, "\t")], { type: "application/json" });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement("a");
+		a.href = url;
+		a.download = filename;
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	/**
+	 * Export a single group (and all its nested dependencies) to downloadable JSON files.
+	 * Nested groups are exported as separate files. Standard library deps are skipped.
+	 */
+	exportGroup(definitionRef: string) {
+		const refs = [definitionRef, ...this.collectNestedRefs(definitionRef)];
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local dedup, not reactive state
+		const uniqueRefs = [...new Set(refs)];
+
+		for (const ref of uniqueRefs) {
+			const entry = this.buildExportEntry(ref);
+			if (!entry) continue;
+			const slug = entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+			this.downloadJson(`${slug}.json`, entry);
+		}
+	}
+
+	/**
+	 * Import group definitions from parsed JSON files.
+	 * All files are loaded first, then dependencies are checked.
+	 * Missing dependencies trigger a console warning but don't block the import.
+	 */
+	importGroups(
+		jsonFiles: {
+			id?: string;
+			name?: string;
+			category?: string;
+			dependencies?: string[];
+			definition?: GraphDocument;
+		}[],
+	) {
+		// Phase 1: Load all definitions
+		for (const file of jsonFiles) {
+			if (!file.id || !file.definition) {
+				console.warn("[graph] skipping malformed import entry", file);
+				continue;
+			}
+			const normalised = normaliseDocument(file.definition);
+			this.project.definitions[file.id] = hydrateDocument(normalised);
+		}
+
+		// Phase 2: Check dependencies
+		const missing: string[] = [];
+		for (const file of jsonFiles) {
+			if (!file.id || !file.dependencies) continue;
+			for (const dep of file.dependencies) {
+				if (!this.project.definitions[dep] && !this.isStandardLibrary(dep)) {
+					missing.push(`${file.id} depends on ${dep}`);
+				}
+			}
+		}
+
+		if (missing.length > 0) {
+			console.warn("[graph] imported groups have missing dependencies:", missing);
+		}
+
+		return { imported: jsonFiles.length, missing };
+	}
+
 	// TODO: groupSelection(nodeIds: string[]): void
 	// The Ctrl+G operation. Not stubbed here since you said you want to design the
 	// edge-rewiring logic yourself — but it belongs on this class, since it needs to
@@ -372,6 +587,25 @@ export class GraphManager {
 			(node) => this.resolveDescriptor(node),
 			{ x: bounds.maxX + OFFSET, y: bounds.centerY },
 		);
+
+		// Detect globals from selected nodes — store as metadata only, no handles
+		// (globals are implicit inputs, not user-visible connections)
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const seenGlobalRefs = new Set<string>();
+		const allGlobals: { name: string; type: WgslType; wgslRef: string }[] = [];
+		for (const node of selectedNodes) {
+			const descriptor = this.resolveDescriptor(node);
+			if (!descriptor.globals) continue;
+			for (const g of descriptor.globals) {
+				if (!seenGlobalRefs.has(g.wgslRef)) {
+					seenGlobalRefs.add(g.wgslRef);
+					allGlobals.push(g);
+				}
+			}
+		}
+		if (allGlobals.length > 0) {
+			(groupInputNode.node.data as Record<string, unknown>).globals = allGlobals;
+		}
 
 		const definitionRef = crypto.randomUUID();
 		const groupNodeId = crypto.randomUUID();
@@ -660,12 +894,111 @@ export class GraphManager {
 		}
 	}
 
-	// TODO: lockGroup(nodeId: string, definitionRef: string): void
-	// TODO: unlockGroup(nodeId: string): void
-	// unlockGroup needs a deep clone of project.definitions[definitionRef] — make sure
-	// it's a REAL deep clone (structuredClone works fine here) so mutating the unlocked
-	// copy can never reach back and mutate the shared definition.
-	// Careful: each node's ID when unlocking a node group MUST be regenerated
+	/**
+	 * Deep-clone a locked group's definition so the user gets their own editable copy.
+	 * Every node and edge ID inside the clone is regenerated to prevent collisions.
+	 * Returns the new definitionRef pointing to the cloned definition.
+	 */
+	deepClone(lockedNodeGroupId: string): string | undefined {
+		const node = this.activeDocument.nodes.find((n) => n.id === lockedNodeGroupId);
+		if (!node?.group) {
+			console.warn(`[graph] deepClone: "${lockedNodeGroupId}" is not a group node`);
+			return undefined;
+		}
+
+		const sourceDef = this.project.definitions[node.group.definitionRef];
+		if (!sourceDef) {
+			console.warn(`[graph] deepClone: missing definition "${node.group.definitionRef}"`);
+			return undefined;
+		}
+
+		const newDefRef = crypto.randomUUID();
+
+		// Build oldId → newId map for every node
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const idMap = new Map<string, string>();
+		for (const n of sourceDef.nodes) {
+			idMap.set(n.id, crypto.randomUUID());
+		}
+
+		const clonedNodes: GraphDocumentNode[] = sourceDef.nodes.map((n) => ({
+			id: idMap.get(n.id) ?? n.id,
+			type: n.type ?? "",
+			data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
+			position: { ...n.position },
+			...(n.group
+				? { group: { definitionRef: n.group.definitionRef, locked: n.group.locked } }
+				: {}),
+		}));
+
+		const clonedEdges: GraphDocumentEdge[] = sourceDef.edges.map((e) => ({
+			id: crypto.randomUUID(),
+			source: idMap.get(e.source) ?? e.source,
+			target: idMap.get(e.target) ?? e.target,
+			sourceHandle: e.sourceHandle ?? undefined,
+			targetHandle: e.targetHandle ?? undefined,
+		}));
+
+		this.project.definitions[newDefRef] = { nodes: clonedNodes, edges: clonedEdges };
+
+		// Point the group node at the new (unlocked) clone
+		node.group = { definitionRef: newDefRef, locked: false };
+
+		return newDefRef;
+	}
+
+	/**
+	 * Add a node-group to the active document from a standard-library definition.
+	 * The definition is deep-cloned so the original is never mutated.
+	 */
+	addFromLibrary(definitionRef: string, position: { x: number; y: number }): string | undefined {
+		const sourceDef = this.project.definitions[definitionRef];
+		if (!sourceDef) {
+			console.warn(`[graph] addFromLibrary: unknown definition "${definitionRef}"`);
+			return undefined;
+		}
+
+		const newDefRef = crypto.randomUUID();
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const idMap = new Map<string, string>();
+		for (const n of sourceDef.nodes) {
+			idMap.set(n.id, crypto.randomUUID());
+		}
+
+		const clonedNodes: GraphDocumentNode[] = sourceDef.nodes.map((n) => ({
+			id: idMap.get(n.id) ?? n.id,
+			type: n.type ?? "",
+			data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
+			position: { ...n.position },
+			...(n.group
+				? { group: { definitionRef: n.group.definitionRef, locked: n.group.locked } }
+				: {}),
+		}));
+
+		const clonedEdges: GraphDocumentEdge[] = sourceDef.edges.map((e) => ({
+			id: crypto.randomUUID(),
+			source: idMap.get(e.source) ?? e.source,
+			target: idMap.get(e.target) ?? e.target,
+			sourceHandle: e.sourceHandle ?? undefined,
+			targetHandle: e.targetHandle ?? undefined,
+		}));
+
+		this.project.definitions[newDefRef] = { nodes: clonedNodes, edges: clonedEdges };
+
+		const groupNodeId = crypto.randomUUID();
+		const groupNode: GraphDocumentNode = {
+			id: groupNodeId,
+			type: "node-group",
+			data: {},
+			position,
+			group: { definitionRef: newDefRef, locked: true },
+		};
+
+		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
+
+		return groupNodeId;
+	}
 }
 
 // ── Context helpers ──────────────────────────────────────────────────────────

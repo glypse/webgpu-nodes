@@ -22,6 +22,7 @@
 		nodesByCategory,
 		DYNAMIC_NODE_TYPES,
 	} from "./registry";
+	import standardLibrary from "./standard-library.json";
 	import { type NodeCategory } from "./types";
 	import { getDevContext } from "./utils";
 
@@ -47,8 +48,56 @@
 
 	const categoryMap = $derived(nodesByCategory());
 
+	const libraryByCategory = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
+		const map = new Map<string, typeof standardLibrary.library>();
+		for (const entry of standardLibrary.library) {
+			const list = map.get(entry.category) ?? [];
+			list.push(entry);
+			map.set(entry.category, list);
+		}
+		return map;
+	});
+
 	const { screenToFlowPosition, getNodes } = useSvelteFlow();
 	const graph = getGraphManager();
+
+	const userGroups = $derived.by(() => {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
+		const seen = new Set<string>();
+		const stdIds = new Set(graph.library.map((e) => e.id));
+		const groups: { definitionRef: string; label: string }[] = [];
+		let idx = 0;
+
+		function collectFromDoc(doc: {
+			nodes: { type?: string; group?: { definitionRef: string } }[];
+		}) {
+			for (const node of doc.nodes) {
+				if (
+					node.type === "node-group" &&
+					node.group &&
+					!seen.has(node.group.definitionRef)
+				) {
+					seen.add(node.group.definitionRef);
+					if (stdIds.has(node.group.definitionRef)) continue;
+					idx += 1;
+					groups.push({
+						definitionRef: node.group.definitionRef,
+						label: `Group ${String(idx)}`,
+					});
+				}
+			}
+		}
+
+		collectFromDoc(graph.project.root);
+		for (const def of Object.values(graph.project.definitions)) {
+			collectFromDoc(def);
+		}
+
+		return groups;
+	});
+
+	const isLocked = $derived(graph.isLocked);
 
 	let contextMenuPosition = $state({ x: 0, y: 0 });
 
@@ -69,6 +118,14 @@
 		];
 	}
 
+	function addFromLibrary(definitionRef: string) {
+		const position = screenToFlowPosition({
+			x: contextMenuPosition.x,
+			y: contextMenuPosition.y,
+		});
+		graph.addFromLibrary(definitionRef, position);
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === "Enter") {
 			const allNodes = getNodes();
@@ -83,6 +140,7 @@
 			event.preventDefault();
 			graph.exitGroup();
 		} else if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+			if (isLocked) return;
 			event.preventDefault();
 			const selectedIds = new Set(
 				getNodes()
@@ -91,6 +149,10 @@
 			);
 			if (selectedIds.size >= 1) {
 				graph.groupSelection(selectedIds);
+			}
+		} else if (event.key === "Delete" || event.key === "Backspace") {
+			if (isLocked) {
+				event.preventDefault();
 			}
 		}
 	}
@@ -151,6 +213,14 @@
 				maxZoom={3}
 				class={cn("", className)}
 				proOptions={{ hideAttribution: !debug }}
+				nodesDraggable={!isLocked}
+				nodesConnectable={!isLocked}
+				elementsSelectable={!isLocked}
+				deleteKey={isLocked ? null : undefined}
+				onbeforedelete={isLocked ? () => false : undefined}
+				onselectionchange={({ nodes: selectedNodes }) => {
+					graph.selectedNodeIds = selectedNodes.map((n) => n.id);
+				}}
 			>
 				<Controls showLock={false} showZoom={false} />
 				<Background class="bg-background" />
@@ -174,6 +244,41 @@
 					</ContextMenu.SubContent>
 				</ContextMenu.Sub>
 			{/each}
+			{#if standardLibrary.library.length > 0}
+				<ContextMenu.Sub>
+					<ContextMenu.SubTrigger>Library</ContextMenu.SubTrigger>
+					<ContextMenu.SubContent>
+						{#each [...libraryByCategory.entries()] as [cat, entries] (cat)}
+							<ContextMenu.Sub>
+								<ContextMenu.SubTrigger>{cat}</ContextMenu.SubTrigger>
+								<ContextMenu.SubContent>
+									{#each entries as entry (entry.id)}
+										<ContextMenu.Item
+											onclick={() => {
+												addFromLibrary(entry.id);
+											}}
+										>
+											{entry.name}
+										</ContextMenu.Item>
+									{/each}
+								</ContextMenu.SubContent>
+							</ContextMenu.Sub>
+						{/each}
+					</ContextMenu.SubContent>
+				</ContextMenu.Sub>
+			{/if}
+			{#if userGroups.length > 0}
+				<ContextMenu.Sub>
+					<ContextMenu.SubTrigger>Groups</ContextMenu.SubTrigger>
+					<ContextMenu.SubContent>
+						{#each userGroups as group (group.definitionRef)}
+							<ContextMenu.Item onclick={() => addFromLibrary(group.definitionRef)}>
+								{group.label}
+							</ContextMenu.Item>
+						{/each}
+					</ContextMenu.SubContent>
+				</ContextMenu.Sub>
+			{/if}
 		</ContextMenu.Content>
 	</ContextMenu.Root>
 </div>

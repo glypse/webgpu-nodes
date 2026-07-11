@@ -56,6 +56,14 @@ export type WgslCtx = {
 	 *  - Non-variadic: `inputs["x"]` is `[varName]` (1 element) if connected, `[]` if not.
 	 *  - Variadic: `inputs["operands"]` has N elements (one per connected edge), `[]` if none. */
 	inputs: Record<string, string[]>;
+	/**
+	 * When a node is inside a group, globals like `uv` or `motiongpuFrame.time`
+	 * must be replaced with the group function's parameter names.
+	 * Maps the raw WGSL reference (e.g. `"uv"`) to the parameter name
+	 * (e.g. `"h_<handle-uuid>"`). If a global is NOT in this map, it means
+	 * the node is at root scope and the raw reference is fine.
+	 */
+	globalOverrides?: Record<string, string>;
 };
 
 export type NodeDescriptor = {
@@ -65,6 +73,14 @@ export type NodeDescriptor = {
 	inputs: NodeInputDef[];
 	outputs: NodeOutputDef[];
 	defaultData: Record<string, unknown>;
+	/**
+	 * Root-level WGSL identifiers this node references that are NOT defined
+	 * inside any group (e.g. `uv`, `motiongpuFrame.time`).
+	 * When a node with globals is placed inside a group, the grouping logic
+	 * must create group-input handles for them, and the codegen must forward
+	 * them as function arguments.
+	 */
+	globals?: { name: string; type: WgslType; wgslRef: string }[];
 	/** Emit WGSL line(s) that define `varName`.
 	 *  Each returned string becomes one line inside `fn frag()`.
 	 *  The `let ` / `var ` prefix is the node's own choice. */

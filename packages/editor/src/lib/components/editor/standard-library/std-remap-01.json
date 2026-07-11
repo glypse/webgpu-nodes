@@ -1,0 +1,65 @@
+{
+	"id": "std-remap-01",
+	"name": "Remap 0-1",
+	"category": "math",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "input-1",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "h-value",
+							"label": "Value",
+							"type": "f32"
+						}
+					]
+				},
+				"position": { "x": -400, "y": 0 }
+			},
+			{
+				"id": "remap-1",
+				"type": "remap",
+				"data": {
+					"in_min": 0,
+					"in_max": 1,
+					"out_min": 0,
+					"out_max": 1
+				},
+				"position": { "x": -100, "y": 0 }
+			},
+			{
+				"id": "output-1",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "h-result",
+							"label": "Result",
+							"type": "f32"
+						}
+					]
+				},
+				"position": { "x": 200, "y": 0 }
+			}
+		],
+		"edges": [
+			{
+				"id": "e-in",
+				"source": "input-1",
+				"sourceHandle": "h-value",
+				"target": "remap-1",
+				"targetHandle": "e"
+			},
+			{
+				"id": "e-out",
+				"source": "remap-1",
+				"sourceHandle": "result",
+				"target": "output-1",
+				"targetHandle": "h-result"
+			}
+		]
+	}
+}
