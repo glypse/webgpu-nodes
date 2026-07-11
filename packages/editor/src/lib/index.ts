@@ -4,5 +4,4 @@ export {
 	setGraphManager,
 	getGraphManager,
 } from "./components/editor/graph-state.svelte";
-export { isGraphDocument } from "./components/editor/graph-state.svelte";
-export type { GraphDocument } from "./components/editor/graph-state.svelte";
+export * from "./components/editor/utils";

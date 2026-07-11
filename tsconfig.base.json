@@ -17,6 +17,7 @@
 		"strict": true,
 		"target": "esnext",
 		"verbatimModuleSyntax": true,
-		"customConditions": ["development"]
+		"customConditions": ["development"],
+		"noUncheckedIndexedAccess": true
 	}
 }

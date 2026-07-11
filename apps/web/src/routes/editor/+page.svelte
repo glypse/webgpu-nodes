@@ -1,10 +1,12 @@
 <script lang="ts">
-	import { Editor, GraphManager, setGraphManager } from "$editor";
+	import { Editor, GraphManager, setDevContext, setGraphManager } from "$editor";
 	import { Menubar } from "$theme/components/ui";
 	import { toggleMode } from "mode-watcher";
 
 	const graph = new GraphManager();
 	setGraphManager(graph);
+
+	setDevContext(true); // TODO: Replace with `dev` from `$app/env` past 1.0 release
 
 	function handleUpload() {
 		const input = document.createElement("input");

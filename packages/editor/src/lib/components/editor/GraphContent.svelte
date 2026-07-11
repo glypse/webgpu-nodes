@@ -13,41 +13,47 @@
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
 
-	import { generateShader, debugSort, shaderHash } from "./codegen";
+	import { generateShader, debugSort, projectHash } from "./codegen";
+	import { getGraphManager } from "./graph-state.svelte";
 	import NodeShell from "./NodeShell.svelte";
-	import { nodeRegistry, defaultDataForType, nodesByCategory } from "./registry";
-	import type { NodeCategory } from "./types";
+	import {
+		nodeRegistry,
+		defaultDataForType,
+		nodesByCategory,
+		DYNAMIC_NODE_TYPES,
+	} from "./registry";
+	import { type NodeCategory } from "./types";
+	import { getDevContext } from "./utils";
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow node types accept any component
 	const nodeTypes: Record<string, any> = {};
-	for (const type of Object.keys(nodeRegistry)) {
+	for (const type of [...Object.keys(nodeRegistry), ...DYNAMIC_NODE_TYPES]) {
 		nodeTypes[type] = NodeShell;
 	}
 
-	let debug = $state(true);
+	let debug = getDevContext();
 
 	let {
 		class: className,
 		nodes = $bindable([]),
 		edges = $bindable([]),
 		frag = $bindable(""),
-		nodeIdCounter = $bindable(nodes.length + 1),
 	}: {
 		class?: string;
 		nodes?: Node[];
 		edges?: Edge[];
 		frag?: string;
-		nodeIdCounter?: number;
 	} = $props();
 
 	const categoryMap = $derived(nodesByCategory());
 
-	const { screenToFlowPosition } = useSvelteFlow();
+	const { screenToFlowPosition, getNodes } = useSvelteFlow();
+	const graph = getGraphManager();
 
 	let contextMenuPosition = $state({ x: 0, y: 0 });
 
 	function addNode(type: string) {
-		const id = `node-${String(nodeIdCounter++)}`;
+		const id = crypto.randomUUID();
 		const position = screenToFlowPosition({
 			x: contextMenuPosition.x,
 			y: contextMenuPosition.y,
@@ -63,23 +69,54 @@
 		];
 	}
 
-	// Track the shader-relevant hash to avoid rebuilding on position changes
+	function handleKeydown(event: KeyboardEvent) {
+		if (event.key === "Enter") {
+			const allNodes = getNodes();
+			const selected = allNodes.find((n) => n.selected);
+			if (!selected) return;
+
+			if (selected.type === "node-group") {
+				event.preventDefault();
+				graph.enterGroup(selected.id);
+			}
+		} else if (event.key === "Escape" && graph.path.length > 0) {
+			event.preventDefault();
+			graph.exitGroup();
+		} else if (event.key === "k" && (event.metaKey || event.ctrlKey)) {
+			event.preventDefault();
+			const selectedIds = new Set(
+				getNodes()
+					.filter((node) => node.selected)
+					.map((node) => node.id),
+			);
+			if (selectedIds.size >= 1) {
+				graph.groupSelection(selectedIds);
+			}
+		}
+	}
+
+	// Track the shader-relevant hash to avoid rebuilding on position changes.
+	// Always hash & generate from the ROOT graph so the shader stays valid
+	// even when the user is viewing a subgraph.
+	// projectHash covers the full project so edits inside subgraphs trigger re-generation.
 	let prevHash = $state("");
 
 	$effect(() => {
-		const hash = shaderHash(nodes, edges);
+		const rootNodes = graph.project.root.nodes;
+		const rootEdges = graph.project.root.edges;
+		const hash = projectHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;
-		frag = generateShader(nodes, edges);
+		frag = generateShader(rootNodes, rootEdges);
 
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
 		if (debug) {
-			const sortedIds = debugSort(nodes, edges);
+			const sortedIds = debugSort(rootNodes, rootEdges);
 			console.group("[shader debug]");
-			console.log("Compiled fragment shader: ", frag);
-			console.log("Sorted order:", sortedIds.toString());
-			console.log("Nodes:", JSON.stringify(nodes));
-			console.log("Edges:", JSON.stringify(edges));
+			console.log("Compiled fragment shader:\n", frag);
+			console.log("Sorted order:\n", sortedIds.join("\n"));
+			/* console.log("Nodes:", JSON.stringify(nodes), null, "\t"));
+			console.log("Edges:", JSON.stringify(edges, null, "\t")); */
+			console.log(JSON.parse(graph.getProjectJson()));
 			console.groupEnd();
 		}
 	});
@@ -101,7 +138,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div oncontextmenu={handleContextMenu} class="size-full">
+<div oncontextmenu={handleContextMenu} onkeydown={handleKeydown} class="size-full">
 	<ContextMenu.Root>
 		<ContextMenu.Trigger class="block size-full">
 			<SvelteFlow
@@ -113,10 +150,10 @@
 				minZoom={0.1}
 				maxZoom={3}
 				class={cn("", className)}
-				proOptions={{ hideAttribution: false }}
+				proOptions={{ hideAttribution: !debug }}
 			>
 				<Controls showLock={false} showZoom={false} />
-				<Background />
+				<Background class="bg-background" />
 			</SvelteFlow>
 		</ContextMenu.Trigger>
 

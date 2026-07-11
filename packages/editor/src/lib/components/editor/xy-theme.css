@@ -2,14 +2,6 @@
 
 @import "@xyflow/svelte/dist/style.css" layer(base);
 
-:root {
-	--xy-background-color-default: transparent;
-}
-
-.dark {
-	--xy-background-color-default: transparent;
-}
-
 @reference "$theme/css";
 
 /* =============================================
@@ -17,7 +9,7 @@
    ============================================= */
 
 .svelte-flow__node {
-	@apply bg-card justify-center rounded-sm;
+	@apply bg-card w-45 justify-center rounded-sm;
 	box-shadow: 0 0 10px var(--background);
 }
 
@@ -48,6 +40,8 @@
 
 .svelte-flow__node-group {
 	@apply border-accent bg-accent/40;
+	min-width: 150px;
+	min-height: 100px;
 }
 
 .svelte-flow__handle {

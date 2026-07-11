@@ -1,0 +1,64 @@
+{
+	"definitions": {
+		"test-group": {
+			"nodes": [
+				{
+					"id": "group-input-1",
+					"type": "group-input",
+					"data": {
+						"handles": [{ "id": "handle-a", "label": "Input 1", "type": "f32" }]
+					},
+					"position": { "x": -200, "y": 0 }
+				},
+				{
+					"id": "float-1",
+					"type": "float",
+					"data": { "value": 0.5 },
+					"position": { "x": 0, "y": 0 }
+				},
+				{
+					"id": "group-output-1",
+					"type": "group-output",
+					"data": {
+						"handles": [{ "id": "handle-b", "label": "Output 1", "type": "f32" }]
+					},
+					"position": { "x": 200, "y": 0 }
+				}
+			],
+			"edges": [
+				{
+					"id": "e-group-input-float",
+					"source": "group-input-1",
+					"target": "float-1",
+					"sourceHandle": "handle-a",
+					"targetHandle": "value"
+				},
+				{
+					"id": "e-float-group-output",
+					"source": "float-1",
+					"target": "group-output-1",
+					"sourceHandle": "value",
+					"targetHandle": "handle-b"
+				}
+			]
+		}
+	},
+	"root": {
+		"nodes": [
+			{
+				"id": "test-group-node",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 0,
+					"y": 0
+				},
+				"group": {
+					"definitionRef": "test-group",
+					"locked": false
+				}
+			}
+		],
+		"edges": []
+	}
+}

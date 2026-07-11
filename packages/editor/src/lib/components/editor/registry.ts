@@ -27,6 +27,20 @@ import { vec4fNode } from "./nodes/vec4f.node";
 import type { NodeDescriptor, NodeCategory } from "./types";
 
 /**
+ * Placeholder descriptor for group nodes.
+ * The actual shape is derived from the subgraph at runtime.
+ */
+const groupNode: NodeDescriptor = {
+	type: "node-group",
+	label: "Group",
+	category: "output",
+	inputs: [],
+	outputs: [],
+	defaultData: {},
+	wgsl: () => [],
+};
+
+/**
  * The global node registry.
  * Built by hand right now; in the future this could auto-discover
  * exported descriptors from a directory, or accept addon registrations.
@@ -65,7 +79,12 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 
 	// Output
 	"frag-output": outputNode,
+
+	// Groups (placeholder — shape derived from subgraph at runtime)
+	"node-group": groupNode,
 };
+
+export const DYNAMIC_NODE_TYPES = ["group-input", "group-output"];
 
 /** Helper: produce default node data for a registered type. */
 export function defaultDataForType(type: string): Record<string, unknown> {
@@ -85,14 +104,4 @@ export function nodesByCategory(): Map<
 		map.set(desc.category, list);
 	}
 	return map;
-}
-
-/** Resolve input definitions from a descriptor. */
-export function inputDefs(type: string): NodeDescriptor["inputs"] {
-	return nodeRegistry[type].inputs;
-}
-
-/** Resolve output definitions from a descriptor. */
-export function outputDefs(type: string): NodeDescriptor["outputs"] {
-	return nodeRegistry[type].outputs;
 }

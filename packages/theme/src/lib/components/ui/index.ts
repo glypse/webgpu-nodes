@@ -1,3 +1,4 @@
+export * as Breadcrumb from "./breadcrumb/index";
 export * as Button from "./button/index";
 export * as ContextMenu from "./context-menu/index";
 export * as Input from "./input/index";

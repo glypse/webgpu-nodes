@@ -1,3 +1,5 @@
+import type { Node } from "@xyflow/svelte";
+
 // ─── WGSL type system ────────────────────────────────────────
 export type WgslType = "f32" | "vec2f" | "vec3f" | "vec4f";
 
@@ -6,6 +8,12 @@ export const WGSL_DEFAULTS: Record<WgslType, string> = {
 	vec2f: "vec2f(0.0, 0.0)",
 	vec3f: "vec3f(0.0, 0.0, 0.0)",
 	vec4f: "vec4f(0.0, 0.0, 0.0, 1.0)",
+};
+
+export type HandleDef = {
+	id: string; // stable, generated once, never changes — this is what edges/targetHandle reference
+	label: string; // user-facing, editable later, defaults to something like "Input 1"
+	type: WgslType; // hardcode "f32" for now, per your call
 };
 
 // ─── Descriptor types ────────────────────────────────────────
@@ -23,6 +31,14 @@ export type NodeInputDef = {
 export type NodeOutputDef = {
 	name: string;
 	type: WgslType;
+};
+
+/** Every node that's used by SvelteFlow */
+export type GroupedNode = Node & {
+	group?: {
+		definitionRef: string;
+		locked: boolean;
+	};
 };
 
 export type NodeCategory = "math" | "input" | "output" | "color" | "vector";

@@ -1,7 +1,7 @@
 import type { Edge, Node } from "@xyflow/svelte";
 
-import { nodeRegistry } from "./registry";
-import type { WgslType } from "./types";
+import { getGraphManager } from "./graph-state.svelte";
+import type { GroupedNode, HandleDef, NodeDescriptor, WgslType } from "./types";
 import { WGSL_DEFAULTS } from "./types";
 
 /**
@@ -19,7 +19,6 @@ function formatWgslLiteral(type: WgslType, value: unknown): string {
 	if (type === "f32") {
 		return `f32(${toNum(value, 0)})`;
 	}
-	// For vector types, try to read individual components from the data object
 	if (typeof value === "object" && value !== null) {
 		const obj = value as Record<string, unknown>;
 		switch (type) {
@@ -28,19 +27,23 @@ function formatWgslLiteral(type: WgslType, value: unknown): string {
 			case "vec3f":
 				return `vec3f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}))`;
 			case "vec4f":
-				return `vec4f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}), f32(${toNum(obj.w, 1)}))`;
+				return `vec4f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}), f32(${toNum(obj.w, 0)}))`;
 		}
 	}
 	return WGSL_DEFAULTS[type];
 }
 
 /**
- * Walk backwards from output nodes through edges to find all node IDs
- * that contribute to the final shader output.
- * Nodes not connected (directly or transitively) to any output node are excluded.
+ * Walk backwards from seed-type nodes through edges to find all node IDs
+ * that contribute to the final output. `seedType` is "frag-output" at root,
+ * "group-output" inside any group's own subgraph — that's the only thing
+ * that differs between generating the root shader and generating one group's function.
  */
-function findReachableNodeIds(nodes: Map<string, Node>, edges: Edge[]): Set<string> {
-	// Build reverse adjacency: target -> sources feeding into it
+function findReachableNodeIds(
+	nodes: Map<string, Node>,
+	edges: Edge[],
+	seedType: string,
+): Set<string> {
 	const reverseAdj = new Map<string, string[]>();
 	for (const node of nodes.values()) {
 		reverseAdj.set(node.id, []);
@@ -53,9 +56,8 @@ function findReachableNodeIds(nodes: Map<string, Node>, edges: Edge[]): Set<stri
 	const reachable = new Set<string>();
 	const queue: string[] = [];
 
-	// Seed the BFS from all output nodes
 	for (const node of nodes.values()) {
-		if (node.type === "frag-output") {
+		if (node.type === seedType) {
 			reachable.add(node.id);
 			queue.push(node.id);
 		}
@@ -63,7 +65,7 @@ function findReachableNodeIds(nodes: Map<string, Node>, edges: Edge[]): Set<stri
 
 	while (queue.length > 0) {
 		const current = queue.shift();
-		if (!current) break; // should never happen given the length check
+		if (!current) break;
 		for (const source of reverseAdj.get(current) ?? []) {
 			if (!reachable.has(source)) {
 				reachable.add(source);
@@ -76,8 +78,8 @@ function findReachableNodeIds(nodes: Map<string, Node>, edges: Edge[]): Set<stri
 }
 
 /**
- * Topological sort of node IDs.
- * Works on a DAG; throws if a cycle is detected.
+ * Topological sort of node IDs. Works on a DAG; throws if a cycle is detected.
+ * Unchanged from before — this never needed to know about groups at all.
  */
 function topologicalSort(nodes: Map<string, Node>, edges: Edge[]): string[] {
 	const adjacency = new Map<string, string[]>();
@@ -118,12 +120,13 @@ function topologicalSort(nodes: Map<string, Node>, edges: Edge[]): string[] {
 	return sorted;
 }
 
-/**
- * Produce the name of a variable holding the output of a node.
- * Each variable is a valid WGSL identifier.
- */
 function getVarName(nodeId: string): string {
 	return `v_${nodeId.replace(/[.-]/g, "_")}`;
+}
+
+/** WGSL identifiers can't contain characters like "-" from a UUID's dashes. */
+function sanitizeIdent(id: string): string {
+	return `h_${id.replace(/[.-]/g, "_")}`;
 }
 
 export function debugSort(nodes: Node[], edges: Edge[]): string[] {
@@ -136,16 +139,27 @@ export function debugSort(nodes: Node[], edges: Edge[]): string[] {
 
 /**
  * Resolve the WGSL variable name for a given edge's source.
- * Single-output sources: just `v_nodeId`.
- * Multi-output sources: `v_nodeId_outputName` — the sourceHandle tells us which output.
+ * - Single-output sources: `v_nodeId`.
+ * - Multi-output sources (ordinary nodes): `v_nodeId_outputName`.
+ * - Group-node sources: `v_nodeId.outputHandleId` — a field access on the
+ *   struct the group's generated function returns, since a group's "outputs"
+ *   are all produced by ONE function call, not separate `let` statements.
  */
-function getSourceVar(edge: Edge, nodes: Map<string, Node>): string {
-	const base = getVarName(edge.source);
-	// Only append a suffix if the source node has multiple outputs.
-	// Single-output nodes get no suffix even if sourceHandle is set (SvelteFlow always sets it).
+function getSourceVar(
+	edge: Edge,
+	nodes: Map<string, Node>,
+	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
+): string {
 	const sourceNode = nodes.get(edge.source);
+	if (sourceNode?.type === "group-input" && edge.sourceHandle) {
+		return sanitizeIdent(edge.sourceHandle); // it's a function parameter, not a let-var
+	}
+	const base = getVarName(edge.source);
 	if (edge.sourceHandle && sourceNode?.type) {
-		const sourceDescriptor = nodeRegistry[sourceNode.type];
+		if (sourceNode.type === "node-group") {
+			return `${base}.${sanitizeIdent(edge.sourceHandle)}`;
+		}
+		const sourceDescriptor = resolveDescriptor(sourceNode);
 		if (sourceDescriptor.outputs.length > 1) {
 			return base + "_" + edge.sourceHandle;
 		}
@@ -155,7 +169,6 @@ function getSourceVar(edge: Edge, nodes: Map<string, Node>): string {
 
 /**
  * Compute a stable hash from the graph state that actually affects the shader output.
- * Position changes, for example, produce the same hash — skipping rebuilds on drag.
  */
 export function shaderHash(nodes: Node[], edges: Edge[]): string {
 	return JSON.stringify({
@@ -170,23 +183,80 @@ export function shaderHash(nodes: Node[], edges: Edge[]): string {
 }
 
 /**
- * Emit the full WGSL fragment shader source from the graph.
+ * Hash the entire project (root + all definitions) so that edits inside any
+ * subgraph also trigger a re-generation of the shader.
  */
-export function generateShader(nodes: Node[], edges: Edge[]): string {
+export function projectHash(project: {
+	root: { nodes: Node[]; edges: Edge[] };
+	definitions: Record<string, { nodes: Node[]; edges: Edge[] }>;
+}): string {
+	return JSON.stringify({
+		root: {
+			nodes: project.root.nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+			edges: project.root.edges.map((e) => ({
+				source: e.source,
+				target: e.target,
+				sourceHandle: e.sourceHandle,
+				targetHandle: e.targetHandle,
+			})),
+		},
+		definitions: Object.fromEntries(
+			Object.entries(project.definitions).map(([key, doc]) => [
+				key,
+				{
+					nodes: doc.nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+					edges: doc.edges.map((e) => ({
+						source: e.source,
+						target: e.target,
+						sourceHandle: e.sourceHandle,
+						targetHandle: e.targetHandle,
+					})),
+				},
+			]),
+		),
+	});
+}
+
+/**
+ * Every group's generated `struct` + `fn` text, collected once per distinct
+ * definitionRef while walking the whole graph (root + every nested group).
+ * Keying by definitionRef is what gives you memoization for free: two locked
+ * instances of the same group ask for the same key, so the second lookup
+ * short-circuits `emitGroupFunction` instead of generating a duplicate.
+ */
+type GroupDecls = Map<
+	string,
+	{ structDecl: string; fnDecl: string; fnName: string; structName: string }
+>;
+
+/**
+ * The reusable "walk one subgraph and emit its body lines" logic — this is the
+ * part of the old generateShader that had nothing to do with being the root.
+ * Used both for the root fragment body and for every group's function body.
+ *
+ * Returns the emitted lines AND the variable name that should be returned —
+ * for root that's whatever feeds frag-output; for a group, we build a struct
+ * literal from whatever feeds group-output instead (handled by the caller).
+ */
+function generateBody(
+	nodes: Node[],
+	edges: Edge[],
+	seedType: string,
+	groupDecls: GroupDecls,
+	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
+	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
+): { lines: string[]; seedNodeVarName: string | null } {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
 		nodeMap.set(node.id, node);
 	}
 
-	// Only keep nodes that contribute (directly or transitively) to an output node
-	const reachableIds = findReachableNodeIds(nodeMap, edges);
+	const reachableIds = findReachableNodeIds(nodeMap, edges, seedType);
 	const filteredEdges = edges.filter(
 		(e) => reachableIds.has(e.source) && reachableIds.has(e.target),
 	);
-
 	const sortedIds = topologicalSort(nodeMap, filteredEdges).filter((id) => reachableIds.has(id));
 
-	// Build reverse map: target -> incoming edges (only from the reachable subgraph)
 	const targetEdgeMap = new Map<string, Edge[]>();
 	for (const edge of filteredEdges) {
 		const list = targetEdgeMap.get(edge.target) ?? [];
@@ -195,32 +265,63 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 	}
 
 	const lines: string[] = [];
-	let resultVariable: string | null = null;
+	let seedNodeVarName: string | null = null;
 
 	for (const nodeId of sortedIds) {
 		const node = nodeMap.get(nodeId);
-		if (!node) continue;
-
-		if (!node.type) continue;
-		const descriptor = nodeRegistry[node.type];
+		if (!node?.type) continue;
 
 		const varName = getVarName(nodeId);
 		const incoming = targetEdgeMap.get(nodeId) ?? [];
 
-		const outputVars: Record<string, string> = {};
-		for (const outputDef of descriptor.outputs) {
-			if (descriptor.outputs.length === 1) {
-				outputVars[outputDef.name] = varName; // single output: no suffix (backwards compat)
-			} else {
-				outputVars[outputDef.name] = varName + "_" + outputDef.name;
+		// Group nodes don't call descriptor.wgsl() the normal way — they need
+		// their own function generated first (recursively), THEN a one-line
+		// call to it. Every other node type falls through to the shared path below.
+		if (node.type === "node-group") {
+			const groupedNode = node as GroupedNode;
+			const definitionRef = groupedNode.group?.definitionRef;
+			if (definitionRef) {
+				emitGroupFunctionIfNeeded(
+					definitionRef,
+					groupDecls,
+					resolveDescriptor,
+					getGroupDefinition,
+				);
+				const decl = groupDecls.get(definitionRef);
+				if (decl) {
+					const descriptor = resolveDescriptor(groupedNode);
+					const callArgs = descriptor.inputs.map((inputDef) => {
+						const edgesForHandle = incoming.filter(
+							(e) =>
+								e.targetHandle === inputDef.name ||
+								(descriptor.inputs.length === 1 && !e.targetHandle),
+						);
+						const firstEdge = edgesForHandle[0];
+						if (firstEdge) return getSourceVar(firstEdge, nodeMap, resolveDescriptor);
+						const dataVal =
+							node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
+						return formatWgslLiteral(inputDef.type, dataVal);
+					});
+					lines.push(`  let ${varName} = ${decl.fnName}(${callArgs.join(", ")});`);
+				}
 			}
+			continue;
 		}
 
-		// Resolve inputs per descriptor definition
+		if (node.type === "group-input" || node.type === "group-output") {
+			continue; // sinks/sources handled structurally by emitGroupFunctionIfNeeded, not via .wgsl()
+		}
+
+		const descriptor = resolveDescriptor(node);
+
+		const outputVars: Record<string, string> = {};
+		for (const outputDef of descriptor.outputs) {
+			outputVars[outputDef.name] =
+				descriptor.outputs.length === 1 ? varName : varName + "_" + outputDef.name;
+		}
+
 		const resolvedInputs: Record<string, string[]> = {};
 		for (const inputDef of descriptor.inputs) {
-			// If a node has only one input, SvelteFlow omits targetHandle on edges.
-			// Match unlabeled edges to the sole input definition.
 			const edgesForHandle = incoming.filter(
 				(e) =>
 					e.targetHandle === inputDef.name ||
@@ -230,16 +331,16 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 
 			if (inputDef.variadic) {
 				for (const edge of edgesForHandle) {
-					upstreamVars.push(getSourceVar(edge, nodeMap));
+					upstreamVars.push(getSourceVar(edge, nodeMap, resolveDescriptor));
 				}
 			} else if (edgesForHandle.length > 0) {
-				upstreamVars.push(getSourceVar(edgesForHandle[0], nodeMap));
+				const firstEdge = edgesForHandle[0];
+				if (firstEdge)
+					upstreamVars.push(getSourceVar(firstEdge, nodeMap, resolveDescriptor));
 			} else {
-				// No connection → emit the node's own data value as a WGSL literal
 				const dataVal: unknown =
 					node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
-				const literal = formatWgslLiteral(inputDef.type, dataVal);
-				upstreamVars.push(literal);
+				upstreamVars.push(formatWgslLiteral(inputDef.type, dataVal));
 			}
 
 			resolvedInputs[inputDef.name] = upstreamVars;
@@ -251,41 +352,115 @@ export function generateShader(nodes: Node[], edges: Edge[]): string {
 			data: node.data,
 			inputs: resolvedInputs,
 		});
+		for (const line of wgslLines) lines.push(`  ${line}`);
 
-		for (const line of wgslLines) {
-			lines.push(`  ${line}`);
-		}
-
-		// Track which node produces the output
-		if (node.type === "frag-output") {
-			resultVariable = varName;
-		}
+		if (node.type === seedType) seedNodeVarName = varName;
 	}
 
-	// Build the fragment body
-	const body: string[] = [
+	return { lines, seedNodeVarName };
+}
+
+/**
+ * Generate one group's `struct` + `fn`, recursively (a group can contain
+ * another group — this just calls generateBody again, unchanged).
+ * No-ops if this definitionRef is already in groupDecls — that's the memoization.
+ */
+function emitGroupFunctionIfNeeded(
+	definitionRef: string,
+	groupDecls: GroupDecls,
+	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
+	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
+): void {
+	if (groupDecls.has(definitionRef)) return; // memoized — already generated
+
+	const definition = getGroupDefinition(definitionRef);
+	if (!definition) return;
+
+	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
+	const handles = (groupOutputNode?.data.handles ?? []) as HandleDef[];
+
+	const ident = sanitizeIdent(definitionRef);
+	const fnName = `group_${ident}`;
+	const structName = `GroupOutputs_${ident}`;
+
+	const { lines } = generateBody(
+		definition.nodes,
+		definition.edges,
+		"group-output",
+		groupDecls,
+		resolveDescriptor,
+		getGroupDefinition,
+	);
+
+	// The group-output node itself never emits a `let` (it's a sink, not computed) —
+	// build the struct literal directly from whatever feeds each of its handles.
+	const outputEdges = definition.edges.filter((e) => e.target === groupOutputNode?.id);
+	const nodeMap = new Map<string, Node>();
+	for (const n of definition.nodes) nodeMap.set(n.id, n);
+
+	const fieldAssignments = handles.map((h) => {
+		const edge = outputEdges.find((e) => e.targetHandle === h.id);
+		return edge ? getSourceVar(edge, nodeMap, resolveDescriptor) : WGSL_DEFAULTS[h.type];
+	});
+
+	const structFields = handles.map((h) => `  ${sanitizeIdent(h.id)}: ${h.type},`).join("\n");
+	const structDecl = `struct ${structName} {\n${structFields}\n}`;
+
+	// Group's inputs (its parameters) come from the group-input node's handles.
+	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
+	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+	const params = inputHandles.map((h) => `${sanitizeIdent(h.id)}: ${h.type}`).join(", ");
+
+	const fnDecl = [
+		`fn ${fnName}(${params}) -> ${structName} {`,
+		...lines,
+		`  return ${structName}(${fieldAssignments.join(", ")});`,
+		`}`,
+	].join("\n");
+
+	groupDecls.set(definitionRef, { structDecl, fnDecl, fnName, structName });
+}
+
+/**
+ * Emit the full WGSL fragment shader source from the graph.
+ */
+export function generateShader(nodes: Node[], edges: Edge[]): string {
+	const graph = getGraphManager();
+	const groupDecls: GroupDecls = new Map();
+
+	const resolveDescriptor = (node: GroupedNode) => graph.resolveDescriptor(node);
+	const getGroupDefinition = (definitionRef: string) => graph.project.definitions[definitionRef];
+
+	const { lines, seedNodeVarName } = generateBody(
+		nodes,
+		edges,
+		"frag-output",
+		groupDecls,
+		resolveDescriptor,
+		getGroupDefinition,
+	);
+
+	const body: string[] = [];
+
+	// Every group's struct + fn, emitted once each, before frag() itself.
+	for (const decl of groupDecls.values()) {
+		body.push(decl.structDecl, "", decl.fnDecl, "");
+	}
+
+	body.push(
 		"// ---------- Common libraries ----------",
 		"",
 		"fn safeDivF32(a: f32, b:f32) -> f32 {",
-		"   return select(a / b, 0.0, b == 0.0);",
+		"  return select(a / b, 0.0, b == 0.0);",
 		"}",
 		"",
 		"// ---------- User code ----------",
 		"",
 		"fn frag(uv: vec2f) -> vec4f {",
-	];
-
-	for (const line of lines) {
-		body.push(line);
-	}
-
-	if (resultVariable) {
-		body.push(`  return ${resultVariable};`);
-	} else {
-		body.push("  return vec4f(0.0, 0.0, 0.0, 1.0);");
-	}
-
-	body.push("}");
+		...lines,
+		seedNodeVarName ? `  return ${seedNodeVarName};` : "  return vec4f(0.0, 0.0, 0.0, 1.0);",
+		"}",
+	);
 
 	return body.join("\n");
 }
