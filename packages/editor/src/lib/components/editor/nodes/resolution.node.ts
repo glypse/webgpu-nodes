@@ -5,11 +5,7 @@ export const resolutionNode = {
 	label: "Resolution",
 	category: "input",
 	inputs: [],
-	outputs: [{ name: "resolution", type: "vec2f" }],
+	outputs: [{ name: "resolution", label: "resolution", type: "vec2f" }],
 	defaultData: {},
-	globals: [{ name: "resolution", type: "vec2f", wgslRef: "motiongpuFrame.resolution" }],
-	wgsl: ({ varName, globalOverrides }) => {
-		const ref = globalOverrides?.resolution ?? "motiongpuFrame.resolution";
-		return [`let ${varName}: vec2f = ${ref};`];
-	},
+	wgsl: ({ varName }) => [`let ${varName}: vec2f = motiongpuFrame.resolution;`],
 } satisfies NodeDescriptor;

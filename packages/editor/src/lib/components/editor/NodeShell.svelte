@@ -1,10 +1,12 @@
 <script lang="ts">
 	import { Button } from "$theme/components/ui/button";
+	import * as Popover from "$theme/components/ui/popover";
 	import { Scrubbable } from "$theme/components/ui/scrubbable";
 	import { Handle, Position, useNodeConnections, useSvelteFlow } from "@xyflow/svelte";
+	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
-	import type { HandleDef } from "./types";
+	import { type HandleDef, type WgslType, WGSL_TYPES } from "./types";
 
 	let {
 		id,
@@ -33,23 +35,44 @@
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
-	function addHandle() {
+	let popoverOpen = $state(false);
+
+	function addHandle(type: WgslType) {
 		const handles = (data.handles ?? []) as HandleDef[];
 		const newHandle: HandleDef = {
 			id: crypto.randomUUID(),
 			label: `Handle ${String(handles.length + 1)}`,
-			type: "f32",
+			type,
 		};
 		updateNodeData(id, {
 			...data,
 			handles: [...handles, newHandle],
 			[newHandle.id]: 0,
 		});
+		popoverOpen = false;
 	}
 </script>
 
 {#snippet addHandleButton()}
-	<Button onclick={addHandle}>+</Button>
+	<Popover.Root bind:open={popoverOpen}>
+		<Popover.Trigger>
+			{#snippet child({ props })}
+				<Button {...props} class="w-full">+</Button>
+			{/snippet}
+		</Popover.Trigger>
+		<Popover.Content class="w-auto p-1" sideOffset={4} side="top">
+			<div class="flex flex-col">
+				{#each WGSL_TYPES as t (t)}
+					<button
+						class="hover:bg-accent rounded px-2 py-1 text-left text-xs"
+						onclick={() => addHandle(t)}
+					>
+						{t}
+					</button>
+				{/each}
+			</div>
+		</Popover.Content>
+	</Popover.Root>
 {/snippet}
 
 {#if descriptor}
@@ -57,13 +80,17 @@
 		<span>
 			{label}
 		</span>
+		{#if nodeType === "node-group"}
+			<TreeViewIcon class="size-5" />
+		{/if}
 	</div>
 
 	<div class="node-shell__body">
 		<div class="node-shell__outputs">
 			{#each outputs as outputDef (outputDef.name)}
 				<div class="node-shell__row node-shell__row--right">
-					<span class="node-shell__handle-label">{outputDef.name}: {outputDef.type}</span>
+					<span class="node-shell__handle-label">{outputDef.label}: {outputDef.type}</span
+					>
 					<Handle
 						type="source"
 						position={Position.Right}
@@ -89,24 +116,32 @@
 					/>
 					{#if inputDef.type !== "f32"}
 						<span class="node-shell__handle-label"
-							>{inputDef.name}: {inputDef.type}</span
+							>{inputDef.label}: {inputDef.type}</span
 						>
 					{/if}
 
 					{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined}
-						<Scrubbable
-							class="node-shell__input"
-							label={inputDef.name}
-							readonly={isLocked || connectedHandles.has(inputDef.name)}
-							value={data[inputDef.name] as number}
-							oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-								const val = parseFloat(e.currentTarget.value) || 0;
-								updateNodeData(id, {
-									...data,
-									[inputDef.name]: val,
-								});
-							}}
-						/>
+						{#if connectedHandles.has(inputDef.name)}
+							<span
+								class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
+							>
+								{inputDef.label}
+							</span>
+						{:else}
+							<Scrubbable
+								class="node-shell__input"
+								label={inputDef.name}
+								readonly={isLocked}
+								value={data[inputDef.name] as number}
+								oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+									const val = parseFloat(e.currentTarget.value) || 0;
+									updateNodeData(id, {
+										...data,
+										[inputDef.name]: val,
+									});
+								}}
+							/>
+						{/if}
 					{/if}
 				</div>
 			{/each}

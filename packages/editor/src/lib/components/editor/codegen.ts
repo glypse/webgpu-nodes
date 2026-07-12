@@ -36,7 +36,7 @@ function formatWgslLiteral(type: WgslType, value: unknown): string {
 /**
  * Walk backwards from seed-type nodes through edges to find all node IDs
  * that contribute to the final output. `seedType` is "frag-output" at root,
- * "group-output" inside any group's own subgraph — that's the only thing
+ * "group-output" inside any group's own subgraph - that's the only thing
  * that differs between generating the root shader and generating one group's function.
  */
 function findReachableNodeIds(
@@ -79,7 +79,7 @@ function findReachableNodeIds(
 
 /**
  * Topological sort of node IDs. Works on a DAG; throws if a cycle is detected.
- * Unchanged from before — this never needed to know about groups at all.
+ * Unchanged from before - this never needed to know about groups at all.
  */
 function topologicalSort(nodes: Map<string, Node>, edges: Edge[]): string[] {
 	const adjacency = new Map<string, string[]>();
@@ -114,7 +114,7 @@ function topologicalSort(nodes: Map<string, Node>, edges: Edge[]): string[] {
 	}
 
 	if (sorted.length !== nodes.size) {
-		throw new Error("Cycle detected in the node graph — cannot generate shader");
+		throw new Error("Cycle detected in the node graph - cannot generate shader");
 	}
 
 	return sorted;
@@ -141,7 +141,7 @@ export function debugSort(nodes: Node[], edges: Edge[]): string[] {
  * Resolve the WGSL variable name for a given edge's source.
  * - Single-output sources: `v_nodeId`.
  * - Multi-output sources (ordinary nodes): `v_nodeId_outputName`.
- * - Group-node sources: `v_nodeId.outputHandleId` — a field access on the
+ * - Group-node sources: `v_nodeId.outputHandleId` - a field access on the
  *   struct the group's generated function returns, since a group's "outputs"
  *   are all produced by ONE function call, not separate `let` statements.
  */
@@ -190,9 +190,31 @@ export function projectHash(project: {
 	root: { nodes: Node[]; edges: Edge[] };
 	definitions: Record<string, { nodes: Node[]; edges: Edge[] }>;
 }): string {
+	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
+		const out: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(data)) {
+			if (k === "handles" && Array.isArray(v)) {
+				out[k] = v.map((h): { id: string; type: string } => {
+					if (typeof h === "object" && h !== null && "id" in h && "type" in h) {
+						const handle = h as { id: string; label: string; type: string };
+						return { id: handle.id, type: handle.type };
+					}
+					return { id: "", type: "" };
+				});
+			} else {
+				out[k] = v;
+			}
+		}
+		return out;
+	}
+
 	return JSON.stringify({
 		root: {
-			nodes: project.root.nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+			nodes: project.root.nodes.map((n) => ({
+				id: n.id,
+				type: n.type,
+				data: stripLabels(n.data),
+			})),
 			edges: project.root.edges.map((e) => ({
 				source: e.source,
 				target: e.target,
@@ -204,7 +226,11 @@ export function projectHash(project: {
 			Object.entries(project.definitions).map(([key, doc]) => [
 				key,
 				{
-					nodes: doc.nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
+					nodes: doc.nodes.map((n) => ({
+						id: n.id,
+						type: n.type,
+						data: stripLabels(n.data),
+					})),
 					edges: doc.edges.map((e) => ({
 						source: e.source,
 						target: e.target,
@@ -231,16 +257,15 @@ type GroupDecls = Map<
 		fnDecl: string;
 		fnName: string;
 		structName: string;
-		globals?: { name: string; type: WgslType; wgslRef: string }[];
 	}
 >;
 
 /**
- * The reusable "walk one subgraph and emit its body lines" logic — this is the
+ * The reusable "walk one subgraph and emit its body lines" logic - this is the
  * part of the old generateShader that had nothing to do with being the root.
  * Used both for the root fragment body and for every group's function body.
  *
- * Returns the emitted lines AND the variable name that should be returned —
+ * Returns the emitted lines AND the variable name that should be returned -
  * for root that's whatever feeds frag-output; for a group, we build a struct
  * literal from whatever feeds group-output instead (handled by the caller).
  */
@@ -251,7 +276,6 @@ function generateBody(
 	groupDecls: GroupDecls,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
-	globalOverrides?: Record<string, string>,
 ): { lines: string[]; seedNodeVarName: string | null } {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
@@ -281,7 +305,7 @@ function generateBody(
 		const varName = getVarName(nodeId);
 		const incoming = targetEdgeMap.get(nodeId) ?? [];
 
-		// Group nodes don't call descriptor.wgsl() the normal way — they need
+		// Group nodes don't call descriptor.wgsl() the normal way - they need
 		// their own function generated first (recursively), THEN a one-line
 		// call to it. Every other node type falls through to the shared path below.
 		if (node.type === "node-group") {
@@ -309,9 +333,7 @@ function generateBody(
 							node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
 						return formatWgslLiteral(inputDef.type, dataVal);
 					});
-					// Append global arguments (e.g. uv, motiongpuFrame.time)
-					const globalArgs = (decl.globals ?? []).map((g) => g.wgslRef);
-					const callArgs = [...inputArgs, ...globalArgs];
+					const callArgs = inputArgs;
 					lines.push(`  let ${varName} = ${decl.fnName}(${callArgs.join(", ")});`);
 				}
 			}
@@ -361,7 +383,6 @@ function generateBody(
 			outputVars,
 			data: node.data,
 			inputs: resolvedInputs,
-			globalOverrides,
 		});
 		for (const line of wgslLines) lines.push(`  ${line}`);
 
@@ -373,8 +394,8 @@ function generateBody(
 
 /**
  * Generate one group's `struct` + `fn`, recursively (a group can contain
- * another group — this just calls generateBody again, unchanged).
- * No-ops if this definitionRef is already in groupDecls — that's the memoization.
+ * another group - this just calls generateBody again, unchanged).
+ * No-ops if this definitionRef is already in groupDecls - that's the memoization.
  */
 function emitGroupFunctionIfNeeded(
 	definitionRef: string,
@@ -382,7 +403,7 @@ function emitGroupFunctionIfNeeded(
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
 ): void {
-	if (groupDecls.has(definitionRef)) return; // memoized — already generated
+	if (groupDecls.has(definitionRef)) return; // memoized - already generated
 
 	const definition = getGroupDefinition(definitionRef);
 	if (!definition) return;
@@ -390,23 +411,12 @@ function emitGroupFunctionIfNeeded(
 	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
 	const handles = (groupOutputNode?.data.handles ?? []) as HandleDef[];
 
+	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
+	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+
 	const ident = sanitizeIdent(definitionRef);
 	const fnName = `group_${ident}`;
 	const structName = `GroupOutputs_${ident}`;
-
-	// Read globals from the group-input node's metadata
-	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
-	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
-	const globals =
-		(groupInputNode?.data.globals as
-			| { name: string; type: WgslType; wgslRef: string }[]
-			| undefined) ?? [];
-
-	// Build globalOverrides: maps raw WGSL ref (e.g. "uv") to parameter name (e.g. "h_<uuid>")
-	const globalOverrides: Record<string, string> = {};
-	for (const g of globals) {
-		globalOverrides[g.wgslRef] = sanitizeIdent(g.name);
-	}
 
 	const { lines } = generateBody(
 		definition.nodes,
@@ -415,10 +425,9 @@ function emitGroupFunctionIfNeeded(
 		groupDecls,
 		resolveDescriptor,
 		getGroupDefinition,
-		Object.keys(globalOverrides).length > 0 ? globalOverrides : undefined,
 	);
 
-	// The group-output node itself never emits a `let` (it's a sink, not computed) —
+	// The group-output node itself never emits a `let` (it's a sink, not computed) -
 	// build the struct literal directly from whatever feeds each of its handles.
 	const outputEdges = definition.edges.filter((e) => e.target === groupOutputNode?.id);
 	const nodeMap = new Map<string, Node>();
@@ -432,10 +441,8 @@ function emitGroupFunctionIfNeeded(
 	const structFields = handles.map((h) => `  ${sanitizeIdent(h.id)}: ${h.type},`).join("\n");
 	const structDecl = `struct ${structName} {\n${structFields}\n}`;
 
-	// Group's inputs: regular handles + global handles
-	const regularParams = inputHandles.map((h) => `${sanitizeIdent(h.id)}: ${h.type}`);
-	const globalParams = globals.map((g) => `${sanitizeIdent(g.name)}: ${g.type}`);
-	const params = [...regularParams, ...globalParams].join(", ");
+	// Group's inputs: regular handles only
+	const params = inputHandles.map((h) => `${sanitizeIdent(h.id)}: ${h.type}`).join(", ");
 
 	const fnDecl = [
 		`fn ${fnName}(${params}) -> ${structName} {`,
@@ -444,7 +451,7 @@ function emitGroupFunctionIfNeeded(
 		`}`,
 	].join("\n");
 
-	groupDecls.set(definitionRef, { structDecl, fnDecl, fnName, structName, globals });
+	groupDecls.set(definitionRef, { structDecl, fnDecl, fnName, structName });
 }
 
 /**

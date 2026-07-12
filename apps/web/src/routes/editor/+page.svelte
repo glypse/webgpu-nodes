@@ -1,5 +1,11 @@
 <script lang="ts">
-	import { Editor, GraphManager, setDevContext, setGraphManager } from "$editor";
+	import {
+		Editor,
+		GraphManager,
+		setDevContext,
+		setGraphManager,
+		type GraphDocument,
+	} from "$editor";
 	import { Menubar } from "$theme/components/ui";
 	import { toggleMode } from "mode-watcher";
 
@@ -37,7 +43,7 @@
 				name?: string;
 				category?: string;
 				dependencies?: string[];
-				definition?: { nodes: unknown[]; edges: unknown[] };
+				definition?: GraphDocument;
 			}[] = await Promise.all(
 				files.map(async (file) => {
 					const text = await file.text();
@@ -46,7 +52,7 @@
 						name?: string;
 						category?: string;
 						dependencies?: string[];
-						definition?: { nodes: unknown[]; edges: unknown[] };
+						definition?: GraphDocument;
 					};
 				}),
 			);

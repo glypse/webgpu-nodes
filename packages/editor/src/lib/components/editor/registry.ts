@@ -80,7 +80,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	// Output
 	"frag-output": outputNode,
 
-	// Groups (placeholder — shape derived from subgraph at runtime)
+	// Groups (placeholder - shape derived from subgraph at runtime)
 	"node-group": groupNode,
 };
 
@@ -88,7 +88,7 @@ export const DYNAMIC_NODE_TYPES = ["group-input", "group-output"];
 
 /** Helper: produce default node data for a registered type. */
 export function defaultDataForType(type: string): Record<string, unknown> {
-	return { ...nodeRegistry[type].defaultData };
+	return { ...nodeRegistry[type]?.defaultData };
 }
 
 /** Convenience: list all categories and their nodes for an AddNode menu. */

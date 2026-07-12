@@ -4,11 +4,13 @@ export const absNode = {
 	type: "abs",
 	label: "Absolute",
 	category: "math",
-	inputs: [{ name: "e", type: "f32" }],
-	outputs: [{ name: "result", type: "f32" }],
+	inputs: [{ name: "e", label: "e", type: "f32" }],
+	outputs: [{ name: "result", label: "result", type: "f32" }],
 	defaultData: { e: 0 },
 	wgsl: ({ varName, inputs }) => {
+		// @ts-expect-error Inputs are guaranteed present by codegen
 		const e = inputs.e[0];
+		// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
 		return [`let ${varName} = abs(${e});`];
 	},
 } satisfies NodeDescriptor;

@@ -1,6 +1,0 @@
-{
-	"library": [
-		{ "id": "std-passthrough", "name": "Passthrough", "category": "math", "dependencies": [] },
-		{ "id": "std-remap-01", "name": "Remap 0-1", "category": "math", "dependencies": [] }
-	]
-}

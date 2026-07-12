@@ -3,5 +3,6 @@ export {
 	GraphManager,
 	setGraphManager,
 	getGraphManager,
+	type GraphDocument,
 } from "./components/editor/graph-state.svelte";
 export * from "./components/editor/utils";

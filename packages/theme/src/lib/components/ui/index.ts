@@ -7,3 +7,7 @@ export * as Menubar from "./menubar/index";
 export * as Resizable from "./resizable/index";
 export * as Scrubbable from "./scrubbable/index";
 export * as Separator from "./separator/index";
+export * as Sheet from "./sheet/index";
+export * as Select from "./select/index";
+export * as Popover from "./popover/index";
+export * as Kbd from "./kbd/index";

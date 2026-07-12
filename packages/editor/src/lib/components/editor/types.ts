@@ -1,7 +1,9 @@
 import type { Node } from "@xyflow/svelte";
 
 // ─── WGSL type system ────────────────────────────────────────
-export type WgslType = "f32" | "vec2f" | "vec3f" | "vec4f";
+export const WGSL_TYPES = ["f32", "vec2f", "vec3f", "vec4f"] as const;
+
+export type WgslType = (typeof WGSL_TYPES)[number];
 
 export const WGSL_DEFAULTS: Record<WgslType, string> = {
 	f32: "f32(0.0)",
@@ -11,7 +13,7 @@ export const WGSL_DEFAULTS: Record<WgslType, string> = {
 };
 
 export type HandleDef = {
-	id: string; // stable, generated once, never changes — this is what edges/targetHandle reference
+	id: string; // stable, generated once, never changes - this is what edges/targetHandle reference
 	label: string; // user-facing, editable later, defaults to something like "Input 1"
 	type: WgslType; // hardcode "f32" for now, per your call
 };
@@ -19,6 +21,7 @@ export type HandleDef = {
 // ─── Descriptor types ────────────────────────────────────────
 export type NodeInputDef = {
 	name: string;
+	label: string;
 	type: WgslType;
 	/**
 	 * If true, every edge connected to this handle is collected.
@@ -30,6 +33,7 @@ export type NodeInputDef = {
 
 export type NodeOutputDef = {
 	name: string;
+	label: string;
 	type: WgslType;
 };
 
@@ -54,16 +58,11 @@ export type WgslCtx = {
 	data: Record<string, unknown>;
 	/** Resolved upstream variable names per input name.
 	 *  - Non-variadic: `inputs["x"]` is `[varName]` (1 element) if connected, `[]` if not.
-	 *  - Variadic: `inputs["operands"]` has N elements (one per connected edge), `[]` if none. */
+	 *  - Variadic: `inputs["operands"]` has N elements (one per connected edge), `[]` if none.
+	 *
+	 *  The codegen guarantees every input declared in the node's descriptor is present,
+	 *  so direct property access like `inputs.e` is always safe. */
 	inputs: Record<string, string[]>;
-	/**
-	 * When a node is inside a group, globals like `uv` or `motiongpuFrame.time`
-	 * must be replaced with the group function's parameter names.
-	 * Maps the raw WGSL reference (e.g. `"uv"`) to the parameter name
-	 * (e.g. `"h_<handle-uuid>"`). If a global is NOT in this map, it means
-	 * the node is at root scope and the raw reference is fine.
-	 */
-	globalOverrides?: Record<string, string>;
 };
 
 export type NodeDescriptor = {
@@ -73,14 +72,6 @@ export type NodeDescriptor = {
 	inputs: NodeInputDef[];
 	outputs: NodeOutputDef[];
 	defaultData: Record<string, unknown>;
-	/**
-	 * Root-level WGSL identifiers this node references that are NOT defined
-	 * inside any group (e.g. `uv`, `motiongpuFrame.time`).
-	 * When a node with globals is placed inside a group, the grouping logic
-	 * must create group-input handles for them, and the codegen must forward
-	 * them as function arguments.
-	 */
-	globals?: { name: string; type: WgslType; wgslRef: string }[];
 	/** Emit WGSL line(s) that define `varName`.
 	 *  Each returned string becomes one line inside `fn frag()`.
 	 *  The `let ` / `var ` prefix is the node's own choice. */

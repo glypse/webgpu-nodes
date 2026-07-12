@@ -18,6 +18,7 @@
 		"eslint": "catalog:",
 		"globals": "catalog:",
 		"mode-watcher": "catalog:",
+		"phosphor-svelte": "catalog:",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
 		"typescript-eslint": "catalog:",

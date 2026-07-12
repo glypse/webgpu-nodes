@@ -6,7 +6,6 @@ import { buildGroupInputDescriptor } from "./nodes/groupInput.node";
 import { buildGroupOutputDescriptor } from "./nodes/groupOutput.node";
 import { nodeRegistry } from "./registry";
 import defaultScene from "./sizing_circle.json";
-import standardLibraryIndex from "./standard-library.json";
 import { type GroupedNode, type HandleDef, type NodeDescriptor, type WgslType } from "./types";
 
 // ── Serialisable document types ──────────────────────────────────────────────
@@ -15,9 +14,13 @@ import { type GroupedNode, type HandleDef, type NodeDescriptor, type WgslType } 
 export type GraphDocument = {
 	nodes: GraphDocumentNode[];
 	edges: GraphDocumentEdge[];
+	/** Shared display label for all instances of this group. */
+	label?: string;
+	/** Whether instances of this group are locked (non-editable) by default. */
+	locked?: boolean;
 };
 
-// ── Standard library per-file imports ────────────────────────────────────────
+// ── Standard library auto-import ──────────────────────────────────────────────
 
 const libraryModules = import.meta.glob<{
 	default: {
@@ -29,9 +32,19 @@ const libraryModules = import.meta.glob<{
 	};
 }>("./standard-library/*.json", { eager: true });
 
-const libraryDefinitions: Record<string, GraphDocument> = {};
-for (const [, mod] of Object.entries(libraryModules)) {
+const libraryEntries: StandardLibraryEntry[] = Object.values(libraryModules).map((mod) => {
 	const entry = mod.default;
+	return {
+		id: entry.id,
+		label: entry.name,
+		category: entry.category,
+		dependencies: entry.dependencies,
+		definition: entry.definition,
+	};
+});
+
+const libraryDefinitions: Record<string, GraphDocument> = {};
+for (const entry of libraryEntries) {
 	libraryDefinitions[entry.id] = entry.definition;
 }
 
@@ -72,6 +85,8 @@ export type GraphProject = {
 export type HydratedGraphDocument = {
 	nodes: GroupedNode[];
 	edges: Edge[];
+	label?: string;
+	locked?: boolean;
 };
 
 export type HydratedGraphProject = {
@@ -108,8 +123,8 @@ function resolveDescriptor(
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
 	}
-	// TODO: properly handle undefined here
-	return nodeRegistry[node.type];
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- fallback is safe
+	return (nodeRegistry[node.type ?? ""] ?? nodeRegistry.float)!;
 }
 
 export function normaliseDocument(doc: GraphDocument): GraphDocument {
@@ -121,14 +136,9 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 		}
 
 		const desc = resolveDescriptor(node, {});
-		// TODO: this check should happen higher up in the chain
-		if (desc === undefined) {
-			console.warn(`[graph] unknown node type "${node.type}" — dropping`);
-			continue;
-		}
 		nodes.push({ ...node, data: { ...desc.defaultData, ...node.data } });
 	}
-	return { nodes, edges: doc.edges };
+	return { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
 }
 
 // Unused for now, since normaliseDocument() is in turn recursively called in hydrateProject()
@@ -140,12 +150,15 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 	return { root, definitions };
 } */
 
+const NON_DELETABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
+
 function hydrateNode(node: GraphDocumentNode): GroupedNode {
 	const base = {
 		id: node.id,
 		type: node.type,
 		data: node.data,
 		position: node.position,
+		deletable: NON_DELETABLE_TYPES.has(node.type) ? false : undefined,
 	};
 
 	if (node.group) {
@@ -155,7 +168,7 @@ function hydrateNode(node: GraphDocumentNode): GroupedNode {
 		};
 	}
 
-	return base; // not a group node at all — most nodes hit this line
+	return base; // not a group node at all - most nodes hit this line
 }
 
 function hydrateDocument(document: GraphDocument): HydratedGraphDocument {
@@ -171,7 +184,7 @@ function hydrateDocument(document: GraphDocument): HydratedGraphDocument {
 		targetHandle: edge.targetHandle,
 	}));
 
-	return { nodes, edges };
+	return { nodes, edges, label: normalised.label, locked: normalised.locked };
 }
 
 function hydrateProject(project: GraphProject): HydratedGraphProject {
@@ -185,20 +198,21 @@ function hydrateProject(project: GraphProject): HydratedGraphProject {
 /**
  * Serialise a single subgraph's live SvelteFlow Node[]/Edge[] back to a GraphDocument.
  * NOTE: like normaliseDocument, this is per-subgraph only. A `serialiseProject` wrapping
- * this for root + definitions + recursing into owned content is still TODO.
+ * this for root + definitions + recursing into owned content is done by
+ * `GraphManager.getProjectJson()`.
  */
-export function serialiseDocument(nodes: Node[], edges: Edge[]): GraphDocument {
+export function serialiseDocument(
+	nodes: Node[],
+	edges: Edge[],
+	label?: string,
+	locked?: boolean,
+): GraphDocument {
 	return {
 		nodes: nodes.map(({ id, type, data, position }) => ({
 			id,
 			type: type ?? "",
 			data,
 			position,
-			// TODO: a live SvelteFlow Node doesn't carry `group` today — that lives only in
-			// your GraphProject tree, not in the flat Node/Edge shape SvelteFlow binds to.
-			// serialiseDocument as called from GraphManager will need the *source* GraphDocument
-			// (to pull `group` back out per node) alongside the live nodes/edges, since SvelteFlow's
-			// bound arrays only ever reflect ONE subgraph's worth of nodes at a time anyway.
 		})),
 		edges: edges.map((e) => ({
 			id: e.id,
@@ -207,6 +221,8 @@ export function serialiseDocument(nodes: Node[], edges: Edge[]): GraphDocument {
 			sourceHandle: e.sourceHandle ?? undefined,
 			targetHandle: e.targetHandle ?? undefined,
 		})),
+		...(label !== undefined ? { label } : {}),
+		...(locked !== undefined ? { locked } : {}),
 	};
 }
 
@@ -214,7 +230,7 @@ export function serialiseDocument(nodes: Node[], edges: Edge[]): GraphDocument {
 
 export type StandardLibraryEntry = {
 	id: string;
-	name: string;
+	label: string;
 	category: string;
 	dependencies: string[];
 	definition: GraphDocument;
@@ -235,10 +251,7 @@ export class GraphManager {
 	selectedNodeIds = $state<string[]>([]);
 
 	/** Read-only standard library entries for browsing. */
-	library: StandardLibraryEntry[] = standardLibraryIndex.library.map((meta) => ({
-		...meta,
-		definition: libraryDefinitions[meta.id] ?? { nodes: [], edges: [] },
-	}));
+	library: StandardLibraryEntry[] = libraryEntries;
 
 	constructor(defaults?: GraphProject) {
 		const project: GraphProject = defaults ?? defaultScene;
@@ -247,6 +260,7 @@ export class GraphManager {
 		// Register standard library definitions so they can be referenced by group nodes
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
+			def.label = entry.label;
 			this.project.definitions[entry.id] = hydrateDocument(def);
 		}
 	}
@@ -256,14 +270,14 @@ export class GraphManager {
 		for (const nodeId of this.path) {
 			const node = current.nodes.find((n) => n.id === nodeId);
 			if (!node?.group) {
-				console.warn(`[graph] invalid path segment "${nodeId}" — resetting to root`);
+				console.warn(`[graph] invalid path segment "${nodeId}" - resetting to root`);
 				this.path = [];
 				return this.project.root;
 			}
 			const definition = this.project.definitions[node.group.definitionRef];
 			if (!definition) {
 				console.warn(
-					`[graph] missing definition "${node.group.definitionRef}" — resetting to root`,
+					`[graph] missing definition "${node.group.definitionRef}" - resetting to root`,
 				);
 				this.path = [];
 				return this.project.root;
@@ -324,25 +338,46 @@ export class GraphManager {
 			if (!node?.group) break;
 			const definition = this.project.definitions[node.group.definitionRef];
 			if (!definition) break;
-			const nodeType = node.type ?? "unknown";
-			const desc = nodeRegistry[nodeType];
-			labels.push({ id: nodeId, label: desc?.label ?? nodeType });
+			if (node.type === "node-group") {
+				labels.push({ id: nodeId, label: definition.label ?? "Group" });
+			} else {
+				const desc = nodeRegistry[node.type ?? ""];
+				labels.push({ id: nodeId, label: desc?.label ?? node.type ?? "unknown" });
+			}
 			current = definition;
 		}
 		return labels;
 	}
 
-	/** Push a group node's id onto the breadcrumb path — "enter" it. */
+	/**
+	 * The document that *contains* the current group node (one level up from the
+	 * activeDocument).  Returns the root when at the top level.
+	 */
+	get parentDocument(): HydratedGraphDocument {
+		if (this.path.length === 0) return this.project.root;
+		let current: HydratedGraphDocument = this.project.root;
+		for (let i = 0; i < this.path.length - 1; i++) {
+			const node = current.nodes.find((n) => n.id === this.path[i]);
+			if (!node?.group) return current;
+			const definition = this.project.definitions[node.group.definitionRef];
+			if (!definition) return current;
+			current = definition;
+		}
+		return current;
+	}
+
+	/** Push a group node's id onto the breadcrumb path - "enter" it. */
 	enterGroup(groupNodeId: string) {
 		const node = this.activeDocument.nodes.find((n) => n.id === groupNodeId);
 		if (!node?.group) {
-			console.warn(`[graph] cannot enter "${groupNodeId}" — not a group node`);
+			console.warn(`[graph] cannot enter "${groupNodeId}" - not a group node`);
 			return;
 		}
+		this.selectedNodeIds = [];
 		this.path = [...this.path, groupNodeId];
 	}
 
-	/** Pop one level off the breadcrumb path — "exit" the current group. */
+	/** Pop one level off the breadcrumb path - "exit" the current group. */
 	exitGroup() {
 		if (this.path.length === 0) return;
 		this.path = this.path.slice(0, -1);
@@ -363,16 +398,27 @@ export class GraphManager {
 		// Re-register standard library definitions after loading
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
+			def.label = entry.label;
 			this.project.definitions[entry.id] = hydrateDocument(def);
 		}
 	}
 
 	getProjectJson(): string {
-		const root = serialiseDocument(this.project.root.nodes, this.project.root.edges);
+		const root = serialiseDocument(
+			this.project.root.nodes,
+			this.project.root.edges,
+			this.project.root.label,
+			this.project.root.locked,
+		);
 		const definitions = Object.fromEntries(
 			Object.entries(this.project.definitions).map(([key, definition]) => [
 				key,
-				serialiseDocument(definition.nodes, definition.edges),
+				serialiseDocument(
+					definition.nodes,
+					definition.edges,
+					definition.label,
+					definition.locked,
+				),
 			]),
 		);
 		const project = { root, definitions };
@@ -416,6 +462,81 @@ export class GraphManager {
 	}
 
 	/**
+	 * Collect all definitionRefs that are "in scope" - i.e. the definitions
+	 * the user is currently inside of, as determined by the breadcrumb path.
+	 */
+	private collectInScopeRefs(): Set<string> {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const refs = new Set<string>();
+		let current: HydratedGraphDocument = this.project.root;
+		for (const nodeId of this.path) {
+			const node = current.nodes.find((n) => n.id === nodeId);
+			if (!node?.group) break;
+			refs.add(node.group.definitionRef);
+			const def = this.project.definitions[node.group.definitionRef];
+			if (!def) break;
+			current = def;
+		}
+		return refs;
+	}
+
+	/**
+	 * Collect all definitionRefs transitively referenced by a definition
+	 * (excluding standard library refs, which can't create cycles).
+	 */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure algorithm helper
+	private transitiveRefs(definitionRef: string, visited = new Set<string>()): Set<string> {
+		if (visited.has(definitionRef) || this.isStandardLibrary(definitionRef)) return visited;
+		visited.add(definitionRef);
+		const def = this.project.definitions[definitionRef];
+		if (!def) return visited;
+		for (const node of def.nodes) {
+			if (node.type === "node-group" && node.group) {
+				this.transitiveRefs(node.group.definitionRef, visited);
+			}
+		}
+		return visited;
+	}
+
+	/**
+	 * Check whether adding an instance of `definitionRef` at the current path
+	 * would create a circular reference (directly or transitively).
+	 */
+	wouldCreateCycle(definitionRef: string): boolean {
+		const inScope = this.collectInScopeRefs();
+		if (inScope.size === 0) return false;
+		const refs = this.transitiveRefs(definitionRef);
+		for (const ref of refs) {
+			if (inScope.has(ref)) return true;
+		}
+		return false;
+	}
+
+	/** Collect every label currently in use (standard library + all definitions). */
+	private usedLabels(): Set<string> {
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- pure algorithm helper
+		const labels = new Set<string>();
+		for (const entry of this.library) {
+			if (entry.label) labels.add(entry.label);
+		}
+		for (const def of Object.values(this.project.definitions)) {
+			if (def.label) labels.add(def.label);
+		}
+		return labels;
+	}
+
+	/** Generate a unique "X - Copy" / "X - Copy 2" / … label for a cloned definition. */
+	private uniqueCopyLabel(sourceLabel: string | undefined): string {
+		if (!sourceLabel) return "Group";
+		const existing = this.usedLabels();
+		const base = `${sourceLabel} - Copy`;
+		if (!existing.has(base)) return base;
+		let n = 2;
+		while (existing.has(`${base} ${String(n)}`)) n++;
+		return `${base} ${String(n)}`;
+	}
+
+	/**
 	 * Collect all nested group definitionRefs referenced by a definition.
 	 * Does NOT include standard library refs (they're always available).
 	 */
@@ -444,9 +565,10 @@ export class GraphManager {
 	private buildExportEntry(definitionRef: string):
 		| {
 				id: string;
-				name: string;
+				label: string;
 				category: string;
 				dependencies: string[];
+				locked: boolean | undefined;
 				definition: GraphDocument;
 		  }
 		| undefined {
@@ -458,9 +580,10 @@ export class GraphManager {
 
 		return {
 			id: definitionRef,
-			name: entry?.name ?? "Group",
+			label: def.label ?? entry?.label ?? "Group",
 			category: entry?.category ?? "group",
 			dependencies: deps,
+			locked: def.locked,
 			definition: {
 				nodes: def.nodes.map((n) => ({
 					id: n.id,
@@ -503,7 +626,7 @@ export class GraphManager {
 		for (const ref of uniqueRefs) {
 			const entry = this.buildExportEntry(ref);
 			if (!entry) continue;
-			const slug = entry.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+			const slug = entry.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 			this.downloadJson(`${slug}.json`, entry);
 		}
 	}
@@ -516,7 +639,7 @@ export class GraphManager {
 	importGroups(
 		jsonFiles: {
 			id?: string;
-			name?: string;
+			label?: string;
 			category?: string;
 			dependencies?: string[];
 			definition?: GraphDocument;
@@ -529,6 +652,8 @@ export class GraphManager {
 				continue;
 			}
 			const normalised = normaliseDocument(file.definition);
+			if (file.label) normalised.label = file.label;
+			normalised.locked = true;
 			this.project.definitions[file.id] = hydrateDocument(normalised);
 		}
 
@@ -550,24 +675,25 @@ export class GraphManager {
 		return { imported: jsonFiles.length, missing };
 	}
 
-	// TODO: groupSelection(nodeIds: string[]): void
-	// The Ctrl+G operation. Not stubbed here since you said you want to design the
-	// edge-rewiring logic yourself — but it belongs on this class, since it needs to
-	// mutate `project` (remove nodes from activeDocument, create a new group node in
-	// their place, move them into that new node's `group.content`, and rewrite any edge
-	// that crossed the selection boundary to instead terminate on a new Group Input/Output
-	// node inside the new content).
-	//
 	groupSelection(selectedNodeIds: Set<string>): void {
-		console.log("hit! Selected nodes: " + [...selectedNodeIds].join(", "));
+		// TODO: temporarily exclude uv nodes from grouping - revisit once subgraph wiring supports them
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const UNGROUPABLE_TYPES = new Set(["frag-output", "uv", "group-input", "group-output"]);
 
-		const selectedNodes = this.activeDocument.nodes.filter((node) =>
-			selectedNodeIds.has(node.id),
+		const selectedNodes = this.activeDocument.nodes.filter(
+			(node) => selectedNodeIds.has(node.id) && !UNGROUPABLE_TYPES.has(node.type ?? ""),
 		);
+
+		if (selectedNodes.length === 0 || selectedNodes.every((n) => n.type === "node-group")) {
+			return;
+		}
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const filteredIds = new Set(selectedNodes.map((n) => n.id));
 		const bounds = computeSelectionBounds(selectedNodes);
 
 		const { internal, incoming, outgoing } = classifyEdges(
-			selectedNodeIds,
+			filteredIds,
 			this.activeDocument.edges as GraphDocumentEdge[], // We could pick only the GraphDocumentEdge properites of each Edge, but passing the raw object is more memory-efficient
 		);
 		const dedupedIncoming = deduplicateBySource(incoming);
@@ -587,25 +713,6 @@ export class GraphManager {
 			(node) => this.resolveDescriptor(node),
 			{ x: bounds.maxX + OFFSET, y: bounds.centerY },
 		);
-
-		// Detect globals from selected nodes — store as metadata only, no handles
-		// (globals are implicit inputs, not user-visible connections)
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const seenGlobalRefs = new Set<string>();
-		const allGlobals: { name: string; type: WgslType; wgslRef: string }[] = [];
-		for (const node of selectedNodes) {
-			const descriptor = this.resolveDescriptor(node);
-			if (!descriptor.globals) continue;
-			for (const g of descriptor.globals) {
-				if (!seenGlobalRefs.has(g.wgslRef)) {
-					seenGlobalRefs.add(g.wgslRef);
-					allGlobals.push(g);
-				}
-			}
-		}
-		if (allGlobals.length > 0) {
-			(groupInputNode.node.data as Record<string, unknown>).globals = allGlobals;
-		}
 
 		const definitionRef = crypto.randomUUID();
 		const groupNodeId = crypto.randomUUID();
@@ -641,12 +748,21 @@ export class GraphManager {
 			allInnerEdges.push(inner);
 		});
 
+		const userGroupCount = Object.keys(this.project.definitions).filter(
+			(k) => !this.isStandardLibrary(k),
+		).length;
+
 		const definition: GraphDocument = {
-			nodes: [...selectedNodes, groupInputNode.node, groupOutputNode.node],
+			nodes: [
+				...(selectedNodes as GraphDocumentNode[]),
+				groupInputNode.node,
+				groupOutputNode.node,
+			],
 			edges: [...internal, ...allInnerEdges],
+			label: `Group ${String(userGroupCount)}`,
 		};
 
-		this.project.definitions[definitionRef] = definition;
+		this.project.definitions[definitionRef] = hydrateDocument(definition);
 
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
@@ -664,7 +780,7 @@ export class GraphManager {
 		]);
 
 		this.activeDocument.nodes = [
-			...this.activeDocument.nodes.filter((n) => !selectedNodeIds.has(n.id)),
+			...this.activeDocument.nodes.filter((n) => !filteredIds.has(n.id)),
 			groupNode,
 		];
 
@@ -672,6 +788,16 @@ export class GraphManager {
 			...this.activeDocument.edges.filter((e) => !touchedEdgeIds.has(e.id)),
 			...allOuterEdges,
 		];
+
+		// Clear SvelteFlow's internal selection state so moved nodes/edges
+		// don't appear selected inside the newly created group.
+		this.selectedNodeIds = [];
+		for (const n of this.activeDocument.nodes) {
+			n.selected = false;
+		}
+		for (const e of this.activeDocument.edges) {
+			e.selected = false;
+		}
 
 		function computeSelectionBounds(selectedNodes: GroupedNode[]) {
 			const lefts = selectedNodes.map((n) => n.position.x);
@@ -768,7 +894,7 @@ export class GraphManager {
 			for (const [i, group] of dedupedIncoming.entries()) {
 				const representative = group[0];
 				if (!representative) {
-					console.warn("[graph] empty edge group — skipping");
+					console.warn("[graph] empty edge group - skipping");
 					continue;
 				}
 				const handle: HandleDef = {
@@ -804,7 +930,7 @@ export class GraphManager {
 			for (const [i, group] of dedupedOutgoing.entries()) {
 				const representative = group[0];
 				if (!representative) {
-					console.warn("[graph] empty edge group — skipping");
+					console.warn("[graph] empty edge group - skipping");
 					continue;
 				}
 				const handle: HandleDef = {
@@ -939,7 +1065,11 @@ export class GraphManager {
 			targetHandle: e.targetHandle ?? undefined,
 		}));
 
-		this.project.definitions[newDefRef] = { nodes: clonedNodes, edges: clonedEdges };
+		this.project.definitions[newDefRef] = hydrateDocument({
+			nodes: clonedNodes,
+			edges: clonedEdges,
+			label: this.uniqueCopyLabel(sourceDef.label),
+		});
 
 		// Point the group node at the new (unlocked) clone
 		node.group = { definitionRef: newDefRef, locked: false };
@@ -948,8 +1078,10 @@ export class GraphManager {
 	}
 
 	/**
-	 * Add a node-group to the active document from a standard-library definition.
-	 * The definition is deep-cloned so the original is never mutated.
+	 * Add a node-group to the active document from an existing definition.
+	 * Standard library definitions are referenced directly (locked).
+	 * User-created definitions are shared across all instances (unlocked).
+	 * Returns undefined if the addition would create a circular reference.
 	 */
 	addFromLibrary(definitionRef: string, position: { x: number; y: number }): string | undefined {
 		const sourceDef = this.project.definitions[definitionRef];
@@ -958,33 +1090,14 @@ export class GraphManager {
 			return undefined;
 		}
 
-		const newDefRef = crypto.randomUUID();
-
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const idMap = new Map<string, string>();
-		for (const n of sourceDef.nodes) {
-			idMap.set(n.id, crypto.randomUUID());
+		if (this.wouldCreateCycle(definitionRef)) {
+			console.warn(
+				`[graph] addFromLibrary: adding "${definitionRef}" would create a circular reference`,
+			);
+			return undefined;
 		}
 
-		const clonedNodes: GraphDocumentNode[] = sourceDef.nodes.map((n) => ({
-			id: idMap.get(n.id) ?? n.id,
-			type: n.type ?? "",
-			data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
-			position: { ...n.position },
-			...(n.group
-				? { group: { definitionRef: n.group.definitionRef, locked: n.group.locked } }
-				: {}),
-		}));
-
-		const clonedEdges: GraphDocumentEdge[] = sourceDef.edges.map((e) => ({
-			id: crypto.randomUUID(),
-			source: idMap.get(e.source) ?? e.source,
-			target: idMap.get(e.target) ?? e.target,
-			sourceHandle: e.sourceHandle ?? undefined,
-			targetHandle: e.targetHandle ?? undefined,
-		}));
-
-		this.project.definitions[newDefRef] = { nodes: clonedNodes, edges: clonedEdges };
+		const isLocked = this.isStandardLibrary(definitionRef) || sourceDef.locked === true;
 
 		const groupNodeId = crypto.randomUUID();
 		const groupNode: GraphDocumentNode = {
@@ -992,12 +1105,79 @@ export class GraphManager {
 			type: "node-group",
 			data: {},
 			position,
-			group: { definitionRef: newDefRef, locked: true },
+			group: { definitionRef, locked: isLocked },
 		};
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
 
 		return groupNodeId;
+	}
+
+	/** Set the display label for a group definition (shared by all instances). */
+	setGroupLabel(nodeId: string, label: string) {
+		const doc = this.path.length > 0 ? this.parentDocument : this.activeDocument;
+		const node = doc.nodes.find((n) => n.id === nodeId);
+		if (!node?.group) return;
+		const def = this.project.definitions[node.group.definitionRef];
+		if (!def) return;
+		const trimmed = label.trim();
+		if (!trimmed) return;
+		if (!this.isLabelAvailable(trimmed, node.group.definitionRef)) return;
+		def.label = trimmed;
+	}
+
+	/** Check whether a label is available (not used by any node type, the standard library, or other definitions). */
+	isLabelAvailable(label: string, excludeDefRef?: string): boolean {
+		const trimmed = label.trim();
+		if (!trimmed) return false;
+		for (const desc of Object.values(nodeRegistry)) {
+			if (desc.label === trimmed) return false;
+		}
+		for (const entry of this.library) {
+			if (entry.label && entry.label === trimmed) return false;
+		}
+		for (const [key, def] of Object.entries(this.project.definitions)) {
+			if (key === excludeDefRef) continue;
+			if (def.label === trimmed) return false;
+		}
+		return true;
+	}
+
+	/** Update the label of a handle on a group-input or group-output node inside a definition. */
+	setHandleLabel(definitionRef: string, handleNodeId: string, handleId: string, label: string) {
+		const def = this.project.definitions[definitionRef];
+		if (!def) return;
+		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
+		if (!handleNode) return;
+		const handles = handleNode.data.handles as HandleDef[] | undefined;
+		if (!handles) return;
+		const handle = handles.find((h) => h.id === handleId);
+		if (!handle) return;
+		handle.label = label;
+	}
+
+	/** Remove a handle from a group-input/group-output node and delete all connected edges. */
+	removeHandle(definitionRef: string, handleNodeId: string, handleId: string) {
+		const def = this.project.definitions[definitionRef];
+		if (!def) return;
+
+		// Remove the handle from the node's data
+		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
+		if (!handleNode) return;
+		const handles = handleNode.data.handles as HandleDef[] | undefined;
+		if (!handles) return;
+		const idx = handles.findIndex((h) => h.id === handleId);
+		if (idx === -1) return;
+		handles.splice(idx, 1);
+
+		// Remove all edges connected to this handle on this node
+		def.edges = def.edges.filter(
+			(e) =>
+				!(
+					(e.source === handleNodeId && e.sourceHandle === handleId) ||
+					(e.target === handleNodeId && e.targetHandle === handleId)
+				),
+		);
 	}
 }
 

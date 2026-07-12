@@ -33,11 +33,11 @@ export function buildGroupDescriptor(
 
 	return {
 		type: "node-group",
-		label: definitionRef, // TODO Placeholder - allow to change group label
+		label: definition.label ?? definitionRef,
 		category: "output",
-		inputs: handles.inputs.map((h) => ({ name: h.id, type: h.type })),
-		outputs: handles.outputs.map((h) => ({ name: h.id, type: h.type })),
+		inputs: handles.inputs.map((h) => ({ name: h.id, label: h.label, type: h.type })),
+		outputs: handles.outputs.map((h) => ({ name: h.id, label: h.label, type: h.type })),
 		defaultData: {},
-		wgsl: () => [], // stubbed, same as group-input/output — group codegen is future work
+		wgsl: () => [],
 	};
 }
