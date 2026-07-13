@@ -324,13 +324,13 @@ function generateBody(
 					const inputArgs = descriptor.inputs.map((inputDef) => {
 						const edgesForHandle = incoming.filter(
 							(e) =>
-								e.targetHandle === inputDef.name ||
+								e.targetHandle === inputDef.id ||
 								(descriptor.inputs.length === 1 && !e.targetHandle),
 						);
 						const firstEdge = edgesForHandle[0];
 						if (firstEdge) return getSourceVar(firstEdge, nodeMap, resolveDescriptor);
 						const dataVal =
-							node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
+							node.data[inputDef.id] ?? descriptor.defaultData[inputDef.id];
 						return formatWgslLiteral(inputDef.type, dataVal);
 					});
 					const callArgs = inputArgs;
@@ -348,15 +348,15 @@ function generateBody(
 
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of descriptor.outputs) {
-			outputVars[outputDef.name] =
-				descriptor.outputs.length === 1 ? varName : varName + "_" + outputDef.name;
+			outputVars[outputDef.id] =
+				descriptor.outputs.length === 1 ? varName : varName + "_" + outputDef.id;
 		}
 
 		const resolvedInputs: Record<string, string[]> = {};
 		for (const inputDef of descriptor.inputs) {
 			const edgesForHandle = incoming.filter(
 				(e) =>
-					e.targetHandle === inputDef.name ||
+					e.targetHandle === inputDef.id ||
 					(descriptor.inputs.length === 1 && !e.targetHandle),
 			);
 			const upstreamVars: string[] = [];
@@ -371,11 +371,11 @@ function generateBody(
 					upstreamVars.push(getSourceVar(firstEdge, nodeMap, resolveDescriptor));
 			} else {
 				const dataVal: unknown =
-					node.data[inputDef.name] ?? descriptor.defaultData[inputDef.name];
+					node.data[inputDef.id] ?? descriptor.defaultData[inputDef.id];
 				upstreamVars.push(formatWgslLiteral(inputDef.type, dataVal));
 			}
 
-			resolvedInputs[inputDef.name] = upstreamVars;
+			resolvedInputs[inputDef.id] = upstreamVars;
 		}
 
 		const wgslLines = descriptor.wgsl({

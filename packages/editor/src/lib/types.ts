@@ -20,19 +20,21 @@ export type HandleDef = {
 
 // ─── Descriptor types ────────────────────────────────────────
 export type NodeInputDef = {
-	name: string;
+	/** Stable port identifier. Doubles as the SvelteFlow Handle id and the key edges reference. */
+	id: string;
 	label: string;
 	type: WgslType;
 	/**
 	 * If true, every edge connected to this handle is collected.
-	 * The descriptor's wgsl receives `inputs[name]` as an array of upstream vars.
+	 * The descriptor's wgsl receives `inputs[id]` as an array of upstream vars.
 	 * For non-variadic, it's always 0 or 1 elements.
 	 */
 	variadic?: boolean;
 };
 
 export type NodeOutputDef = {
-	name: string;
+	/** Stable port identifier. Doubles as the SvelteFlow Handle id and the key edges reference. */
+	id: string;
 	label: string;
 	type: WgslType;
 };
@@ -45,18 +47,18 @@ export type GroupedNode = Node & {
 	};
 };
 
-export type NodeCategory = "math" | "input" | "output" | "color" | "vector";
+export type NodeCategory = "math" | "input" | "misc" | "color" | "vector";
 
 export type WgslCtx = {
 	varName: string;
 	/**
-	 * Map from output name to its WGSL variable name.
+	 * Map from output port id to its WGSL variable name.
 	 * For single-output nodes this always has one entry pointing at the same variable as `varName`.
 	 * For multi-output nodes each entry has a unique suffix: `{ x: "v_id_x", y: "v_id_y" }`.
 	 */
 	outputVars: Record<string, string>;
 	data: Record<string, unknown>;
-	/** Resolved upstream variable names per input name.
+	/** Resolved upstream variable names per input port id.
 	 *  - Non-variadic: `inputs["x"]` is `[varName]` (1 element) if connected, `[]` if not.
 	 *  - Variadic: `inputs["operands"]` has N elements (one per connected edge), `[]` if none.
 	 *

@@ -1,6 +1,6 @@
 <script>
 	import { resolve } from "$app/paths";
-	import { Kbd } from "$theme/components/ui";
+	import { Kbd } from "$theme";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 </script>
 

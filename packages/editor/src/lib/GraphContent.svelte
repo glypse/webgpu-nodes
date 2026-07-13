@@ -1,9 +1,7 @@
 <script lang="ts">
-	import { ContextMenu, Input, Sheet } from "$theme/components/ui";
-	import { Button } from "$theme/components/ui/button";
+	import { Button, ContextMenu, Input, Sheet, cn } from "$theme";
 
 	import "./xy-theme.css";
-	import { cn } from "$theme/utils";
 	import {
 		SvelteFlow,
 		useSvelteFlow,
@@ -140,6 +138,14 @@
 		graph.addFromLibrary(definitionRef, position);
 	}
 
+	function createGroup() {
+		const position = screenToFlowPosition({
+			x: contextMenuPosition.x,
+			y: contextMenuPosition.y,
+		});
+		graph.createGroup(position);
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		const tag = (event.target as HTMLElement | null)?.tagName;
 		if (tag === "INPUT" || tag === "TEXTAREA") return;
@@ -254,16 +260,13 @@
 		}
 	});
 
-	function categoryLabel(category: NodeCategory): string {
-		const labels: Record<NodeCategory, string> = {
-			math: "Math",
-			input: "Input",
-			output: "Output",
-			color: "Color",
-			vector: "Vector",
-		};
-		return labels[category];
-	}
+	const CATEGORY_LABELS: Record<NodeCategory, string> = {
+		math: "Math",
+		input: "Input",
+		misc: "Miscellaneous",
+		color: "Color",
+		vector: "Vector",
+	};
 
 	function handleContextMenu(e: MouseEvent) {
 		contextMenuPosition = { x: e.clientX, y: e.clientY };
@@ -271,10 +274,11 @@
 
 	const sheetGroupNode = $derived.by(() => {
 		if (!sheetGroupId) return undefined;
-		// When inside a group, the node-group node lives in the parent document,
-		// not the active (subgraph) document.
-		const doc = graph.path.length > 0 ? graph.parentDocument : graph.activeDocument;
-		return doc.nodes.find((n) => n.id === sheetGroupId);
+		if (graph.path.length > 0) {
+			const inParent = graph.parentDocument.nodes.find((n) => n.id === sheetGroupId);
+			if (inParent) return inParent;
+		}
+		return graph.activeDocument.nodes.find((n) => n.id === sheetGroupId);
 	});
 	const sheetDefinition = $derived(
 		sheetGroupNode?.group
@@ -386,13 +390,15 @@
 		<ContextMenu.Content class="w-20">
 			{#each [...categoryMap.entries()] as [category, items] (category)}
 				<ContextMenu.Sub>
-					<ContextMenu.SubTrigger>{categoryLabel(category)}</ContextMenu.SubTrigger>
+					<ContextMenu.SubTrigger>{CATEGORY_LABELS[category]}</ContextMenu.SubTrigger>
 					<ContextMenu.SubContent>
 						{#each items as item (item.id)}
 							<ContextMenu.Item
 								disabled={graph.wouldCreateCycle(item.id)}
 								onclick={() => {
-									if (item.fromLibrary) {
+									if (item.id === "node-group") {
+										createGroup();
+									} else if (item.fromLibrary) {
 										addFromLibrary(item.id);
 									} else {
 										addNode(item.id);
@@ -433,7 +439,7 @@
 		escapeKeydownBehavior="ignore"
 	>
 		<Sheet.Header>
-			<Sheet.Title>Group Settings</Sheet.Title>
+			<Sheet.Title>Group settings</Sheet.Title>
 		</Sheet.Header>
 		{#if sheetGroupNode && sheetDefinition}
 			<div class="flex flex-col gap-4 p-4">
@@ -450,7 +456,7 @@
 
 				<div class="flex flex-col gap-1.5">
 					<span class="text-sm font-medium">Group Label</span>
-					<Input.Root
+					<Input
 						value={groupLabelBuffer}
 						placeholder="Group name"
 						disabled={sheetLocked}
@@ -471,7 +477,7 @@
 								<span class="text-muted-foreground w-16 shrink-0 text-xs"
 									>{handle.type}</span
 								>
-								<Input.Root
+								<Input
 									value={handleLabelValue(handle.id)}
 									disabled={sheetLocked}
 									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
@@ -520,7 +526,7 @@
 								<span class="text-muted-foreground w-16 shrink-0 text-xs"
 									>{handle.type}</span
 								>
-								<Input.Root
+								<Input
 									value={handleLabelValue(handle.id)}
 									disabled={sheetLocked}
 									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {

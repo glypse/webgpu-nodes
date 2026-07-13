@@ -6,7 +6,7 @@
 		setGraphManager,
 		type GraphDocument,
 	} from "$editor";
-	import { Menubar } from "$theme/components/ui";
+	import { Menubar } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
 	const graph = new GraphManager();
@@ -14,14 +14,20 @@
 
 	setDevContext(true); // TODO: Replace with `dev` from `$app/env` past 1.0 release
 
-	function handleUpload() {
-		const input = document.createElement("input");
-		input.type = "file";
-		input.accept = ".json";
-		input.onchange = () => {
-			if (input.files?.[0]) void graph.upload(input.files[0]);
-		};
-		input.click();
+	function pickFiles(opts: { accept: string; multiple?: boolean }): Promise<File[]> {
+		return new Promise((resolve) => {
+			const input = document.createElement("input");
+			input.type = "file";
+			input.accept = opts.accept;
+			if (opts.multiple) input.multiple = true;
+			input.onchange = () => resolve(Array.from(input.files ?? []));
+			input.click();
+		});
+	}
+
+	async function handleUpload() {
+		const [file] = await pickFiles({ accept: ".json" });
+		if (file) await graph.upload(file);
 	}
 
 	function handleExportGroup() {
@@ -30,38 +36,25 @@
 		graph.exportGroup(ref);
 	}
 
-	function handleImportGroups() {
-		const input = document.createElement("input");
-		input.type = "file";
-		input.accept = ".json";
-		input.multiple = true;
-		input.onchange = async () => {
-			if (!input.files) return;
-			const files = Array.from(input.files);
-			const entries: {
-				id?: string;
-				name?: string;
-				category?: string;
-				dependencies?: string[];
-				definition?: GraphDocument;
-			}[] = await Promise.all(
-				files.map(async (file) => {
-					const text = await file.text();
-					return JSON.parse(text) as {
+	async function handleImportGroups() {
+		const files = await pickFiles({ accept: ".json", multiple: true });
+		if (files.length === 0) return;
+		const entries = await Promise.all(
+			files.map(
+				async (file) =>
+					JSON.parse(await file.text()) as {
 						id?: string;
 						name?: string;
 						category?: string;
 						dependencies?: string[];
 						definition?: GraphDocument;
-					};
-				}),
-			);
-			const result = graph.importGroups(entries);
-			if (result.missing.length > 0) {
-				console.warn("Import completed with missing dependencies:", result.missing);
-			}
-		};
-		input.click();
+					},
+			),
+		);
+		const result = graph.importGroups(entries);
+		if (result.missing.length > 0) {
+			console.warn("Import completed with missing dependencies:", result.missing);
+		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {

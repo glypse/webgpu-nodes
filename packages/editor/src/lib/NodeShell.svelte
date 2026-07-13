@@ -1,8 +1,7 @@
 <script lang="ts">
-	import { Button } from "$theme/components/ui/button";
-	import * as Popover from "$theme/components/ui/popover";
-	import { Scrubbable } from "$theme/components/ui/scrubbable";
+	import { Button, Popover, Scrubbable } from "$theme";
 	import { Handle, Position, useNodeConnections, useSvelteFlow } from "@xyflow/svelte";
+	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
@@ -27,6 +26,10 @@
 
 	const fullNode = $derived(graph.activeDocument.nodes.find((n) => n.id === id));
 	const descriptor = $derived(fullNode ? graph.resolveDescriptor(fullNode) : undefined);
+
+	// Whether *this* group node is locked (e.g. a standard-library instance),
+	// distinct from the document-level lock derived above.
+	const nodeLocked = $derived(fullNode?.group?.locked ?? false);
 
 	const inputs = $derived(descriptor?.inputs);
 	const outputs = $derived(descriptor?.outputs);
@@ -82,19 +85,30 @@
 		</span>
 		{#if nodeType === "node-group"}
 			<TreeViewIcon class="size-5" />
+			{#if nodeLocked}
+				<Button
+					variant="secondary"
+					type="button"
+					size="icon-sm"
+					title="Locked group - clone & edit"
+					onclick={() => graph.deepClone(id)}
+				>
+					<LockSimpleIcon />
+				</Button>
+			{/if}
 		{/if}
 	</div>
 
 	<div class="node-shell__body">
 		<div class="node-shell__outputs">
-			{#each outputs as outputDef (outputDef.name)}
+			{#each outputs as outputDef (outputDef.id)}
 				<div class="node-shell__row node-shell__row--right">
 					<span class="node-shell__handle-label">{outputDef.label}: {outputDef.type}</span
 					>
 					<Handle
 						type="source"
 						position={Position.Right}
-						id={outputDef.name}
+						id={outputDef.id}
 						class="node-shell__handle node-shell__handle--right"
 					/>
 				</div>
@@ -106,12 +120,12 @@
 		</div>
 
 		<div class="node-shell__inputs">
-			{#each inputs as inputDef (inputDef.name)}
+			{#each inputs as inputDef (inputDef.id)}
 				<div class="node-shell__row">
 					<Handle
 						type="target"
 						position={Position.Left}
-						id={inputDef.name}
+						id={inputDef.id}
 						class="node-shell__handle node-shell__handle--left"
 					/>
 					{#if inputDef.type !== "f32"}
@@ -120,8 +134,8 @@
 						>
 					{/if}
 
-					{#if inputDef.type === "f32" && !inputDef.variadic && data[inputDef.name] !== undefined}
-						{#if connectedHandles.has(inputDef.name)}
+					{#if inputDef.type === "f32" && !inputDef.variadic}
+						{#if connectedHandles.has(inputDef.id)}
 							<span
 								class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
 							>
@@ -130,14 +144,14 @@
 						{:else}
 							<Scrubbable
 								class="node-shell__input"
-								label={inputDef.name}
+								label={inputDef.label}
 								readonly={isLocked}
-								value={data[inputDef.name] as number}
+								value={(data[inputDef.id] as number | undefined) ?? 0}
 								oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
 									const val = parseFloat(e.currentTarget.value) || 0;
 									updateNodeData(id, {
 										...data,
-										[inputDef.name]: val,
+										[inputDef.id]: val,
 									});
 								}}
 							/>

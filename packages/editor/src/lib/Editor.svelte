@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Resizable } from "$theme/components/ui";
+	import { Resizable } from "$theme";
 	import { FragCanvas, defineMaterial } from "@motion-core/motion-gpu/svelte";
 
 	import NodeGraph from "./NodeGraph.svelte";

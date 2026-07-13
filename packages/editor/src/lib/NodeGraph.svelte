@@ -1,6 +1,7 @@
 <script lang="ts">
-	import * as Breadcrumb from "$theme/components/ui/breadcrumb";
+	import { Breadcrumb, Button } from "$theme";
 	import { SvelteFlowProvider } from "@xyflow/svelte";
+	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
 	import GraphContent from "./GraphContent.svelte";
@@ -34,7 +35,7 @@
 					</Breadcrumb.Item>
 					{#each graph.pathLabels as segment, i (segment.id)}
 						<Breadcrumb.Separator />
-						<Breadcrumb.Item>
+						<Breadcrumb.Item class="flex items-center gap-1">
 							{#if i === graph.pathLabels.length - 1}
 								<Breadcrumb.Page>{segment.label}</Breadcrumb.Page>
 							{:else}
@@ -47,6 +48,17 @@
 								>
 									{segment.label}
 								</Breadcrumb.Link>
+							{/if}
+							{#if segment.locked}
+								<Button
+									type="button"
+									size="icon-sm"
+									variant="secondary"
+									title="Locked group - clone & edit"
+									onclick={() => graph.deepClone(segment.id)}
+								>
+									<LockSimpleIcon class="size-4" />
+								</Button>
 							{/if}
 						</Breadcrumb.Item>
 					{/each}
