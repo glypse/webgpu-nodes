@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Button, Popover, Scrubbable } from "$theme";
 	import { Handle, Position, useNodeConnections, useSvelteFlow } from "@xyflow/svelte";
+	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 
@@ -34,6 +35,17 @@
 	const inputs = $derived(descriptor?.inputs);
 	const outputs = $derived(descriptor?.outputs);
 	const label = $derived(descriptor?.label);
+
+	// The group node instance whose configuration sheet this node's faders
+	// button should open. For a group node it's itself; for the group-input /
+	// group-output boundary nodes it's the containing group (current path head).
+	const sheetTargetId = $derived(
+		nodeType === "node-group"
+			? id
+			: graph.path.length > 0
+				? graph.path[graph.path.length - 1]
+				: undefined,
+	);
 
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
@@ -80,23 +92,34 @@
 
 {#if descriptor}
 	<div class="node-shell__label">
-		<span>
-			{label}
-		</span>
 		{#if nodeType === "node-group"}
-			<TreeViewIcon class="size-5" />
-			{#if nodeLocked}
-				<Button
-					variant="secondary"
-					type="button"
-					size="icon-sm"
-					title="Locked group - clone & edit"
-					onclick={() => graph.deepClone(id)}
-				>
-					<LockSimpleIcon />
-				</Button>
-			{/if}
+			<div class="float-right flex flex-row items-center gap-1 ms-2">
+				<TreeViewIcon class="size-4" />
+				{#if nodeLocked}
+					<Button
+						variant="secondary"
+						type="button"
+						size="icon-sm"
+						title="Locked group - clone & edit"
+						onclick={() => graph.deepClone(id)}
+					>
+						<LockSimpleIcon />
+					</Button>
+				{/if}
+				{#if sheetTargetId}
+					<Button
+						variant="secondary"
+						type="button"
+						size="icon-sm"
+						title="Open group settings"
+						onclick={() => graph.openGroupSheet(sheetTargetId)}
+					>
+						<FadersIcon />
+					</Button>
+				{/if}
+			</div>
 		{/if}
+		<span>{label}</span>
 	</div>
 
 	<div class="node-shell__body">

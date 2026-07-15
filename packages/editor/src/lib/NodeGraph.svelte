@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { Breadcrumb, Button } from "$theme";
 	import { SvelteFlowProvider } from "@xyflow/svelte";
+	import ArrowElbowLeftUpIcon from "phosphor-svelte/lib/ArrowElbowLeftUpIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
@@ -15,12 +16,9 @@
 	<div class="flex h-full min-h-0 flex-col">
 		{#if graph.path.length > 0}
 			<div class="flex items-center gap-2 border-b px-3 py-2">
-				<button
-					class="text-muted-foreground hover:text-foreground text-xs"
-					onclick={() => graph.exitGroup()}
-				>
-					← Back
-				</button>
+				<Button onclick={() => graph.exitGroup()} variant="default" size="icon-sm">
+					<ArrowElbowLeftUpIcon />
+				</Button>
 				<Breadcrumb.Root>
 					<Breadcrumb.List>
 						<Breadcrumb.Item>
@@ -67,6 +65,7 @@
 				</Breadcrumb.Root>
 			</div>
 		{/if}
+
 		<GraphContent
 			bind:nodes={graph.nodes}
 			bind:edges={graph.edges}

@@ -60,6 +60,24 @@ export class GraphManager {
 	/** Currently selected node IDs in SvelteFlow. */
 	selectedNodeIds = $state<string[]>([]);
 
+	/**
+	 * Group configuration sheet state. Opened via the "n" key (see GraphContent)
+	 * or the faders button on group / group-input / group-output nodes (see NodeShell).
+	 * `sheetGroupId` is the id of the group node *instance* whose definition is being edited.
+	 */
+	sheetOpen = $state(false);
+	sheetGroupId = $state<string | null>(null);
+
+	/** Open (or toggle closed) the group configuration sheet for a group node instance. */
+	openGroupSheet(targetNodeId: string) {
+		if (this.sheetOpen && this.sheetGroupId === targetNodeId) {
+			this.sheetOpen = false;
+		} else {
+			this.sheetGroupId = targetNodeId;
+			this.sheetOpen = true;
+		}
+	}
+
 	/** Read-only standard library entries for browsing. */
 	library: StandardLibraryEntry[] = libraryEntries;
 

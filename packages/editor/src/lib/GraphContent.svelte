@@ -151,9 +151,6 @@
 
 	let contextMenuPosition = $state({ x: 0, y: 0 });
 
-	let sheetOpen = $state(false);
-	let sheetGroupId = $state<string | null>(null);
-
 	function addNode(type: string) {
 		const id = crypto.randomUUID();
 		const position = screenToFlowPosition({
@@ -201,9 +198,9 @@
 				graph.enterGroup(selected.id);
 			}
 		} else if (event.key === "Escape") {
-			if (sheetOpen) {
+			if (graph.sheetOpen) {
 				event.preventDefault();
-				sheetOpen = false;
+				graph.sheetOpen = false;
 			} else if (graph.path.length > 0) {
 				event.preventDefault();
 				graph.exitGroup();
@@ -233,14 +230,9 @@
 
 			if (targetNodeId) {
 				event.preventDefault();
-				if (sheetOpen && sheetGroupId === targetNodeId) {
-					sheetOpen = false;
-				} else {
-					sheetGroupId = targetNodeId;
-					sheetOpen = true;
-				}
-			} else if (sheetOpen) {
-				sheetOpen = false;
+				graph.openGroupSheet(targetNodeId);
+			} else if (graph.sheetOpen) {
+				graph.sheetOpen = false;
 			}
 		} else if (event.key === "g") {
 			if (isLocked) return;
@@ -289,7 +281,7 @@
 	// Close the group config sheet when selection no longer contains a group node.
 	$effect(() => {
 		const _ids = graph.selectedNodeIds;
-		if (!sheetOpen) return;
+		if (!graph.sheetOpen) return;
 		// Keep the sheet open when we're inside a group (viewing its contents).
 		if (graph.path.length > 0) return;
 		const hasGroup = _ids.some((id) => {
@@ -297,7 +289,7 @@
 			return node?.type === "node-group" && node.group;
 		});
 		if (!hasGroup) {
-			sheetOpen = false;
+			graph.sheetOpen = false;
 		}
 	});
 
@@ -314,12 +306,12 @@
 	}
 
 	const sheetGroupNode = $derived.by(() => {
-		if (!sheetGroupId) return undefined;
+		if (!graph.sheetGroupId) return undefined;
 		if (graph.path.length > 0) {
-			const inParent = graph.parentDocument.nodes.find((n) => n.id === sheetGroupId);
+			const inParent = graph.parentDocument.nodes.find((n) => n.id === graph.sheetGroupId);
 			if (inParent) return inParent;
 		}
-		return graph.activeDocument.nodes.find((n) => n.id === sheetGroupId);
+		return graph.activeDocument.nodes.find((n) => n.id === graph.sheetGroupId);
 	});
 	const sheetDefinition = $derived(
 		sheetGroupNode?.group
@@ -381,8 +373,8 @@
 	});
 
 	function commitGroupLabel() {
-		if (sheetGroupId && groupLabelBuffer.trim()) {
-			graph.setGroupLabel(sheetGroupId, groupLabelBuffer);
+		if (graph.sheetGroupId && groupLabelBuffer.trim()) {
+			graph.setGroupLabel(graph.sheetGroupId, groupLabelBuffer);
 		}
 	}
 
@@ -476,7 +468,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<Sheet.Root bind:open={sheetOpen}>
+<Sheet.Root bind:open={graph.sheetOpen}>
 	<Sheet.Content
 		class="w-[350px] sm:w-[400px]"
 		onOpenAutoFocus={(e: Event) => e.preventDefault()}
@@ -490,8 +482,8 @@
 				<Button
 					variant="outline"
 					onclick={() => {
-						if (sheetGroupId) {
-							graph.deepClone(sheetGroupId);
+						if (graph.sheetGroupId) {
+							graph.deepClone(graph.sheetGroupId);
 						}
 					}}
 				>
