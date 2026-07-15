@@ -11,9 +11,11 @@
 		type Node,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
+	import { tick } from "svelte";
 
 	import { generateShader, debugSort, projectHash } from "./codegen";
 	import { getGraphManager } from "./graph-state.svelte";
+	import { type HydratedGraphDocument, type HydratedGraphProject } from "./graph-types";
 	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, defaultDataForType, DYNAMIC_NODE_TYPES } from "./registry";
 	import { type HandleDef, type NodeCategory } from "./types";
@@ -59,8 +61,45 @@
 		return map;
 	});
 
-	const { screenToFlowPosition, getNodes } = useSvelteFlow();
+	const { screenToFlowPosition, getNodes, getViewport, setViewport, fitView } = useSvelteFlow();
 	const graph = getGraphManager();
+
+	// ── Per-document viewport (pan/zoom) persistence ──────────────────────────
+	// Each graph document (root + every group definition) stores its own camera so
+	// navigating between subgraphs restores the previous view instead of sharing a
+	// single global viewport. A document with no stored viewport falls back to
+	// fitView the first time it is entered, then keeps whatever the user leaves it at.
+	let prevPathKey = $state("");
+	let prevProject: HydratedGraphProject | null = null;
+	let prevDoc: HydratedGraphDocument | null = null;
+
+	async function applyActiveViewport() {
+		const doc = graph.activeDocument;
+		// Wait for the DOM to swap in the new document's nodes, then give SvelteFlow
+		// a frame to measure them before restoring the camera or fitting.
+		await tick();
+		requestAnimationFrame(() => {
+			if (doc.viewport) {
+				void setViewport(doc.viewport);
+			} else {
+				void fitView();
+			}
+		});
+	}
+
+	$effect(() => {
+		const pathKey = graph.path.join("|");
+		const project = graph.project;
+		const projectChanged = prevProject !== project;
+		if (prevDoc && prevPathKey !== pathKey && !projectChanged) {
+			// Capture the camera of the document we're leaving before it's lost.
+			prevDoc.viewport = { ...getViewport() };
+		}
+		prevPathKey = pathKey;
+		prevProject = project;
+		prevDoc = graph.activeDocument;
+		void applyActiveViewport();
+	});
 
 	const userGroups = $derived.by(() => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
@@ -380,6 +419,9 @@
 				elementsSelectable={!isLocked}
 				deleteKey={isLocked ? null : undefined}
 				onbeforedelete={isLocked ? () => Promise.resolve(false) : undefined}
+				onmove={(_event, viewport) => {
+					graph.activeDocument.viewport = { ...viewport };
+				}}
 				onselectionchange={({ nodes: selectedNodes }) => {
 					graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 				}}

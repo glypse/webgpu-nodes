@@ -1,4 +1,4 @@
-import type { Edge } from "@xyflow/svelte";
+import type { Edge, Viewport } from "@xyflow/svelte";
 
 import type { GroupedNode } from "./types";
 
@@ -12,6 +12,9 @@ export type GraphDocument = {
 	label?: string;
 	/** Whether instances of this group are locked (non-editable) by default. */
 	locked?: boolean;
+	/** Per-document camera (pan + zoom), persisted so navigating between
+	 *  subgraphs restores the previous view instead of sharing one global viewport. */
+	viewport?: Viewport;
 };
 
 export type GraphDocumentNode = {
@@ -53,6 +56,9 @@ export type HydratedGraphDocument = {
 	edges: Edge[];
 	label?: string;
 	locked?: boolean;
+	/** Per-document camera (pan + zoom). Undefined until the user has interacted
+	 *  or a saved viewport has been loaded. */
+	viewport?: Viewport;
 };
 
 export type HydratedGraphProject = {

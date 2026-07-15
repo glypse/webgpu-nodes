@@ -228,6 +228,7 @@ export class GraphManager {
 			this.project.root.edges,
 			this.project.root.label,
 			this.project.root.locked,
+			this.project.root.viewport,
 		);
 		const definitions = Object.fromEntries(
 			Object.entries(this.project.definitions).map(([key, definition]) => [
@@ -237,6 +238,7 @@ export class GraphManager {
 					definition.edges,
 					definition.label,
 					definition.locked,
+					definition.viewport,
 				),
 			]),
 		);

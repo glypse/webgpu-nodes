@@ -1,4 +1,4 @@
-import type { Node, Edge } from "@xyflow/svelte";
+import type { Node, Edge, Viewport } from "@xyflow/svelte";
 
 import type {
 	GraphDocument,
@@ -45,7 +45,9 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 		const desc = resolveDescriptor(node, {});
 		nodes.push({ ...node, data: { ...desc.defaultData, ...node.data } });
 	}
-	return { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
+	const result: GraphDocument = { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
+	if (doc.viewport) result.viewport = doc.viewport;
+	return result;
 }
 
 const NON_DELETABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
@@ -82,7 +84,13 @@ export function hydrateDocument(document: GraphDocument): HydratedGraphDocument 
 		targetHandle: edge.targetHandle,
 	}));
 
-	return { nodes, edges, label: normalised.label, locked: normalised.locked };
+	return {
+		nodes,
+		edges,
+		label: normalised.label,
+		locked: normalised.locked,
+		viewport: normalised.viewport,
+	};
 }
 
 export function hydrateProject(project: GraphProject): HydratedGraphProject {
@@ -104,6 +112,7 @@ export function serialiseDocument(
 	edges: Edge[],
 	label?: string,
 	locked?: boolean,
+	viewport?: Viewport,
 ): GraphDocument {
 	return {
 		nodes: nodes.map(({ id, type, data, position }) => ({
@@ -121,5 +130,6 @@ export function serialiseDocument(
 		})),
 		...(label !== undefined ? { label } : {}),
 		...(locked !== undefined ? { locked } : {}),
+		...(viewport !== undefined ? { viewport } : {}),
 	};
 }
