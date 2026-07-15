@@ -29,11 +29,13 @@
 
 	let {
 		class: className,
+		wrapperClass,
 		nodes = $bindable([]),
 		edges = $bindable([]),
 		frag = $bindable(""),
 	}: {
 		class?: string;
+		wrapperClass?: string;
 		nodes?: Node[];
 		edges?: Edge[];
 		frag?: string;
@@ -360,7 +362,7 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div oncontextmenu={handleContextMenu} class="size-full">
+<div oncontextmenu={handleContextMenu} class={cn("size-full", wrapperClass)}>
 	<ContextMenu.Root>
 		<ContextMenu.Trigger class="block size-full">
 			<SvelteFlow

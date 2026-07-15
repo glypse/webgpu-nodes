@@ -67,7 +67,7 @@
 
 <svelte:window onkeydown={handleKeydown} />
 
-<div class="flex h-dvh w-dvw flex-col">
+<div class="flex h-dvh w-full flex-col overflow-hidden">
 	<Menubar.Root class="h-auto gap-1 rounded-none border-t-0 border-r-0 border-l-0 p-2">
 		<Menubar.Menu>
 			<Menubar.Trigger>File</Menubar.Trigger>
