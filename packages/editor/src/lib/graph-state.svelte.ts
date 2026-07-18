@@ -992,6 +992,43 @@ export class GraphManager {
 		return true;
 	}
 
+	/**
+	 * Permanently delete a group definition and every instance that references it
+	 * across the whole project. Standard library definitions cannot be deleted.
+	 * No-op if the definition is still referenced anywhere (use after confirming
+	 * it's an orphaned entry).
+	 */
+	deleteDefinition(definitionRef: string) {
+		if (this.isStandardLibrary(definitionRef)) return;
+		if (!(definitionRef in this.project.definitions)) return;
+
+		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		let stillReferenced = false;
+		for (const doc of documents) {
+			if (
+				doc.nodes.some(
+					(n) => n.type === "node-group" && n.group?.definitionRef === definitionRef,
+				)
+			) {
+				stillReferenced = true;
+				break;
+			}
+		}
+		if (stillReferenced) return;
+
+		// Reassign via rest-spread so the $state proxy tracks the removal.
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- only the remaining keys matter
+		const { [definitionRef]: _removed, ...rest } = this.project.definitions;
+		this.project.definitions = rest;
+
+		// If we're currently viewing this (now-deleted) definition, bail out to root.
+		const inPath = this.path.some((nodeId) => {
+			const node = this.project.root.nodes.find((n) => n.id === nodeId);
+			return node?.group?.definitionRef === definitionRef;
+		});
+		if (inPath) this.path = [];
+	}
+
 	/** Update the label of a handle on a group-input or group-output node inside a definition. */
 	setHandleLabel(definitionRef: string, handleNodeId: string, handleId: string, label: string) {
 		const def = this.project.definitions[definitionRef];

@@ -11,6 +11,7 @@
 		type Node,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
+	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 	import { tick } from "svelte";
 
 	import { generateShader, debugSort, projectHash } from "./codegen";
@@ -105,7 +106,7 @@
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
 		const seen = new Set<string>();
 		const stdIds = new Set(graph.library.map((e) => e.id));
-		const groups: { definitionRef: string; label: string }[] = [];
+		const groups: { definitionRef: string; label: string; used: boolean }[] = [];
 
 		function collectFromDoc(doc: {
 			nodes: {
@@ -125,6 +126,7 @@
 					groups.push({
 						definitionRef: node.group.definitionRef,
 						label: def?.label ?? "Group",
+						used: true,
 					});
 				}
 			}
@@ -141,7 +143,7 @@
 			if (seen.has(defRef) || stdIds.has(defRef)) continue;
 			seen.add(defRef);
 			const def = graph.project.definitions[defRef];
-			groups.push({ definitionRef: defRef, label: def?.label ?? "Group" });
+			groups.push({ definitionRef: defRef, label: def?.label ?? "Group", used: false });
 		}
 
 		return groups;
@@ -460,6 +462,19 @@
 								onclick={() => addFromLibrary(group.definitionRef)}
 							>
 								{group.label}
+								{#if !group.used}
+									<Button
+										variant="destructive"
+										size="icon-sm"
+										class="ml-auto"
+										onclick={(e: MouseEvent) => {
+											e.stopPropagation();
+											graph.deleteDefinition(group.definitionRef);
+										}}
+									>
+										<TrashIcon />
+									</Button>
+								{/if}
 							</ContextMenu.Item>
 						{/each}
 					</ContextMenu.SubContent>
