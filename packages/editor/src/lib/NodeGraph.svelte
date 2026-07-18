@@ -13,14 +13,22 @@
 </script>
 
 <SvelteFlowProvider>
-	<div class="flex h-full min-h-0 flex-col">
+	<div class="relative flex h-full min-h-0 flex-col">
 		{#if graph.path.length > 0}
-			<div class="flex items-center gap-2 border-b px-3 py-2">
-				<Button onclick={() => graph.exitGroup()} variant="default" size="icon-sm">
+			<div
+				class="bg-background/20 border-border/80 absolute top-4 left-1/2 z-10 flex max-w-[75%] -translate-x-1/2 items-center gap-6 overflow-x-auto rounded-full border px-3 py-1.5 shadow-lg backdrop-blur"
+			>
+				<Button
+					onclick={() => graph.exitGroup()}
+					variant="secondary"
+					size="icon-sm"
+					href="#"
+					class="shrink-0"
+				>
 					<ArrowElbowLeftUpIcon />
 				</Button>
-				<Breadcrumb.Root>
-					<Breadcrumb.List>
+				<Breadcrumb.Root class="shrink-0">
+					<Breadcrumb.List class="flex-nowrap">
 						<Breadcrumb.Item>
 							<Breadcrumb.Link
 								href="#"
@@ -34,7 +42,7 @@
 						</Breadcrumb.Item>
 						{#each graph.pathLabels as segment, i (segment.id)}
 							<Breadcrumb.Separator />
-							<Breadcrumb.Item class="flex items-center gap-1">
+							<Breadcrumb.Item class="flex shrink-0 items-center gap-2 whitespace-nowrap">
 								{#if i === graph.pathLabels.length - 1}
 									<Breadcrumb.Page>{segment.label}</Breadcrumb.Page>
 								{:else}
