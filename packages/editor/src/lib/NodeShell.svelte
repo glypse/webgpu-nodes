@@ -93,7 +93,7 @@
 {#if descriptor}
 	<div class="node-shell__label">
 		{#if nodeType === "node-group"}
-			<div class="float-right flex flex-row items-center gap-1 ms-2">
+			<div class="float-right ms-2 flex flex-row items-center gap-1">
 				<TreeViewIcon class="size-4" />
 				{#if nodeLocked}
 					<Button

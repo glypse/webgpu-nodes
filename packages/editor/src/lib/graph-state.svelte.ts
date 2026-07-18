@@ -636,6 +636,152 @@ export class GraphManager {
 	}
 
 	/**
+	 * Ungroup the selected group node(s) in the active document: clone the group's
+	 * inner nodes (excluding group-input / group-output boundary nodes) into the
+	 * active document, centered where the group node was, and rewire the edges.
+	 *
+	 * Works on both locked and unlocked groups (the source definition is never
+	 * mutated - inner nodes and edges are always cloned with fresh ids).
+	 */
+	ungroupSelection(selectedNodeIds: Set<string>): void {
+		if (this.isLocked) return;
+
+		const groupNodes = this.activeDocument.nodes.filter(
+			(n) => selectedNodeIds.has(n.id) && n.type === "node-group" && n.group,
+		);
+		if (groupNodes.length === 0) return;
+
+		const freshNodeIds: string[] = [];
+		for (const groupNode of groupNodes) {
+			freshNodeIds.push(...this.ungroupNode(groupNode));
+		}
+
+		// Deselect everything, then select the freshly ungrouped nodes so the user
+		// can immediately drag them all together.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set, not reactive state
+		const freshIds = new Set(freshNodeIds);
+		for (const n of this.activeDocument.nodes) n.selected = freshIds.has(n.id);
+		for (const e of this.activeDocument.edges) e.selected = false;
+		this.selectedNodeIds = freshNodeIds;
+	}
+
+	/**
+	 * Ungroup a single group node instance living in the active document.
+	 * Returns the ids of the freshly-created (cloned) inner nodes.
+	 */
+	private ungroupNode(groupNode: GroupedNode): string[] {
+		if (!groupNode.group) return [];
+		const def = this.project.definitions[groupNode.group.definitionRef];
+		if (!def) return [];
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const BOUNDARY = new Set(["group-input", "group-output"]);
+		const inputNode = def.nodes.find((n) => n.type === "group-input");
+		const outputNode = def.nodes.find((n) => n.type === "group-output");
+		const innerNodes = def.nodes.filter((n) => !BOUNDARY.has(n.type ?? ""));
+
+		// Regenerate ids for every inner node.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local id map, not reactive state
+		const idMap = new Map<string, string>();
+		for (const n of innerNodes) idMap.set(n.id, crypto.randomUUID());
+
+		// Compute the center of the inner nodes so we can re-center them on the group node.
+		const groupCenterX = groupNode.position.x + (groupNode.width ?? 0) / 2;
+		const groupCenterY = groupNode.position.y + (groupNode.height ?? 0) / 2;
+
+		const lefts = innerNodes.map((n) => n.position.x);
+		const tops = innerNodes.map((n) => n.position.y);
+		const rights = innerNodes.map((n) => n.position.x + (n.width ?? 0));
+		const bottoms = innerNodes.map((n) => n.position.y + (n.height ?? 0));
+		const innerCenterX =
+			innerNodes.length > 0 ? (Math.min(...lefts) + Math.max(...rights)) / 2 : 0;
+		const innerCenterY =
+			innerNodes.length > 0 ? (Math.min(...tops) + Math.max(...bottoms)) / 2 : 0;
+		const dx = groupCenterX - innerCenterX;
+		const dy = groupCenterY - innerCenterY;
+
+		const clonedNodes: GraphDocumentNode[] = innerNodes.map((n) => ({
+			id: idMap.get(n.id) ?? n.id,
+			type: n.type ?? "",
+			data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
+			position: { x: n.position.x + dx, y: n.position.y + dy },
+			...(n.group
+				? { group: { definitionRef: n.group.definitionRef, locked: n.group.locked } }
+				: {}),
+		}));
+
+		const remap = (id: string): string => idMap.get(id) ?? id;
+		const isBoundary = (id: string): boolean => id === inputNode?.id || id === outputNode?.id;
+
+		// Internal edges (both endpoints are inner, non-boundary nodes) - clone directly.
+		const clonedInnerEdges: GraphDocumentEdge[] = def.edges
+			.filter((e) => !isBoundary(e.source) && !isBoundary(e.target))
+			.map((e) => ({
+				id: crypto.randomUUID(),
+				source: remap(e.source),
+				target: remap(e.target),
+				sourceHandle: e.sourceHandle ?? undefined,
+				targetHandle: e.targetHandle ?? undefined,
+			}));
+
+		// Outer edges connected to this group node instance.
+		const outerEdges = this.activeDocument.edges as GraphDocumentEdge[];
+		const incomingOuter = outerEdges.filter((e) => e.target === groupNode.id);
+		const outgoingOuter = outerEdges.filter((e) => e.source === groupNode.id);
+
+		const boundaryEdges: GraphDocumentEdge[] = [];
+
+		// group-input handle -> inner target. Splice: outer source -> inner target.
+		for (const innerEdge of def.edges) {
+			if (innerEdge.source !== inputNode?.id) continue;
+			const feed = incomingOuter.find((e) => e.targetHandle === innerEdge.sourceHandle);
+			if (!feed) continue; // handle not wired from outside - drop
+			boundaryEdges.push({
+				id: crypto.randomUUID(),
+				source: feed.source,
+				sourceHandle: feed.sourceHandle ?? undefined,
+				target: remap(innerEdge.target),
+				targetHandle: innerEdge.targetHandle ?? undefined,
+			});
+		}
+
+		// inner source -> group-output handle. Splice: inner source -> outer target(s).
+		for (const innerEdge of def.edges) {
+			if (innerEdge.target !== outputNode?.id) continue;
+			const consumers = outgoingOuter.filter(
+				(e) => e.sourceHandle === innerEdge.targetHandle,
+			);
+			for (const consumer of consumers) {
+				boundaryEdges.push({
+					id: crypto.randomUUID(),
+					source: remap(innerEdge.source),
+					sourceHandle: innerEdge.sourceHandle ?? undefined,
+					target: consumer.target,
+					targetHandle: consumer.targetHandle ?? undefined,
+				});
+			}
+		}
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set, not reactive state
+		const removedEdgeIds = new Set([
+			...incomingOuter.map((e) => e.id),
+			...outgoingOuter.map((e) => e.id),
+		]);
+
+		this.activeDocument.nodes = [
+			...this.activeDocument.nodes.filter((n) => n.id !== groupNode.id),
+			...(clonedNodes as GroupedNode[]),
+		];
+		this.activeDocument.edges = [
+			...this.activeDocument.edges.filter((e) => !removedEdgeIds.has(e.id)),
+			...clonedInnerEdges,
+			...boundaryEdges,
+		];
+
+		return clonedNodes.map((n) => n.id);
+	}
+
+	/**
 	 * Deep-clone a locked group's definition so the user gets their own editable copy.
 	 * Every node and edge ID inside the clone is regenerated to prevent collisions.
 	 * Returns the new definitionRef pointing to the cloned definition.

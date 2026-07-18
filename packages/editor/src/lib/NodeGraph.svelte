@@ -42,7 +42,9 @@
 						</Breadcrumb.Item>
 						{#each graph.pathLabels as segment, i (segment.id)}
 							<Breadcrumb.Separator />
-							<Breadcrumb.Item class="flex shrink-0 items-center gap-2 whitespace-nowrap">
+							<Breadcrumb.Item
+								class="flex shrink-0 items-center gap-2 whitespace-nowrap"
+							>
 								{#if i === graph.pathLabels.length - 1}
 									<Breadcrumb.Page>{segment.label}</Breadcrumb.Page>
 								{:else}

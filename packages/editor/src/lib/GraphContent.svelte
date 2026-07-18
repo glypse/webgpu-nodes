@@ -234,7 +234,7 @@
 			} else if (graph.sheetOpen) {
 				graph.sheetOpen = false;
 			}
-		} else if (event.key === "g") {
+		} else if (event.code === "KeyG" && !event.metaKey && !event.ctrlKey && !event.altKey) {
 			if (isLocked) return;
 			event.preventDefault();
 			const selectedIds = new Set(
@@ -242,7 +242,10 @@
 					.filter((node) => node.selected)
 					.map((node) => node.id),
 			);
-			if (selectedIds.size >= 1) {
+			if (selectedIds.size < 1) return;
+			if (event.shiftKey) {
+				graph.ungroupSelection(selectedIds);
+			} else {
 				graph.groupSelection(selectedIds);
 			}
 		} else if (event.key === "Delete" || event.key === "Backspace") {
