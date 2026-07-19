@@ -1,5 +1,11 @@
 # $editor
 
+## 0.4.0
+
+### Minor Changes
+
+- [#28](https://github.com/glypse/webgpu-nodes/pull/28) [`1eec8b5`](https://github.com/glypse/webgpu-nodes/commit/1eec8b54e65b2055225b361cd1b44df3f6f87e17) Thanks [@glypse](https://github.com/glypse)! - feat: node groups
+
 ## 0.3.1
 
 ### Patch Changes

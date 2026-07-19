@@ -1,5 +1,12 @@
 # $web
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies [[`1eec8b5`](https://github.com/glypse/webgpu-nodes/commit/1eec8b54e65b2055225b361cd1b44df3f6f87e17)]:
+  - $editor@0.4.0
+
 ## 0.0.6
 
 ### Patch Changes
