@@ -1029,6 +1029,102 @@ export class GraphManager {
 		if (inPath) this.path = [];
 	}
 
+	/**
+	 * Compute every user-created (non-standard-library) group definition that is
+	 * not reachable from any "live" part of the project. A definition is live if
+	 * it is a standard-library entry, or if it is referenced (directly or
+	 * transitively) by a node-group instance that lives in the root document or
+	 * in another live definition.
+	 *
+	 * This is a *deep* reachability check: if group A is only referenced by group
+	 * B, and group B itself is unused, then A is also unreachable and prunable.
+	 *
+	 * Returns the definition refs that *would* be removed (and are therefore safe
+	 * to delete without leaving dangling references). Does not mutate anything.
+	 */
+	getPrunableRefs(): string[] {
+		// Live = standard library + anything reachable from a live node instance.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set, not reactive state
+		const live = new Set<string>();
+		for (const entry of this.library) live.add(entry.id);
+
+		// The root document is always live; seed with refs it references directly.
+		const queue: string[] = [];
+		for (const node of this.project.root.nodes) {
+			if (node.type === "node-group" && node.group) {
+				if (!live.has(node.group.definitionRef)) {
+					live.add(node.group.definitionRef);
+					queue.push(node.group.definitionRef);
+				}
+			}
+		}
+
+		// Flood-fill: every ref reachable through nested group nodes of a live def.
+		while (queue.length > 0) {
+			const ref = queue.pop();
+			if (ref === undefined) break;
+			const def = this.project.definitions[ref];
+			if (!def) continue;
+			for (const node of def.nodes) {
+				if (node.type === "node-group" && node.group) {
+					const child = node.group.definitionRef;
+					if (!live.has(child)) {
+						live.add(child);
+						queue.push(child);
+					}
+				}
+			}
+		}
+
+		const prunable: string[] = [];
+		for (const key of Object.keys(this.project.definitions)) {
+			if (!live.has(key)) prunable.push(key);
+		}
+		return prunable;
+	}
+
+	/** A preview of groups that `pruneUnusedDefinitions` would delete. */
+	getPrunableGroups(): { ref: string; label: string; nodeCount: number }[] {
+		const BOUNDARY = ["group-input", "group-output"];
+		return this.getPrunableRefs().map((ref) => {
+			const def = this.project.definitions[ref];
+			const nodeCount = def
+				? def.nodes.filter((n) => !BOUNDARY.includes(n.type ?? "")).length
+				: 0;
+			return { ref, label: def?.label ?? "Group", nodeCount };
+		});
+	}
+
+	/**
+	 * Remove every user-created (non-standard-library) group definition that is
+	 * no longer referenced by any group node instance anywhere in the project,
+	 * including definitions that only reference each other in a cycle of orphans.
+	 * Returns the list of definition refs that were removed.
+	 */
+	pruneUnusedDefinitions(): string[] {
+		if (this.isLocked) return [];
+
+		const removed = this.getPrunableRefs();
+		if (removed.length === 0) return [];
+
+		// Reassign via rest-spread so the $state proxy tracks the removal.
+		const removedLookup: Record<string, true> = {};
+		for (const key of removed) removedLookup[key] = true;
+		const rest = Object.fromEntries(
+			Object.entries(this.project.definitions).filter(([key]) => !removedLookup[key]),
+		);
+		this.project.definitions = rest;
+
+		// If we're currently viewing a now-deleted definition, bail out to root.
+		const inPath = this.path.some((nodeId) => {
+			const node = this.project.root.nodes.find((n) => n.id === nodeId);
+			return node?.group && removed.includes(node.group.definitionRef);
+		});
+		if (inPath) this.path = [];
+
+		return removed;
+	}
+
 	/** Update the label of a handle on a group-input or group-output node inside a definition. */
 	setHandleLabel(definitionRef: string, handleNodeId: string, handleId: string, label: string) {
 		const def = this.project.definitions[definitionRef];

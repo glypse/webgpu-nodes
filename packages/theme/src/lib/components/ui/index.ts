@@ -6,6 +6,7 @@ export { Root as Separator } from "./separator/index";
 export { Root as Scrubbable } from "./scrubbable/index";
 
 // Multi-component: exported as namespaces (use as <ContextMenu.Root>, <Menubar.Menu>, etc.)
+export * as AlertDialog from "./alert-dialog/index";
 export * as Breadcrumb from "./breadcrumb/index";
 export * as ContextMenu from "./context-menu/index";
 export * as Kbd from "./kbd/index";
