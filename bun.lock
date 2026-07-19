@@ -20,7 +20,7 @@
     },
     "apps/web": {
       "name": "$web",
-      "version": "0.0.6",
+      "version": "0.0.7",
       "dependencies": {
         "$editor": "workspace:*",
         "$theme": "workspace:*",
@@ -42,7 +42,7 @@
     },
     "packages/editor": {
       "name": "$editor",
-      "version": "0.3.1",
+      "version": "0.4.0",
       "dependencies": {
         "$theme": "workspace:*",
         "@motion-core/motion-gpu": "^0.12.0",
