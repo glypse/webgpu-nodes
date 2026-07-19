@@ -1,6 +1,7 @@
 {
 	"name": "$theme",
 	"version": "0.1.1",
+	"private": true,
 	"type": "module",
 	"sideEffects": [
 		"**/*.css"
@@ -8,13 +9,36 @@
 	"exports": {
 		".": {
 			"development": "./src/lib/index.ts",
-			"default": "./src/lib/index.ts"
+			"svelte": "./dist/index.js",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		},
-		"./css": "./src/index.css",
-		"./utils": "./src/lib/utils.ts",
-		"./utils.js": "./src/lib/utils.ts",
-		"./components/ui": "./src/lib/components/ui/index.ts",
-		"./components/ui/*": "./src/lib/components/ui/*/index.ts"
+		"./css": {
+			"development": "./src/lib/index.css",
+			"default": "./dist/index.css"
+		},
+		"./utils": {
+			"development": "./src/lib/utils.ts",
+			"import": "./dist/utils.js",
+			"default": "./dist/utils.js"
+		},
+		"./utils.js": {
+			"development": "./src/lib/utils.ts",
+			"import": "./dist/utils.js",
+			"default": "./dist/utils.js"
+		},
+		"./components/ui": {
+			"development": "./src/lib/components/ui/index.ts",
+			"svelte": "./dist/components/ui/index.js",
+			"import": "./dist/components/ui/index.js",
+			"default": "./dist/components/ui/index.js"
+		},
+		"./components/ui/*": {
+			"development": "./src/lib/components/ui/*/index.ts",
+			"svelte": "./dist/components/ui/*/index.js",
+			"import": "./dist/components/ui/*/index.js",
+			"default": "./dist/components/ui/*/index.js"
+		}
 	},
 	"dependencies": {
 		"@fontsource-variable/atkinson-hyperlegible-next": "^5.2.6",
