@@ -28,6 +28,8 @@
 		</li>
 		<li>
 			Nodes with <TreeViewIcon class="bg-muted inline size-5 rounded-sm p-1" /> are a node group.
+			Click the <TreeViewIcon class="bg-muted inline size-5 rounded-sm p-1" /> button to enter said
+			node group.
 		</li>
 		<li>Select a node group and press <Kbd.Root>Enter</Kbd.Root> to enter it.</li>
 	</ul>

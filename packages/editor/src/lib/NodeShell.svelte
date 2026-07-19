@@ -94,7 +94,15 @@
 	<div class="node-shell__label">
 		{#if nodeType === "node-group"}
 			<div class="float-right ms-2 flex flex-row items-center gap-1">
-				<TreeViewIcon class="size-4" />
+				<Button
+					variant="secondary"
+					type="button"
+					size="icon-sm"
+					title="Enter node group"
+					onclick={() => graph.enterGroup(id)}
+				>
+					<TreeViewIcon class="size-4" />
+				</Button>
 				{#if nodeLocked}
 					<Button
 						variant="secondary"
