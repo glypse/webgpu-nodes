@@ -7,7 +7,9 @@
 	let {
 		ref = $bindable(null),
 		class: className,
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		variant = "outline",
+		// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
 		size = "default",
 		...restProps
 	}: AlertDialogPrimitive.CancelProps & {
@@ -19,6 +21,7 @@
 <AlertDialogPrimitive.Cancel
 	bind:ref
 	data-slot="alert-dialog-cancel"
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-assignment
 	class={cn(buttonVariants({ variant, size }), "cn-alert-dialog-cancel", className)}
 	{...restProps}
 />
