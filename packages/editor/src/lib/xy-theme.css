@@ -1,0 +1,98 @@
+/* xyflow theme – centralised styles */
+
+@import "@xyflow/svelte/dist/style.css" layer(base);
+
+@reference "$theme/css";
+
+/* =============================================
+   xyflow base style overrides
+   ============================================= */
+
+.svelte-flow__node {
+	@apply bg-card w-45 justify-center rounded-sm;
+	box-shadow: 0 0 10px var(--background);
+}
+
+.node-shell__label {
+	@apply flow-root border-b px-3 pt-3 pb-2;
+}
+
+.node-shell__label > svg {
+	@apply shrink-0;
+}
+
+.node-shell__body {
+	@apply p-3;
+}
+
+.svelte-flow__node.selectable:focus {
+	@apply outline-ring outline;
+}
+
+.svelte-flow__node.selectable:hover,
+.svelte-flow__node.draggable:hover {
+	border-color: var(--ring);
+}
+
+.svelte-flow__handle {
+	@apply border-card -mx-3 size-2 rounded-full;
+}
+
+.svelte-flow__node.selectable.selected {
+	border-color: var(--primary);
+}
+
+.svelte-flow__node-group {
+	@apply border-accent bg-accent/40;
+	min-width: 150px;
+	min-height: 100px;
+}
+
+.svelte-flow__handle {
+	background-color: var(--muted-foreground);
+}
+
+.svelte-flow__handle.connectionindicator:hover {
+	@apply bg-foreground pointer-events-auto;
+}
+
+.svelte-flow__node:has(.svelte-flow__resize-control.line) {
+	@apply rounded-none;
+}
+
+.svelte-flow__resize-control.handle {
+	@apply h-1.25 w-1.25 rounded-none border-none;
+}
+
+.svelte-flow__edge-label {
+	@apply bg-card;
+}
+
+/* =============================================
+   NodeShell component styles
+   ============================================= */
+
+.node-shell--unknown {
+	@apply text-destructive;
+}
+
+.node-shell__body {
+	@apply flex flex-col gap-1;
+}
+
+.node-shell__inputs,
+.node-shell__outputs {
+	@apply flex flex-col gap-1;
+}
+
+.node-shell__row {
+	@apply relative flex min-h-6 items-center gap-1.5;
+}
+
+.node-shell__row--right {
+	@apply justify-end;
+}
+
+.node-shell__handle-label {
+	@apply text-muted-foreground text-xs whitespace-nowrap;
+}

@@ -217,39 +217,32 @@
 	data-slot={dataSlot}
 >
 	{#if !readonly}
-		<!-- {#if label}
-			<span class="text-muted-foreground pointer-events-none shrink-0 text-xs">{label}</span>
-		{/if}
-	{:else} -->
 		{@render sideButton("left")}
+	{/if}
 
-		<!-- {#if label}
-			<span class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
-				>{label}</span
-			>
-		{/if} -->
+	<input
+		bind:this={ref}
+		type="number"
+		class="bg-foreground/5 h-8 w-full min-w-0 rounded-sm px-2.5 py-1 text-center transition-colors outline-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none {scrubbing ||
+		isFocused
+			? 'bg-foreground/10'
+			: ''} {scrubbing ? 'cursor-none' : ''} {readonly ? 'opacity-50' : ''}"
+		inputmode="decimal"
+		aria-label="Numeric value"
+		aria-valuenow={value}
+		aria-valuetext={formatValue(value)}
+		value={localDisplay}
+		readonly={readonly || undefined}
+		oninput={!readonly ? handleInput : undefined}
+		onfocus={!readonly ? handleFocus : undefined}
+		onblur={!readonly ? handleBlur : undefined}
+		onmousedown={!readonly ? handleScrubStart : undefined}
+		onkeydown={!readonly ? handleKeydown : undefined}
+		onclick={handleClick}
+		{...restProps}
+	/>
 
-		<input
-			bind:this={ref}
-			type="number"
-			class="bg-foreground/5 h-8 w-full min-w-0 rounded-sm px-2.5 py-1 text-center transition-colors outline-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none {scrubbing ||
-			isFocused
-				? 'bg-foreground/10'
-				: ''} {scrubbing ? 'cursor-none' : ''}"
-			inputmode="decimal"
-			aria-label="Numeric value"
-			aria-valuenow={value}
-			aria-valuetext={formatValue(value)}
-			value={localDisplay}
-			oninput={handleInput}
-			onfocus={handleFocus}
-			onblur={handleBlur}
-			onmousedown={handleScrubStart}
-			onkeydown={handleKeydown}
-			onclick={handleClick}
-			{...restProps}
-		/>
-
+	{#if !readonly}
 		{@render sideButton("right")}
 	{/if}
 </div>

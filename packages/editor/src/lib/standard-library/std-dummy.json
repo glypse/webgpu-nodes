@@ -1,0 +1,47 @@
+{
+	"id": "std-dummy",
+	"name": "Dummy standard library node group",
+	"category": "misc",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "input-1",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "h-in-1",
+							"label": "Value",
+							"type": "f32"
+						}
+					]
+				},
+				"position": { "x": -200, "y": 0 }
+			},
+			{
+				"id": "output-1",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "h-out-1",
+							"label": "Result",
+							"type": "f32"
+						}
+					]
+				},
+				"position": { "x": 200, "y": 0 }
+			}
+		],
+		"edges": [
+			{
+				"id": "e-passthrough",
+				"source": "input-1",
+				"sourceHandle": "h-in-1",
+				"target": "output-1",
+				"targetHandle": "h-out-1"
+			}
+		]
+	}
+}
