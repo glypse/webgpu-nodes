@@ -1,5 +1,6 @@
 import type { Node, Edge } from "@xyflow/svelte";
 import { getContext, setContext } from "svelte";
+import * as v from "valibot";
 
 import {
 	hydrateDocument,
@@ -8,6 +9,7 @@ import {
 	resolveDescriptor,
 	serialiseDocument,
 } from "./graph-helpers";
+import { GraphProjectSchema, StandardLibraryEntriesSchema } from "./graph-schema";
 import {
 	type GraphDocument,
 	type GraphDocumentEdge,
@@ -228,8 +230,13 @@ export class GraphManager {
 		this.path = [...newPath];
 	}
 
-	loadProject(project: GraphProject) {
-		this.project = hydrateProject(project);
+	loadProject(project: unknown): boolean {
+		const parsed = v.safeParse(GraphProjectSchema, project);
+		if (!parsed.success) {
+			console.error("[graph] rejected invalid project JSON", v.flatten(parsed.issues));
+			return false;
+		}
+		this.project = hydrateProject(parsed.output);
 		this.path = [];
 
 		// Re-register standard library definitions after loading
@@ -238,6 +245,7 @@ export class GraphManager {
 			def.label = entry.label;
 			this.project.definitions[entry.id] = hydrateDocument(def);
 		}
+		return true;
 	}
 
 	getProjectJson(): string {
@@ -264,12 +272,13 @@ export class GraphManager {
 		return JSON.stringify(project, null, "\t");
 	}
 
-	loadFromString(text: string) {
+	loadFromString(text: string): boolean {
 		try {
-			const project = JSON.parse(text) as GraphProject;
-			this.loadProject(project);
+			const project = JSON.parse(text) as unknown;
+			return this.loadProject(project);
 		} catch (err) {
 			console.error("[graph] failed to parse JSON", err);
+			return false;
 		}
 	}
 
@@ -283,13 +292,13 @@ export class GraphManager {
 		URL.revokeObjectURL(url);
 	}
 
-	async upload(file: File) {
+	async upload(file: File): Promise<boolean> {
 		try {
 			const text = await file.text();
-			const project = JSON.parse(text) as GraphProject;
-			this.loadProject(project);
+			return this.loadFromString(text);
 		} catch (err) {
 			console.error("[graph] failed to parse uploaded JSON", err);
+			return false;
 		}
 	}
 
@@ -477,13 +486,20 @@ export class GraphManager {
 			dependencies?: string[];
 			definition?: GraphDocument;
 		}[],
-	) {
+	): { imported: number; missing: string[]; rejected: string[] } {
+		const parsed = v.safeParse(StandardLibraryEntriesSchema, jsonFiles);
+		if (!parsed.success) {
+			console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
+			return {
+				imported: 0,
+				missing: [],
+				rejected: jsonFiles.map((f) => f.id ?? "<unknown>"),
+			};
+		}
+
+		const entries = parsed.output;
 		// Phase 1: Load all definitions
-		for (const file of jsonFiles) {
-			if (!file.id || !file.definition) {
-				console.warn("[graph] skipping malformed import entry", file);
-				continue;
-			}
+		for (const file of entries) {
 			const normalised = normaliseDocument(file.definition);
 			if (file.label) normalised.label = file.label;
 			normalised.locked = true;
@@ -492,8 +508,7 @@ export class GraphManager {
 
 		// Phase 2: Check dependencies
 		const missing: string[] = [];
-		for (const file of jsonFiles) {
-			if (!file.id || !file.dependencies) continue;
+		for (const file of entries) {
 			for (const dep of file.dependencies) {
 				if (!this.project.definitions[dep] && !this.isStandardLibrary(dep)) {
 					missing.push(`${file.id} depends on ${dep}`);
@@ -505,7 +520,7 @@ export class GraphManager {
 			console.warn("[graph] imported groups have missing dependencies:", missing);
 		}
 
-		return { imported: jsonFiles.length, missing };
+		return { imported: entries.length, missing, rejected: [] };
 	}
 
 	groupSelection(selectedNodeIds: Set<string>): void {

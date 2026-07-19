@@ -29,7 +29,8 @@
 		"$theme": "workspace:*",
 		"@motion-core/motion-gpu": "^0.12.0",
 		"@xyflow/svelte": "^1.6.2",
-		"phosphor-svelte": "catalog:"
+		"phosphor-svelte": "catalog:",
+		"valibot": "^1.4.2"
 	},
 	"devDependencies": {
 		"@sveltejs/package": "catalog:",
