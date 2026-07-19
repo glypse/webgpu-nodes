@@ -1,7 +1,7 @@
 {
-	"id": "std-passthrough",
-	"name": "Passthrough",
-	"category": "math",
+	"id": "std-dummy",
+	"name": "Dummy standard library node group",
+	"category": "misc",
 	"dependencies": [],
 	"definition": {
 		"nodes": [
