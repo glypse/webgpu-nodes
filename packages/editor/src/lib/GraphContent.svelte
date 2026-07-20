@@ -416,6 +416,7 @@
 				elementsSelectable={!isLocked}
 				deleteKey={isLocked ? null : undefined}
 				onbeforedelete={isLocked ? () => Promise.resolve(false) : undefined}
+				isValidConnection={(connection) => graph.isValidConnection(connection)}
 				onmove={(_event, viewport) => {
 					graph.activeDocument.viewport = { ...viewport };
 				}}

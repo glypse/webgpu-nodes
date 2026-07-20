@@ -2,7 +2,7 @@ import type { Edge, Node } from "@xyflow/svelte";
 
 import { getGraphManager } from "./graph-state.svelte";
 import type { GroupedNode, HandleDef, NodeDescriptor, WgslType } from "./types";
-import { WGSL_DEFAULTS } from "./types";
+import { WGSL_DEFAULTS, promoteVar } from "./types";
 
 /**
  * Safely convert an unknown value to a numeric WGSL literal component.
@@ -168,6 +168,33 @@ function getSourceVar(
 }
 
 /**
+ * Resolve the WGSL type produced by an edge's source handle. Used to decide
+ * whether (and how) the source value must be promoted before being fed into a
+ * larger input. Returns "f32" if it can't be determined (fail soft).
+ */
+function getSourceType(
+	edge: Edge,
+	nodes: Map<string, Node>,
+	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
+): WgslType {
+	const sourceNode = nodes.get(edge.source);
+	if (!sourceNode) return "f32";
+	if (sourceNode.type === "group-input" && edge.sourceHandle) {
+		const handle = (sourceNode.data.handles as HandleDef[] | undefined)?.find(
+			(h) => h.id === edge.sourceHandle,
+		);
+		return handle?.type ?? "f32";
+	}
+	const descriptor = resolveDescriptor(sourceNode);
+	if (descriptor.outputs.length === 0) return "f32";
+	const first = descriptor.outputs[0];
+	if (descriptor.outputs.length === 1 || !edge.sourceHandle) {
+		return first?.type ?? "f32";
+	}
+	return descriptor.outputs.find((o) => o.id === edge.sourceHandle)?.type ?? "f32";
+}
+
+/**
  * Compute a stable hash from the graph state that actually affects the shader output.
  */
 export function shaderHash(nodes: Node[], edges: Edge[]): string {
@@ -328,7 +355,11 @@ function generateBody(
 								(descriptor.inputs.length === 1 && !e.targetHandle),
 						);
 						const firstEdge = edgesForHandle[0];
-						if (firstEdge) return getSourceVar(firstEdge, nodeMap, resolveDescriptor);
+						if (firstEdge) {
+							const raw = getSourceVar(firstEdge, nodeMap, resolveDescriptor);
+							const sourceType = getSourceType(firstEdge, nodeMap, resolveDescriptor);
+							return promoteVar(raw, sourceType, inputDef.type);
+						}
 						const dataVal =
 							node.data[inputDef.id] ?? descriptor.defaultData[inputDef.id];
 						return formatWgslLiteral(inputDef.type, dataVal);
@@ -363,12 +394,17 @@ function generateBody(
 
 			if (inputDef.variadic) {
 				for (const edge of edgesForHandle) {
-					upstreamVars.push(getSourceVar(edge, nodeMap, resolveDescriptor));
+					const raw = getSourceVar(edge, nodeMap, resolveDescriptor);
+					const sourceType = getSourceType(edge, nodeMap, resolveDescriptor);
+					upstreamVars.push(promoteVar(raw, sourceType, inputDef.type));
 				}
 			} else if (edgesForHandle.length > 0) {
 				const firstEdge = edgesForHandle[0];
-				if (firstEdge)
-					upstreamVars.push(getSourceVar(firstEdge, nodeMap, resolveDescriptor));
+				if (firstEdge) {
+					const raw = getSourceVar(firstEdge, nodeMap, resolveDescriptor);
+					const sourceType = getSourceType(firstEdge, nodeMap, resolveDescriptor);
+					upstreamVars.push(promoteVar(raw, sourceType, inputDef.type));
+				}
 			} else {
 				const dataVal: unknown =
 					node.data[inputDef.id] ?? descriptor.defaultData[inputDef.id];

@@ -21,7 +21,13 @@ import {
 } from "./graph-types";
 import { nodeRegistry } from "./registry";
 import defaultScene from "./sizing_circle.json";
-import { type GroupedNode, type HandleDef, type NodeDescriptor, type WgslType } from "./types";
+import {
+	type GroupedNode,
+	type HandleDef,
+	type NodeDescriptor,
+	type WgslType,
+	isConnectionCompatible,
+} from "./types";
 
 // ── Standard library auto-import ──────────────────────────────────────────────
 
@@ -133,6 +139,22 @@ export class GraphManager {
 
 	resolveDescriptor(node: GroupedNode | Node): NodeDescriptor {
 		return resolveDescriptor(node, this.project.definitions);
+	}
+
+	/**
+	 * Public wrapper used by SvelteFlow's `isValidConnection` prop. Validates a
+	 * prospective edge against the WGSL type system: a higher-N value cannot be
+	 * fed into a lower-N input (the user must decompose it first).
+	 */
+	isValidConnection(connection: {
+		source?: string | null;
+		sourceHandle?: string | null;
+		target?: string | null;
+		targetHandle?: string | null;
+	}): boolean {
+		return isValidConnection(connection, this.activeDocument.nodes, (n) =>
+			this.resolveDescriptor(n),
+		);
 	}
 
 	get nodes(): GroupedNode[] {
@@ -1280,6 +1302,48 @@ function inferHandleType(
 	);
 
 	return outputDef?.type ?? "f32";
+}
+
+/**
+ * Validate a connection the user is trying to make. Returns false (and
+ * therefore blocks the edge) when a higher-N value would be fed into a
+ * lower-N input — that direction is not auto-convertible, the user must
+ * decompose the vector first (e.g. via a "Separate Vec" node). Lower-N ->
+ * higher-N and equal-N connections are allowed (handled by codegen promotion).
+ */
+function isValidConnection(
+	connection: {
+		source?: string | null;
+		sourceHandle?: string | null;
+		target?: string | null;
+		targetHandle?: string | null;
+	},
+	nodes: GroupedNode[],
+	resolve: (node: GroupedNode) => NodeDescriptor,
+): boolean {
+	if (!connection.source || !connection.target) return false;
+
+	const sourceNode = nodes.find((n) => n.id === connection.source);
+	const targetNode = nodes.find((n) => n.id === connection.target);
+	if (!sourceNode || !targetNode) return false;
+
+	const sourceType = inferHandleType(
+		{
+			source: connection.source,
+			sourceHandle: connection.sourceHandle ?? undefined,
+		} as GraphDocumentEdge,
+		nodes,
+		resolve,
+	);
+
+	const targetDescriptor = resolve(targetNode);
+	const targetEdgeIncoming = targetDescriptor.inputs.length === 1 && !connection.targetHandle;
+	const targetInputDef = targetDescriptor.inputs.find(
+		(i) => i.id === connection.targetHandle || targetEdgeIncoming,
+	);
+	if (!targetInputDef) return false;
+
+	return isConnectionCompatible(sourceType, targetInputDef.type);
 }
 
 type BoundaryBuildResult = {

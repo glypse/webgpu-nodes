@@ -12,6 +12,60 @@ export const WGSL_DEFAULTS: Record<WgslType, string> = {
 	vec4f: "vec4f(0.0, 0.0, 0.0, 1.0)",
 };
 
+/** Component count per WGSL type, used to decide promotion direction. */
+export const WGSL_COMPONENTS: Record<WgslType, number> = {
+	f32: 1,
+	vec2f: 2,
+	vec3f: 3,
+	vec4f: 4,
+};
+
+/**
+ * Whether a value of `source` type may be connected to / fed into an input of
+ * `target` type. Connections are allowed when the source has equal or fewer
+ * components than the target (the lower-N value gets promoted to fill the
+ * higher-N slots). Higher-to-lower connections are rejected: the user must
+ * decompose the vector first (e.g. via a "Separate Vec" node) and pick the
+ * component they want.
+ */
+export function isConnectionCompatible(source: WgslType, target: WgslType): boolean {
+	return WGSL_COMPONENTS[source] <= WGSL_COMPONENTS[target];
+}
+
+/**
+ * Emit a WGSL expression that promotes a variable of `source` type so it can be
+ * consumed where `target` type is expected.
+ *
+ * - f32 -> vecNf: fills every slot with the scalar (`vec3f(v, v, v)`).
+ * - vecNf -> higher-M vecMf: keeps the M available components and fills the
+ *   remaining slots with 0 (`vec4f(v.xy, 0.0, 0.0)` for vec2f -> vec4f).
+ * - equal types (or already matching): returned verbatim.
+ *
+ * When the value is already at-or-above the target size, `sourceVar` is returned
+ * unchanged (callers only invoke this after `isConnectionCompatible`).
+ */
+export function promoteVar(sourceVar: string, source: WgslType, target: WgslType): string {
+	if (source === target) return sourceVar;
+
+	if (source === "f32") {
+		switch (target) {
+			case "vec2f":
+				return `vec2f(${sourceVar}, ${sourceVar})`;
+			case "vec3f":
+				return `vec3f(${sourceVar}, ${sourceVar}, ${sourceVar})`;
+			case "vec4f":
+				return `vec4f(${sourceVar}, ${sourceVar}, ${sourceVar}, ${sourceVar})`;
+		}
+	}
+
+	// vecNf -> higher-M vecMf
+	const swizzle = ["x", "y", "z", "w"].slice(0, WGSL_COMPONENTS[source]).join("");
+	const extra = WGSL_COMPONENTS[target] - WGSL_COMPONENTS[source];
+	const fill = Array.from({ length: extra }, () => "0.0").join(", ");
+	const args = `${sourceVar}.${swizzle}${fill ? `, ${fill}` : ""}`;
+	return `${target}(${args})`;
+}
+
 export type HandleDef = {
 	id: string; // stable, generated once, never changes - this is what edges/targetHandle reference
 	label: string; // user-facing, editable later, defaults to something like "Input 1"
