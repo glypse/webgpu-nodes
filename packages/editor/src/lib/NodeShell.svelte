@@ -140,7 +140,7 @@
 						type="source"
 						position={Position.Right}
 						id={outputDef.id}
-						class="node-shell__handle node-shell__handle--right"
+						class="node-shell__handle {outputDef.type}"
 					/>
 				</div>
 			{/each}
@@ -157,7 +157,9 @@
 						type="target"
 						position={Position.Left}
 						id={inputDef.id}
-						class="node-shell__handle node-shell__handle--left"
+						class="node-shell__handle {inputDef.type} {inputDef.variadic
+							? 'variadic'
+							: ''}"
 					/>
 					{#if inputDef.type !== "f32"}
 						<span class="node-shell__handle-label"

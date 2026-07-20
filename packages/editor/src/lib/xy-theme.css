@@ -4,10 +4,6 @@
 
 @reference "$theme/css";
 
-/* =============================================
-   xyflow base style overrides
-   ============================================= */
-
 .svelte-flow__node {
 	@apply bg-card w-45 justify-center rounded-sm;
 	box-shadow: 0 0 10px var(--background);
@@ -56,6 +52,28 @@
 	@apply bg-foreground pointer-events-auto;
 }
 
+.node-shell__handle {
+	&.f32 {
+		@apply bg-neutral-500;
+	}
+
+	&.vec2f {
+		@apply bg-green-500;
+	}
+
+	&.vec3f {
+		@apply bg-violet-500;
+	}
+
+	&.vec4f {
+		@apply bg-amber-500;
+	}
+
+	&.variadic {
+		@apply min-h-6;
+	}
+}
+
 .svelte-flow__node:has(.svelte-flow__resize-control.line) {
 	@apply rounded-none;
 }
@@ -67,10 +85,6 @@
 .svelte-flow__edge-label {
 	@apply bg-card;
 }
-
-/* =============================================
-   NodeShell component styles
-   ============================================= */
 
 .node-shell--unknown {
 	@apply text-destructive;
