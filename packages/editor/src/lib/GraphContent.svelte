@@ -419,6 +419,30 @@
 				onmove={(_event, viewport) => {
 					graph.activeDocument.viewport = { ...viewport };
 				}}
+				onconnect={(connection) => {
+					const { source, target, targetHandle } = connection;
+					if (!source || !target || !targetHandle) return;
+
+					// Skip replacement logic for variadic inputs — they accept many edges.
+					const targetNode = nodes.find((n) => n.id === target);
+					if (targetNode) {
+						const descriptor = graph.resolveDescriptor(targetNode);
+						const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
+						if (inputDef?.variadic) {
+							edges = [...edges, { ...connection, id: crypto.randomUUID() }];
+							return;
+						}
+					}
+
+					// Single source of data per non-variadic input: drop any existing
+					// edge into the same target handle, then add the new one.
+					edges = [
+						...edges.filter(
+							(e) => !(e.target === target && e.targetHandle === targetHandle),
+						),
+						{ ...connection, id: crypto.randomUUID() },
+					];
+				}}
 				onselectionchange={({ nodes: selectedNodes }) => {
 					graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 				}}
