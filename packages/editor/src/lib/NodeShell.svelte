@@ -8,6 +8,13 @@
 	import { getGraphManager } from "./graph-state.svelte";
 	import { type HandleDef, type WgslType, WGSL_TYPES } from "./types";
 
+	const COMPONENT_KEYS: Record<WgslType, string[]> = {
+		f32: ["_"],
+		vec2f: ["x", "y"],
+		vec3f: ["x", "y", "z"],
+		vec4f: ["x", "y", "z", "w"],
+	};
+
 	let {
 		id,
 		data: rawData,
@@ -50,7 +57,44 @@
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
+	// DEBUG: trace connected handles for this node
+	$effect(() => {
+		const conns = connections.current;
+		console.log(`[NodeShell DEBUG] node="${id}" type="${nodeType}" connections:`, conns.map(c => ({
+			source: c.source, target: c.target,
+			sourceHandle: c.sourceHandle, targetHandle: c.targetHandle,
+			edgeId: c.edgeId
+		})));
+		console.log(`[NodeShell DEBUG] node="${id}" connectedHandles set:`, [...connectedHandles]);
+		if (descriptor) {
+			console.log(`[NodeShell DEBUG] node="${id}" input ids:`, descriptor.inputs.map(i => i.id));
+		}
+	});
+
 	let popoverOpen = $state(false);
+
+	function getComponentValue(inputId: string, type: WgslType, comp: string): number {
+		if (type === "f32") return (data[inputId] as number | undefined) ?? 0;
+		const obj = data[inputId];
+		if (obj && typeof obj === "object" && comp in (obj as Record<string, unknown>)) {
+			return Number((obj as Record<string, unknown>)[comp]) || 0;
+		}
+		return comp === "w" && type === "vec4f" ? 1 : 0;
+	}
+
+	function setComponentValue(inputId: string, type: WgslType, comp: string, val: number) {
+		if (type === "f32") {
+			updateNodeData(id, { ...data, [inputId]: val });
+		} else {
+			const current = data[inputId];
+			const obj =
+				current && typeof current === "object"
+					? { ...(current as Record<string, unknown>) }
+					: {};
+			obj[comp] = val;
+			updateNodeData(id, { ...data, [inputId]: obj });
+		}
+	}
 
 	function addHandle(type: WgslType) {
 		const handles = (data.handles ?? []) as HandleDef[];
@@ -161,34 +205,36 @@
 							? 'variadic'
 							: ''}"
 					/>
-					{#if inputDef.type !== "f32"}
+					{#if inputDef.variadic}
 						<span class="node-shell__handle-label"
 							>{inputDef.label}: {inputDef.type}</span
 						>
-					{/if}
-
-					{#if inputDef.type === "f32" && !inputDef.variadic}
-						{#if connectedHandles.has(inputDef.id)}
-							<span
-								class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
-							>
-								{inputDef.label}
-							</span>
-						{:else}
-							<Scrubbable
-								class="node-shell__input"
-								label={inputDef.label}
-								readonly={isLocked}
-								value={(data[inputDef.id] as number | undefined) ?? 0}
-								oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-									const val = parseFloat(e.currentTarget.value) || 0;
-									updateNodeData(id, {
-										...data,
-										[inputDef.id]: val,
-									});
-								}}
-							/>
-						{/if}
+					{:else if connectedHandles.has(inputDef.id)}
+						<span
+							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
+						>
+							{inputDef.label}: {inputDef.type}
+						</span>
+					{:else}
+						<span class="node-shell__handle-label"
+							>{inputDef.label}: {inputDef.type}</span
+						>
+						<div class="*:not-first:rounded-t-none *:not-last:rounded-b-none">
+							{#each COMPONENT_KEYS[inputDef.type] as comp, i (comp)}
+								<Scrubbable
+									class={"node-shell__input" +
+										(i > 0
+											? "border-border border-foreground/15 border-t"
+											: "")}
+									readonly={isLocked}
+									value={getComponentValue(inputDef.id, inputDef.type, comp)}
+									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+										const val = parseFloat(e.currentTarget.value) || 0;
+										setComponentValue(inputDef.id, inputDef.type, comp, val);
+									}}
+								/>
+							{/each}
+						</div>
 					{/if}
 				</div>
 			{/each}
