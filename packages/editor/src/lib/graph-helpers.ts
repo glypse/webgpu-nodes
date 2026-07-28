@@ -1,9 +1,10 @@
-import type { Node, Edge, Viewport } from "@xyflow/svelte";
+import type { Node, Viewport } from "@xyflow/svelte";
 
 import type {
 	GraphDocument,
 	GraphDocumentNode,
 	GraphProject,
+	HydratedEdge,
 	HydratedGraphDocument,
 	HydratedGraphProject,
 } from "./graph-types";
@@ -76,7 +77,7 @@ export function hydrateDocument(document: GraphDocument): HydratedGraphDocument 
 
 	const nodes: GroupedNode[] = normalised.nodes.map(hydrateNode);
 
-	const edges: Edge[] = normalised.edges.map((edge) => ({
+	const edges: HydratedEdge[] = normalised.edges.map((edge) => ({
 		id: edge.id,
 		source: edge.source,
 		target: edge.target,
@@ -109,7 +110,7 @@ export function hydrateProject(project: GraphProject): HydratedGraphProject {
  */
 export function serialiseDocument(
 	nodes: Node[],
-	edges: Edge[],
+	edges: HydratedEdge[],
 	label?: string,
 	locked?: boolean,
 	viewport?: Viewport,
@@ -125,8 +126,8 @@ export function serialiseDocument(
 			id: e.id,
 			source: e.source,
 			target: e.target,
-			sourceHandle: e.sourceHandle ?? undefined,
-			targetHandle: e.targetHandle ?? undefined,
+			sourceHandle: e.sourceHandle,
+			targetHandle: e.targetHandle,
 		})),
 		...(label !== undefined ? { label } : {}),
 		...(locked !== undefined ? { locked } : {}),

@@ -1,6 +1,7 @@
-import type { Edge, Node } from "@xyflow/svelte";
+import type { Node } from "@xyflow/svelte";
 
 import { getGraphManager } from "./graph-state.svelte";
+import type { HydratedEdge } from "./graph-types";
 import type { GroupedNode, HandleDef, NodeDescriptor, WgslType } from "./types";
 import { WGSL_DEFAULTS, promoteVar } from "./types";
 
@@ -41,7 +42,7 @@ function formatWgslLiteral(type: WgslType, value: unknown): string {
  */
 function findReachableNodeIds(
 	nodes: Map<string, Node>,
-	edges: Edge[],
+	edges: HydratedEdge[],
 	seedType: string,
 ): Set<string> {
 	const reverseAdj = new Map<string, string[]>();
@@ -81,7 +82,7 @@ function findReachableNodeIds(
  * Topological sort of node IDs. Works on a DAG; throws if a cycle is detected.
  * Unchanged from before - this never needed to know about groups at all.
  */
-function topologicalSort(nodes: Map<string, Node>, edges: Edge[]): string[] {
+function topologicalSort(nodes: Map<string, Node>, edges: HydratedEdge[]): string[] {
 	const adjacency = new Map<string, string[]>();
 	const inDegree = new Map<string, number>();
 
@@ -129,7 +130,7 @@ function sanitizeIdent(id: string): string {
 	return `h_${id.replace(/[.-]/g, "_")}`;
 }
 
-export function debugSort(nodes: Node[], edges: Edge[]): string[] {
+export function debugSort(nodes: Node[], edges: HydratedEdge[]): string[] {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
 		nodeMap.set(node.id, node);
@@ -146,16 +147,16 @@ export function debugSort(nodes: Node[], edges: Edge[]): string[] {
  *   are all produced by ONE function call, not separate `let` statements.
  */
 function getSourceVar(
-	edge: Edge,
+	edge: HydratedEdge,
 	nodes: Map<string, Node>,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 ): string {
 	const sourceNode = nodes.get(edge.source);
-	if (sourceNode?.type === "group-input" && edge.sourceHandle) {
+	if (sourceNode?.type === "group-input") {
 		return sanitizeIdent(edge.sourceHandle); // it's a function parameter, not a let-var
 	}
 	const base = getVarName(edge.source);
-	if (edge.sourceHandle && sourceNode?.type) {
+	if (sourceNode?.type) {
 		if (sourceNode.type === "node-group") {
 			return `${base}.${sanitizeIdent(edge.sourceHandle)}`;
 		}
@@ -173,13 +174,13 @@ function getSourceVar(
  * larger input. Returns "f32" if it can't be determined (fail soft).
  */
 function getSourceType(
-	edge: Edge,
+	edge: HydratedEdge,
 	nodes: Map<string, Node>,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 ): WgslType {
 	const sourceNode = nodes.get(edge.source);
 	if (!sourceNode) return "f32";
-	if (sourceNode.type === "group-input" && edge.sourceHandle) {
+	if (sourceNode.type === "group-input") {
 		const handle = (sourceNode.data.handles as HandleDef[] | undefined)?.find(
 			(h) => h.id === edge.sourceHandle,
 		);
@@ -188,7 +189,7 @@ function getSourceType(
 	const descriptor = resolveDescriptor(sourceNode);
 	if (descriptor.outputs.length === 0) return "f32";
 	const first = descriptor.outputs[0];
-	if (descriptor.outputs.length === 1 || !edge.sourceHandle) {
+	if (descriptor.outputs.length === 1) {
 		return first?.type ?? "f32";
 	}
 	return descriptor.outputs.find((o) => o.id === edge.sourceHandle)?.type ?? "f32";
@@ -197,7 +198,7 @@ function getSourceType(
 /**
  * Compute a stable hash from the graph state that actually affects the shader output.
  */
-export function shaderHash(nodes: Node[], edges: Edge[]): string {
+export function shaderHash(nodes: Node[], edges: HydratedEdge[]): string {
 	return JSON.stringify({
 		nodes: nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
 		edges: edges.map((e) => ({
@@ -214,8 +215,8 @@ export function shaderHash(nodes: Node[], edges: Edge[]): string {
  * subgraph also trigger a re-generation of the shader.
  */
 export function projectHash(project: {
-	root: { nodes: Node[]; edges: Edge[] };
-	definitions: Record<string, { nodes: Node[]; edges: Edge[] }>;
+	root: { nodes: Node[]; edges: HydratedEdge[] };
+	definitions: Record<string, { nodes: Node[]; edges: HydratedEdge[] }>;
 }): string {
 	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
 		const out: Record<string, unknown> = {};
@@ -298,11 +299,13 @@ type GroupDecls = Map<
  */
 function generateBody(
 	nodes: Node[],
-	edges: Edge[],
+	edges: HydratedEdge[],
 	seedType: string,
 	groupDecls: GroupDecls,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
-	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
+	getGroupDefinition: (
+		definitionRef: string,
+	) => { nodes: Node[]; edges: HydratedEdge[] } | undefined,
 ): { lines: string[]; seedNodeVarName: string | null } {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
@@ -315,7 +318,7 @@ function generateBody(
 	);
 	const sortedIds = topologicalSort(nodeMap, filteredEdges).filter((id) => reachableIds.has(id));
 
-	const targetEdgeMap = new Map<string, Edge[]>();
+	const targetEdgeMap = new Map<string, HydratedEdge[]>();
 	for (const edge of filteredEdges) {
 		const list = targetEdgeMap.get(edge.target) ?? [];
 		list.push(edge);
@@ -350,9 +353,7 @@ function generateBody(
 					const descriptor = resolveDescriptor(groupedNode);
 					const inputArgs = descriptor.inputs.map((inputDef) => {
 						const edgesForHandle = incoming.filter(
-							(e) =>
-								e.targetHandle === inputDef.id ||
-								(descriptor.inputs.length === 1 && !e.targetHandle),
+							(e) => e.targetHandle === inputDef.id,
 						);
 						const firstEdge = edgesForHandle[0];
 						if (firstEdge) {
@@ -385,11 +386,7 @@ function generateBody(
 
 		const resolvedInputs: Record<string, string[]> = {};
 		for (const inputDef of descriptor.inputs) {
-			const edgesForHandle = incoming.filter(
-				(e) =>
-					e.targetHandle === inputDef.id ||
-					(descriptor.inputs.length === 1 && !e.targetHandle),
-			);
+			const edgesForHandle = incoming.filter((e) => e.targetHandle === inputDef.id);
 			const upstreamVars: string[] = [];
 
 			if (inputDef.variadic) {
@@ -437,7 +434,9 @@ function emitGroupFunctionIfNeeded(
 	definitionRef: string,
 	groupDecls: GroupDecls,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
-	getGroupDefinition: (definitionRef: string) => { nodes: Node[]; edges: Edge[] } | undefined,
+	getGroupDefinition: (
+		definitionRef: string,
+	) => { nodes: Node[]; edges: HydratedEdge[] } | undefined,
 ): void {
 	if (groupDecls.has(definitionRef)) return; // memoized - already generated
 
@@ -493,7 +492,7 @@ function emitGroupFunctionIfNeeded(
 /**
  * Emit the full WGSL fragment shader source from the graph.
  */
-export function generateShader(nodes: Node[], edges: Edge[]): string {
+export function generateShader(nodes: Node[], edges: HydratedEdge[]): string {
 	const graph = getGraphManager();
 	const groupDecls: GroupDecls = new Map();
 

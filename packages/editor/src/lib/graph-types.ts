@@ -41,8 +41,8 @@ export type GraphDocumentEdge = {
 	id: string;
 	source: string;
 	target: string;
-	sourceHandle?: string;
-	targetHandle?: string;
+	sourceHandle: string;
+	targetHandle: string;
 };
 
 /** The whole project. Exactly one per file/save. */
@@ -51,9 +51,19 @@ export type GraphProject = {
 	root: GraphDocument;
 };
 
+/**
+ * SvelteFlow's `Edge` type has `sourceHandle` / `targetHandle` as optional.
+ * Our domain model requires them, so we narrow the type for edges that live
+ * inside a hydrated document.
+ */
+export type HydratedEdge = Edge & {
+	sourceHandle: string;
+	targetHandle: string;
+};
+
 export type HydratedGraphDocument = {
 	nodes: GroupedNode[];
-	edges: Edge[];
+	edges: HydratedEdge[];
 	label?: string;
 	locked?: boolean;
 	/** Per-document camera (pan + zoom). Undefined until the user has interacted

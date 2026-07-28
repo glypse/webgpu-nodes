@@ -1,5 +1,4 @@
 {
-	"definitions": {},
 	"root": {
 		"nodes": [
 			{
@@ -370,11 +369,6 @@
 		],
 		"edges": [
 			{
-				"id": "e-vec4f1-out1",
-				"source": "vec4f1",
-				"target": "out1"
-			},
-			{
 				"id": "xy-edge__node-2result-node-4operands",
 				"source": "node-2",
 				"target": "node-4",
@@ -639,7 +633,64 @@
 				"target": "vec4f1",
 				"sourceHandle": "result",
 				"targetHandle": "w"
+			},
+			{
+				"id": "376bc6ad-d010-49f9-9f1c-5ce06e91fce5",
+				"source": "vec4f1",
+				"target": "out1",
+				"sourceHandle": "value",
+				"targetHandle": "color"
 			}
 		]
+	},
+	"definitions": {
+		"std-dummy": {
+			"nodes": [
+				{
+					"id": "input-1",
+					"type": "group-input",
+					"data": {
+						"handles": [
+							{
+								"id": "h-in-1",
+								"label": "Value",
+								"type": "f32"
+							}
+						]
+					},
+					"position": {
+						"x": -200,
+						"y": 0
+					}
+				},
+				{
+					"id": "output-1",
+					"type": "group-output",
+					"data": {
+						"handles": [
+							{
+								"id": "h-out-1",
+								"label": "Result",
+								"type": "f32"
+							}
+						]
+					},
+					"position": {
+						"x": 200,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "e-passthrough",
+					"source": "input-1",
+					"target": "output-1",
+					"sourceHandle": "h-in-1",
+					"targetHandle": "h-out-1"
+				}
+			],
+			"label": "Dummy standard library node group"
+		}
 	}
 }

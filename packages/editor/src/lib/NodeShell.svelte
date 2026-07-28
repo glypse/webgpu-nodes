@@ -57,20 +57,6 @@
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
-	// DEBUG: trace connected handles for this node
-	$effect(() => {
-		const conns = connections.current;
-		console.log(`[NodeShell DEBUG] node="${id}" type="${nodeType}" connections:`, conns.map(c => ({
-			source: c.source, target: c.target,
-			sourceHandle: c.sourceHandle, targetHandle: c.targetHandle,
-			edgeId: c.edgeId
-		})));
-		console.log(`[NodeShell DEBUG] node="${id}" connectedHandles set:`, [...connectedHandles]);
-		if (descriptor) {
-			console.log(`[NodeShell DEBUG] node="${id}" input ids:`, descriptor.inputs.map(i => i.id));
-		}
-	});
-
 	let popoverOpen = $state(false);
 
 	function getComponentValue(inputId: string, type: WgslType, comp: string): number {

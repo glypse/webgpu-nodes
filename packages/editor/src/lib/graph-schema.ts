@@ -35,8 +35,8 @@ const GraphDocumentEdgeSchema = v.object({
 	id: v.string(),
 	source: v.string(),
 	target: v.string(),
-	sourceHandle: v.optional(v.string()),
-	targetHandle: v.optional(v.string()),
+	sourceHandle: v.string(),
+	targetHandle: v.string(),
 });
 
 const ViewportSchema = v.object({

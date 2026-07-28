@@ -15,6 +15,7 @@ import {
 	type GraphDocumentEdge,
 	type GraphDocumentNode,
 	type GraphProject,
+	type HydratedEdge,
 	type HydratedGraphDocument,
 	type HydratedGraphProject,
 	type StandardLibraryEntry,
@@ -163,11 +164,11 @@ export class GraphManager {
 	set nodes(value: GroupedNode[]) {
 		this.activeDocument.nodes = value;
 	}
-	get edges(): Edge[] {
+	get edges(): HydratedEdge[] {
 		return this.activeDocument.edges;
 	}
 	set edges(value: Edge[]) {
-		this.activeDocument.edges = value;
+		this.activeDocument.edges = value as HydratedEdge[];
 	}
 
 	/** Whether the currently-viewed subgraph (or any of its ancestors) is locked. */
@@ -460,8 +461,8 @@ export class GraphManager {
 					id: e.id,
 					source: e.source,
 					target: e.target,
-					sourceHandle: e.sourceHandle ?? undefined,
-					targetHandle: e.targetHandle ?? undefined,
+					sourceHandle: e.sourceHandle,
+					targetHandle: e.targetHandle,
 				})),
 			},
 		};
@@ -564,7 +565,7 @@ export class GraphManager {
 
 		const { internal, incoming, outgoing } = classifyEdges(
 			filteredIds,
-			this.activeDocument.edges as GraphDocumentEdge[], // We could pick only the GraphDocumentEdge properites of each Edge, but passing the raw object is more memory-efficient
+			this.activeDocument.edges, // We could pick only the GraphDocumentEdge properites of each Edge, but passing the raw object is more memory-efficient
 		);
 		const dedupedIncoming = deduplicateBySource(incoming);
 		const dedupedOutgoing = deduplicateBySource(outgoing);
@@ -757,8 +758,8 @@ export class GraphManager {
 				id: crypto.randomUUID(),
 				source: remap(e.source),
 				target: remap(e.target),
-				sourceHandle: e.sourceHandle ?? undefined,
-				targetHandle: e.targetHandle ?? undefined,
+				sourceHandle: e.sourceHandle,
+				targetHandle: e.targetHandle,
 			}));
 
 		// Outer edges connected to this group node instance.
@@ -776,9 +777,9 @@ export class GraphManager {
 			boundaryEdges.push({
 				id: crypto.randomUUID(),
 				source: feed.source,
-				sourceHandle: feed.sourceHandle ?? undefined,
+				sourceHandle: feed.sourceHandle,
 				target: remap(innerEdge.target),
-				targetHandle: innerEdge.targetHandle ?? undefined,
+				targetHandle: innerEdge.targetHandle,
 			});
 		}
 
@@ -792,9 +793,9 @@ export class GraphManager {
 				boundaryEdges.push({
 					id: crypto.randomUUID(),
 					source: remap(innerEdge.source),
-					sourceHandle: innerEdge.sourceHandle ?? undefined,
+					sourceHandle: innerEdge.sourceHandle,
 					target: consumer.target,
-					targetHandle: consumer.targetHandle ?? undefined,
+					targetHandle: consumer.targetHandle,
 				});
 			}
 		}
@@ -869,8 +870,8 @@ export class GraphManager {
 			id: crypto.randomUUID(),
 			source: idMap.get(e.source) ?? e.source,
 			target: idMap.get(e.target) ?? e.target,
-			sourceHandle: e.sourceHandle ?? undefined,
-			targetHandle: e.targetHandle ?? undefined,
+			sourceHandle: e.sourceHandle,
+			targetHandle: e.targetHandle,
 		}));
 
 		this.project.definitions[newDefRef] = hydrateDocument({
@@ -1275,7 +1276,7 @@ function deduplicateBySource(edgesToGroup: GraphDocumentEdge[]): GraphDocumentEd
 	const groups = new Map<string, GraphDocumentEdge[]>();
 
 	for (const edge of edgesToGroup) {
-		const key = `${edge.source}::${edge.sourceHandle ?? ""}`;
+		const key = `${edge.source}::${edge.sourceHandle}`;
 
 		const existing = groups.get(key);
 		if (existing) {
@@ -1297,9 +1298,7 @@ function inferHandleType(
 	if (!sourceNode) return "f32"; // shouldn't happen, but fail soft
 
 	const descriptor = resolve(sourceNode);
-	const outputDef = descriptor.outputs.find(
-		(o) => o.id === edge.sourceHandle || descriptor.outputs.length === 1,
-	);
+	const outputDef = descriptor.outputs.find((o) => o.id === edge.sourceHandle);
 
 	return outputDef?.type ?? "f32";
 }
