@@ -10,7 +10,7 @@
 }
 
 .node-shell__label {
-	@apply flow-root border-b px-3 pt-3 pb-2;
+	@apply flex flex-col gap-1 border-b px-3 pt-3 pb-2;
 }
 
 .node-shell__label > svg {

@@ -2,6 +2,7 @@ import type { Node, Edge } from "@xyflow/svelte";
 import { getContext, setContext } from "svelte";
 import * as v from "valibot";
 
+import defaultScene from "./defaultProject.json";
 import {
 	hydrateDocument,
 	hydrateProject,
@@ -21,11 +22,13 @@ import {
 	type StandardLibraryEntry,
 } from "./graph-types";
 import { nodeRegistry } from "./registry";
-import defaultScene from "./sizing_circle.json";
+import { TypeResolver } from "./type-resolver";
 import {
 	type GroupedNode,
 	type HandleDef,
 	type NodeDescriptor,
+	type NodeInputDef,
+	type NodeOutputDef,
 	type WgslType,
 	isConnectionCompatible,
 } from "./types";
@@ -90,6 +93,29 @@ export class GraphManager {
 	/** Read-only standard library entries for browsing. */
 	library: StandardLibraryEntry[] = libraryEntries;
 
+	/** Centralised type resolver — single source of truth for all type resolution. */
+	typeResolver: TypeResolver;
+
+	/**
+	 * Reactive cache of resolved types per node. Keyed by node ID.
+	 * Components read from this for type badges, dropdowns, and output labels.
+	 * Updated via `invalidateTypes` after graph mutations.
+	 */
+	typeCache = $state<
+		Map<
+			string,
+			{
+				inputTypes: Record<string, WgslType>;
+				outputType: WgslType;
+				resolvedInputs: NodeInputDef[];
+				resolvedOutputs: NodeOutputDef[];
+			}
+		>
+	>(
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		new Map(),
+	);
+
 	constructor(defaults?: GraphProject) {
 		const project: GraphProject = defaults ?? defaultScene;
 		this.project = hydrateProject(project);
@@ -100,6 +126,42 @@ export class GraphManager {
 			def.label = entry.label;
 			this.project.definitions[entry.id] = hydrateDocument(def);
 		}
+
+		this.typeResolver = new TypeResolver(
+			(n) => this.resolveDescriptor(n),
+			this.project.root,
+			this.project.definitions,
+			(id) => this.getIncomingEdges(id),
+		);
+		this.rebuildTypeCache();
+	}
+
+	/**
+	 * Look up any node by ID across all documents in the project (root + definitions).
+	 * Used as the `resolveNode` callback for the TypeResolver.
+	 */
+	resolveNode(nodeId: string): GroupedNode | undefined {
+		const found = this.project.root.nodes.find((n) => n.id === nodeId);
+		if (found) return found;
+		for (const def of Object.values(this.project.definitions)) {
+			const n = def.nodes.find((node) => node.id === nodeId);
+			if (n) return n;
+		}
+		return undefined;
+	}
+
+	/**
+	 * Find all edges targeting a node across the entire project.
+	 * Used by TypeResolver for recursive type inference.
+	 */
+	private getIncomingEdges(nodeId: string): HydratedEdge[] {
+		const rootEdges = this.project.root.edges.filter((e) => e.target === nodeId);
+		if (rootEdges.length > 0) return rootEdges;
+		for (const def of Object.values(this.project.definitions)) {
+			const edges = def.edges.filter((e) => e.target === nodeId);
+			if (edges.length > 0) return edges;
+		}
+		return [];
 	}
 
 	/**
@@ -153,9 +215,56 @@ export class GraphManager {
 		target?: string | null;
 		targetHandle?: string | null;
 	}): boolean {
-		return isValidConnection(connection, this.activeDocument.nodes, (n) =>
-			this.resolveDescriptor(n),
+		if (!connection.source || !connection.target) return false;
+
+		const sourceNode = this.resolveNode(connection.source);
+		const targetNode = this.resolveNode(connection.target);
+		if (!sourceNode || !targetNode) return false;
+
+		const sourceType = this.typeResolver.inferHandleType(
+			{
+				source: connection.source,
+				sourceHandle: connection.sourceHandle ?? "",
+				target: "",
+				targetHandle: "",
+				id: "",
+			},
+			(id) => this.resolveNode(id),
 		);
+
+		const targetDescriptor = this.resolveDescriptor(targetNode);
+
+		// For nodes with resolveInputs, validate against active inputs only
+		if (targetDescriptor.resolveInputs && targetDescriptor.typeFamily) {
+			const override = targetNode.data[targetDescriptor.typeFamily.key] as
+				| WgslType
+				| undefined;
+			const outputType = override ?? targetDescriptor.typeFamily.types[0] ?? "f32";
+			const activeInputs = targetDescriptor.resolveInputs(outputType);
+			const targetInputDef = activeInputs.find((i) => i.id === connection.targetHandle);
+			if (!targetInputDef) return false;
+			return isConnectionCompatible(sourceType, targetInputDef.types[0] ?? "f32");
+		}
+
+		const targetEdgeIncoming = targetDescriptor.inputs.length === 1 && !connection.targetHandle;
+		const targetInputDef = targetDescriptor.inputs.find(
+			(i) => i.id === connection.targetHandle || targetEdgeIncoming,
+		);
+		if (!targetInputDef) return false;
+
+		// If the target has a node-wide override, validate against that specific type
+		const nodeOverrides = targetNode.data.__nodeTypeOverrides as
+			| Record<string, WgslType>
+			| undefined;
+		const familyKey = targetInputDef.types.join(",");
+		const overrideType = nodeOverrides?.[familyKey];
+		if (overrideType) {
+			return isConnectionCompatible(sourceType, overrideType);
+		}
+
+		// Check against the type family — connection is valid if the source can
+		// be promoted to any type within the family (up to the highest member)
+		return targetInputDef.types.some((t) => isConnectionCompatible(sourceType, t));
 	}
 
 	get nodes(): GroupedNode[] {
@@ -169,6 +278,7 @@ export class GraphManager {
 	}
 	set edges(value: Edge[]) {
 		this.activeDocument.edges = value as HydratedEdge[];
+		this.rebuildTypeCache();
 	}
 
 	/** Whether the currently-viewed subgraph (or any of its ancestors) is locked. */
@@ -268,6 +378,16 @@ export class GraphManager {
 			def.label = entry.label;
 			this.project.definitions[entry.id] = hydrateDocument(def);
 		}
+
+		// Rebuild the type resolver with the new definitions and recompute all types
+		this.typeResolver = new TypeResolver(
+			(n) => this.resolveDescriptor(n),
+			this.project.root,
+			this.project.definitions,
+			(id) => this.getIncomingEdges(id),
+		);
+		this.rebuildTypeCache();
+
 		return true;
 	}
 
@@ -543,6 +663,9 @@ export class GraphManager {
 			console.warn("[graph] imported groups have missing dependencies:", missing);
 		}
 
+		// New definitions may change how group nodes resolve their types
+		this.rebuildTypeCache();
+
 		return { imported: entries.length, missing, rejected: [] };
 	}
 
@@ -575,15 +698,15 @@ export class GraphManager {
 		const groupInputNode = buildBoundaryNode(
 			"input",
 			dedupedIncoming,
-			this.activeDocument.nodes,
-			(node) => this.resolveDescriptor(node),
+			this.typeResolver,
+			(id) => this.resolveNode(id),
 			{ x: bounds.minX - OFFSET, y: bounds.centerY },
 		);
 		const groupOutputNode = buildBoundaryNode(
 			"output",
 			dedupedOutgoing,
-			this.activeDocument.nodes,
-			(node) => this.resolveDescriptor(node),
+			this.typeResolver,
+			(id) => this.resolveNode(id),
 			{ x: bounds.maxX + OFFSET, y: bounds.centerY },
 		);
 
@@ -671,6 +794,9 @@ export class GraphManager {
 		for (const e of this.activeDocument.edges) {
 			e.selected = false;
 		}
+
+		// Rebuild types since the graph structure changed significantly
+		this.rebuildTypeCache();
 	}
 
 	/**
@@ -815,6 +941,9 @@ export class GraphManager {
 			...clonedInnerEdges,
 			...boundaryEdges,
 		];
+
+		// Rebuild types since the graph structure changed significantly
+		this.rebuildTypeCache();
 
 		return clonedNodes.map((n) => n.id);
 	}
@@ -985,6 +1114,9 @@ export class GraphManager {
 		};
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
+
+		// Rebuild types since a new definition and node were added
+		this.rebuildTypeCache();
 
 		return groupNodeId;
 	}
@@ -1176,6 +1308,214 @@ export class GraphManager {
 		handle.label = label;
 	}
 
+	// ── Type override helpers ───────────────────────────────────────────────
+
+	/**
+	 * Resolve the effective type for an input handle on a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveInputType(nodeId: string, inputId: string): WgslType {
+		const node = this.resolveNode(nodeId);
+		if (!node) return "f32";
+
+		const descriptor = this.resolveDescriptor(node);
+		const inputDef = descriptor.inputs.find((i) => i.id === inputId);
+		if (!inputDef) return "f32";
+
+		// Check cache first
+		const cached = this.typeCache.get(nodeId);
+		if (cached) {
+			return cached.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
+		}
+
+		// Fallback: compute on the fly (shouldn't happen after initial cache build)
+		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
+	}
+
+	/**
+	 * Resolve the output type for a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveNodeOutputType(nodeId: string): WgslType {
+		const cached = this.typeCache.get(nodeId);
+		if (cached) return cached.outputType;
+
+		// Fallback: compute on the fly
+		const node = this.resolveNode(nodeId);
+		if (!node) return "f32";
+		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.outputType;
+	}
+
+	/**
+	 * Resolve the active inputs for a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveNodeInputs(nodeId: string): NodeInputDef[] {
+		const cached = this.typeCache.get(nodeId);
+		if (cached) return cached.resolvedInputs;
+
+		// Fallback: compute on the fly
+		const node = this.resolveNode(nodeId);
+		if (!node) return [];
+		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.resolvedInputs;
+	}
+
+	/**
+	 * Resolve the active outputs for a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveNodeOutputs(nodeId: string): NodeOutputDef[] {
+		const cached = this.typeCache.get(nodeId);
+		if (cached) return cached.resolvedOutputs;
+
+		// Fallback: compute on the fly
+		const node = this.resolveNode(nodeId);
+		if (!node) return [];
+		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.resolvedOutputs;
+	}
+
+	/**
+	 * Set a node-wide type override for an entire type family. When set,
+	 * all inputs in that family ignore type inference and use the specified type.
+	 */
+	setNodeTypeOverride(nodeId: string, familyKey: string, type: WgslType) {
+		const node = this.activeDocument.nodes.find((n) => n.id === nodeId);
+		if (!node) return;
+
+		const overrides =
+			(node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined) ?? {};
+		node.data.__nodeTypeOverrides = { ...overrides, [familyKey]: type };
+		this.invalidateTypes([nodeId]);
+	}
+
+	/**
+	 * Clear a node-wide type override for a family, reverting to dynamic inference.
+	 */
+	clearNodeTypeOverride(nodeId: string, familyKey: string) {
+		const node = this.activeDocument.nodes.find((n) => n.id === nodeId);
+		if (!node) return;
+
+		const overrides = node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
+		if (overrides) {
+			const rest = { ...overrides };
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+			delete rest[familyKey];
+			node.data.__nodeTypeOverrides = rest;
+		}
+		this.invalidateTypes([nodeId]);
+	}
+
+	/**
+	 * Check if a type family on a node is in forced (manual override) mode.
+	 */
+	isNodeForced(nodeId: string, familyKey: string): boolean {
+		const node = this.activeDocument.nodes.find((n) => n.id === nodeId);
+		if (!node) return false;
+		const overrides = node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
+		return overrides?.[familyKey] !== undefined;
+	}
+
+	/**
+	 * Invalidate types for the given node IDs and all their ancestors.
+	 * Walks backward through the reverse graph, recomputing only affected nodes.
+	 * Stops at group-output boundaries (within the same document).
+	 * Cross-document propagation goes through `node-group` instances.
+	 */
+	invalidateTypes(nodeIds: string[]): void {
+		const allEdges = [
+			...this.project.root.edges,
+			...Object.values(this.project.definitions).flatMap((d) => d.edges),
+		];
+		const invalidated = this.typeResolver.invalidate(
+			nodeIds,
+			(id) => this.resolveNode(id),
+			allEdges,
+		);
+
+		// Recompute types for all invalidated nodes
+		for (const nodeId of invalidated) {
+			const node = this.resolveNode(nodeId);
+			if (!node) continue;
+			const incoming = allEdges.filter((e) => e.target === nodeId);
+			const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+				this.resolveNode(id),
+			);
+			this.typeCache.set(nodeId, result);
+		}
+
+		// Disconnect edges to outputs/inputs that no longer exist
+		// (e.g. separate vec3f → vec2f drops z output; declare vec3f → f32 drops y/w inputs)
+		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		for (const nodeId of invalidated) {
+			const cached = this.typeCache.get(nodeId);
+			if (!cached) continue;
+
+			// Clean dangling source handles (outputs) — read from cached resolved outputs
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Set, never stored in reactive state
+			const activeOutIds = new Set(cached.resolvedOutputs.map((o) => o.id));
+			for (const doc of documents) {
+				doc.edges = doc.edges.filter(
+					(e) => !(e.source === nodeId && !activeOutIds.has(e.sourceHandle)),
+				);
+			}
+
+			// Clean dangling target handles (inputs) — read from cached resolved inputs
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Set, never stored in reactive state
+			const activeInIds = new Set(cached.resolvedInputs.map((i) => i.id));
+			for (const doc of documents) {
+				doc.edges = doc.edges.filter(
+					(e) => !(e.target === nodeId && !activeInIds.has(e.targetHandle)),
+				);
+			}
+		}
+
+		// Trigger reactivity by creating a new Map reference
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.typeCache = new Map(this.typeCache);
+	}
+
+	/**
+	 * Rebuild the entire type cache from scratch. Called on project load
+	 * and when the document structure changes fundamentally.
+	 */
+	rebuildTypeCache(): void {
+		// Clear the TypeResolver's memoisation cache so every node is recomputed
+		this.typeResolver.clearCache();
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.typeCache = new Map();
+
+		// Compute types for all nodes across all documents
+		for (const doc of [this.project.root, ...Object.values(this.project.definitions)]) {
+			this.typeResolver.computeAll(doc.nodes, doc.edges, (id) => this.resolveNode(id));
+		}
+
+		// Copy resolved types into the reactive cache
+		for (const [nodeId, result] of this.typeResolver.cache) {
+			this.typeCache.set(nodeId, result);
+		}
+
+		// Trigger reactivity
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.typeCache = new Map(this.typeCache);
+	}
+
 	/** Remove a handle from a group-input/group-output node and delete all connected edges. */
 	removeHandle(definitionRef: string, handleNodeId: string, handleId: string) {
 		const def = this.project.definitions[definitionRef];
@@ -1203,6 +1543,9 @@ export class GraphManager {
 		// definition: the now-deleted handle no longer exists on the group node,
 		// so any edge referencing it would be dangling and crash the renderer.
 		this.removeOuterEdgesForHandle(definitionRef, handleId);
+
+		// Rebuild types since handles and cross-document edges changed
+		this.rebuildTypeCache();
 	}
 
 	/**
@@ -1289,62 +1632,6 @@ function deduplicateBySource(edgesToGroup: GraphDocumentEdge[]): GraphDocumentEd
 	return [...groups.values()];
 }
 
-function inferHandleType(
-	edge: GraphDocumentEdge,
-	nodes: GroupedNode[],
-	resolve: (node: GroupedNode) => NodeDescriptor,
-): WgslType {
-	const sourceNode = nodes.find((n) => n.id === edge.source);
-	if (!sourceNode) return "f32"; // shouldn't happen, but fail soft
-
-	const descriptor = resolve(sourceNode);
-	const outputDef = descriptor.outputs.find((o) => o.id === edge.sourceHandle);
-
-	return outputDef?.type ?? "f32";
-}
-
-/**
- * Validate a connection the user is trying to make. Returns false (and
- * therefore blocks the edge) when a higher-N value would be fed into a
- * lower-N input — that direction is not auto-convertible, the user must
- * decompose the vector first (e.g. via a "Separate Vec" node). Lower-N ->
- * higher-N and equal-N connections are allowed (handled by codegen promotion).
- */
-function isValidConnection(
-	connection: {
-		source?: string | null;
-		sourceHandle?: string | null;
-		target?: string | null;
-		targetHandle?: string | null;
-	},
-	nodes: GroupedNode[],
-	resolve: (node: GroupedNode) => NodeDescriptor,
-): boolean {
-	if (!connection.source || !connection.target) return false;
-
-	const sourceNode = nodes.find((n) => n.id === connection.source);
-	const targetNode = nodes.find((n) => n.id === connection.target);
-	if (!sourceNode || !targetNode) return false;
-
-	const sourceType = inferHandleType(
-		{
-			source: connection.source,
-			sourceHandle: connection.sourceHandle ?? undefined,
-		} as GraphDocumentEdge,
-		nodes,
-		resolve,
-	);
-
-	const targetDescriptor = resolve(targetNode);
-	const targetEdgeIncoming = targetDescriptor.inputs.length === 1 && !connection.targetHandle;
-	const targetInputDef = targetDescriptor.inputs.find(
-		(i) => i.id === connection.targetHandle || targetEdgeIncoming,
-	);
-	if (!targetInputDef) return false;
-
-	return isConnectionCompatible(sourceType, targetInputDef.type);
-}
-
 type BoundaryBuildResult = {
 	node: GraphDocumentNode;
 	handleFor: Map<GraphDocumentEdge[], HandleDef>;
@@ -1353,8 +1640,8 @@ type BoundaryBuildResult = {
 function buildBoundaryNode(
 	direction: "input" | "output",
 	deduped: GraphDocumentEdge[][],
-	activeDocumentNodes: GroupedNode[],
-	resolve: (node: GroupedNode) => NodeDescriptor,
+	typeResolver: TypeResolver,
+	resolveNode: (id: string) => GroupedNode | undefined,
 	position: { x: number; y: number },
 ): BoundaryBuildResult {
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -1372,7 +1659,7 @@ function buildBoundaryNode(
 		const handle: HandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(i + 1)}`,
-			type: inferHandleType(representative, activeDocumentNodes, resolve),
+			type: typeResolver.inferHandleType(representative, resolveNode),
 		};
 		handles.push(handle);
 		handleFor.set(group, handle);

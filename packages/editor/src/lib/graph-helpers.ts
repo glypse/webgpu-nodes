@@ -116,12 +116,17 @@ export function serialiseDocument(
 	viewport?: Viewport,
 ): GraphDocument {
 	return {
-		nodes: nodes.map(({ id, type, data, position }) => ({
-			id,
-			type: type ?? "",
-			data,
-			position,
-		})),
+		nodes: nodes.map((n) => {
+			const { id, type, data, position } = n;
+			const group = (n as GroupedNode).group;
+			return {
+				id,
+				type: type ?? "",
+				data,
+				position,
+				...(group ? { group } : {}),
+			};
+		}),
 		edges: edges.map((e) => ({
 			id: e.id,
 			source: e.source,

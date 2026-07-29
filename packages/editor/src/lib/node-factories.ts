@@ -1,20 +1,7 @@
 import type { HydratedGraphDocument } from "./graph-types";
-import type {
-	GroupedNode,
-	HandleDef,
-	NodeDescriptor,
-	NodeInputDef,
-	WgslType,
-	WgslCtx,
-} from "./types";
-
-// ── Input helpers ─────────────────────────────────────────────────────────────
-
-/** Extract a single named input's upstream variable. Safe to call — codegen guarantees presence. */
-function input(ctx: WgslCtx, name: string): string {
-	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- guaranteed by codegen
-	return ctx.inputs[name]![0]!;
-}
+import type { GroupedNode, HandleDef, NodeDescriptor, NodeInputDef, WgslType } from "./types";
+import { WGSL_DEFAULTS, WGSL_TYPES, VEC_TYPES, WGSL_COMPONENTS } from "./types";
+import { cwFnName } from "./wgsl-helpers";
 
 // ── Factory: unary math function (sin, cos, tan, abs) ────────────────────────
 
@@ -23,10 +10,10 @@ function unaryFn(type: string, label: string, wgslFn: string): NodeDescriptor {
 		type,
 		label,
 		category: "math",
-		inputs: [{ id: "e", label: "e", type: "f32" }],
+		inputs: [{ id: "e", label: "e", types: WGSL_TYPES }],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: { e: 0 },
-		wgsl: (ctx) => [`let ${ctx.varName} = ${wgslFn}(${input(ctx, "e")});`],
+		wgsl: (ctx) => [`let ${ctx.varName} = ${wgslFn}(${ctx.promoteInput("e")});`],
 	};
 }
 
@@ -37,12 +24,21 @@ function variadicOp(type: string, label: string, joiner: string): NodeDescriptor
 		type,
 		label,
 		category: "math",
-		inputs: [{ id: "operands", label: "operands", type: "f32", variadic: true }],
+		inputs: [
+			{
+				id: "operands",
+				label: "operands",
+				types: WGSL_TYPES,
+				variadic: true,
+			},
+		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: {},
 		wgsl: (ctx) => {
 			const list = ctx.inputs.operands ?? [];
-			if (list.length === 0) return [`let ${ctx.varName} = f32(0.0);`];
+			if (list.length === 0)
+				return [`let ${ctx.varName} = ${WGSL_DEFAULTS[ctx.outputType]};`];
+			// Variadic operands are pre-promoted by codegen to the resolved type
 			return [`let ${ctx.varName} = ${list.join(joiner)};`];
 		},
 	};
@@ -56,13 +52,13 @@ function binaryFn(type: string, label: string, wgslFn: string): NodeDescriptor {
 		label,
 		category: "math",
 		inputs: [
-			{ id: "e1", label: "e1", type: "f32" },
-			{ id: "e2", label: "e2", type: "f32" },
+			{ id: "e1", label: "e1", types: WGSL_TYPES },
+			{ id: "e2", label: "e2", types: WGSL_TYPES },
 		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: { e1: 0, e2: 0 },
 		wgsl: (ctx) => [
-			`let ${ctx.varName} = ${wgslFn}(${input(ctx, "e1")}, ${input(ctx, "e2")});`,
+			`let ${ctx.varName} = ${wgslFn}(${ctx.promoteInput("e1")}, ${ctx.promoteInput("e2")});`,
 		],
 	};
 }
@@ -79,12 +75,14 @@ function binaryOp(
 		label,
 		category: "math",
 		inputs: [
-			{ id: "a", label: "a", type: "f32" },
-			{ id: "b", label: "b", type: "f32" },
+			{ id: "a", label: "a", types: WGSL_TYPES },
+			{ id: "b", label: "b", types: WGSL_TYPES },
 		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: { a: 0, b: 0 },
-		wgsl: (ctx) => [`let ${ctx.varName} = ${op(input(ctx, "a"), input(ctx, "b"))};`],
+		wgsl: (ctx) => [
+			`let ${ctx.varName} = ${op(ctx.promoteInput("a"), ctx.promoteInput("b"))};`,
+		],
 	};
 }
 
@@ -105,61 +103,40 @@ function nAryFn(
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: defaults,
 		wgsl: (ctx) => {
-			const args = inputDefs.map((d) => input(ctx, d.id)).join(", ");
+			const args = inputDefs.map((d) => ctx.promoteInput(d.id)).join(", ");
 			return [`let ${ctx.varName} = ${wgslFn}(${args});`];
 		},
 	};
 }
 
-// ── Factory: vector constructor (vec2f, vec3f, vec4f) ────────────────────────
+// ── Vector decompose (separate) ───────────────────────────────────────────────
 
-function vecConstructor(
-	type: string,
-	components: string[],
-	defaults: Record<string, number>,
-): NodeDescriptor {
-	const outType = type as WgslType;
-	return {
-		type,
-		label: type.charAt(0).toUpperCase() + type.slice(1),
-		category: "vector",
-		inputs: components.map((c) => ({ id: c, label: c, type: "f32" as const })),
-		outputs: [{ id: "value", label: "value", type: outType }],
-		defaultData: defaults,
-		wgsl: (ctx) => {
-			const args = components.map((c) => input(ctx, c)).join(", ");
-			return [`let ${ctx.varName} = ${type}(${args});`];
-		},
-	};
-}
+const SEPARATE_COMPONENTS = ["x", "y", "z", "w"];
 
-// ── Factory: vector decompose (separateVec2f, separateVec3f, separateVec4f) ──
-
-function separateVec(type: string, dim: number): NodeDescriptor {
-	const components = ["x", "y", "z", "w"].slice(0, dim);
-	const inputName = components.join("");
-	const vecType = `vec${String(dim)}f` as WgslType;
-	const vecDefault = `${vecType}(0.0)`;
-	const label = `Separate Vec${String(dim)}f`;
-
-	return {
-		type,
-		label,
-		category: "vector",
-		inputs: [{ id: inputName, label: inputName, type: vecType }],
-		outputs: components.map((c) => ({ id: c, label: c, type: "f32" as const })),
-		defaultData: Object.fromEntries(components.map((c) => [c, 0])),
-		wgsl: (ctx) => {
-			// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-			const src = ctx.inputs[inputName]![0] ?? vecDefault;
-			return components.map(
-				(c) =>
-					// eslint-disable-next-line @typescript-eslint/restrict-template-expressions
-					`let ${ctx.outputVars[c]} = ${src}.${c};`,
-			);
-		},
-	};
-}
+export const separateVectorNode: NodeDescriptor = {
+	type: "separate-vector",
+	label: "Separate Vector",
+	category: "math",
+	inputs: [{ id: "v", label: "v", types: VEC_TYPES }],
+	outputs: SEPARATE_COMPONENTS.map((c) => ({ id: c, label: c, type: "f32" })),
+	defaultData: {},
+	resolveOutputType: () => "f32",
+	resolveOutputs: (resolvedInputType) => {
+		const dim = WGSL_COMPONENTS[resolvedInputType];
+		return SEPARATE_COMPONENTS.slice(0, dim).map((c) => ({
+			id: c,
+			label: c,
+			type: "f32" as const,
+		}));
+	},
+	wgsl: (ctx) => {
+		const src = ctx.promoteInput("v");
+		return ctx.resolvedOutputs.map((o) => {
+			const varName = ctx.outputVars[o.id] ?? o.id;
+			return `let ${varName} = ${src}.${o.id};`;
+		});
+	},
+};
 
 // ── Factory: built-in uniform reader (time, delta, resolution, uv) ───────────
 
@@ -196,10 +173,24 @@ export const mulNode = variadicOp("mul", "Multiply", " * ");
 // Math — binary function call
 export const minNode = binaryFn("min", "Minimum", "min");
 export const maxNode = binaryFn("max", "Maximum", "max");
+export const stepNode = binaryFn("step", "Step", "step");
 
 // Math — binary operator
 export const subNode = binaryOp("sub", "Subtract", (a, b) => `${a} - ${b}`);
-export const divNode = binaryOp("div", "Divide", (a, b) => `safeDivF32(${a}, ${b})`);
+export const divNode: NodeDescriptor = {
+	type: "div",
+	label: "Divide",
+	category: "math",
+	inputs: [
+		{ id: "a", label: "a", types: WGSL_TYPES },
+		{ id: "b", label: "b", types: WGSL_TYPES },
+	],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: { a: 0, b: 0 },
+	wgsl: (ctx) => [
+		`let ${ctx.varName} = ${cwFnName("safeDiv", ctx.outputType)}(${ctx.promoteInput("a")}, ${ctx.promoteInput("b")});`,
+	],
+};
 
 // Math — N-ary function call
 export const clampNode = nAryFn(
@@ -207,9 +198,9 @@ export const clampNode = nAryFn(
 	"Clamp",
 	"clamp",
 	[
-		{ id: "e", label: "e", type: "f32" },
-		{ id: "low", label: "low", type: "f32" },
-		{ id: "high", label: "high", type: "f32" },
+		{ id: "e", label: "e", types: WGSL_TYPES },
+		{ id: "low", label: "low", types: WGSL_TYPES },
+		{ id: "high", label: "high", types: WGSL_TYPES },
 	],
 	{ e: 0, low: 0, high: 1 },
 );
@@ -218,22 +209,83 @@ export const mixNode = nAryFn(
 	"Mix",
 	"mix",
 	[
-		{ id: "e1", label: "e1", type: "f32" },
-		{ id: "e2", label: "e2", type: "f32" },
-		{ id: "e3", label: "e3", type: "f32" },
+		{ id: "e1", label: "e1", types: WGSL_TYPES },
+		{ id: "e2", label: "e2", types: WGSL_TYPES },
+		{ id: "e3", label: "e3", types: WGSL_TYPES },
 	],
 	{ e1: 0, e2: 0, e3: 0 },
 );
 
-// Vector — constructors
-export const vec2fNode = vecConstructor("vec2f", ["x", "y"], { x: 0, y: 0 });
-export const vec3fNode = vecConstructor("vec3f", ["x", "y", "z"], { x: 0, y: 0, z: 0 });
-export const vec4fNode = vecConstructor("vec4f", ["x", "y", "z", "w"], { x: 0, y: 0, z: 0, w: 1 });
+// Math — dot product: (vecN, vecN) -> f32
+export const dotNode: NodeDescriptor = {
+	type: "dot",
+	label: "Dot Product",
+	category: "math",
+	inputs: [
+		{ id: "e1", label: "e1", types: VEC_TYPES },
+		{ id: "e2", label: "e2", types: VEC_TYPES },
+	],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: { e1: 0, e2: 0 },
+	resolveOutputType: () => "f32",
+	wgsl: (ctx) => [
+		`let ${ctx.varName} = dot(${ctx.promoteInput("e1")}, ${ctx.promoteInput("e2")});`,
+	],
+};
 
-// Vector — decompose
-export const separateVec2fNode = separateVec("separateVec2f", 2);
-export const separateVec3fNode = separateVec("separateVec3f", 3);
-export const separateVec4fNode = separateVec("separateVec4f", 4);
+export const distanceNode: NodeDescriptor = {
+	type: "distance",
+	label: "Distance",
+	category: "math",
+	inputs: [
+		{ id: "e1", label: "e1", types: VEC_TYPES },
+		{ id: "e2", label: "e2", types: VEC_TYPES },
+	],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: { e1: 0, e2: 0 },
+	resolveOutputType: () => "f32",
+	wgsl: (ctx) => [
+		`let ${ctx.varName} = distance(${ctx.promoteInput("e1")}, ${ctx.promoteInput("e2")});`,
+	],
+};
+
+export const lengthNode: NodeDescriptor = {
+	type: "length",
+	label: "Length",
+	category: "math",
+	inputs: [{ id: "e1", label: "e1", types: VEC_TYPES }],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: { e1: 0 },
+	resolveOutputType: () => "f32",
+	wgsl: (ctx) => [`let ${ctx.varName} = length(${ctx.promoteInput("e1")});`],
+};
+
+// Vector — declare (type family driven)
+const DECLARE_COMPONENTS = ["x", "y", "z", "w"];
+
+export const declareNode: NodeDescriptor = {
+	type: "declare",
+	label: "Declare",
+	category: "input",
+	inputs: DECLARE_COMPONENTS.map((c) => ({ id: c, label: c, types: ["f32" as const] })),
+	outputs: [{ id: "value", label: "value", type: "f32" as const }],
+	defaultData: Object.fromEntries(DECLARE_COMPONENTS.map((c) => [c, 0])),
+	typeFamily: { key: "declare", types: WGSL_TYPES },
+	resolveOutputs: () => [{ id: "value", label: "value", type: "f32" as const }],
+	resolveInputs: (resolvedOutputType) => {
+		const dim = WGSL_COMPONENTS[resolvedOutputType];
+		return DECLARE_COMPONENTS.slice(0, dim).map((c) => ({
+			id: c,
+			label: c,
+			types: ["f32" as const],
+		}));
+	},
+	wgsl: (ctx) => {
+		const args = ctx.resolvedInputs.map((i) => ctx.promoteInput(i.id)).join(", ");
+		if (ctx.outputType === "f32") return [`let ${ctx.varName} = ${args};`];
+		return [`let ${ctx.varName} = ${ctx.outputType}(${args});`];
+	},
+};
 
 // Input — uniforms
 export const timeNode = uniformReader("time", "Time", "time", "f32", "motiongpuFrame.time");
@@ -249,24 +301,14 @@ export const uvNode = uniformReader("uv", "UV", "uv", "vec2f", "uv");
 
 // ── Standalone nodes (unique patterns) ───────────────────────────────────────
 
-export const floatNode: NodeDescriptor = {
-	type: "float",
-	label: "f32",
-	category: "input",
-	inputs: [{ id: "value", label: "value", type: "f32" }],
-	outputs: [{ id: "value", label: "value", type: "f32" }],
-	defaultData: { value: 0.0 },
-	wgsl: ({ varName, data }) => [`let ${varName} = f32(${String(data.value)});`],
-};
-
 export const outputNode: NodeDescriptor = {
 	type: "frag-output",
 	label: "Output",
 	category: "misc",
-	inputs: [{ id: "color", label: "color", type: "vec4f" }],
+	inputs: [{ id: "color", label: "color", types: ["vec4f"] }],
 	outputs: [],
 	defaultData: {},
-	wgsl: (ctx) => [`let ${ctx.varName} = ${input(ctx, "color")};`],
+	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("color")};`],
 };
 
 export const powNode: NodeDescriptor = {
@@ -274,23 +316,14 @@ export const powNode: NodeDescriptor = {
 	label: "Power",
 	category: "math",
 	inputs: [
-		{ id: "e1", label: "e1", type: "f32" },
-		{ id: "e2", label: "e2", type: "f32" },
+		{ id: "e1", label: "e1", types: WGSL_TYPES },
+		{ id: "e2", label: "e2", types: WGSL_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { e1: 0, e2: 0 },
-	wgsl: (ctx) => {
-		const e = input(ctx, "e1");
-		const p = input(ctx, "e2");
-		return [
-			`var ${ctx.varName}: f32;`,
-			`if (${p} == 0.0) {`,
-			`  ${ctx.varName} = 1.0;`,
-			`} else {`,
-			`  ${ctx.varName} = pow(${e}, ${p});`,
-			`}`,
-		];
-	},
+	wgsl: (ctx) => [
+		`let ${ctx.varName} = ${cwFnName("safePow", ctx.outputType)}(${ctx.promoteInput("e1")}, ${ctx.promoteInput("e2")});`,
+	],
 };
 
 export const remapNode: NodeDescriptor = {
@@ -298,22 +331,22 @@ export const remapNode: NodeDescriptor = {
 	label: "Remap",
 	category: "math",
 	inputs: [
-		{ id: "e", label: "e", type: "f32" },
-		{ id: "in_min", label: "in_min", type: "f32" },
-		{ id: "in_max", label: "in_max", type: "f32" },
-		{ id: "out_min", label: "out_min", type: "f32" },
-		{ id: "out_max", label: "out_max", type: "f32" },
+		{ id: "e", label: "e", types: WGSL_TYPES },
+		{ id: "in_min", label: "in_min", types: WGSL_TYPES },
+		{ id: "in_max", label: "in_max", types: WGSL_TYPES },
+		{ id: "out_min", label: "out_min", types: WGSL_TYPES },
+		{ id: "out_max", label: "out_max", types: WGSL_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { e: 0, in_min: 0, in_max: 1, out_min: 0, out_max: 1 },
 	wgsl: (ctx) => {
-		const e = input(ctx, "e");
-		const inMin = input(ctx, "in_min");
-		const inMax = input(ctx, "in_max");
-		const outMin = input(ctx, "out_min");
-		const outMax = input(ctx, "out_max");
+		const e = ctx.promoteInput("e");
+		const inMin = ctx.promoteInput("in_min");
+		const inMax = ctx.promoteInput("in_max");
+		const outMin = ctx.promoteInput("out_min");
+		const outMax = ctx.promoteInput("out_max");
 		return [
-			`let ${ctx.varName} = ${outMin} + (${e} - ${inMin}) * safeDivF32((${outMax} - ${outMin}), (${inMax} - ${inMin}));`,
+			`let ${ctx.varName} = ${outMin} + (${e} - ${inMin}) * ${cwFnName("safeDiv", ctx.outputType)}((${outMax} - ${outMin}), (${inMax} - ${inMin}));`,
 		];
 	},
 };
@@ -339,7 +372,11 @@ export function buildGroupOutputDescriptor(handles: HandleDef[]): NodeDescriptor
 		type: "group-output",
 		label: "Group Output",
 		category: "misc",
-		inputs: handles.map((h) => ({ id: h.id, label: h.label, type: h.type })),
+		inputs: handles.map((h) => ({
+			id: h.id,
+			label: h.label,
+			types: [h.type],
+		})),
 		outputs: [],
 		defaultData: { handles: [] },
 		wgsl: () => {
@@ -382,7 +419,11 @@ export function buildGroupDescriptor(
 		type: "node-group",
 		label: definition.label ?? definitionRef,
 		category: "misc",
-		inputs: handles.inputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
+		inputs: handles.inputs.map((h) => ({
+			id: h.id,
+			label: h.label,
+			types: [h.type],
+		})),
 		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
 		defaultData: {},
 		wgsl: () => [],

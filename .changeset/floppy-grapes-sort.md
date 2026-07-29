@@ -1,0 +1,5 @@
+---
+"$editor": minor
+---
+
+Inferrable types

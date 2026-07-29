@@ -14,7 +14,7 @@
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 	import { tick } from "svelte";
 
-	import { generateShader, debugSort, projectHash } from "./codegen";
+	import { generateShader, projectHash } from "./codegen";
 	import { getGraphManager } from "./graph-state.svelte";
 	import { type HydratedGraphDocument, type HydratedGraphProject } from "./graph-types";
 	import NodeShell from "./NodeShell.svelte";
@@ -168,6 +168,7 @@
 				position,
 			},
 		];
+		graph.rebuildTypeCache();
 	}
 
 	function addFromLibrary(definitionRef: string) {
@@ -272,13 +273,11 @@
 		frag = generateShader(rootNodes, rootEdges);
 
 		if (debug) {
-			const sortedIds = debugSort(rootNodes, rootEdges);
+			/* const sortedIds = debugSort(rootNodes, rootEdges); */
 			console.group("[shader debug]");
 			console.log("Compiled fragment shader:\n", frag);
-			console.log("Sorted order:\n", sortedIds.join("\n"));
-			/* console.log("Nodes:", JSON.stringify(nodes), null, "\t"));
-			console.log("Edges:", JSON.stringify(edges, null, "\t")); */
-			console.log(JSON.parse(graph.getProjectJson()));
+			/* console.log("Sorted order:\n", sortedIds.join("\n"));
+			console.log(JSON.parse(graph.getProjectJson())); */
 			console.groupEnd();
 		}
 	});
@@ -437,7 +436,18 @@
 						const descriptor = graph.resolveDescriptor(targetNode);
 						const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
 						if (inputDef?.variadic) {
-							edges = [...edges, edge];
+							edges = [
+								...edges.filter(
+									(e) =>
+										!(
+											e.source === source &&
+											e.sourceHandle === sourceHandle &&
+											e.target === target &&
+											e.targetHandle === targetHandle
+										),
+								),
+								edge,
+							];
 							return;
 						}
 					}
