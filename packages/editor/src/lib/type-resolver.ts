@@ -129,6 +129,10 @@ function resolveRegularNodeTypes(
 			rawInferred[inputDef.id] = inputDefaultType(inputDef);
 			continue;
 		}
+		if (inputDef.types.length === 1) {
+			rawInferred[inputDef.id] = inputDef.types[0] ?? inputDefaultType(inputDef);
+			continue;
+		}
 		const sourceTypes = edgesForInput.map((e) =>
 			inferHandleType(e, resolveNode, resolveDescriptor, getIncomingEdges, definitions),
 		);
