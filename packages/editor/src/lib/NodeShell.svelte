@@ -89,7 +89,8 @@
 		if (descriptor?.typeFamily) {
 			return (data[descriptor.typeFamily.key] as WgslType | undefined) !== undefined;
 		}
-		return graph.isNodeForced(id, nodeFamilyKey);
+		const overrides = (data.__nodeTypeOverrides as Record<string, WgslType> | undefined) ?? {};
+		return overrides[nodeFamilyKey] !== undefined;
 	});
 
 	/** The resolved type to display in the dropdown. */
@@ -122,7 +123,12 @@
 			graph.invalidateTypes([id]);
 			return;
 		}
-		graph.setNodeTypeOverride(id, nodeFamilyKey, value as WgslType);
+		const overrides = (data.__nodeTypeOverrides as Record<string, WgslType> | undefined) ?? {};
+		updateNodeData(id, {
+			...data,
+			__nodeTypeOverrides: { ...overrides, [nodeFamilyKey]: value },
+		});
+		graph.invalidateTypes([id]);
 	}
 
 	function handleTypeReset() {
@@ -135,7 +141,15 @@
 			graph.invalidateTypes([id]);
 			return;
 		}
-		graph.clearNodeTypeOverride(id, nodeFamilyKey);
+		const overrides = (data.__nodeTypeOverrides as Record<string, WgslType> | undefined) ?? {};
+		const rest = { ...overrides };
+		// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+		delete rest[nodeFamilyKey];
+		updateNodeData(id, {
+			...data,
+			__nodeTypeOverrides: Object.keys(rest).length > 0 ? rest : undefined,
+		});
+		graph.invalidateTypes([id]);
 	}
 
 	function resolvedInputType(inputDef: { id: string }): WgslType {
@@ -340,9 +354,7 @@
 								{#each COMPONENT_KEYS[effectiveType] as comp, i (comp)}
 									<Scrubbable
 										class={"node-shell__input" +
-											(i > 0
-												? "border-border border-foreground/15 border-t"
-												: "")}
+											(i > 0 ? "border-border border-t" : "")}
 										readonly={isLocked}
 										value={getComponentValue(inputDef.id, effectiveType, comp)}
 										oninput={(
