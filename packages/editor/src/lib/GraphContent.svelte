@@ -274,8 +274,8 @@
 
 		if (debug) {
 			/* const sortedIds = debugSort(rootNodes, rootEdges); */
-			console.group("[shader debug]");
-			console.log("Compiled fragment shader:\n", frag);
+			console.groupCollapsed("[shader debug]");
+			console.log("// Compiled fragment shader:\n", frag);
 			/* console.log("Sorted order:\n", sortedIds.join("\n"));
 			console.log(JSON.parse(graph.getProjectJson())); */
 			console.groupEnd();
