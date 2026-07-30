@@ -16,7 +16,7 @@
 
 	import { generateShader, projectHash } from "./codegen";
 	import { getGraphManager } from "./graph-state.svelte";
-	import { type HydratedGraphProject } from "./graph-types";
+	import { type HydratedGraphProject, ROOT_ID } from "./graph-types";
 	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, defaultDataForType, DYNAMIC_NODE_TYPES } from "./registry";
@@ -140,7 +140,7 @@
 		// Also include definitions that exist in the project but aren't referenced
 		// by any node-group in the graph (e.g. imported from JSON but not yet placed).
 		for (const defRef of graph.project.definitions.keys()) {
-			if (seen.has(defRef) || stdIds.has(defRef)) continue;
+			if (seen.has(defRef) || stdIds.has(defRef) || defRef === ROOT_ID) continue;
 			seen.add(defRef);
 			const def = graph.project.definitions.get(defRef);
 			groups.push({ definitionRef: defRef, label: def?.label ?? "Group", used: false });

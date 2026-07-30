@@ -1188,6 +1188,7 @@ export class GraphManager {
 	 * it's an orphaned entry).
 	 */
 	deleteDefinition(definitionRef: string) {
+		if (definitionRef === ROOT_ID) return;
 		if (this.isStandardLibrary(definitionRef)) return;
 		if (!this.project.definitions.has(definitionRef)) return;
 
@@ -1268,6 +1269,7 @@ export class GraphManager {
 
 		const prunable: string[] = [];
 		for (const key of this.project.definitions.keys()) {
+			if (key === ROOT_ID) continue;
 			if (!live.has(key)) prunable.push(key);
 		}
 		return prunable;
