@@ -1,5 +1,26 @@
 # $editor
 
+## 0.5.0
+
+### Minor Changes
+
+- [#30](https://github.com/glypse/webgpu-nodes/pull/30) [`c00aea5`](https://github.com/glypse/webgpu-nodes/commit/c00aea544501765adf8a5ae79b8f51a9cdb58ba8) Thanks [@glypse](https://github.com/glypse)! - Inferrable types
+
+- [#30](https://github.com/glypse/webgpu-nodes/pull/30) [`13d0db1`](https://github.com/glypse/webgpu-nodes/commit/13d0db140f3432e86f4b3117a01063a335974073) Thanks [@glypse](https://github.com/glypse)! - Float vectors now display a scrubbable input
+
+- [#30](https://github.com/glypse/webgpu-nodes/pull/30) [`c00aea5`](https://github.com/glypse/webgpu-nodes/commit/c00aea544501765adf8a5ae79b8f51a9cdb58ba8) Thanks [@glypse](https://github.com/glypse)! - BREAKING: Replace individual vector declaration and separation nodes in a unified Declare node and Separate Vector node
+
+- [#30](https://github.com/glypse/webgpu-nodes/pull/30) [`c572fc2`](https://github.com/glypse/webgpu-nodes/commit/c572fc2a24d00d5296366e3b84e593a88352ddb9) Thanks [@glypse](https://github.com/glypse)! - Gracefully handle shader errors with a panel
+
+- [#30](https://github.com/glypse/webgpu-nodes/pull/30) [`22da746`](https://github.com/glypse/webgpu-nodes/commit/22da7467fcce00126008f179b420572ce296ffb1) Thanks [@glypse](https://github.com/glypse)! - Float components can be promoted (f32 -> vec3f, vec2f -> vec4f, etc)
+
+### Patch Changes
+
+- [#30](https://github.com/glypse/webgpu-nodes/pull/30) [`0cf6666`](https://github.com/glypse/webgpu-nodes/commit/0cf66665844b350ef79d63395f5ecad6f0ca1695) Thanks [@glypse](https://github.com/glypse)! - Only allow one input edge for non-variadic handles
+
+- Updated dependencies [[`13d0db1`](https://github.com/glypse/webgpu-nodes/commit/13d0db140f3432e86f4b3117a01063a335974073)]:
+  - $theme@0.2.0
+
 ## 0.4.0
 
 ### Minor Changes
