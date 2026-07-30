@@ -395,7 +395,14 @@ function generateBody(
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 	resolveNode: (id: string) => GroupedNode | undefined,
 	getGroupDefinition: (definitionRef: string) => HydratedGraphDocument | undefined,
-): { lines: string[]; seedNodeVarName: string | null } {
+): {
+	lines: string[];
+	seedNodeVarName: string | null;
+	/**
+	 * TODO: lineMap will be used to highlight faulty edges in-UI
+	 */
+	lineMap: Map<string, { start: number; end: number }>;
+} {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
 		nodeMap.set(node.id, node);
@@ -415,6 +422,7 @@ function generateBody(
 	}
 
 	const lines: string[] = [];
+	const lineMap = new Map<string, { start: number; end: number }>();
 	let seedNodeVarName: string | null = null;
 
 	for (const nodeId of sortedIds) {
@@ -457,7 +465,9 @@ function generateBody(
 						return formatWgslLiteral(inputDefaultType(inputDef), dataVal);
 					});
 					const callArgs = inputArgs;
+					const startLine = lines.length;
 					lines.push(`  let ${varName} = ${decl.fnName}(${callArgs.join(", ")});`);
+					lineMap.set(nodeId, { start: startLine, end: lines.length });
 				}
 			}
 			continue;
@@ -533,12 +543,14 @@ function generateBody(
 			resolvedInputs,
 			promoteInput,
 		});
+		const startLine = lines.length;
 		for (const line of wgslLines) lines.push(`  ${line}`);
+		lineMap.set(nodeId, { start: startLine, end: lines.length });
 
 		if (node.type === seedType) seedNodeVarName = varName;
 	}
 
-	return { lines, seedNodeVarName };
+	return { lines, seedNodeVarName, lineMap };
 }
 
 /**
@@ -642,7 +654,10 @@ function emitGroupFunctionIfNeeded(
 /**
  * Emit the full WGSL fragment shader source from the graph.
  */
-export function generateShader(nodes: Node[], edges: HydratedEdge[]): string {
+export function generateShader(
+	nodes: Node[],
+	edges: HydratedEdge[],
+): { shader: string; lineMap: Map<string, { start: number; end: number }> } {
 	const graph = getGraphManager();
 	const groupDecls: GroupDecls = new Map();
 
@@ -654,7 +669,7 @@ export function generateShader(nodes: Node[], edges: HydratedEdge[]): string {
 	// Single source of truth: reuse the GraphManager's TypeResolver
 	const typeResolver = graph.typeResolver;
 
-	const { lines, seedNodeVarName } = generateBody(
+	const { lines, seedNodeVarName, lineMap } = generateBody(
 		nodes,
 		edges,
 		"frag-output",
@@ -665,24 +680,41 @@ export function generateShader(nodes: Node[], edges: HydratedEdge[]): string {
 		getGroupDefinition,
 	);
 
-	const body: string[] = [];
+	const preamble: string[] = [];
 
 	// Every group's struct + fn, emitted once each, before frag() itself.
 	for (const decl of groupDecls.values()) {
-		body.push(decl.structDecl, "", decl.fnDecl, "");
+		preamble.push(decl.structDecl, "", decl.fnDecl, "");
 	}
 
-	body.push(
+	preamble.push(
 		"// ---------- Common libraries ----------",
 		"",
 		...emitHelperFunctions().flatMap((fn) => [fn, ""]),
 		"// ---------- User code ----------",
 		"",
 		"fn frag(uv: vec2f) -> vec4f {",
+	);
+
+	const preambleText = preamble.join("\n");
+	const preambleLineCount = preambleText.split("\n").length;
+
+	// Offset the line map by the preamble line count so line numbers
+	// correspond to the final shader string.
+	const finalLineMap = new Map<string, { start: number; end: number }>();
+	for (const [nodeId, range] of lineMap) {
+		finalLineMap.set(nodeId, {
+			start: range.start + preambleLineCount,
+			end: range.end + preambleLineCount,
+		});
+	}
+
+	const body: string[] = [
+		...preamble,
 		...lines,
 		seedNodeVarName ? `  return ${seedNodeVarName};` : "  return vec4f(0.0, 0.0, 0.0, 0.0);",
 		"}",
-	);
+	];
 
-	return body.join("\n");
+	return { shader: body.join("\n"), lineMap: finalLineMap };
 }

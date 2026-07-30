@@ -269,7 +269,7 @@
 		const hash = reachableShaderHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;
-		frag = generateShader(rootNodes, rootEdges);
+		frag = generateShader(rootNodes, rootEdges).shader;
 
 		if (debug) {
 			/* const sortedIds = debugSort(rootNodes, rootEdges); */

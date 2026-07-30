@@ -24,6 +24,8 @@ import {
 	stepNode,
 	distanceNode,
 	lengthNode,
+	testInvalidWgslNode,
+	testRuntimeErrorNode,
 } from "./node-factories";
 import type { NodeDescriptor, NodeCategory } from "./types";
 
@@ -82,6 +84,10 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 
 	// Groups (placeholder - shape derived from subgraph at runtime)
 	"node-group": groupNode,
+
+	// Test nodes (for error handling UI)
+	"test-invalid-wgsl": testInvalidWgslNode,
+	"test-runtime-error": testRuntimeErrorNode,
 };
 
 export const DYNAMIC_NODE_TYPES = ["group-input", "group-output"];

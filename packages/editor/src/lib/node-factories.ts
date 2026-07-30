@@ -351,6 +351,28 @@ export const remapNode: NodeDescriptor = {
 	},
 };
 
+// ── Test nodes (for error handling UI testing) ────────────────────────────────
+
+export const testInvalidWgslNode: NodeDescriptor = {
+	type: "test-invalid-wgsl",
+	label: "⚠ Test: Bad WGSL",
+	category: "misc",
+	inputs: [],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: {},
+	wgsl: (ctx) => [`let ${ctx.varName} = this_is_not_valid_wgsl;`],
+};
+
+export const testRuntimeErrorNode: NodeDescriptor = {
+	type: "test-runtime-error",
+	label: "⚠ Test: Runtime Error",
+	category: "misc",
+	inputs: [{ id: "e", label: "e", types: WGSL_TYPES }],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: { e: 0 },
+	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("e")} / f32(0.0);`],
+};
+
 // ── Group descriptor builders ─────────────────────────────────────────────────
 
 export function buildGroupInputDescriptor(handles: HandleDef[]): NodeDescriptor {
