@@ -1,25 +1,39 @@
 import type { Node, Edge } from "@xyflow/svelte";
 import { getContext, setContext } from "svelte";
+import * as v from "valibot";
 
+import defaultScene from "./defaultProject.json";
 import {
+	buildDocumentIndex,
 	hydrateDocument,
 	hydrateProject,
 	normaliseDocument,
 	resolveDescriptor,
 	serialiseDocument,
 } from "./graph-helpers";
+import { GraphProjectSchema, StandardLibraryEntriesSchema } from "./graph-schema";
 import {
 	type GraphDocument,
 	type GraphDocumentEdge,
 	type GraphDocumentNode,
 	type GraphProject,
-	type HydratedGraphDocument,
+	type HydratedEdge,
 	type HydratedGraphProject,
+	ROOT_ID,
 	type StandardLibraryEntry,
 } from "./graph-types";
+import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 import { nodeRegistry } from "./registry";
-import defaultScene from "./sizing_circle.json";
-import { type GroupedNode, type HandleDef, type NodeDescriptor, type WgslType } from "./types";
+import { TypeResolver } from "./type-resolver";
+import {
+	type GroupedNode,
+	type HandleDef,
+	type NodeDescriptor,
+	type NodeInputDef,
+	type NodeOutputDef,
+	type WgslType,
+	isConnectionCompatible,
+} from "./types";
 
 // ── Standard library auto-import ──────────────────────────────────────────────
 
@@ -48,7 +62,14 @@ const libraryEntries: StandardLibraryEntry[] = Object.values(libraryModules).map
 
 export class GraphManager {
 	/** The entire project tree. */
-	project = $state<HydratedGraphProject>({ definitions: {}, root: { nodes: [], edges: [] } });
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- Map is reassigned, not mutated
+	project = $state<HydratedGraphProject>({ definitions: new Map() });
+
+	/** Shortcut for the root document. Always exists after construction. */
+	get root(): HydratedGraphDocument {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- ROOT_ID is always present
+		return this.project.definitions.get(ROOT_ID)!;
+	}
 
 	/**
 	 * Breadcrumb path of group-node ids from root down to the currently-viewed subgraph.
@@ -81,6 +102,29 @@ export class GraphManager {
 	/** Read-only standard library entries for browsing. */
 	library: StandardLibraryEntry[] = libraryEntries;
 
+	/** Centralised type resolver — single source of truth for all type resolution. */
+	typeResolver: TypeResolver;
+
+	/**
+	 * Reactive cache of resolved types per node. Keyed by node ID.
+	 * Components read from this for type badges, dropdowns, and output labels.
+	 * Updated via `invalidateTypes` after graph mutations.
+	 */
+	typeCache = $state<
+		Map<
+			string,
+			{
+				inputTypes: Record<string, WgslType>;
+				outputType: WgslType;
+				resolvedInputs: NodeInputDef[];
+				resolvedOutputs: NodeOutputDef[];
+			}
+		>
+	>(
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		new Map(),
+	);
+
 	constructor(defaults?: GraphProject) {
 		const project: GraphProject = defaults ?? defaultScene;
 		this.project = hydrateProject(project);
@@ -89,8 +133,39 @@ export class GraphManager {
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
 			def.label = entry.label;
-			this.project.definitions[entry.id] = hydrateDocument(def);
+			this.project.definitions.set(entry.id, hydrateDocument(def));
 		}
+
+		this.typeResolver = new TypeResolver(
+			(n) => this.resolveDescriptor(n),
+			this.project.definitions,
+			(id) => this.getIncomingEdges(id),
+		);
+		this.rebuildTypeCache();
+	}
+
+	/**
+	 * Look up any node by ID across all documents in the project.
+	 * Used as the `resolveNode` callback for the TypeResolver.
+	 */
+	resolveNode(nodeId: string): GroupedNode | undefined {
+		for (const def of this.project.definitions.values()) {
+			const n = def.nodesById.get(nodeId);
+			if (n) return n;
+		}
+		return undefined;
+	}
+
+	/**
+	 * Find all edges targeting a node across the entire project.
+	 * Used by TypeResolver for recursive type inference.
+	 */
+	private getIncomingEdges(nodeId: string): HydratedEdge[] {
+		for (const def of this.project.definitions.values()) {
+			const edges = def.edgesByTarget.get(nodeId) ?? [];
+			if (edges.length > 0) return edges;
+		}
+		return [];
 	}
 
 	/**
@@ -103,11 +178,11 @@ export class GraphManager {
 		definition: HydratedGraphDocument;
 		nodeId: string;
 	}> {
-		let current: HydratedGraphDocument = this.project.root;
+		let current: HydratedGraphDocument = this.root;
 		for (const nodeId of this.path) {
-			const node = current.nodes.find((n) => n.id === nodeId);
+			const node = current.nodesById.get(nodeId);
 			if (!node?.group) return;
-			const definition = this.project.definitions[node.group.definitionRef];
+			const definition = this.project.definitions.get(node.group.definitionRef);
 			if (!definition) return;
 			yield { node, group: node.group, definition, nodeId };
 			current = definition;
@@ -115,7 +190,7 @@ export class GraphManager {
 	}
 
 	get activeDocument(): HydratedGraphDocument {
-		let current: HydratedGraphDocument = this.project.root;
+		let current: HydratedGraphDocument = this.root;
 		let steps = 0;
 		for (const { definition } of this.walkPath()) {
 			current = definition;
@@ -124,7 +199,7 @@ export class GraphManager {
 		// If the walk didn't consume the entire path, the path is invalid — reset
 		if (steps !== this.path.length) {
 			this.path = [];
-			return this.project.root;
+			return this.root;
 		}
 		return current;
 	}
@@ -133,17 +208,83 @@ export class GraphManager {
 		return resolveDescriptor(node, this.project.definitions);
 	}
 
+	/**
+	 * Public wrapper used by SvelteFlow's `isValidConnection` prop. Validates a
+	 * prospective edge against the WGSL type system: a higher-N value cannot be
+	 * fed into a lower-N input (the user must decompose it first).
+	 */
+	isValidConnection(connection: {
+		source?: string | null;
+		sourceHandle?: string | null;
+		target?: string | null;
+		targetHandle?: string | null;
+	}): boolean {
+		if (!connection.source || !connection.target) return false;
+
+		const sourceNode = this.resolveNode(connection.source);
+		const targetNode = this.resolveNode(connection.target);
+		if (!sourceNode || !targetNode) return false;
+
+		const sourceType = this.typeResolver.inferHandleType(
+			{
+				source: connection.source,
+				sourceHandle: connection.sourceHandle ?? "",
+				target: "",
+				targetHandle: "",
+				id: "",
+			},
+			(id) => this.resolveNode(id),
+		);
+
+		const targetDescriptor = this.resolveDescriptor(targetNode);
+
+		// For nodes with resolveInputs, validate against active inputs only
+		if (targetDescriptor.resolveInputs && targetDescriptor.typeFamily) {
+			const override = targetNode.data[targetDescriptor.typeFamily.key] as
+				| WgslType
+				| undefined;
+			const outputType = override ?? targetDescriptor.typeFamily.types[0] ?? "f32";
+			const activeInputs = targetDescriptor.resolveInputs(outputType);
+			const targetInputDef = activeInputs.find((i) => i.id === connection.targetHandle);
+			if (!targetInputDef) return false;
+			return isConnectionCompatible(sourceType, targetInputDef.types[0] ?? "f32");
+		}
+
+		const targetEdgeIncoming = targetDescriptor.inputs.length === 1 && !connection.targetHandle;
+		const targetInputDef = targetDescriptor.inputs.find(
+			(i) => i.id === connection.targetHandle || targetEdgeIncoming,
+		);
+		if (!targetInputDef) return false;
+
+		// If the target has a node-wide override, validate against that specific type
+		const nodeOverrides = targetNode.data.__nodeTypeOverrides as
+			| Record<string, WgslType>
+			| undefined;
+		const familyKey = targetInputDef.types.join(",");
+		const overrideType = nodeOverrides?.[familyKey];
+		if (overrideType) {
+			return isConnectionCompatible(sourceType, overrideType);
+		}
+
+		// Check against the type family — connection is valid if the source can
+		// be promoted to any type within the family (up to the highest member)
+		return targetInputDef.types.some((t) => isConnectionCompatible(sourceType, t));
+	}
+
 	get nodes(): GroupedNode[] {
 		return this.activeDocument.nodes;
 	}
 	set nodes(value: GroupedNode[]) {
 		this.activeDocument.nodes = value;
+		this.rebuildDocumentIndex(this.activeDocument);
 	}
-	get edges(): Edge[] {
+	get edges(): HydratedEdge[] {
 		return this.activeDocument.edges;
 	}
 	set edges(value: Edge[]) {
-		this.activeDocument.edges = value;
+		this.activeDocument.edges = value as HydratedEdge[];
+		this.rebuildDocumentIndex(this.activeDocument);
+		this.rebuildTypeCache();
 	}
 
 	/** Whether the currently-viewed subgraph (or any of its ancestors) is locked. */
@@ -157,7 +298,7 @@ export class GraphManager {
 	/** The definitionRef of the first selected group node, if any. */
 	get selectedGroupRef(): string | undefined {
 		for (const id of this.selectedNodeIds) {
-			const node = this.activeDocument.nodes.find((n) => n.id === id);
+			const node = this.activeDocument.nodesById.get(id);
 			if (node?.type === "node-group" && node.group) {
 				return node.group.definitionRef;
 			}
@@ -192,8 +333,8 @@ export class GraphManager {
 	 * activeDocument).  Returns the root when at the top level.
 	 */
 	get parentDocument(): HydratedGraphDocument {
-		if (this.path.length === 0) return this.project.root;
-		let current: HydratedGraphDocument = this.project.root;
+		if (this.path.length === 0) return this.root;
+		let current: HydratedGraphDocument = this.root;
 		let steps = 0;
 		for (const { definition } of this.walkPath()) {
 			steps++;
@@ -205,7 +346,7 @@ export class GraphManager {
 
 	/** Push a group node's id onto the breadcrumb path - "enter" it. */
 	enterGroup(groupNodeId: string) {
-		const node = this.activeDocument.nodes.find((n) => n.id === groupNodeId);
+		const node = this.activeDocument.nodesById.get(groupNodeId);
 		if (!node?.group) {
 			console.warn(`[graph] cannot enter "${groupNodeId}" - not a group node`);
 			return;
@@ -228,28 +369,36 @@ export class GraphManager {
 		this.path = [...newPath];
 	}
 
-	loadProject(project: GraphProject) {
-		this.project = hydrateProject(project);
+	loadProject(project: unknown): boolean {
+		const parsed = v.safeParse(GraphProjectSchema, project);
+		if (!parsed.success) {
+			console.error("[graph] rejected invalid project JSON", v.flatten(parsed.issues));
+			return false;
+		}
+		this.project = hydrateProject(parsed.output);
 		this.path = [];
 
 		// Re-register standard library definitions after loading
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
 			def.label = entry.label;
-			this.project.definitions[entry.id] = hydrateDocument(def);
+			this.project.definitions.set(entry.id, hydrateDocument(def));
 		}
+
+		// Rebuild the type resolver with the new definitions and recompute all types
+		this.typeResolver = new TypeResolver(
+			(n) => this.resolveDescriptor(n),
+			this.project.definitions,
+			(id) => this.getIncomingEdges(id),
+		);
+		this.rebuildTypeCache();
+
+		return true;
 	}
 
 	getProjectJson(): string {
-		const root = serialiseDocument(
-			this.project.root.nodes,
-			this.project.root.edges,
-			this.project.root.label,
-			this.project.root.locked,
-			this.project.root.viewport,
-		);
 		const definitions = Object.fromEntries(
-			Object.entries(this.project.definitions).map(([key, definition]) => [
+			[...this.project.definitions.entries()].map(([key, definition]) => [
 				key,
 				serialiseDocument(
 					definition.nodes,
@@ -260,16 +409,17 @@ export class GraphManager {
 				),
 			]),
 		);
-		const project = { root, definitions };
+		const project = { definitions };
 		return JSON.stringify(project, null, "\t");
 	}
 
-	loadFromString(text: string) {
+	loadFromString(text: string): boolean {
 		try {
-			const project = JSON.parse(text) as GraphProject;
-			this.loadProject(project);
+			const project = JSON.parse(text) as unknown;
+			return this.loadProject(project);
 		} catch (err) {
 			console.error("[graph] failed to parse JSON", err);
+			return false;
 		}
 	}
 
@@ -283,13 +433,13 @@ export class GraphManager {
 		URL.revokeObjectURL(url);
 	}
 
-	async upload(file: File) {
+	async upload(file: File): Promise<boolean> {
 		try {
 			const text = await file.text();
-			const project = JSON.parse(text) as GraphProject;
-			this.loadProject(project);
+			return this.loadFromString(text);
 		} catch (err) {
 			console.error("[graph] failed to parse uploaded JSON", err);
+			return false;
 		}
 	}
 
@@ -321,7 +471,7 @@ export class GraphManager {
 	private transitiveRefs(definitionRef: string, visited = new Set<string>()): Set<string> {
 		if (visited.has(definitionRef) || this.isStandardLibrary(definitionRef)) return visited;
 		visited.add(definitionRef);
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return visited;
 		for (const node of def.nodes) {
 			if (node.type === "node-group" && node.group) {
@@ -352,7 +502,7 @@ export class GraphManager {
 		for (const entry of this.library) {
 			if (entry.label) labels.add(entry.label);
 		}
-		for (const def of Object.values(this.project.definitions)) {
+		for (const def of this.project.definitions.values()) {
 			if (def.label) labels.add(def.label);
 		}
 		return labels;
@@ -378,7 +528,7 @@ export class GraphManager {
 		if (visited.has(definitionRef) || this.isStandardLibrary(definitionRef)) return [];
 		visited.add(definitionRef);
 
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return [];
 
 		const refs: string[] = [];
@@ -405,7 +555,7 @@ export class GraphManager {
 				definition: GraphDocument;
 		  }
 		| undefined {
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return undefined;
 
 		const deps = this.collectNestedRefs(definitionRef);
@@ -429,8 +579,8 @@ export class GraphManager {
 					id: e.id,
 					source: e.source,
 					target: e.target,
-					sourceHandle: e.sourceHandle ?? undefined,
-					targetHandle: e.targetHandle ?? undefined,
+					sourceHandle: e.sourceHandle,
+					targetHandle: e.targetHandle,
 				})),
 			},
 		};
@@ -477,25 +627,35 @@ export class GraphManager {
 			dependencies?: string[];
 			definition?: GraphDocument;
 		}[],
-	) {
+	): { imported: number; missing: string[]; rejected: string[] } {
+		const parsed = v.safeParse(StandardLibraryEntriesSchema, jsonFiles);
+		if (!parsed.success) {
+			console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
+			return {
+				imported: 0,
+				missing: [],
+				rejected: jsonFiles.map((f) => f.id ?? "<unknown>"),
+			};
+		}
+
+		const entries = parsed.output;
 		// Phase 1: Load all definitions
-		for (const file of jsonFiles) {
-			if (!file.id || !file.definition) {
-				console.warn("[graph] skipping malformed import entry", file);
-				continue;
-			}
+		for (const file of entries) {
 			const normalised = normaliseDocument(file.definition);
 			if (file.label) normalised.label = file.label;
 			normalised.locked = true;
-			this.project.definitions[file.id] = hydrateDocument(normalised);
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+			this.project.definitions = new Map(this.project.definitions).set(
+				file.id,
+				hydrateDocument(normalised),
+			);
 		}
 
 		// Phase 2: Check dependencies
 		const missing: string[] = [];
-		for (const file of jsonFiles) {
-			if (!file.id || !file.dependencies) continue;
+		for (const file of entries) {
 			for (const dep of file.dependencies) {
-				if (!this.project.definitions[dep] && !this.isStandardLibrary(dep)) {
+				if (!this.project.definitions.has(dep) && !this.isStandardLibrary(dep)) {
 					missing.push(`${file.id} depends on ${dep}`);
 				}
 			}
@@ -505,7 +665,10 @@ export class GraphManager {
 			console.warn("[graph] imported groups have missing dependencies:", missing);
 		}
 
-		return { imported: jsonFiles.length, missing };
+		// New definitions may change how group nodes resolve their types
+		this.rebuildTypeCache();
+
+		return { imported: entries.length, missing, rejected: [] };
 	}
 
 	groupSelection(selectedNodeIds: Set<string>): void {
@@ -527,7 +690,7 @@ export class GraphManager {
 
 		const { internal, incoming, outgoing } = classifyEdges(
 			filteredIds,
-			this.activeDocument.edges as GraphDocumentEdge[], // We could pick only the GraphDocumentEdge properites of each Edge, but passing the raw object is more memory-efficient
+			this.activeDocument.edges, // We could pick only the GraphDocumentEdge properites of each Edge, but passing the raw object is more memory-efficient
 		);
 		const dedupedIncoming = deduplicateBySource(incoming);
 		const dedupedOutgoing = deduplicateBySource(outgoing);
@@ -537,15 +700,15 @@ export class GraphManager {
 		const groupInputNode = buildBoundaryNode(
 			"input",
 			dedupedIncoming,
-			this.activeDocument.nodes,
-			(node) => this.resolveDescriptor(node),
+			this.typeResolver,
+			(id) => this.resolveNode(id),
 			{ x: bounds.minX - OFFSET, y: bounds.centerY },
 		);
 		const groupOutputNode = buildBoundaryNode(
 			"output",
 			dedupedOutgoing,
-			this.activeDocument.nodes,
-			(node) => this.resolveDescriptor(node),
+			this.typeResolver,
+			(id) => this.resolveNode(id),
 			{ x: bounds.maxX + OFFSET, y: bounds.centerY },
 		);
 
@@ -583,7 +746,7 @@ export class GraphManager {
 			allInnerEdges.push(inner);
 		});
 
-		const userGroupCount = Object.keys(this.project.definitions).filter(
+		const userGroupCount = [...this.project.definitions.keys()].filter(
 			(k) => !this.isStandardLibrary(k),
 		).length;
 
@@ -597,7 +760,11 @@ export class GraphManager {
 			label: `Group ${String(userGroupCount)}`,
 		};
 
-		this.project.definitions[definitionRef] = hydrateDocument(definition);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.project.definitions = new Map(this.project.definitions).set(
+			definitionRef,
+			hydrateDocument(definition),
+		);
 
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
@@ -618,11 +785,13 @@ export class GraphManager {
 			...this.activeDocument.nodes.filter((n) => !filteredIds.has(n.id)),
 			groupNode,
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		this.activeDocument.edges = [
 			...this.activeDocument.edges.filter((e) => !touchedEdgeIds.has(e.id)),
 			...allOuterEdges,
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		// Clear SvelteFlow's internal selection state so moved nodes/edges
 		// don't appear selected inside the newly created group.
@@ -633,6 +802,9 @@ export class GraphManager {
 		for (const e of this.activeDocument.edges) {
 			e.selected = false;
 		}
+
+		// Rebuild types since the graph structure changed significantly
+		this.rebuildTypeCache();
 	}
 
 	/**
@@ -671,7 +843,7 @@ export class GraphManager {
 	 */
 	private ungroupNode(groupNode: GroupedNode): string[] {
 		if (!groupNode.group) return [];
-		const def = this.project.definitions[groupNode.group.definitionRef];
+		const def = this.project.definitions.get(groupNode.group.definitionRef);
 		if (!def) return [];
 
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -720,14 +892,13 @@ export class GraphManager {
 				id: crypto.randomUUID(),
 				source: remap(e.source),
 				target: remap(e.target),
-				sourceHandle: e.sourceHandle ?? undefined,
-				targetHandle: e.targetHandle ?? undefined,
+				sourceHandle: e.sourceHandle,
+				targetHandle: e.targetHandle,
 			}));
 
 		// Outer edges connected to this group node instance.
-		const outerEdges = this.activeDocument.edges as GraphDocumentEdge[];
-		const incomingOuter = outerEdges.filter((e) => e.target === groupNode.id);
-		const outgoingOuter = outerEdges.filter((e) => e.source === groupNode.id);
+		const incomingOuter = this.activeDocument.edgesByTarget.get(groupNode.id) ?? [];
+		const outgoingOuter = this.activeDocument.edgesBySource.get(groupNode.id) ?? [];
 
 		const boundaryEdges: GraphDocumentEdge[] = [];
 
@@ -739,9 +910,9 @@ export class GraphManager {
 			boundaryEdges.push({
 				id: crypto.randomUUID(),
 				source: feed.source,
-				sourceHandle: feed.sourceHandle ?? undefined,
+				sourceHandle: feed.sourceHandle,
 				target: remap(innerEdge.target),
-				targetHandle: innerEdge.targetHandle ?? undefined,
+				targetHandle: innerEdge.targetHandle,
 			});
 		}
 
@@ -755,9 +926,9 @@ export class GraphManager {
 				boundaryEdges.push({
 					id: crypto.randomUUID(),
 					source: remap(innerEdge.source),
-					sourceHandle: innerEdge.sourceHandle ?? undefined,
+					sourceHandle: innerEdge.sourceHandle,
 					target: consumer.target,
-					targetHandle: consumer.targetHandle ?? undefined,
+					targetHandle: consumer.targetHandle,
 				});
 			}
 		}
@@ -772,11 +943,16 @@ export class GraphManager {
 			...this.activeDocument.nodes.filter((n) => n.id !== groupNode.id),
 			...(clonedNodes as GroupedNode[]),
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 		this.activeDocument.edges = [
 			...this.activeDocument.edges.filter((e) => !removedEdgeIds.has(e.id)),
 			...clonedInnerEdges,
 			...boundaryEdges,
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
+
+		// Rebuild types since the graph structure changed significantly
+		this.rebuildTypeCache();
 
 		return clonedNodes.map((n) => n.id);
 	}
@@ -789,10 +965,10 @@ export class GraphManager {
 	deepClone(lockedNodeGroupId: string): string | undefined {
 		// Search the whole project: the node may live in the active document,
 		// an ancestor document (e.g. a breadcrumb segment), or the currently-viewed group.
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = this.project.definitions.values();
 		let node: GroupedNode | undefined;
 		for (const doc of documents) {
-			const found = doc.nodes.find((n) => n.id === lockedNodeGroupId);
+			const found = doc.nodesById.get(lockedNodeGroupId);
 			if (found) {
 				node = found;
 				break;
@@ -803,7 +979,7 @@ export class GraphManager {
 			return undefined;
 		}
 
-		const sourceDef = this.project.definitions[node.group.definitionRef];
+		const sourceDef = this.project.definitions.get(node.group.definitionRef);
 		if (!sourceDef) {
 			console.warn(`[graph] deepClone: missing definition "${node.group.definitionRef}"`);
 			return undefined;
@@ -832,15 +1008,19 @@ export class GraphManager {
 			id: crypto.randomUUID(),
 			source: idMap.get(e.source) ?? e.source,
 			target: idMap.get(e.target) ?? e.target,
-			sourceHandle: e.sourceHandle ?? undefined,
-			targetHandle: e.targetHandle ?? undefined,
+			sourceHandle: e.sourceHandle,
+			targetHandle: e.targetHandle,
 		}));
 
-		this.project.definitions[newDefRef] = hydrateDocument({
-			nodes: clonedNodes,
-			edges: clonedEdges,
-			label: this.uniqueCopyLabel(sourceDef.label),
-		});
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.project.definitions = new Map(this.project.definitions).set(
+			newDefRef,
+			hydrateDocument({
+				nodes: clonedNodes,
+				edges: clonedEdges,
+				label: this.uniqueCopyLabel(sourceDef.label),
+			}),
+		);
 
 		// Point the group node at the new (unlocked) clone
 		node.group = { definitionRef: newDefRef, locked: false };
@@ -855,7 +1035,7 @@ export class GraphManager {
 	 * Returns undefined if the addition would create a circular reference.
 	 */
 	addFromLibrary(definitionRef: string, position: { x: number; y: number }): string | undefined {
-		const sourceDef = this.project.definitions[definitionRef];
+		const sourceDef = this.project.definitions.get(definitionRef);
 		if (!sourceDef) {
 			console.warn(`[graph] addFromLibrary: unknown definition "${definitionRef}"`);
 			return undefined;
@@ -868,7 +1048,7 @@ export class GraphManager {
 			return undefined;
 		}
 
-		const isLocked = this.isStandardLibrary(definitionRef) || sourceDef.locked === true;
+		const isLocked = this.isStandardLibrary(definitionRef) || sourceDef.locked;
 
 		const groupNodeId = crypto.randomUUID();
 		const groupNode: GraphDocumentNode = {
@@ -880,6 +1060,7 @@ export class GraphManager {
 		};
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		return groupNodeId;
 	}
@@ -935,7 +1116,11 @@ export class GraphManager {
 			label: this.nextGroupLabel(),
 		};
 
-		this.project.definitions[definitionRef] = hydrateDocument(definition);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.project.definitions = new Map(this.project.definitions).set(
+			definitionRef,
+			hydrateDocument(definition),
+		);
 
 		const groupNodeId = crypto.randomUUID();
 		const groupNode: GraphDocumentNode = {
@@ -947,13 +1132,17 @@ export class GraphManager {
 		};
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
+		this.rebuildDocumentIndex(this.activeDocument);
+
+		// Rebuild types since a new definition and node were added
+		this.rebuildTypeCache();
 
 		return groupNodeId;
 	}
 
 	/** Generate the next "Group N" label based on existing user definitions. */
 	private nextGroupLabel(): string {
-		const count = Object.keys(this.project.definitions).filter(
+		const count = [...this.project.definitions.keys()].filter(
 			(k) => !this.isStandardLibrary(k),
 		).length;
 		return `Group ${String(count)}`;
@@ -963,11 +1152,11 @@ export class GraphManager {
 	setGroupLabel(nodeId: string, label: string) {
 		let node: GroupedNode | undefined;
 		if (this.path.length > 0) {
-			node = this.parentDocument.nodes.find((n) => n.id === nodeId);
+			node = this.parentDocument.nodesById.get(nodeId);
 		}
-		node ??= this.activeDocument.nodes.find((n) => n.id === nodeId);
+		node ??= this.activeDocument.nodesById.get(nodeId);
 		if (!node?.group) return;
-		const def = this.project.definitions[node.group.definitionRef];
+		const def = this.project.definitions.get(node.group.definitionRef);
 		if (!def) return;
 		const trimmed = label.trim();
 		if (!trimmed) return;
@@ -985,7 +1174,7 @@ export class GraphManager {
 		for (const entry of this.library) {
 			if (entry.label && entry.label === trimmed) return false;
 		}
-		for (const [key, def] of Object.entries(this.project.definitions)) {
+		for (const [key, def] of this.project.definitions.entries()) {
 			if (key === excludeDefRef) continue;
 			if (def.label === trimmed) return false;
 		}
@@ -999,10 +1188,11 @@ export class GraphManager {
 	 * it's an orphaned entry).
 	 */
 	deleteDefinition(definitionRef: string) {
+		if (definitionRef === ROOT_ID) return;
 		if (this.isStandardLibrary(definitionRef)) return;
-		if (!(definitionRef in this.project.definitions)) return;
+		if (!this.project.definitions.has(definitionRef)) return;
 
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = this.project.definitions.values();
 		let stillReferenced = false;
 		for (const doc of documents) {
 			if (
@@ -1016,14 +1206,15 @@ export class GraphManager {
 		}
 		if (stillReferenced) return;
 
-		// Reassign via rest-spread so the $state proxy tracks the removal.
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- only the remaining keys matter
-		const { [definitionRef]: _removed, ...rest } = this.project.definitions;
-		this.project.definitions = rest;
+		// Reassign via new Map so the $state proxy tracks the removal.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		const remaining = new Map(this.project.definitions);
+		remaining.delete(definitionRef);
+		this.project.definitions = remaining;
 
 		// If we're currently viewing this (now-deleted) definition, bail out to root.
 		const inPath = this.path.some((nodeId) => {
-			const node = this.project.root.nodes.find((n) => n.id === nodeId);
+			const node = this.root.nodesById.get(nodeId);
 			return node?.group?.definitionRef === definitionRef;
 		});
 		if (inPath) this.path = [];
@@ -1050,7 +1241,7 @@ export class GraphManager {
 
 		// The root document is always live; seed with refs it references directly.
 		const queue: string[] = [];
-		for (const node of this.project.root.nodes) {
+		for (const node of this.root.nodes) {
 			if (node.type === "node-group" && node.group) {
 				if (!live.has(node.group.definitionRef)) {
 					live.add(node.group.definitionRef);
@@ -1063,7 +1254,7 @@ export class GraphManager {
 		while (queue.length > 0) {
 			const ref = queue.pop();
 			if (ref === undefined) break;
-			const def = this.project.definitions[ref];
+			const def = this.project.definitions.get(ref);
 			if (!def) continue;
 			for (const node of def.nodes) {
 				if (node.type === "node-group" && node.group) {
@@ -1077,7 +1268,8 @@ export class GraphManager {
 		}
 
 		const prunable: string[] = [];
-		for (const key of Object.keys(this.project.definitions)) {
+		for (const key of this.project.definitions.keys()) {
+			if (key === ROOT_ID) continue;
 			if (!live.has(key)) prunable.push(key);
 		}
 		return prunable;
@@ -1087,7 +1279,7 @@ export class GraphManager {
 	getPrunableGroups(): { ref: string; label: string; nodeCount: number }[] {
 		const BOUNDARY = ["group-input", "group-output"];
 		return this.getPrunableRefs().map((ref) => {
-			const def = this.project.definitions[ref];
+			const def = this.project.definitions.get(ref);
 			const nodeCount = def
 				? def.nodes.filter((n) => !BOUNDARY.includes(n.type ?? "")).length
 				: 0;
@@ -1107,17 +1299,18 @@ export class GraphManager {
 		const removed = this.getPrunableRefs();
 		if (removed.length === 0) return [];
 
-		// Reassign via rest-spread so the $state proxy tracks the removal.
-		const removedLookup: Record<string, true> = {};
-		for (const key of removed) removedLookup[key] = true;
-		const rest = Object.fromEntries(
-			Object.entries(this.project.definitions).filter(([key]) => !removedLookup[key]),
+		// Reassign via new Map so the $state proxy tracks the removal.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set, not reactive state
+		const removedLookup = new Set(removed);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		const remaining = new Map(
+			[...this.project.definitions.entries()].filter(([key]) => !removedLookup.has(key)),
 		);
-		this.project.definitions = rest;
+		this.project.definitions = remaining;
 
 		// If we're currently viewing a now-deleted definition, bail out to root.
 		const inPath = this.path.some((nodeId) => {
-			const node = this.project.root.nodes.find((n) => n.id === nodeId);
+			const node = this.root.nodesById.get(nodeId);
 			return node?.group && removed.includes(node.group.definitionRef);
 		});
 		if (inPath) this.path = [];
@@ -1125,26 +1318,291 @@ export class GraphManager {
 		return removed;
 	}
 
-	/** Update the label of a handle on a group-input or group-output node inside a definition. */
-	setHandleLabel(definitionRef: string, handleNodeId: string, handleId: string, label: string) {
-		const def = this.project.definitions[definitionRef];
-		if (!def) return;
-		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
-		if (!handleNode) return;
+	/** Update the label of a handle on a group-input or group-output node inside a definition.
+	 *  Rejects the change if another handle on the same boundary node already has that label.
+	 *  Returns true if the label was updated, false if rejected. */
+	setHandleLabel(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		label: string,
+	): boolean {
+		const def = this.project.definitions.get(definitionRef);
+		if (!def) return false;
+		const handleNode = def.nodesById.get(handleNodeId);
+		if (!handleNode) return false;
 		const handles = handleNode.data.handles as HandleDef[] | undefined;
-		if (!handles) return;
+		if (!handles) return false;
 		const handle = handles.find((h) => h.id === handleId);
-		if (!handle) return;
-		handle.label = label;
+		if (!handle) return false;
+
+		const trimmed = label.trim();
+		if (!trimmed) return false;
+
+		// Reject duplicate labels within the same boundary node
+		if (handles.some((h) => h.id !== handleId && h.label === trimmed)) return false;
+
+		handle.label = trimmed;
+		return true;
+	}
+
+	// ── Label helpers ───────────────────────────────────────────────────────
+
+	/**
+	 * Resolve the display labels for a node's handles directly from the source
+	 * definitions. Used by NodeShell so label edits are visible immediately.
+	 */
+	resolveNodeLabels(nodeId: string): {
+		inputs: Record<string, string>;
+		outputs: Record<string, string>;
+	} {
+		const inputs: Record<string, string> = {};
+		const outputs: Record<string, string> = {};
+
+		const node = this.resolveNode(nodeId);
+		if (!node) return { inputs, outputs };
+
+		if (node.type === "group-input") {
+			for (const h of (node.data.handles ?? []) as HandleDef[]) outputs[h.id] = h.label;
+		} else if (node.type === "group-output") {
+			for (const h of (node.data.handles ?? []) as HandleDef[]) inputs[h.id] = h.label;
+		} else if (node.type === "node-group" && node.group) {
+			const def = this.project.definitions.get(node.group.definitionRef);
+			if (def) {
+				const inputNode = def.nodes.find((n) => n.type === "group-input");
+				const outputNode = def.nodes.find((n) => n.type === "group-output");
+				for (const h of (inputNode?.data.handles ?? []) as HandleDef[])
+					inputs[h.id] = h.label;
+				for (const h of (outputNode?.data.handles ?? []) as HandleDef[])
+					outputs[h.id] = h.label;
+			}
+		}
+
+		return { inputs, outputs };
+	}
+
+	// ── Type override helpers ───────────────────────────────────────────────
+
+	/**
+	 * Resolve the effective type for an input handle on a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveInputType(nodeId: string, inputId: string): WgslType {
+		const node = this.resolveNode(nodeId);
+		if (!node) return "f32";
+
+		const descriptor = this.resolveDescriptor(node);
+		const inputDef = descriptor.inputs.find((i) => i.id === inputId);
+		if (!inputDef) return "f32";
+
+		// Check cache first
+		const cached = this.typeCache.get(nodeId);
+		if (cached) {
+			return cached.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
+		}
+
+		// Fallback: compute on the fly (shouldn't happen after initial cache build)
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
+	}
+
+	/**
+	 * Resolve the output type for a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveNodeOutputType(nodeId: string): WgslType {
+		const cached = this.typeCache.get(nodeId);
+		if (cached) return cached.outputType;
+
+		// Fallback: compute on the fly
+		const node = this.resolveNode(nodeId);
+		if (!node) return "f32";
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.outputType;
+	}
+
+	/**
+	 * Resolve the active inputs for a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveNodeInputs(nodeId: string): NodeInputDef[] {
+		const cached = this.typeCache.get(nodeId);
+		if (cached) return cached.resolvedInputs;
+
+		// Fallback: compute on the fly
+		const node = this.resolveNode(nodeId);
+		if (!node) return [];
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.resolvedInputs;
+	}
+
+	/**
+	 * Resolve the active outputs for a node instance.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveNodeOutputs(nodeId: string): NodeOutputDef[] {
+		const cached = this.typeCache.get(nodeId);
+		if (cached) return cached.resolvedOutputs;
+
+		// Fallback: compute on the fly
+		const node = this.resolveNode(nodeId);
+		if (!node) return [];
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
+		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+			this.resolveNode(id),
+		);
+		return result.resolvedOutputs;
+	}
+
+	/**
+	 * Set a node-wide type override for an entire type family. When set,
+	 * all inputs in that family ignore type inference and use the specified type.
+	 */
+	setNodeTypeOverride(nodeId: string, familyKey: string, type: WgslType) {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (!node) return;
+
+		const overrides =
+			(node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined) ?? {};
+		node.data.__nodeTypeOverrides = { ...overrides, [familyKey]: type };
+		this.invalidateTypes([nodeId]);
+	}
+
+	/**
+	 * Clear a node-wide type override for a family, reverting to dynamic inference.
+	 */
+	clearNodeTypeOverride(nodeId: string, familyKey: string) {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (!node) return;
+
+		const overrides = node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
+		if (overrides) {
+			const rest = { ...overrides };
+			// eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+			delete rest[familyKey];
+			node.data.__nodeTypeOverrides = rest;
+		}
+		this.invalidateTypes([nodeId]);
+	}
+
+	/**
+	 * Check if a type family on a node is in forced (manual override) mode.
+	 */
+	isNodeForced(nodeId: string, familyKey: string): boolean {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (!node) return false;
+		const overrides = node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
+		return overrides?.[familyKey] !== undefined;
+	}
+
+	/**
+	 * Invalidate types for the given node IDs and all their ancestors.
+	 * Walks backward through the reverse graph, recomputing only affected nodes.
+	 * Stops at group-output boundaries (within the same document).
+	 * Cross-document propagation goes through `node-group` instances.
+	 */
+	invalidateTypes(nodeIds: string[]): void {
+		const allEdges = [...this.project.definitions.values()].flatMap((d) => d.edges);
+		const invalidated = this.typeResolver.invalidate(
+			nodeIds,
+			(id) => this.resolveNode(id),
+			allEdges,
+		);
+
+		// Recompute types for all invalidated nodes
+		for (const nodeId of invalidated) {
+			const node = this.resolveNode(nodeId);
+			if (!node) continue;
+			const incoming = allEdges.filter((e) => e.target === nodeId);
+			const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
+				this.resolveNode(id),
+			);
+			this.typeCache.set(nodeId, result);
+		}
+
+		// Disconnect edges to outputs/inputs that no longer exist
+		// (e.g. separate vec3f → vec2f drops z output; declare vec3f → f32 drops y/w inputs)
+		const documents = this.project.definitions.values();
+		for (const nodeId of invalidated) {
+			const cached = this.typeCache.get(nodeId);
+			if (!cached) continue;
+
+			// Clean dangling source handles (outputs) — read from cached resolved outputs
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Set, never stored in reactive state
+			const activeOutIds = new Set(cached.resolvedOutputs.map((o) => o.id));
+			for (const doc of documents) {
+				doc.edges = doc.edges.filter(
+					(e) => !(e.source === nodeId && !activeOutIds.has(e.sourceHandle)),
+				);
+				this.rebuildDocumentIndex(doc);
+			}
+
+			// Clean dangling target handles (inputs) — read from cached resolved inputs
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local Set, never stored in reactive state
+			const activeInIds = new Set(cached.resolvedInputs.map((i) => i.id));
+			for (const doc of documents) {
+				doc.edges = doc.edges.filter(
+					(e) => !(e.target === nodeId && !activeInIds.has(e.targetHandle)),
+				);
+				this.rebuildDocumentIndex(doc);
+			}
+		}
+
+		// Trigger reactivity by creating a new Map reference
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.typeCache = new Map(this.typeCache);
+	}
+
+	/**
+	 * Rebuild the entire type cache from scratch. Called on project load
+	 * and when the document structure changes fundamentally.
+	 */
+	rebuildTypeCache(): void {
+		// Clear the TypeResolver's memoisation cache so every node is recomputed
+		this.typeResolver.clearCache();
+
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.typeCache = new Map();
+
+		// Compute types for all nodes across all documents
+		for (const doc of this.project.definitions.values()) {
+			this.typeResolver.computeAll(doc.nodes, doc.edges, (id) => this.resolveNode(id));
+		}
+
+		// Copy resolved types into the reactive cache
+		for (const [nodeId, result] of this.typeResolver.cache) {
+			this.typeCache.set(nodeId, result);
+		}
+
+		// Trigger reactivity
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.typeCache = new Map(this.typeCache);
+	}
+
+	/** Rebuild the indexed Maps (nodesById, edgesBySource, edgesByTarget) for a document. */
+	private rebuildDocumentIndex(doc: HydratedGraphDocument): void {
+		const idx = buildDocumentIndex(doc.nodes, doc.edges);
+		doc.nodesById = idx.nodesById;
+		doc.edgesBySource = idx.edgesBySource;
+		doc.edgesByTarget = idx.edgesByTarget;
 	}
 
 	/** Remove a handle from a group-input/group-output node and delete all connected edges. */
 	removeHandle(definitionRef: string, handleNodeId: string, handleId: string) {
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return;
 
 		// Remove the handle from the node's data
-		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
+		const handleNode = def.nodesById.get(handleNodeId);
 		if (!handleNode) return;
 		const handles = handleNode.data.handles as HandleDef[] | undefined;
 		if (!handles) return;
@@ -1160,11 +1618,15 @@ export class GraphManager {
 					(e.target === handleNodeId && e.targetHandle === handleId)
 				),
 		);
+		this.rebuildDocumentIndex(def);
 
 		// Remove all *outer* edges in any document that holds an instance of this
 		// definition: the now-deleted handle no longer exists on the group node,
 		// so any edge referencing it would be dangling and crash the renderer.
 		this.removeOuterEdgesForHandle(definitionRef, handleId);
+
+		// Rebuild types since handles and cross-document edges changed
+		this.rebuildTypeCache();
 	}
 
 	/**
@@ -1173,7 +1635,7 @@ export class GraphManager {
 	 * from a group's definition leaves dangling edges in parent documents.
 	 */
 	private removeOuterEdgesForHandle(definitionRef: string, handleId: string) {
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = this.project.definitions.values();
 		for (const doc of documents) {
 			const instanceIds = doc.nodes
 				.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)
@@ -1188,6 +1650,7 @@ export class GraphManager {
 						(ids.has(e.target) && e.targetHandle === handleId)
 					),
 			);
+			this.rebuildDocumentIndex(doc);
 		}
 	}
 }
@@ -1238,7 +1701,7 @@ function deduplicateBySource(edgesToGroup: GraphDocumentEdge[]): GraphDocumentEd
 	const groups = new Map<string, GraphDocumentEdge[]>();
 
 	for (const edge of edgesToGroup) {
-		const key = `${edge.source}::${edge.sourceHandle ?? ""}`;
+		const key = `${edge.source}::${edge.sourceHandle}`;
 
 		const existing = groups.get(key);
 		if (existing) {
@@ -1251,22 +1714,6 @@ function deduplicateBySource(edgesToGroup: GraphDocumentEdge[]): GraphDocumentEd
 	return [...groups.values()];
 }
 
-function inferHandleType(
-	edge: GraphDocumentEdge,
-	nodes: GroupedNode[],
-	resolve: (node: GroupedNode) => NodeDescriptor,
-): WgslType {
-	const sourceNode = nodes.find((n) => n.id === edge.source);
-	if (!sourceNode) return "f32"; // shouldn't happen, but fail soft
-
-	const descriptor = resolve(sourceNode);
-	const outputDef = descriptor.outputs.find(
-		(o) => o.id === edge.sourceHandle || descriptor.outputs.length === 1,
-	);
-
-	return outputDef?.type ?? "f32";
-}
-
 type BoundaryBuildResult = {
 	node: GraphDocumentNode;
 	handleFor: Map<GraphDocumentEdge[], HandleDef>;
@@ -1275,8 +1722,8 @@ type BoundaryBuildResult = {
 function buildBoundaryNode(
 	direction: "input" | "output",
 	deduped: GraphDocumentEdge[][],
-	activeDocumentNodes: GroupedNode[],
-	resolve: (node: GroupedNode) => NodeDescriptor,
+	typeResolver: TypeResolver,
+	resolveNode: (id: string) => GroupedNode | undefined,
 	position: { x: number; y: number },
 ): BoundaryBuildResult {
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -1294,7 +1741,7 @@ function buildBoundaryNode(
 		const handle: HandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(i + 1)}`,
-			type: inferHandleType(representative, activeDocumentNodes, resolve),
+			type: typeResolver.inferHandleType(representative, resolveNode),
 		};
 		handles.push(handle);
 		handleFor.set(group, handle);

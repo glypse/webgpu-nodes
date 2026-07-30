@@ -4,14 +4,11 @@ A web-based node-based fragment shader editor for WGSL
 
 ### Roadmap
 
-- [ ] A WGSL string builder handling all major value types and operations
-- [ ] A proper handling of Motion GPU native & custom uniforms (ie: time, canvas resolution, texture, texture dimensions and texture sampling, etc)
-
-And asynchronously:
-
-- [ ] A user-friendly UI for handling the node editor
-- [ ] A JSON load/save system for user-created scenes
-- [ ] A Tauri desktop app bundling a WebGPU runtime, allowing for local, offline shader creation
+- A WGSL string builder handling all major value types and operations
+- A proper handling of Motion GPU native & custom uniforms (ie: time, canvas resolution, texture, texture dimensions and texture sampling, etc)
+- A user-friendly UI for handling the node editor
+- A JSON load/save system for user-created scenes
+- A Tauri desktop app bundling a WebGPU runtime, allowing for local, offline shader creation
 
 ### Pre-alpha
 
@@ -26,6 +23,14 @@ This project is in pre-alpha: every change can afford to be breaking, no backwar
 - (Not yet implemented) Tauri as the desktop app framework
 - Motion GPU as the WGSL runtime
 
+## Instructions
+
 Assume your knowledge of these tools to be vastly outdated, don't be afraid to fetch the appropriate documentation (ideally via an MCP server if your user has some available for you, or via your built-in web scraping tool, or as a last resort via reading the source code in `node_modules`), or use the skills available at [.agents/skills](.agents/skills).
 
-Whenever you're done working on a feature, run check and lint on the whole package or packages you've been working on. Example: `bun run format && bun nx run-many --projects=editor,web --targets=check,lint`
+Whenever you're done working on a feature, run check and lint on the whole package or packages you've been working on. Example: `bun run format && bun nx run-many --projects=editor,web --targets=check,lint`. Always prefer using NX run-many because it's much faster (parallel execution) than individual commands, and is configured for caching.
+
+Given the nature of this project, it's easy for the UI to not reflect the same state as the computed types and codegen, group references, etc. Make an effort to keep a single source of truth.
+
+## Reactivity model
+
+Node/edge arrays in `HydratedGraphDocument` use `$state.raw` (not `$state`) for performance — SvelteFlow iterates them thousands of times per frame. This means **mutations to individual node properties (e.g. `node.data.foo = bar`) are not reactive**. Always use SvelteFlow's `updateNodeData` API or reassign the array to trigger UI updates. If something that should be reactive isn't, check whether you're mutating through a `$state.raw` container. See `hydrated-document.svelte.ts` and the comments there. If this section is out of sync with the actual data model, please notify the user.

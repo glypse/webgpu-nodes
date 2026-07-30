@@ -1,0 +1,18 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "frag-output-id",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": []
+		}
+	}
+}

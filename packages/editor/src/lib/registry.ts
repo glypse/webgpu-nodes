@@ -3,9 +3,21 @@ import {
 	addNode,
 	clampNode,
 	cosNode,
+	declareNode,
 	deltaNode,
 	divNode,
-	floatNode,
+	dotNode,
+	floorNode,
+	ceilNode,
+	fractNode,
+	roundNode,
+	signNode,
+	sqrtNode,
+	atanNode,
+	atan2Node,
+	normalizeNode,
+	crossNode,
+	reflectNode,
 	maxNode,
 	minNode,
 	mulNode,
@@ -14,17 +26,17 @@ import {
 	remapNode,
 	resolutionNode,
 	mixNode,
-	separateVec2fNode,
-	separateVec3fNode,
-	separateVec4fNode,
+	separateVectorNode,
 	sinNode,
 	subNode,
 	tanNode,
 	timeNode,
 	uvNode,
-	vec2fNode,
-	vec3fNode,
-	vec4fNode,
+	stepNode,
+	distanceNode,
+	lengthNode,
+	testInvalidWgslNode,
+	testRuntimeErrorNode,
 } from "./node-factories";
 import type { NodeDescriptor, NodeCategory } from "./types";
 
@@ -49,7 +61,7 @@ const groupNode: NodeDescriptor = {
  */
 export const nodeRegistry: Record<string, NodeDescriptor> = {
 	// Input
-	float: floatNode,
+	declare: declareNode,
 	uv: uvNode,
 	time: timeNode,
 	delta: deltaNode,
@@ -64,26 +76,40 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	abs: absNode,
 	min: minNode,
 	max: maxNode,
+	step: stepNode,
 	clamp: clampNode,
 	pow: powNode,
 	remap: remapNode,
 	sin: sinNode,
 	cos: cosNode,
 	tan: tanNode,
+	atan: atanNode,
+	atan2: atan2Node,
+	floor: floorNode,
+	ceil: ceilNode,
+	fract: fractNode,
+	round: roundNode,
+	sign: signNode,
+	sqrt: sqrtNode,
+	dot: dotNode,
+	distance: distanceNode,
+	length: lengthNode,
+	normalize: normalizeNode,
+	cross: crossNode,
+	reflect: reflectNode,
 
 	// Vector
-	vec2f: vec2fNode,
-	vec3f: vec3fNode,
-	vec4f: vec4fNode,
-	separateVec2f: separateVec2fNode,
-	separateVec3f: separateVec3fNode,
-	separateVec4f: separateVec4fNode,
+	"separate-vector": separateVectorNode,
 
 	// Output
 	"frag-output": outputNode,
 
 	// Groups (placeholder - shape derived from subgraph at runtime)
 	"node-group": groupNode,
+
+	// Test nodes (for error handling UI)
+	"test-invalid-wgsl": testInvalidWgslNode,
+	"test-runtime-error": testRuntimeErrorNode,
 };
 
 export const DYNAMIC_NODE_TYPES = ["group-input", "group-output"];

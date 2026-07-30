@@ -8,15 +8,18 @@
 		Controls,
 		Background,
 		type Edge,
+		type EdgeTypes,
 		type Node,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 	import { tick } from "svelte";
 
-	import { generateShader, debugSort, projectHash } from "./codegen";
+	import { generateShader, reachableShaderHash } from "./codegen";
+	import GradientEdge from "./GradientEdge.svelte";
 	import { getGraphManager } from "./graph-state.svelte";
-	import { type HydratedGraphDocument, type HydratedGraphProject } from "./graph-types";
+	import { type HydratedGraphProject, ROOT_ID } from "./graph-types";
+	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, defaultDataForType, DYNAMIC_NODE_TYPES } from "./registry";
 	import { type HandleDef, type NodeCategory } from "./types";
@@ -27,6 +30,10 @@
 	for (const type of [...Object.keys(nodeRegistry), ...DYNAMIC_NODE_TYPES]) {
 		nodeTypes[type] = NodeShell;
 	}
+
+	const edgeTypes: EdgeTypes = {
+		gradient: GradientEdge,
+	};
 
 	let debug = getDevContext();
 
@@ -122,7 +129,7 @@
 				) {
 					seen.add(node.group.definitionRef);
 					if (stdIds.has(node.group.definitionRef)) continue;
-					const def = graph.project.definitions[node.group.definitionRef];
+					const def = graph.project.definitions.get(node.group.definitionRef);
 					groups.push({
 						definitionRef: node.group.definitionRef,
 						label: def?.label ?? "Group",
@@ -132,17 +139,16 @@
 			}
 		}
 
-		collectFromDoc(graph.project.root);
-		for (const def of Object.values(graph.project.definitions)) {
+		for (const def of graph.project.definitions.values()) {
 			collectFromDoc(def);
 		}
 
 		// Also include definitions that exist in the project but aren't referenced
 		// by any node-group in the graph (e.g. imported from JSON but not yet placed).
-		for (const defRef of Object.keys(graph.project.definitions)) {
-			if (seen.has(defRef) || stdIds.has(defRef)) continue;
+		for (const defRef of graph.project.definitions.keys()) {
+			if (seen.has(defRef) || stdIds.has(defRef) || defRef === ROOT_ID) continue;
 			seen.add(defRef);
-			const def = graph.project.definitions[defRef];
+			const def = graph.project.definitions.get(defRef);
 			groups.push({ definitionRef: defRef, label: def?.label ?? "Group", used: false });
 		}
 
@@ -168,6 +174,7 @@
 				position,
 			},
 		];
+		graph.rebuildTypeCache();
 	}
 
 	function addFromLibrary(definitionRef: string) {
@@ -219,12 +226,12 @@
 				targetNodeId = groupNode?.id;
 			} else if (graph.path.length > 0) {
 				// Inside a subgraph - use the group we're currently viewing
-				let current = graph.project.root;
+				let current = graph.root;
 				for (const nodeId of graph.path) {
 					const node = current.nodes.find((n) => n.id === nodeId);
 					if (!node?.group) break;
 					targetNodeId = nodeId;
-					const def = graph.project.definitions[node.group.definitionRef];
+					const def = graph.project.definitions.get(node.group.definitionRef);
 					if (!def) break;
 					current = def;
 				}
@@ -258,27 +265,24 @@
 	}
 
 	// Track the shader-relevant hash to avoid rebuilding on position changes.
-	// Always hash & generate from the ROOT graph so the shader stays valid
-	// even when the user is viewing a subgraph.
-	// projectHash covers the full project so edits inside subgraphs trigger re-generation.
+	// Only hash the reachable subgraph so edits to disconnected nodes or unused
+	// group definitions don't trigger unnecessary shader regeneration.
 	let prevHash = $state("");
 
 	$effect(() => {
-		const rootNodes = graph.project.root.nodes;
-		const rootEdges = graph.project.root.edges;
-		const hash = projectHash(graph.project);
+		const rootNodes = graph.root.nodes;
+		const rootEdges = graph.root.edges;
+		const hash = reachableShaderHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;
-		frag = generateShader(rootNodes, rootEdges);
+		frag = generateShader(rootNodes, rootEdges).shader;
 
 		if (debug) {
-			const sortedIds = debugSort(rootNodes, rootEdges);
-			console.group("[shader debug]");
-			console.log("Compiled fragment shader:\n", frag);
-			console.log("Sorted order:\n", sortedIds.join("\n"));
-			/* console.log("Nodes:", JSON.stringify(nodes), null, "\t"));
-			console.log("Edges:", JSON.stringify(edges, null, "\t")); */
-			console.log(JSON.parse(graph.getProjectJson()));
+			/* const sortedIds = debugSort(rootNodes, rootEdges); */
+			console.groupCollapsed("[shader debug]");
+			console.log("// Compiled fragment shader:\n", frag);
+			/* console.log("Sorted order:\n", sortedIds.join("\n"));
+			console.log(JSON.parse(graph.getProjectJson())); */
 			console.groupEnd();
 		}
 	});
@@ -320,7 +324,7 @@
 	});
 	const sheetDefinition = $derived(
 		sheetGroupNode?.group
-			? graph.project.definitions[sheetGroupNode.group.definitionRef]
+			? graph.project.definitions.get(sheetGroupNode.group.definitionRef)
 			: undefined,
 	);
 	const sheetLocked = $derived(sheetGroupNode?.group?.locked ?? true);
@@ -385,7 +389,13 @@
 
 	function commitHandleLabel(defRef: string, nodeId: string, handleId: string, value: string) {
 		if (value.trim()) {
-			graph.setHandleLabel(defRef, nodeId, handleId, value);
+			const accepted = graph.setHandleLabel(defRef, nodeId, handleId, value);
+			if (!accepted) {
+				// Revert buffer to the stored label so the input reflects the actual value
+				const labels = graph.resolveNodeLabels(nodeId);
+				const stored = labels.outputs[handleId] ?? labels.inputs[handleId];
+				if (stored) handleLabelBuffer[handleId] = stored;
+			}
 		}
 	}
 
@@ -405,6 +415,8 @@
 				bind:nodes
 				bind:edges
 				{nodeTypes}
+				{edgeTypes}
+				defaultEdgeOptions={{ type: "gradient" }}
 				colorMode={mode.current}
 				fitView
 				minZoom={0.1}
@@ -416,8 +428,52 @@
 				elementsSelectable={!isLocked}
 				deleteKey={isLocked ? null : undefined}
 				onbeforedelete={isLocked ? () => Promise.resolve(false) : undefined}
+				isValidConnection={(connection) => graph.isValidConnection(connection)}
 				onmove={(_event, viewport) => {
 					graph.activeDocument.viewport = { ...viewport };
+				}}
+				onconnect={(connection) => {
+					const { source, target, sourceHandle, targetHandle } = connection;
+					if (!source || !target || !sourceHandle || !targetHandle) return;
+
+					const edge = {
+						...connection,
+						id: crypto.randomUUID(),
+						sourceHandle,
+						targetHandle,
+						type: "gradient",
+					};
+
+					// Skip replacement logic for variadic inputs — they accept many edges.
+					const targetNode = nodes.find((n) => n.id === target);
+					if (targetNode) {
+						const descriptor = graph.resolveDescriptor(targetNode);
+						const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
+						if (inputDef?.variadic) {
+							edges = [
+								...edges.filter(
+									(e) =>
+										!(
+											e.source === source &&
+											e.sourceHandle === sourceHandle &&
+											e.target === target &&
+											e.targetHandle === targetHandle
+										),
+								),
+								edge,
+							];
+							return;
+						}
+					}
+
+					// Single source of data per non-variadic input: drop any existing
+					// edge into the same target handle, then add the new one.
+					edges = [
+						...edges.filter(
+							(e) => !(e.target === target && e.targetHandle === targetHandle),
+						),
+						edge,
+					];
 				}}
 				onselectionchange={({ nodes: selectedNodes }) => {
 					graph.selectedNodeIds = selectedNodes.map((n) => n.id);

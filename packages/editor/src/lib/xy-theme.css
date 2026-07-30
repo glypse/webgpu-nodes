@@ -1,12 +1,6 @@
-/* xyflow theme – centralised styles */
-
 @import "@xyflow/svelte/dist/style.css" layer(base);
 
 @reference "$theme/css";
-
-/* =============================================
-   xyflow base style overrides
-   ============================================= */
 
 .svelte-flow__node {
 	@apply bg-card w-45 justify-center rounded-sm;
@@ -14,7 +8,7 @@
 }
 
 .node-shell__label {
-	@apply flow-root border-b px-3 pt-3 pb-2;
+	@apply flex flex-col gap-1 border-b px-3 pt-3 pb-2;
 }
 
 .node-shell__label > svg {
@@ -56,6 +50,28 @@
 	@apply bg-foreground pointer-events-auto;
 }
 
+.node-shell__handle {
+	&.f32 {
+		@apply bg-f32;
+	}
+
+	&.vec2f {
+		@apply bg-vec2f;
+	}
+
+	&.vec3f {
+		@apply bg-vec3f;
+	}
+
+	&.vec4f {
+		@apply bg-vec4f;
+	}
+
+	&.variadic {
+		@apply min-h-6;
+	}
+}
+
 .svelte-flow__node:has(.svelte-flow__resize-control.line) {
 	@apply rounded-none;
 }
@@ -67,10 +83,6 @@
 .svelte-flow__edge-label {
 	@apply bg-card;
 }
-
-/* =============================================
-   NodeShell component styles
-   ============================================= */
 
 .node-shell--unknown {
 	@apply text-destructive;

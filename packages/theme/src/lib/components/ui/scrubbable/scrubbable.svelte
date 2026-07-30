@@ -192,7 +192,7 @@
 		type="button"
 		class="absolute {isRight
 			? 'right-0'
-			: 'left-0'} hover:bg-foreground/10 z-10 flex h-full w-6 items-center justify-center rounded-sm bg-transparent p-0 text-xs opacity-0 transition-opacity group-hover/scrub:opacity-50 hover:!opacity-100"
+			: 'left-0'} hover:bg-foreground/10 z-10 flex h-full w-6 items-center justify-center bg-transparent p-0 text-xs opacity-0 transition-opacity group-hover/scrub:opacity-50 hover:opacity-100!"
 		tabindex="-1"
 		aria-label={isRight ? "Increase value" : "Decrease value"}
 		onmousedown={isRight ? handleIncrement : handleDecrement}
@@ -210,7 +210,7 @@
 {/if}
 <div
 	class={cn(
-		"group/scrub relative flex grow items-center rounded-sm transition-colors",
+		"group/scrub relative flex grow items-center overflow-clip rounded-sm transition-colors",
 		!readonly && "hover:bg-foreground/5 nodrag nokey",
 		className,
 	)}
@@ -223,7 +223,7 @@
 	<input
 		bind:this={ref}
 		type="number"
-		class="bg-foreground/5 h-8 w-full min-w-0 rounded-sm px-2.5 py-1 text-center transition-colors outline-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none {scrubbing ||
+		class="bg-foreground/5 h-8 w-full min-w-0 px-2.5 py-1 text-center transition-colors outline-none [-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none {scrubbing ||
 		isFocused
 			? 'bg-foreground/10'
 			: ''} {scrubbing ? 'cursor-none' : ''} {readonly ? 'opacity-50' : ''}"
