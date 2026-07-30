@@ -19,6 +19,7 @@ import {
 	type HydratedEdge,
 	type HydratedGraphDocument,
 	type HydratedGraphProject,
+	ROOT_ID,
 	type StandardLibraryEntry,
 } from "./graph-types";
 import { nodeRegistry } from "./registry";
@@ -60,7 +61,13 @@ const libraryEntries: StandardLibraryEntry[] = Object.values(libraryModules).map
 
 export class GraphManager {
 	/** The entire project tree. */
-	project = $state<HydratedGraphProject>({ definitions: {}, root: { nodes: [], edges: [] } });
+	project = $state<HydratedGraphProject>({ definitions: {} });
+
+	/** Shortcut for the root document. Always exists after construction. */
+	get root(): HydratedGraphDocument {
+		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- ROOT_ID is always present
+		return this.project.definitions[ROOT_ID]!;
+	}
 
 	/**
 	 * Breadcrumb path of group-node ids from root down to the currently-viewed subgraph.
@@ -129,7 +136,6 @@ export class GraphManager {
 
 		this.typeResolver = new TypeResolver(
 			(n) => this.resolveDescriptor(n),
-			this.project.root,
 			this.project.definitions,
 			(id) => this.getIncomingEdges(id),
 		);
@@ -137,12 +143,10 @@ export class GraphManager {
 	}
 
 	/**
-	 * Look up any node by ID across all documents in the project (root + definitions).
+	 * Look up any node by ID across all documents in the project.
 	 * Used as the `resolveNode` callback for the TypeResolver.
 	 */
 	resolveNode(nodeId: string): GroupedNode | undefined {
-		const found = this.project.root.nodes.find((n) => n.id === nodeId);
-		if (found) return found;
 		for (const def of Object.values(this.project.definitions)) {
 			const n = def.nodes.find((node) => node.id === nodeId);
 			if (n) return n;
@@ -155,8 +159,6 @@ export class GraphManager {
 	 * Used by TypeResolver for recursive type inference.
 	 */
 	private getIncomingEdges(nodeId: string): HydratedEdge[] {
-		const rootEdges = this.project.root.edges.filter((e) => e.target === nodeId);
-		if (rootEdges.length > 0) return rootEdges;
 		for (const def of Object.values(this.project.definitions)) {
 			const edges = def.edges.filter((e) => e.target === nodeId);
 			if (edges.length > 0) return edges;
@@ -174,7 +176,7 @@ export class GraphManager {
 		definition: HydratedGraphDocument;
 		nodeId: string;
 	}> {
-		let current: HydratedGraphDocument = this.project.root;
+		let current: HydratedGraphDocument = this.root;
 		for (const nodeId of this.path) {
 			const node = current.nodes.find((n) => n.id === nodeId);
 			if (!node?.group) return;
@@ -186,7 +188,7 @@ export class GraphManager {
 	}
 
 	get activeDocument(): HydratedGraphDocument {
-		let current: HydratedGraphDocument = this.project.root;
+		let current: HydratedGraphDocument = this.root;
 		let steps = 0;
 		for (const { definition } of this.walkPath()) {
 			current = definition;
@@ -195,7 +197,7 @@ export class GraphManager {
 		// If the walk didn't consume the entire path, the path is invalid — reset
 		if (steps !== this.path.length) {
 			this.path = [];
-			return this.project.root;
+			return this.root;
 		}
 		return current;
 	}
@@ -327,8 +329,8 @@ export class GraphManager {
 	 * activeDocument).  Returns the root when at the top level.
 	 */
 	get parentDocument(): HydratedGraphDocument {
-		if (this.path.length === 0) return this.project.root;
-		let current: HydratedGraphDocument = this.project.root;
+		if (this.path.length === 0) return this.root;
+		let current: HydratedGraphDocument = this.root;
 		let steps = 0;
 		for (const { definition } of this.walkPath()) {
 			steps++;
@@ -382,7 +384,6 @@ export class GraphManager {
 		// Rebuild the type resolver with the new definitions and recompute all types
 		this.typeResolver = new TypeResolver(
 			(n) => this.resolveDescriptor(n),
-			this.project.root,
 			this.project.definitions,
 			(id) => this.getIncomingEdges(id),
 		);
@@ -392,13 +393,6 @@ export class GraphManager {
 	}
 
 	getProjectJson(): string {
-		const root = serialiseDocument(
-			this.project.root.nodes,
-			this.project.root.edges,
-			this.project.root.label,
-			this.project.root.locked,
-			this.project.root.viewport,
-		);
 		const definitions = Object.fromEntries(
 			Object.entries(this.project.definitions).map(([key, definition]) => [
 				key,
@@ -411,7 +405,7 @@ export class GraphManager {
 				),
 			]),
 		);
-		const project = { root, definitions };
+		const project = { definitions };
 		return JSON.stringify(project, null, "\t");
 	}
 
@@ -956,7 +950,7 @@ export class GraphManager {
 	deepClone(lockedNodeGroupId: string): string | undefined {
 		// Search the whole project: the node may live in the active document,
 		// an ancestor document (e.g. a breadcrumb segment), or the currently-viewed group.
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = Object.values(this.project.definitions);
 		let node: GroupedNode | undefined;
 		for (const doc of documents) {
 			const found = doc.nodes.find((n) => n.id === lockedNodeGroupId);
@@ -1172,7 +1166,7 @@ export class GraphManager {
 		if (this.isStandardLibrary(definitionRef)) return;
 		if (!(definitionRef in this.project.definitions)) return;
 
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = Object.values(this.project.definitions);
 		let stillReferenced = false;
 		for (const doc of documents) {
 			if (
@@ -1193,7 +1187,7 @@ export class GraphManager {
 
 		// If we're currently viewing this (now-deleted) definition, bail out to root.
 		const inPath = this.path.some((nodeId) => {
-			const node = this.project.root.nodes.find((n) => n.id === nodeId);
+			const node = this.root.nodes.find((n) => n.id === nodeId);
 			return node?.group?.definitionRef === definitionRef;
 		});
 		if (inPath) this.path = [];
@@ -1220,7 +1214,7 @@ export class GraphManager {
 
 		// The root document is always live; seed with refs it references directly.
 		const queue: string[] = [];
-		for (const node of this.project.root.nodes) {
+		for (const node of this.root.nodes) {
 			if (node.type === "node-group" && node.group) {
 				if (!live.has(node.group.definitionRef)) {
 					live.add(node.group.definitionRef);
@@ -1287,7 +1281,7 @@ export class GraphManager {
 
 		// If we're currently viewing a now-deleted definition, bail out to root.
 		const inPath = this.path.some((nodeId) => {
-			const node = this.project.root.nodes.find((n) => n.id === nodeId);
+			const node = this.root.nodes.find((n) => n.id === nodeId);
 			return node?.group && removed.includes(node.group.definitionRef);
 		});
 		if (inPath) this.path = [];
@@ -1438,10 +1432,7 @@ export class GraphManager {
 	 * Cross-document propagation goes through `node-group` instances.
 	 */
 	invalidateTypes(nodeIds: string[]): void {
-		const allEdges = [
-			...this.project.root.edges,
-			...Object.values(this.project.definitions).flatMap((d) => d.edges),
-		];
+		const allEdges = Object.values(this.project.definitions).flatMap((d) => d.edges);
 		const invalidated = this.typeResolver.invalidate(
 			nodeIds,
 			(id) => this.resolveNode(id),
@@ -1461,7 +1452,7 @@ export class GraphManager {
 
 		// Disconnect edges to outputs/inputs that no longer exist
 		// (e.g. separate vec3f → vec2f drops z output; declare vec3f → f32 drops y/w inputs)
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = Object.values(this.project.definitions);
 		for (const nodeId of invalidated) {
 			const cached = this.typeCache.get(nodeId);
 			if (!cached) continue;
@@ -1502,7 +1493,7 @@ export class GraphManager {
 		this.typeCache = new Map();
 
 		// Compute types for all nodes across all documents
-		for (const doc of [this.project.root, ...Object.values(this.project.definitions)]) {
+		for (const doc of Object.values(this.project.definitions)) {
 			this.typeResolver.computeAll(doc.nodes, doc.edges, (id) => this.resolveNode(id));
 		}
 
@@ -1554,7 +1545,7 @@ export class GraphManager {
 	 * from a group's definition leaves dangling edges in parent documents.
 	 */
 	private removeOuterEdgesForHandle(definitionRef: string, handleId: string) {
-		const documents = [this.project.root, ...Object.values(this.project.definitions)];
+		const documents = Object.values(this.project.definitions);
 		for (const doc of documents) {
 			const instanceIds = doc.nodes
 				.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)

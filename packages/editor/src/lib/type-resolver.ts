@@ -1,4 +1,4 @@
-import type { GraphDocumentEdge, HydratedGraphDocument, HydratedGraphProject } from "./graph-types";
+import type { GraphDocumentEdge, HydratedGraphProject } from "./graph-types";
 import type { GroupedNode, NodeDescriptor, NodeInputDef, NodeOutputDef, WgslType } from "./types";
 import { WGSL_COMPONENTS, highestType, inputDefaultType, inputFamilyKey } from "./types";
 
@@ -239,18 +239,15 @@ export class TypeResolver {
 	cache = new Map<string, ResolvedNodeTypes>();
 
 	private resolveDescriptor: ResolveDescriptor;
-	private root: HydratedGraphDocument;
 	private definitions: HydratedGraphProject["definitions"];
 	private getIncomingEdges: GetIncomingEdges;
 
 	constructor(
 		resolveDescriptor: ResolveDescriptor,
-		root: HydratedGraphDocument,
 		definitions: HydratedGraphProject["definitions"],
 		getIncomingEdges: GetIncomingEdges,
 	) {
 		this.resolveDescriptor = resolveDescriptor;
-		this.root = root;
 		this.definitions = definitions;
 		this.getIncomingEdges = getIncomingEdges;
 	}
@@ -525,22 +522,7 @@ export class TypeResolver {
 		}
 		if (!definitionRef) return;
 
-		// Search the root document for node-group instances of this definition
-		const rootInstanceIds = this.root.nodes
-			.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)
-			.map((n) => n.id);
-		for (const instanceId of rootInstanceIds) {
-			if (!invalidated.has(instanceId)) {
-				this.invalidateNodeAndAncestors(
-					instanceId,
-					resolveNode,
-					this.root.edges,
-					invalidated,
-				);
-			}
-		}
-
-		// Also search all definition documents for node-group instances
+		// Search all documents (including root) for node-group instances of this definition
 		for (const def of Object.values(this.definitions)) {
 			const instanceIds = def.nodes
 				.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)

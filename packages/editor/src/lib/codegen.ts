@@ -215,11 +215,10 @@ export function shaderHash(nodes: Node[], edges: HydratedEdge[]): string {
 }
 
 /**
- * Hash the entire project (root + all definitions) so that edits inside any
+ * Hash the entire project (all definitions) so that edits inside any
  * subgraph also trigger a re-generation of the shader.
  */
 export function projectHash(project: {
-	root: { nodes: Node[]; edges: HydratedEdge[] };
 	definitions: Record<string, { nodes: Node[]; edges: HydratedEdge[] }>;
 }): string {
 	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
@@ -240,21 +239,8 @@ export function projectHash(project: {
 		return out;
 	}
 
-	return JSON.stringify({
-		root: {
-			nodes: project.root.nodes.map((n) => ({
-				id: n.id,
-				type: n.type,
-				data: stripLabels(n.data),
-			})),
-			edges: project.root.edges.map((e) => ({
-				source: e.source,
-				target: e.target,
-				sourceHandle: e.sourceHandle,
-				targetHandle: e.targetHandle,
-			})),
-		},
-		definitions: Object.fromEntries(
+	return JSON.stringify(
+		Object.fromEntries(
 			Object.entries(project.definitions).map(([key, doc]) => [
 				key,
 				{
@@ -272,7 +258,7 @@ export function projectHash(project: {
 				},
 			]),
 		),
-	});
+	);
 }
 
 /**

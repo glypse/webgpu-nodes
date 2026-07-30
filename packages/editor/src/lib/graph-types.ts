@@ -4,6 +4,9 @@ import type { GroupedNode } from "./types";
 
 // ── Serialisable document types ──────────────────────────────────────────────
 
+/** Sentinel key for the root document inside `definitions`. */
+export const ROOT_ID = "__root__";
+
 /** A single subgraph: what used to be the whole document is now one level of it. */
 export type GraphDocument = {
 	nodes: GraphDocumentNode[];
@@ -45,10 +48,9 @@ export type GraphDocumentEdge = {
 	targetHandle: string;
 };
 
-/** The whole project. Exactly one per file/save. */
+/** The whole project. Exactly one per file/save. Root lives in `definitions[ROOT_ID]`. */
 export type GraphProject = {
 	definitions: Record<string, GraphDocument>;
-	root: GraphDocument;
 };
 
 /**
@@ -73,7 +75,6 @@ export type HydratedGraphDocument = {
 
 export type HydratedGraphProject = {
 	definitions: Record<string, HydratedGraphDocument>;
-	root: HydratedGraphDocument;
 };
 
 export type StandardLibraryEntry = {
@@ -92,8 +93,9 @@ export function isGraphProject(obj: unknown): obj is GraphProject {
 	return (
 		typeof obj === "object" &&
 		obj !== null &&
-		"root" in obj &&
 		"definitions" in obj &&
-		isGraphDocument(obj.root)
+		typeof obj.definitions === "object" &&
+		obj.definitions !== null &&
+		isGraphDocument((obj.definitions as Record<string, unknown>)[ROOT_ID])
 	);
 }

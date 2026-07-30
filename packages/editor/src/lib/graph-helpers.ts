@@ -95,11 +95,10 @@ export function hydrateDocument(document: GraphDocument): HydratedGraphDocument 
 }
 
 export function hydrateProject(project: GraphProject): HydratedGraphProject {
-	const root = hydrateDocument(project.root);
 	const definitions = Object.fromEntries(
 		Object.entries(project.definitions).map(([key, doc]) => [key, hydrateDocument(doc)]),
 	);
-	return { root, definitions };
+	return { definitions };
 }
 
 /**

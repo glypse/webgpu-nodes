@@ -132,7 +132,6 @@
 			}
 		}
 
-		collectFromDoc(graph.project.root);
 		for (const def of Object.values(graph.project.definitions)) {
 			collectFromDoc(def);
 		}
@@ -220,7 +219,7 @@
 				targetNodeId = groupNode?.id;
 			} else if (graph.path.length > 0) {
 				// Inside a subgraph - use the group we're currently viewing
-				let current = graph.project.root;
+				let current = graph.root;
 				for (const nodeId of graph.path) {
 					const node = current.nodes.find((n) => n.id === nodeId);
 					if (!node?.group) break;
@@ -265,8 +264,8 @@
 	let prevHash = $state("");
 
 	$effect(() => {
-		const rootNodes = graph.project.root.nodes;
-		const rootEdges = graph.project.root.edges;
+		const rootNodes = graph.root.nodes;
+		const rootEdges = graph.root.edges;
 		const hash = projectHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;

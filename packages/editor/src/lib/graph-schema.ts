@@ -54,7 +54,6 @@ const GraphDocumentSchema = v.object({
 });
 
 export const GraphProjectSchema = v.object({
-	root: GraphDocumentSchema,
 	definitions: v.record(v.string(), GraphDocumentSchema),
 });
 
