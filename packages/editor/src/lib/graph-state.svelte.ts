@@ -1289,17 +1289,67 @@ export class GraphManager {
 		return removed;
 	}
 
-	/** Update the label of a handle on a group-input or group-output node inside a definition. */
-	setHandleLabel(definitionRef: string, handleNodeId: string, handleId: string, label: string) {
+	/** Update the label of a handle on a group-input or group-output node inside a definition.
+	 *  Rejects the change if another handle on the same boundary node already has that label.
+	 *  Returns true if the label was updated, false if rejected. */
+	setHandleLabel(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		label: string,
+	): boolean {
 		const def = this.project.definitions[definitionRef];
-		if (!def) return;
+		if (!def) return false;
 		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
-		if (!handleNode) return;
+		if (!handleNode) return false;
 		const handles = handleNode.data.handles as HandleDef[] | undefined;
-		if (!handles) return;
+		if (!handles) return false;
 		const handle = handles.find((h) => h.id === handleId);
-		if (!handle) return;
-		handle.label = label;
+		if (!handle) return false;
+
+		const trimmed = label.trim();
+		if (!trimmed) return false;
+
+		// Reject duplicate labels within the same boundary node
+		if (handles.some((h) => h.id !== handleId && h.label === trimmed)) return false;
+
+		handle.label = trimmed;
+		return true;
+	}
+
+	// ── Label helpers ───────────────────────────────────────────────────────
+
+	/**
+	 * Resolve the display labels for a node's handles directly from the source
+	 * definitions. Used by NodeShell so label edits are visible immediately.
+	 */
+	resolveNodeLabels(nodeId: string): {
+		inputs: Record<string, string>;
+		outputs: Record<string, string>;
+	} {
+		const inputs: Record<string, string> = {};
+		const outputs: Record<string, string> = {};
+
+		const node = this.resolveNode(nodeId);
+		if (!node) return { inputs, outputs };
+
+		if (node.type === "group-input") {
+			for (const h of (node.data.handles ?? []) as HandleDef[]) outputs[h.id] = h.label;
+		} else if (node.type === "group-output") {
+			for (const h of (node.data.handles ?? []) as HandleDef[]) inputs[h.id] = h.label;
+		} else if (node.type === "node-group" && node.group) {
+			const def = this.project.definitions[node.group.definitionRef];
+			if (def) {
+				const inputNode = def.nodes.find((n) => n.type === "group-input");
+				const outputNode = def.nodes.find((n) => n.type === "group-output");
+				for (const h of (inputNode?.data.handles ?? []) as HandleDef[])
+					inputs[h.id] = h.label;
+				for (const h of (outputNode?.data.handles ?? []) as HandleDef[])
+					outputs[h.id] = h.label;
+			}
+		}
+
+		return { inputs, outputs };
 	}
 
 	// ── Type override helpers ───────────────────────────────────────────────

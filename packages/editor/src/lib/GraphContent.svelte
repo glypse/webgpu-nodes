@@ -383,7 +383,13 @@
 
 	function commitHandleLabel(defRef: string, nodeId: string, handleId: string, value: string) {
 		if (value.trim()) {
-			graph.setHandleLabel(defRef, nodeId, handleId, value);
+			const accepted = graph.setHandleLabel(defRef, nodeId, handleId, value);
+			if (!accepted) {
+				// Revert buffer to the stored label so the input reflects the actual value
+				const labels = graph.resolveNodeLabels(nodeId);
+				const stored = labels.outputs[handleId] ?? labels.inputs[handleId];
+				if (stored) handleLabelBuffer[handleId] = stored;
+			}
 		}
 	}
 

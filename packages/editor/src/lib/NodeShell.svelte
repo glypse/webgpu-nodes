@@ -42,6 +42,8 @@
 	const outputs = $derived(graph.resolveNodeOutputs(id));
 	const label = $derived(descriptor?.label);
 
+	const nodeLabels = $derived(graph.resolveNodeLabels(id));
+
 	const sheetTargetId = $derived(
 		nodeType === "node-group"
 			? id
@@ -288,7 +290,7 @@
 						: resolvedOutputType}
 				<div class="node-shell__row node-shell__row--right">
 					<span class="node-shell__handle-label"
-						>{outputDef.label}: {handleOutputType}</span
+						>{nodeLabels.outputs[outputDef.id] ?? outputDef.label}: {handleOutputType}</span
 					>
 					<Handle
 						type="source"
@@ -320,19 +322,19 @@
 					{#if inputDef.variadic}
 						<div class="flex flex-col gap-0.5">
 							<span class="node-shell__handle-label"
-								>{inputDef.label}: {effectiveType}</span
+								>{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}</span
 							>
 						</div>
 					{:else if connected}
 						<span
 							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
 						>
-							{inputDef.label}: {effectiveType}
+							{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}
 						</span>
 					{:else}
 						<div class="flex flex-1 flex-col gap-0.5">
 							<span class="node-shell__handle-label"
-								>{inputDef.label}: {effectiveType}</span
+								>{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}</span
 							>
 							<div class="*:not-first:rounded-t-none *:not-last:rounded-b-none">
 								{#each COMPONENT_KEYS[effectiveType] as comp, i (comp)}
