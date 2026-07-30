@@ -233,6 +233,64 @@ export const dotNode: NodeDescriptor = {
 	],
 };
 
+// Math — rounding (unary)
+export const floorNode = unaryFn("floor", "Floor", "floor");
+export const ceilNode = unaryFn("ceil", "Ceil", "ceil");
+export const fractNode = unaryFn("fract", "Fract", "fract");
+export const roundNode = unaryFn("round", "Round", "round");
+
+// Math — unary misc
+export const signNode = unaryFn("sign", "Sign", "sign");
+export const sqrtNode = unaryFn("sqrt", "Square Root", "sqrt");
+
+// Math — trig inverse
+export const atanNode = unaryFn("atan", "Arc Tangent", "atan");
+export const atan2Node = binaryFn("atan2", "Arc Tangent 2", "atan2");
+
+// Vector — normalize
+export const normalizeNode: NodeDescriptor = {
+	type: "normalize",
+	label: "Normalize",
+	category: "math",
+	inputs: [{ id: "e", label: "e", types: VEC_TYPES }],
+	outputs: [{ id: "result", label: "result", type: "vec3f" }],
+	defaultData: { e: 0 },
+	wgsl: (ctx) => [`let ${ctx.varName} = normalize(${ctx.promoteInput("e")});`],
+};
+
+// Vector — cross product (vec3f × vec3f → vec3f)
+export const crossNode: NodeDescriptor = {
+	type: "cross",
+	label: "Cross Product",
+	category: "math",
+	inputs: [
+		{ id: "e1", label: "e1", types: ["vec3f"] },
+		{ id: "e2", label: "e2", types: ["vec3f"] },
+	],
+	outputs: [{ id: "result", label: "result", type: "vec3f" }],
+	defaultData: { e1: 0, e2: 0 },
+	resolveOutputType: () => "vec3f",
+	wgsl: (ctx) => [
+		`let ${ctx.varName} = cross(${ctx.promoteInput("e1")}, ${ctx.promoteInput("e2")});`,
+	],
+};
+
+// Vector — reflect
+export const reflectNode: NodeDescriptor = {
+	type: "reflect",
+	label: "Reflect",
+	category: "math",
+	inputs: [
+		{ id: "e1", label: "incident", types: VEC_TYPES },
+		{ id: "e2", label: "normal", types: VEC_TYPES },
+	],
+	outputs: [{ id: "result", label: "result", type: "vec3f" }],
+	defaultData: { e1: 0, e2: 0 },
+	wgsl: (ctx) => [
+		`let ${ctx.varName} = reflect(${ctx.promoteInput("e1")}, ${ctx.promoteInput("e2")});`,
+	],
+};
+
 export const distanceNode: NodeDescriptor = {
 	type: "distance",
 	label: "Distance",
