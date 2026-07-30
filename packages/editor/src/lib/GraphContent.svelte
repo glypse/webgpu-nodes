@@ -14,7 +14,7 @@
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 	import { tick } from "svelte";
 
-	import { generateShader, projectHash } from "./codegen";
+	import { generateShader, reachableShaderHash } from "./codegen";
 	import { getGraphManager } from "./graph-state.svelte";
 	import { type HydratedGraphProject, ROOT_ID } from "./graph-types";
 	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
@@ -259,15 +259,14 @@
 	}
 
 	// Track the shader-relevant hash to avoid rebuilding on position changes.
-	// Always hash & generate from the ROOT graph so the shader stays valid
-	// even when the user is viewing a subgraph.
-	// projectHash covers the full project so edits inside subgraphs trigger re-generation.
+	// Only hash the reachable subgraph so edits to disconnected nodes or unused
+	// group definitions don't trigger unnecessary shader regeneration.
 	let prevHash = $state("");
 
 	$effect(() => {
 		const rootNodes = graph.root.nodes;
 		const rootEdges = graph.root.edges;
-		const hash = projectHash(graph.project);
+		const hash = reachableShaderHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;
 		frag = generateShader(rootNodes, rootEdges);

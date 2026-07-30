@@ -1,7 +1,7 @@
 import type { Node } from "@xyflow/svelte";
 
 import { getGraphManager } from "./graph-state.svelte";
-import type { GraphDocumentEdge, HydratedEdge } from "./graph-types";
+import { ROOT_ID, type GraphDocumentEdge, type HydratedEdge } from "./graph-types";
 import type { HydratedGraphDocument } from "./hydrated-document.svelte";
 import type { TypeResolver } from "./type-resolver";
 import type { GroupedNode, HandleDef, NodeDescriptor, WgslType } from "./types";
@@ -260,6 +260,104 @@ export function projectHash(project: {
 			]),
 		),
 	);
+}
+
+/**
+ * Hash only the subset of the project that actually contributes to the shader
+ * output: nodes reachable from frag-output in the root document, the edges
+ * between them, and any group definitions they reference (recursively).
+ * Changes to disconnected nodes or unused group definitions won't change
+ * this hash, avoiding unnecessary shader regeneration.
+ */
+export function reachableShaderHash(project: {
+	definitions: Map<string, { nodes: Node[]; edges: HydratedEdge[] }>;
+}): string {
+	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
+		const out: Record<string, unknown> = {};
+		for (const [k, v] of Object.entries(data)) {
+			if (k === "handles" && Array.isArray(v)) {
+				out[k] = v.map((h): { id: string; type: string } => {
+					if (typeof h === "object" && h !== null && "id" in h && "type" in h) {
+						const handle = h as { id: string; label: string; type: string };
+						return { id: handle.id, type: handle.type };
+					}
+					return { id: "", type: "" };
+				});
+			} else {
+				out[k] = v;
+			}
+		}
+		return out;
+	}
+
+	function hashDoc(doc: { nodes: Node[]; edges: HydratedEdge[] }) {
+		return {
+			nodes: doc.nodes.map((n) => ({
+				id: n.id,
+				type: n.type,
+				data: stripLabels(n.data),
+			})),
+			edges: doc.edges.map((e) => ({
+				source: e.source,
+				target: e.target,
+				sourceHandle: e.sourceHandle,
+				targetHandle: e.targetHandle,
+			})),
+		};
+	}
+
+	const root = project.definitions.get(ROOT_ID);
+	if (!root) return "";
+
+	// 1. Find reachable node IDs from frag-output in the root document.
+	const nodeMap = new Map<string, GroupedNode>();
+	for (const node of root.nodes) nodeMap.set(node.id, node);
+	const reachableRootIds = findReachableNodeIds(nodeMap, root.edges, "frag-output");
+
+	// 2. Collect group definitions referenced by reachable group nodes (recursively).
+	const visitedGroupDefs = new Set<string>();
+	const defQueue: string[] = [];
+	for (const nodeId of reachableRootIds) {
+		const node = nodeMap.get(nodeId);
+		if (node?.type === "node-group" && node.group) {
+			if (!visitedGroupDefs.has(node.group.definitionRef)) {
+				visitedGroupDefs.add(node.group.definitionRef);
+				defQueue.push(node.group.definitionRef);
+			}
+		}
+	}
+	while (defQueue.length > 0) {
+		const ref = defQueue.pop();
+		if (ref === undefined) break;
+		const def = project.definitions.get(ref);
+		if (!def) continue;
+		for (const node of def.nodes) {
+			const groupedNode = node as GroupedNode;
+			if (groupedNode.type === "node-group" && groupedNode.group) {
+				if (!visitedGroupDefs.has(groupedNode.group.definitionRef)) {
+					visitedGroupDefs.add(groupedNode.group.definitionRef);
+					defQueue.push(groupedNode.group.definitionRef);
+				}
+			}
+		}
+	}
+
+	// 3. Hash only the reachable root nodes/edges and the referenced definitions.
+	const reachableRootNodes = root.nodes.filter((n) => reachableRootIds.has(n.id));
+	const reachableRootEdges = root.edges.filter(
+		(e) => reachableRootIds.has(e.source) && reachableRootIds.has(e.target),
+	);
+
+	const defs: Record<string, ReturnType<typeof hashDoc>> = {};
+	for (const ref of visitedGroupDefs) {
+		const def = project.definitions.get(ref);
+		if (def) defs[ref] = hashDoc(def);
+	}
+
+	return JSON.stringify({
+		root: hashDoc({ nodes: reachableRootNodes, edges: reachableRootEdges }),
+		defs,
+	});
 }
 
 /**
