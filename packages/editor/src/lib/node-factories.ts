@@ -1,4 +1,4 @@
-import type { HydratedGraphDocument } from "./graph-types";
+import type { HydratedGraphDocument } from "./hydrated-document.svelte";
 import type { GroupedNode, HandleDef, NodeDescriptor, NodeInputDef, WgslType } from "./types";
 import { WGSL_DEFAULTS, WGSL_TYPES, VEC_TYPES, WGSL_COMPONENTS } from "./types";
 import { cwFnName } from "./wgsl-helpers";
@@ -387,10 +387,10 @@ export function buildGroupOutputDescriptor(handles: HandleDef[]): NodeDescriptor
 
 export function buildGroupDescriptor(
 	node: GroupedNode,
-	definitions: Record<string, HydratedGraphDocument>,
+	definitions: Map<string, HydratedGraphDocument>,
 ): NodeDescriptor {
 	const definitionRef = node.group?.definitionRef;
-	const definition = definitionRef ? definitions[definitionRef] : undefined;
+	const definition = definitionRef ? definitions.get(definitionRef) : undefined;
 
 	if (!definition || !definitionRef) {
 		console.warn(

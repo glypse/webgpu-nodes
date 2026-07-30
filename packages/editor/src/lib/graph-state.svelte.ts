@@ -4,6 +4,7 @@ import * as v from "valibot";
 
 import defaultScene from "./defaultProject.json";
 import {
+	buildDocumentIndex,
 	hydrateDocument,
 	hydrateProject,
 	normaliseDocument,
@@ -17,11 +18,11 @@ import {
 	type GraphDocumentNode,
 	type GraphProject,
 	type HydratedEdge,
-	type HydratedGraphDocument,
 	type HydratedGraphProject,
 	ROOT_ID,
 	type StandardLibraryEntry,
 } from "./graph-types";
+import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 import { nodeRegistry } from "./registry";
 import { TypeResolver } from "./type-resolver";
 import {
@@ -61,12 +62,13 @@ const libraryEntries: StandardLibraryEntry[] = Object.values(libraryModules).map
 
 export class GraphManager {
 	/** The entire project tree. */
-	project = $state<HydratedGraphProject>({ definitions: {} });
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- Map is reassigned, not mutated
+	project = $state<HydratedGraphProject>({ definitions: new Map() });
 
 	/** Shortcut for the root document. Always exists after construction. */
 	get root(): HydratedGraphDocument {
 		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- ROOT_ID is always present
-		return this.project.definitions[ROOT_ID]!;
+		return this.project.definitions.get(ROOT_ID)!;
 	}
 
 	/**
@@ -131,7 +133,7 @@ export class GraphManager {
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
 			def.label = entry.label;
-			this.project.definitions[entry.id] = hydrateDocument(def);
+			this.project.definitions.set(entry.id, hydrateDocument(def));
 		}
 
 		this.typeResolver = new TypeResolver(
@@ -147,8 +149,8 @@ export class GraphManager {
 	 * Used as the `resolveNode` callback for the TypeResolver.
 	 */
 	resolveNode(nodeId: string): GroupedNode | undefined {
-		for (const def of Object.values(this.project.definitions)) {
-			const n = def.nodes.find((node) => node.id === nodeId);
+		for (const def of this.project.definitions.values()) {
+			const n = def.nodesById.get(nodeId);
 			if (n) return n;
 		}
 		return undefined;
@@ -159,8 +161,8 @@ export class GraphManager {
 	 * Used by TypeResolver for recursive type inference.
 	 */
 	private getIncomingEdges(nodeId: string): HydratedEdge[] {
-		for (const def of Object.values(this.project.definitions)) {
-			const edges = def.edges.filter((e) => e.target === nodeId);
+		for (const def of this.project.definitions.values()) {
+			const edges = def.edgesByTarget.get(nodeId) ?? [];
 			if (edges.length > 0) return edges;
 		}
 		return [];
@@ -178,9 +180,9 @@ export class GraphManager {
 	}> {
 		let current: HydratedGraphDocument = this.root;
 		for (const nodeId of this.path) {
-			const node = current.nodes.find((n) => n.id === nodeId);
+			const node = current.nodesById.get(nodeId);
 			if (!node?.group) return;
-			const definition = this.project.definitions[node.group.definitionRef];
+			const definition = this.project.definitions.get(node.group.definitionRef);
 			if (!definition) return;
 			yield { node, group: node.group, definition, nodeId };
 			current = definition;
@@ -274,12 +276,14 @@ export class GraphManager {
 	}
 	set nodes(value: GroupedNode[]) {
 		this.activeDocument.nodes = value;
+		this.rebuildDocumentIndex(this.activeDocument);
 	}
 	get edges(): HydratedEdge[] {
 		return this.activeDocument.edges;
 	}
 	set edges(value: Edge[]) {
 		this.activeDocument.edges = value as HydratedEdge[];
+		this.rebuildDocumentIndex(this.activeDocument);
 		this.rebuildTypeCache();
 	}
 
@@ -294,7 +298,7 @@ export class GraphManager {
 	/** The definitionRef of the first selected group node, if any. */
 	get selectedGroupRef(): string | undefined {
 		for (const id of this.selectedNodeIds) {
-			const node = this.activeDocument.nodes.find((n) => n.id === id);
+			const node = this.activeDocument.nodesById.get(id);
 			if (node?.type === "node-group" && node.group) {
 				return node.group.definitionRef;
 			}
@@ -342,7 +346,7 @@ export class GraphManager {
 
 	/** Push a group node's id onto the breadcrumb path - "enter" it. */
 	enterGroup(groupNodeId: string) {
-		const node = this.activeDocument.nodes.find((n) => n.id === groupNodeId);
+		const node = this.activeDocument.nodesById.get(groupNodeId);
 		if (!node?.group) {
 			console.warn(`[graph] cannot enter "${groupNodeId}" - not a group node`);
 			return;
@@ -378,7 +382,7 @@ export class GraphManager {
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
 			def.label = entry.label;
-			this.project.definitions[entry.id] = hydrateDocument(def);
+			this.project.definitions.set(entry.id, hydrateDocument(def));
 		}
 
 		// Rebuild the type resolver with the new definitions and recompute all types
@@ -394,7 +398,7 @@ export class GraphManager {
 
 	getProjectJson(): string {
 		const definitions = Object.fromEntries(
-			Object.entries(this.project.definitions).map(([key, definition]) => [
+			[...this.project.definitions.entries()].map(([key, definition]) => [
 				key,
 				serialiseDocument(
 					definition.nodes,
@@ -467,7 +471,7 @@ export class GraphManager {
 	private transitiveRefs(definitionRef: string, visited = new Set<string>()): Set<string> {
 		if (visited.has(definitionRef) || this.isStandardLibrary(definitionRef)) return visited;
 		visited.add(definitionRef);
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return visited;
 		for (const node of def.nodes) {
 			if (node.type === "node-group" && node.group) {
@@ -498,7 +502,7 @@ export class GraphManager {
 		for (const entry of this.library) {
 			if (entry.label) labels.add(entry.label);
 		}
-		for (const def of Object.values(this.project.definitions)) {
+		for (const def of this.project.definitions.values()) {
 			if (def.label) labels.add(def.label);
 		}
 		return labels;
@@ -524,7 +528,7 @@ export class GraphManager {
 		if (visited.has(definitionRef) || this.isStandardLibrary(definitionRef)) return [];
 		visited.add(definitionRef);
 
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return [];
 
 		const refs: string[] = [];
@@ -551,7 +555,7 @@ export class GraphManager {
 				definition: GraphDocument;
 		  }
 		| undefined {
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return undefined;
 
 		const deps = this.collectNestedRefs(definitionRef);
@@ -640,14 +644,18 @@ export class GraphManager {
 			const normalised = normaliseDocument(file.definition);
 			if (file.label) normalised.label = file.label;
 			normalised.locked = true;
-			this.project.definitions[file.id] = hydrateDocument(normalised);
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+			this.project.definitions = new Map(this.project.definitions).set(
+				file.id,
+				hydrateDocument(normalised),
+			);
 		}
 
 		// Phase 2: Check dependencies
 		const missing: string[] = [];
 		for (const file of entries) {
 			for (const dep of file.dependencies) {
-				if (!this.project.definitions[dep] && !this.isStandardLibrary(dep)) {
+				if (!this.project.definitions.has(dep) && !this.isStandardLibrary(dep)) {
 					missing.push(`${file.id} depends on ${dep}`);
 				}
 			}
@@ -738,7 +746,7 @@ export class GraphManager {
 			allInnerEdges.push(inner);
 		});
 
-		const userGroupCount = Object.keys(this.project.definitions).filter(
+		const userGroupCount = [...this.project.definitions.keys()].filter(
 			(k) => !this.isStandardLibrary(k),
 		).length;
 
@@ -752,7 +760,11 @@ export class GraphManager {
 			label: `Group ${String(userGroupCount)}`,
 		};
 
-		this.project.definitions[definitionRef] = hydrateDocument(definition);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.project.definitions = new Map(this.project.definitions).set(
+			definitionRef,
+			hydrateDocument(definition),
+		);
 
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
@@ -773,11 +785,13 @@ export class GraphManager {
 			...this.activeDocument.nodes.filter((n) => !filteredIds.has(n.id)),
 			groupNode,
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		this.activeDocument.edges = [
 			...this.activeDocument.edges.filter((e) => !touchedEdgeIds.has(e.id)),
 			...allOuterEdges,
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		// Clear SvelteFlow's internal selection state so moved nodes/edges
 		// don't appear selected inside the newly created group.
@@ -829,7 +843,7 @@ export class GraphManager {
 	 */
 	private ungroupNode(groupNode: GroupedNode): string[] {
 		if (!groupNode.group) return [];
-		const def = this.project.definitions[groupNode.group.definitionRef];
+		const def = this.project.definitions.get(groupNode.group.definitionRef);
 		if (!def) return [];
 
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
@@ -883,9 +897,8 @@ export class GraphManager {
 			}));
 
 		// Outer edges connected to this group node instance.
-		const outerEdges = this.activeDocument.edges as GraphDocumentEdge[];
-		const incomingOuter = outerEdges.filter((e) => e.target === groupNode.id);
-		const outgoingOuter = outerEdges.filter((e) => e.source === groupNode.id);
+		const incomingOuter = this.activeDocument.edgesByTarget.get(groupNode.id) ?? [];
+		const outgoingOuter = this.activeDocument.edgesBySource.get(groupNode.id) ?? [];
 
 		const boundaryEdges: GraphDocumentEdge[] = [];
 
@@ -930,11 +943,13 @@ export class GraphManager {
 			...this.activeDocument.nodes.filter((n) => n.id !== groupNode.id),
 			...(clonedNodes as GroupedNode[]),
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 		this.activeDocument.edges = [
 			...this.activeDocument.edges.filter((e) => !removedEdgeIds.has(e.id)),
 			...clonedInnerEdges,
 			...boundaryEdges,
 		];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		// Rebuild types since the graph structure changed significantly
 		this.rebuildTypeCache();
@@ -950,10 +965,10 @@ export class GraphManager {
 	deepClone(lockedNodeGroupId: string): string | undefined {
 		// Search the whole project: the node may live in the active document,
 		// an ancestor document (e.g. a breadcrumb segment), or the currently-viewed group.
-		const documents = Object.values(this.project.definitions);
+		const documents = this.project.definitions.values();
 		let node: GroupedNode | undefined;
 		for (const doc of documents) {
-			const found = doc.nodes.find((n) => n.id === lockedNodeGroupId);
+			const found = doc.nodesById.get(lockedNodeGroupId);
 			if (found) {
 				node = found;
 				break;
@@ -964,7 +979,7 @@ export class GraphManager {
 			return undefined;
 		}
 
-		const sourceDef = this.project.definitions[node.group.definitionRef];
+		const sourceDef = this.project.definitions.get(node.group.definitionRef);
 		if (!sourceDef) {
 			console.warn(`[graph] deepClone: missing definition "${node.group.definitionRef}"`);
 			return undefined;
@@ -997,11 +1012,15 @@ export class GraphManager {
 			targetHandle: e.targetHandle,
 		}));
 
-		this.project.definitions[newDefRef] = hydrateDocument({
-			nodes: clonedNodes,
-			edges: clonedEdges,
-			label: this.uniqueCopyLabel(sourceDef.label),
-		});
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.project.definitions = new Map(this.project.definitions).set(
+			newDefRef,
+			hydrateDocument({
+				nodes: clonedNodes,
+				edges: clonedEdges,
+				label: this.uniqueCopyLabel(sourceDef.label),
+			}),
+		);
 
 		// Point the group node at the new (unlocked) clone
 		node.group = { definitionRef: newDefRef, locked: false };
@@ -1016,7 +1035,7 @@ export class GraphManager {
 	 * Returns undefined if the addition would create a circular reference.
 	 */
 	addFromLibrary(definitionRef: string, position: { x: number; y: number }): string | undefined {
-		const sourceDef = this.project.definitions[definitionRef];
+		const sourceDef = this.project.definitions.get(definitionRef);
 		if (!sourceDef) {
 			console.warn(`[graph] addFromLibrary: unknown definition "${definitionRef}"`);
 			return undefined;
@@ -1029,7 +1048,7 @@ export class GraphManager {
 			return undefined;
 		}
 
-		const isLocked = this.isStandardLibrary(definitionRef) || sourceDef.locked === true;
+		const isLocked = this.isStandardLibrary(definitionRef) || sourceDef.locked;
 
 		const groupNodeId = crypto.randomUUID();
 		const groupNode: GraphDocumentNode = {
@@ -1041,6 +1060,7 @@ export class GraphManager {
 		};
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		return groupNodeId;
 	}
@@ -1096,7 +1116,11 @@ export class GraphManager {
 			label: this.nextGroupLabel(),
 		};
 
-		this.project.definitions[definitionRef] = hydrateDocument(definition);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		this.project.definitions = new Map(this.project.definitions).set(
+			definitionRef,
+			hydrateDocument(definition),
+		);
 
 		const groupNodeId = crypto.randomUUID();
 		const groupNode: GraphDocumentNode = {
@@ -1108,6 +1132,7 @@ export class GraphManager {
 		};
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
+		this.rebuildDocumentIndex(this.activeDocument);
 
 		// Rebuild types since a new definition and node were added
 		this.rebuildTypeCache();
@@ -1117,7 +1142,7 @@ export class GraphManager {
 
 	/** Generate the next "Group N" label based on existing user definitions. */
 	private nextGroupLabel(): string {
-		const count = Object.keys(this.project.definitions).filter(
+		const count = [...this.project.definitions.keys()].filter(
 			(k) => !this.isStandardLibrary(k),
 		).length;
 		return `Group ${String(count)}`;
@@ -1127,11 +1152,11 @@ export class GraphManager {
 	setGroupLabel(nodeId: string, label: string) {
 		let node: GroupedNode | undefined;
 		if (this.path.length > 0) {
-			node = this.parentDocument.nodes.find((n) => n.id === nodeId);
+			node = this.parentDocument.nodesById.get(nodeId);
 		}
-		node ??= this.activeDocument.nodes.find((n) => n.id === nodeId);
+		node ??= this.activeDocument.nodesById.get(nodeId);
 		if (!node?.group) return;
-		const def = this.project.definitions[node.group.definitionRef];
+		const def = this.project.definitions.get(node.group.definitionRef);
 		if (!def) return;
 		const trimmed = label.trim();
 		if (!trimmed) return;
@@ -1149,7 +1174,7 @@ export class GraphManager {
 		for (const entry of this.library) {
 			if (entry.label && entry.label === trimmed) return false;
 		}
-		for (const [key, def] of Object.entries(this.project.definitions)) {
+		for (const [key, def] of this.project.definitions.entries()) {
 			if (key === excludeDefRef) continue;
 			if (def.label === trimmed) return false;
 		}
@@ -1164,9 +1189,9 @@ export class GraphManager {
 	 */
 	deleteDefinition(definitionRef: string) {
 		if (this.isStandardLibrary(definitionRef)) return;
-		if (!(definitionRef in this.project.definitions)) return;
+		if (!this.project.definitions.has(definitionRef)) return;
 
-		const documents = Object.values(this.project.definitions);
+		const documents = this.project.definitions.values();
 		let stillReferenced = false;
 		for (const doc of documents) {
 			if (
@@ -1180,14 +1205,15 @@ export class GraphManager {
 		}
 		if (stillReferenced) return;
 
-		// Reassign via rest-spread so the $state proxy tracks the removal.
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- only the remaining keys matter
-		const { [definitionRef]: _removed, ...rest } = this.project.definitions;
-		this.project.definitions = rest;
+		// Reassign via new Map so the $state proxy tracks the removal.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		const remaining = new Map(this.project.definitions);
+		remaining.delete(definitionRef);
+		this.project.definitions = remaining;
 
 		// If we're currently viewing this (now-deleted) definition, bail out to root.
 		const inPath = this.path.some((nodeId) => {
-			const node = this.root.nodes.find((n) => n.id === nodeId);
+			const node = this.root.nodesById.get(nodeId);
 			return node?.group?.definitionRef === definitionRef;
 		});
 		if (inPath) this.path = [];
@@ -1227,7 +1253,7 @@ export class GraphManager {
 		while (queue.length > 0) {
 			const ref = queue.pop();
 			if (ref === undefined) break;
-			const def = this.project.definitions[ref];
+			const def = this.project.definitions.get(ref);
 			if (!def) continue;
 			for (const node of def.nodes) {
 				if (node.type === "node-group" && node.group) {
@@ -1241,7 +1267,7 @@ export class GraphManager {
 		}
 
 		const prunable: string[] = [];
-		for (const key of Object.keys(this.project.definitions)) {
+		for (const key of this.project.definitions.keys()) {
 			if (!live.has(key)) prunable.push(key);
 		}
 		return prunable;
@@ -1251,7 +1277,7 @@ export class GraphManager {
 	getPrunableGroups(): { ref: string; label: string; nodeCount: number }[] {
 		const BOUNDARY = ["group-input", "group-output"];
 		return this.getPrunableRefs().map((ref) => {
-			const def = this.project.definitions[ref];
+			const def = this.project.definitions.get(ref);
 			const nodeCount = def
 				? def.nodes.filter((n) => !BOUNDARY.includes(n.type ?? "")).length
 				: 0;
@@ -1271,17 +1297,18 @@ export class GraphManager {
 		const removed = this.getPrunableRefs();
 		if (removed.length === 0) return [];
 
-		// Reassign via rest-spread so the $state proxy tracks the removal.
-		const removedLookup: Record<string, true> = {};
-		for (const key of removed) removedLookup[key] = true;
-		const rest = Object.fromEntries(
-			Object.entries(this.project.definitions).filter(([key]) => !removedLookup[key]),
+		// Reassign via new Map so the $state proxy tracks the removal.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local set, not reactive state
+		const removedLookup = new Set(removed);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
+		const remaining = new Map(
+			[...this.project.definitions.entries()].filter(([key]) => !removedLookup.has(key)),
 		);
-		this.project.definitions = rest;
+		this.project.definitions = remaining;
 
 		// If we're currently viewing a now-deleted definition, bail out to root.
 		const inPath = this.path.some((nodeId) => {
-			const node = this.root.nodes.find((n) => n.id === nodeId);
+			const node = this.root.nodesById.get(nodeId);
 			return node?.group && removed.includes(node.group.definitionRef);
 		});
 		if (inPath) this.path = [];
@@ -1298,9 +1325,9 @@ export class GraphManager {
 		handleId: string,
 		label: string,
 	): boolean {
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return false;
-		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
+		const handleNode = def.nodesById.get(handleNodeId);
 		if (!handleNode) return false;
 		const handles = handleNode.data.handles as HandleDef[] | undefined;
 		if (!handles) return false;
@@ -1338,7 +1365,7 @@ export class GraphManager {
 		} else if (node.type === "group-output") {
 			for (const h of (node.data.handles ?? []) as HandleDef[]) inputs[h.id] = h.label;
 		} else if (node.type === "node-group" && node.group) {
-			const def = this.project.definitions[node.group.definitionRef];
+			const def = this.project.definitions.get(node.group.definitionRef);
 			if (def) {
 				const inputNode = def.nodes.find((n) => n.type === "group-input");
 				const outputNode = def.nodes.find((n) => n.type === "group-output");
@@ -1373,7 +1400,7 @@ export class GraphManager {
 		}
 
 		// Fallback: compute on the fly (shouldn't happen after initial cache build)
-		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
 		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
 			this.resolveNode(id),
 		);
@@ -1391,7 +1418,7 @@ export class GraphManager {
 		// Fallback: compute on the fly
 		const node = this.resolveNode(nodeId);
 		if (!node) return "f32";
-		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
 		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
 			this.resolveNode(id),
 		);
@@ -1409,7 +1436,7 @@ export class GraphManager {
 		// Fallback: compute on the fly
 		const node = this.resolveNode(nodeId);
 		if (!node) return [];
-		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
 		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
 			this.resolveNode(id),
 		);
@@ -1427,7 +1454,7 @@ export class GraphManager {
 		// Fallback: compute on the fly
 		const node = this.resolveNode(nodeId);
 		if (!node) return [];
-		const incoming = this.activeDocument.edges.filter((e) => e.target === nodeId);
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
 		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
 			this.resolveNode(id),
 		);
@@ -1439,7 +1466,7 @@ export class GraphManager {
 	 * all inputs in that family ignore type inference and use the specified type.
 	 */
 	setNodeTypeOverride(nodeId: string, familyKey: string, type: WgslType) {
-		const node = this.activeDocument.nodes.find((n) => n.id === nodeId);
+		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return;
 
 		const overrides =
@@ -1452,7 +1479,7 @@ export class GraphManager {
 	 * Clear a node-wide type override for a family, reverting to dynamic inference.
 	 */
 	clearNodeTypeOverride(nodeId: string, familyKey: string) {
-		const node = this.activeDocument.nodes.find((n) => n.id === nodeId);
+		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return;
 
 		const overrides = node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
@@ -1469,7 +1496,7 @@ export class GraphManager {
 	 * Check if a type family on a node is in forced (manual override) mode.
 	 */
 	isNodeForced(nodeId: string, familyKey: string): boolean {
-		const node = this.activeDocument.nodes.find((n) => n.id === nodeId);
+		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return false;
 		const overrides = node.data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
 		return overrides?.[familyKey] !== undefined;
@@ -1482,7 +1509,7 @@ export class GraphManager {
 	 * Cross-document propagation goes through `node-group` instances.
 	 */
 	invalidateTypes(nodeIds: string[]): void {
-		const allEdges = Object.values(this.project.definitions).flatMap((d) => d.edges);
+		const allEdges = [...this.project.definitions.values()].flatMap((d) => d.edges);
 		const invalidated = this.typeResolver.invalidate(
 			nodeIds,
 			(id) => this.resolveNode(id),
@@ -1502,7 +1529,7 @@ export class GraphManager {
 
 		// Disconnect edges to outputs/inputs that no longer exist
 		// (e.g. separate vec3f → vec2f drops z output; declare vec3f → f32 drops y/w inputs)
-		const documents = Object.values(this.project.definitions);
+		const documents = this.project.definitions.values();
 		for (const nodeId of invalidated) {
 			const cached = this.typeCache.get(nodeId);
 			if (!cached) continue;
@@ -1514,6 +1541,7 @@ export class GraphManager {
 				doc.edges = doc.edges.filter(
 					(e) => !(e.source === nodeId && !activeOutIds.has(e.sourceHandle)),
 				);
+				this.rebuildDocumentIndex(doc);
 			}
 
 			// Clean dangling target handles (inputs) — read from cached resolved inputs
@@ -1523,6 +1551,7 @@ export class GraphManager {
 				doc.edges = doc.edges.filter(
 					(e) => !(e.target === nodeId && !activeInIds.has(e.targetHandle)),
 				);
+				this.rebuildDocumentIndex(doc);
 			}
 		}
 
@@ -1543,7 +1572,7 @@ export class GraphManager {
 		this.typeCache = new Map();
 
 		// Compute types for all nodes across all documents
-		for (const doc of Object.values(this.project.definitions)) {
+		for (const doc of this.project.definitions.values()) {
 			this.typeResolver.computeAll(doc.nodes, doc.edges, (id) => this.resolveNode(id));
 		}
 
@@ -1557,13 +1586,21 @@ export class GraphManager {
 		this.typeCache = new Map(this.typeCache);
 	}
 
+	/** Rebuild the indexed Maps (nodesById, edgesBySource, edgesByTarget) for a document. */
+	private rebuildDocumentIndex(doc: HydratedGraphDocument): void {
+		const idx = buildDocumentIndex(doc.nodes, doc.edges);
+		doc.nodesById = idx.nodesById;
+		doc.edgesBySource = idx.edgesBySource;
+		doc.edgesByTarget = idx.edgesByTarget;
+	}
+
 	/** Remove a handle from a group-input/group-output node and delete all connected edges. */
 	removeHandle(definitionRef: string, handleNodeId: string, handleId: string) {
-		const def = this.project.definitions[definitionRef];
+		const def = this.project.definitions.get(definitionRef);
 		if (!def) return;
 
 		// Remove the handle from the node's data
-		const handleNode = def.nodes.find((n) => n.id === handleNodeId);
+		const handleNode = def.nodesById.get(handleNodeId);
 		if (!handleNode) return;
 		const handles = handleNode.data.handles as HandleDef[] | undefined;
 		if (!handles) return;
@@ -1579,6 +1616,7 @@ export class GraphManager {
 					(e.target === handleNodeId && e.targetHandle === handleId)
 				),
 		);
+		this.rebuildDocumentIndex(def);
 
 		// Remove all *outer* edges in any document that holds an instance of this
 		// definition: the now-deleted handle no longer exists on the group node,
@@ -1595,7 +1633,7 @@ export class GraphManager {
 	 * from a group's definition leaves dangling edges in parent documents.
 	 */
 	private removeOuterEdgesForHandle(definitionRef: string, handleId: string) {
-		const documents = Object.values(this.project.definitions);
+		const documents = this.project.definitions.values();
 		for (const doc of documents) {
 			const instanceIds = doc.nodes
 				.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)
@@ -1610,6 +1648,7 @@ export class GraphManager {
 						(ids.has(e.target) && e.targetHandle === handleId)
 					),
 			);
+			this.rebuildDocumentIndex(doc);
 		}
 	}
 }

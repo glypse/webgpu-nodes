@@ -2,6 +2,7 @@ import type { Node } from "@xyflow/svelte";
 
 import { getGraphManager } from "./graph-state.svelte";
 import type { GraphDocumentEdge, HydratedEdge } from "./graph-types";
+import type { HydratedGraphDocument } from "./hydrated-document.svelte";
 import type { TypeResolver } from "./type-resolver";
 import type { GroupedNode, HandleDef, NodeDescriptor, WgslType } from "./types";
 import { WGSL_DEFAULTS, promoteVar, inputDefaultType } from "./types";
@@ -219,7 +220,7 @@ export function shaderHash(nodes: Node[], edges: HydratedEdge[]): string {
  * subgraph also trigger a re-generation of the shader.
  */
 export function projectHash(project: {
-	definitions: Record<string, { nodes: Node[]; edges: HydratedEdge[] }>;
+	definitions: Map<string, { nodes: Node[]; edges: HydratedEdge[] }>;
 }): string {
 	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
 		const out: Record<string, unknown> = {};
@@ -241,7 +242,7 @@ export function projectHash(project: {
 
 	return JSON.stringify(
 		Object.fromEntries(
-			Object.entries(project.definitions).map(([key, doc]) => [
+			[...project.definitions.entries()].map(([key, doc]) => [
 				key,
 				{
 					nodes: doc.nodes.map((n) => ({
@@ -295,9 +296,7 @@ function generateBody(
 	typeResolver: TypeResolver,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 	resolveNode: (id: string) => GroupedNode | undefined,
-	getGroupDefinition: (
-		definitionRef: string,
-	) => { nodes: Node[]; edges: HydratedEdge[] } | undefined,
+	getGroupDefinition: (definitionRef: string) => HydratedGraphDocument | undefined,
 ): { lines: string[]; seedNodeVarName: string | null } {
 	const nodeMap = new Map<string, Node>();
 	for (const node of nodes) {
@@ -455,9 +454,7 @@ function emitGroupFunctionIfNeeded(
 	typeResolver: TypeResolver,
 	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
 	resolveNode: (id: string) => GroupedNode | undefined,
-	getGroupDefinition: (
-		definitionRef: string,
-	) => { nodes: Node[]; edges: HydratedEdge[] } | undefined,
+	getGroupDefinition: (definitionRef: string) => HydratedGraphDocument | undefined,
 ): void {
 	if (groupDecls.has(definitionRef)) return; // memoized - already generated
 
@@ -494,7 +491,7 @@ function emitGroupFunctionIfNeeded(
 	// (these are the types the internal wiring actually delivers to each handle).
 	const resolvedOutputTypes: WgslType[] = handles.map((h) => {
 		if (!groupOutputNode) return h.type;
-		const incoming = definition.edges.filter((e) => e.target === groupOutputNode.id);
+		const incoming = definition.edgesByTarget.get(groupOutputNode.id) ?? [];
 		return typeResolver.resolveInputType(groupOutputNode.id, h.id, resolveNode, incoming);
 	});
 
@@ -502,7 +499,7 @@ function emitGroupFunctionIfNeeded(
 	// (these are the types the group-input node actually produces for each handle).
 	const resolvedInputTypes: WgslType[] = inputHandles.map((h) => {
 		if (!groupInputNode) return h.type;
-		const incoming = definition.edges.filter((e) => e.target === groupInputNode.id);
+		const incoming = definition.edgesByTarget.get(groupInputNode.id) ?? [];
 		const resolvedOutputs = typeResolver.resolveOutputs(
 			groupInputNode.id,
 			resolveNode,
@@ -514,7 +511,9 @@ function emitGroupFunctionIfNeeded(
 
 	// The group-output node itself never emits a `let` (it's a sink, not computed) -
 	// build the struct literal directly from whatever feeds each of its handles.
-	const outputEdges = definition.edges.filter((e) => e.target === groupOutputNode?.id);
+	const outputEdges = groupOutputNode
+		? (definition.edgesByTarget.get(groupOutputNode.id) ?? [])
+		: [];
 
 	const fieldAssignments = handles.map((h, i) => {
 		const edge = outputEdges.find((e) => e.targetHandle === h.id);
@@ -551,7 +550,8 @@ export function generateShader(nodes: Node[], edges: HydratedEdge[]): string {
 
 	const resolveDescriptor = (node: GroupedNode) => graph.resolveDescriptor(node);
 	const resolveNode = (id: string) => graph.resolveNode(id);
-	const getGroupDefinition = (definitionRef: string) => graph.project.definitions[definitionRef];
+	const getGroupDefinition = (definitionRef: string) =>
+		graph.project.definitions.get(definitionRef);
 
 	// Single source of truth: reuse the GraphManager's TypeResolver
 	const typeResolver = graph.typeResolver;

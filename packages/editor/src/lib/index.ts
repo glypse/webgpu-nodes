@@ -6,6 +6,7 @@ export { default as NodeShell } from "./NodeShell.svelte";
 export { GraphManager, setGraphManager, getGraphManager } from "./graph-state.svelte";
 
 export * from "./graph-types";
+export * from "./hydrated-document.svelte";
 export * from "./graph-helpers";
 export * from "./types";
 export * from "./registry";

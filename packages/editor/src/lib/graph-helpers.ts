@@ -5,9 +5,9 @@ import type {
 	GraphDocumentNode,
 	GraphProject,
 	HydratedEdge,
-	HydratedGraphDocument,
 	HydratedGraphProject,
 } from "./graph-types";
+import { HydratedGraphDocument } from "./hydrated-document.svelte";
 import {
 	buildGroupDescriptor,
 	buildGroupInputDescriptor,
@@ -20,7 +20,7 @@ import { type GroupedNode, type HandleDef, type NodeDescriptor } from "./types";
 
 export function resolveDescriptor(
 	node: GroupedNode | Node,
-	definitions: Record<string, HydratedGraphDocument>,
+	definitions: Map<string, HydratedGraphDocument>,
 ): NodeDescriptor {
 	if (node.type === "group-input") {
 		return buildGroupInputDescriptor((node.data.handles ?? []) as HandleDef[]);
@@ -43,7 +43,7 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 			continue;
 		}
 
-		const desc = resolveDescriptor(node, {});
+		const desc = resolveDescriptor(node, new Map());
 		nodes.push({ ...node, data: { ...desc.defaultData, ...node.data } });
 	}
 	const result: GraphDocument = { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
@@ -72,6 +72,40 @@ function hydrateNode(node: GraphDocumentNode): GroupedNode {
 	return base; // not a group node at all - most nodes hit this line
 }
 
+/** Build indexed Maps from nodes and edges arrays. */
+export function buildDocumentIndex(
+	nodes: GroupedNode[],
+	edges: HydratedEdge[],
+): {
+	nodesById: Map<string, GroupedNode>;
+	edgesBySource: Map<string, HydratedEdge[]>;
+	edgesByTarget: Map<string, HydratedEdge[]>;
+} {
+	const nodesById = new Map<string, GroupedNode>();
+	for (const node of nodes) {
+		nodesById.set(node.id, node);
+	}
+
+	const edgesBySource = new Map<string, HydratedEdge[]>();
+	const edgesByTarget = new Map<string, HydratedEdge[]>();
+	for (const edge of edges) {
+		const sourceList = edgesBySource.get(edge.source);
+		if (sourceList) {
+			sourceList.push(edge);
+		} else {
+			edgesBySource.set(edge.source, [edge]);
+		}
+		const targetList = edgesByTarget.get(edge.target);
+		if (targetList) {
+			targetList.push(edge);
+		} else {
+			edgesByTarget.set(edge.target, [edge]);
+		}
+	}
+
+	return { nodesById, edgesBySource, edgesByTarget };
+}
+
 export function hydrateDocument(document: GraphDocument): HydratedGraphDocument {
 	const normalised = normaliseDocument(document);
 
@@ -85,19 +119,25 @@ export function hydrateDocument(document: GraphDocument): HydratedGraphDocument 
 		targetHandle: edge.targetHandle,
 	}));
 
-	return {
-		nodes,
-		edges,
-		label: normalised.label,
-		locked: normalised.locked,
-		viewport: normalised.viewport,
-	};
+	const { nodesById, edgesBySource, edgesByTarget } = buildDocumentIndex(nodes, edges);
+
+	const doc = new HydratedGraphDocument();
+	doc.nodes = nodes;
+	doc.edges = edges;
+	doc.nodesById = nodesById;
+	doc.edgesBySource = edgesBySource;
+	doc.edgesByTarget = edgesByTarget;
+	doc.label = normalised.label;
+	doc.locked = normalised.locked ?? false;
+	doc.viewport = normalised.viewport;
+	return doc;
 }
 
 export function hydrateProject(project: GraphProject): HydratedGraphProject {
-	const definitions = Object.fromEntries(
-		Object.entries(project.definitions).map(([key, doc]) => [key, hydrateDocument(doc)]),
-	);
+	const definitions = new Map<string, HydratedGraphDocument>();
+	for (const [key, doc] of Object.entries(project.definitions)) {
+		definitions.set(key, hydrateDocument(doc));
+	}
 	return { definitions };
 }
 

@@ -1,6 +1,6 @@
 import type { Edge, Viewport } from "@xyflow/svelte";
 
-import type { GroupedNode } from "./types";
+import type { HydratedGraphDocument } from "./hydrated-document.svelte";
 
 // ── Serialisable document types ──────────────────────────────────────────────
 
@@ -63,18 +63,8 @@ export type HydratedEdge = Edge & {
 	targetHandle: string;
 };
 
-export type HydratedGraphDocument = {
-	nodes: GroupedNode[];
-	edges: HydratedEdge[];
-	label?: string;
-	locked?: boolean;
-	/** Per-document camera (pan + zoom). Undefined until the user has interacted
-	 *  or a saved viewport has been loaded. */
-	viewport?: Viewport;
-};
-
 export type HydratedGraphProject = {
-	definitions: Record<string, HydratedGraphDocument>;
+	definitions: Map<string, HydratedGraphDocument>;
 };
 
 export type StandardLibraryEntry = {
@@ -94,8 +84,7 @@ export function isGraphProject(obj: unknown): obj is GraphProject {
 		typeof obj === "object" &&
 		obj !== null &&
 		"definitions" in obj &&
-		typeof obj.definitions === "object" &&
-		obj.definitions !== null &&
-		isGraphDocument((obj.definitions as Record<string, unknown>)[ROOT_ID])
+		obj.definitions instanceof Map &&
+		isGraphDocument((obj.definitions as Map<string, unknown>).get(ROOT_ID))
 	);
 }

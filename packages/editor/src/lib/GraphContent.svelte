@@ -16,7 +16,8 @@
 
 	import { generateShader, projectHash } from "./codegen";
 	import { getGraphManager } from "./graph-state.svelte";
-	import { type HydratedGraphDocument, type HydratedGraphProject } from "./graph-types";
+	import { type HydratedGraphProject } from "./graph-types";
+	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, defaultDataForType, DYNAMIC_NODE_TYPES } from "./registry";
 	import { type HandleDef, type NodeCategory } from "./types";
@@ -122,7 +123,7 @@
 				) {
 					seen.add(node.group.definitionRef);
 					if (stdIds.has(node.group.definitionRef)) continue;
-					const def = graph.project.definitions[node.group.definitionRef];
+					const def = graph.project.definitions.get(node.group.definitionRef);
 					groups.push({
 						definitionRef: node.group.definitionRef,
 						label: def?.label ?? "Group",
@@ -132,16 +133,16 @@
 			}
 		}
 
-		for (const def of Object.values(graph.project.definitions)) {
+		for (const def of graph.project.definitions.values()) {
 			collectFromDoc(def);
 		}
 
 		// Also include definitions that exist in the project but aren't referenced
 		// by any node-group in the graph (e.g. imported from JSON but not yet placed).
-		for (const defRef of Object.keys(graph.project.definitions)) {
+		for (const defRef of graph.project.definitions.keys()) {
 			if (seen.has(defRef) || stdIds.has(defRef)) continue;
 			seen.add(defRef);
-			const def = graph.project.definitions[defRef];
+			const def = graph.project.definitions.get(defRef);
 			groups.push({ definitionRef: defRef, label: def?.label ?? "Group", used: false });
 		}
 
@@ -224,7 +225,7 @@
 					const node = current.nodes.find((n) => n.id === nodeId);
 					if (!node?.group) break;
 					targetNodeId = nodeId;
-					const def = graph.project.definitions[node.group.definitionRef];
+					const def = graph.project.definitions.get(node.group.definitionRef);
 					if (!def) break;
 					current = def;
 				}
@@ -318,7 +319,7 @@
 	});
 	const sheetDefinition = $derived(
 		sheetGroupNode?.group
-			? graph.project.definitions[sheetGroupNode.group.definitionRef]
+			? graph.project.definitions.get(sheetGroupNode.group.definitionRef)
 			: undefined,
 	);
 	const sheetLocked = $derived(sheetGroupNode?.group?.locked ?? true);

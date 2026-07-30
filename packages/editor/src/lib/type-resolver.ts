@@ -70,17 +70,17 @@ function resolveGroupOutputNodeTypes(
 	getIncomingEdges: GetIncomingEdges,
 	definitions: HydratedGraphProject["definitions"],
 ): ResolvedNodeTypes {
-	for (const def of Object.values(definitions)) {
-		const goNode = def.nodes.find((n) => n.id === node.id);
+	for (const def of definitions.values()) {
+		const goNode = def.nodesById.get(node.id);
 		if (goNode?.type === "group-output") {
-			const incoming = def.edges.filter((e) => e.target === node.id);
+			const incoming = def.edgesByTarget.get(node.id) ?? [];
 			// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- GraphDocumentNode lacks Node properties required by GroupedNode
 			const goDescriptor = resolveDescriptor(goNode as GroupedNode);
 			return resolveRegularNodeTypes(
 				goDescriptor,
 				incoming,
 				goNode.data,
-				(id) => def.nodes.find((n) => n.id === id),
+				(id) => def.nodesById.get(id),
 				resolveDescriptor,
 				getIncomingEdges,
 				definitions,
@@ -514,8 +514,8 @@ export class TypeResolver {
 	): void {
 		// Find which definition this node belongs to
 		let definitionRef: string | undefined;
-		for (const [ref, def] of Object.entries(this.definitions)) {
-			if (def.nodes.some((n) => n.id === nodeId)) {
+		for (const [ref, def] of this.definitions) {
+			if (def.nodesById.has(nodeId)) {
 				definitionRef = ref;
 				break;
 			}
@@ -523,7 +523,7 @@ export class TypeResolver {
 		if (!definitionRef) return;
 
 		// Search all documents (including root) for node-group instances of this definition
-		for (const def of Object.values(this.definitions)) {
+		for (const def of this.definitions.values()) {
 			const instanceIds = def.nodes
 				.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)
 				.map((n) => n.id);
