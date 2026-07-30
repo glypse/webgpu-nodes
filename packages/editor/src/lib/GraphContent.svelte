@@ -8,6 +8,7 @@
 		Controls,
 		Background,
 		type Edge,
+		type EdgeTypes,
 		type Node,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
@@ -15,6 +16,7 @@
 	import { tick } from "svelte";
 
 	import { generateShader, reachableShaderHash } from "./codegen";
+	import GradientEdge from "./GradientEdge.svelte";
 	import { getGraphManager } from "./graph-state.svelte";
 	import { type HydratedGraphProject, ROOT_ID } from "./graph-types";
 	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
@@ -28,6 +30,10 @@
 	for (const type of [...Object.keys(nodeRegistry), ...DYNAMIC_NODE_TYPES]) {
 		nodeTypes[type] = NodeShell;
 	}
+
+	const edgeTypes: EdgeTypes = {
+		gradient: GradientEdge,
+	};
 
 	let debug = getDevContext();
 
@@ -409,6 +415,8 @@
 				bind:nodes
 				bind:edges
 				{nodeTypes}
+				{edgeTypes}
+				defaultEdgeOptions={{ type: "gradient" }}
 				colorMode={mode.current}
 				fitView
 				minZoom={0.1}
@@ -433,6 +441,7 @@
 						id: crypto.randomUUID(),
 						sourceHandle,
 						targetHandle,
+						type: "gradient",
 					};
 
 					// Skip replacement logic for variadic inputs — they accept many edges.

@@ -1,5 +1,3 @@
-/* xyflow theme – centralised styles */
-
 @import "@xyflow/svelte/dist/style.css" layer(base);
 
 @reference "$theme/css";
@@ -54,19 +52,19 @@
 
 .node-shell__handle {
 	&.f32 {
-		@apply bg-neutral-500;
+		@apply bg-f32;
 	}
 
 	&.vec2f {
-		@apply bg-green-500;
+		@apply bg-vec2f;
 	}
 
 	&.vec3f {
-		@apply bg-violet-500;
+		@apply bg-vec3f;
 	}
 
 	&.vec4f {
-		@apply bg-amber-500;
+		@apply bg-vec4f;
 	}
 
 	&.variadic {
