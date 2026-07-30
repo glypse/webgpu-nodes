@@ -44,7 +44,34 @@ function variadicOp(type: string, label: string, joiner: string): NodeDescriptor
 	};
 }
 
-// ── Factory: binary function call (min, max) ─────────────────────────────────
+// ── Factory: variadic function call (min, max) ─────────────────────────────
+
+function variadicFn(type: string, label: string, wgslFn: string): NodeDescriptor {
+	return {
+		type,
+		label,
+		category: "math",
+		inputs: [
+			{
+				id: "operands",
+				label: "operands",
+				types: WGSL_TYPES,
+				variadic: true,
+			},
+		],
+		outputs: [{ id: "result", label: "result", type: "f32" }],
+		defaultData: {},
+		wgsl: (ctx) => {
+			const list = ctx.inputs.operands ?? [];
+			if (list.length === 0)
+				return [`let ${ctx.varName} = ${WGSL_DEFAULTS[ctx.outputType]};`];
+			const nested = list.reduce((acc, cur) => `${wgslFn}(${acc}, ${cur})`);
+			return [`let ${ctx.varName} = ${nested};`];
+		},
+	};
+}
+
+// ── Factory: binary function call (step) ────────────────────────────────────
 
 function binaryFn(type: string, label: string, wgslFn: string): NodeDescriptor {
 	return {
@@ -170,9 +197,11 @@ export const absNode = unaryFn("abs", "Absolute", "abs");
 export const addNode = variadicOp("add", "Add", " + ");
 export const mulNode = variadicOp("mul", "Multiply", " * ");
 
+// Math — variadic function call
+export const minNode = variadicFn("min", "Minimum", "min");
+export const maxNode = variadicFn("max", "Maximum", "max");
+
 // Math — binary function call
-export const minNode = binaryFn("min", "Minimum", "min");
-export const maxNode = binaryFn("max", "Maximum", "max");
 export const stepNode = binaryFn("step", "Step", "step");
 
 // Math — binary operator
