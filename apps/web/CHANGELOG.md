@@ -1,5 +1,13 @@
 # $web
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [[`c00aea5`](https://github.com/glypse/webgpu-nodes/commit/c00aea544501765adf8a5ae79b8f51a9cdb58ba8), [`13d0db1`](https://github.com/glypse/webgpu-nodes/commit/13d0db140f3432e86f4b3117a01063a335974073), [`c00aea5`](https://github.com/glypse/webgpu-nodes/commit/c00aea544501765adf8a5ae79b8f51a9cdb58ba8), [`c572fc2`](https://github.com/glypse/webgpu-nodes/commit/c572fc2a24d00d5296366e3b84e593a88352ddb9), [`0cf6666`](https://github.com/glypse/webgpu-nodes/commit/0cf66665844b350ef79d63395f5ecad6f0ca1695), [`22da746`](https://github.com/glypse/webgpu-nodes/commit/22da7467fcce00126008f179b420572ce296ffb1)]:
+  - $editor@0.5.0
+  - $theme@0.2.0
+
 ## 0.0.7
 
 ### Patch Changes
