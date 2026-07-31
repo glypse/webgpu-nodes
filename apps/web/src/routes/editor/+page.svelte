@@ -133,8 +133,8 @@
 			<Menubar.Content>
 				<Menubar.Item
 					onSelect={() => {
-						graph.save();
-					}}
+	graph.save();
+}}
 				>
 					Save
 				</Menubar.Item>
@@ -150,10 +150,7 @@
 		<Menubar.Menu>
 			<Menubar.Trigger>Edit</Menubar.Trigger>
 			<Menubar.Content>
-				<Menubar.Item
-					onSelect={handleGroupSelected}
-					disabled={!(hasSelection && !graph.isLocked)}
-				>
+				<Menubar.Item onSelect={handleGroupSelected} disabled={!(hasSelection && !graph.isLocked)}>
 					Group selected
 					<Menubar.Shortcut>G</Menubar.Shortcut>
 				</Menubar.Item>
@@ -193,8 +190,8 @@
 			<Menubar.Content>
 				<Menubar.Item
 					onSelect={() => {
-						toggleMode();
-					}}
+	toggleMode();
+}}
 				>
 					Toggle mode <Menubar.Shortcut>⌘M</Menubar.Shortcut>
 				</Menubar.Item>
@@ -209,11 +206,9 @@
 				<AlertDialog.Header>
 					<AlertDialog.Title>Remove unused group references?</AlertDialog.Title>
 					<AlertDialog.Description>
-						This will permanently delete the following group definition{prunableGroups.length ===
-						1
+						This will permanently delete the following group definition{prunableGroups.length === 1
 							? ""
-							: "s"} that {prunableGroups.length === 1 ? "is" : "are"} not referenced by
-						any node in the project.
+							: "s"} that {prunableGroups.length === 1 ? "is" : "are"} not referenced by any node in the project.
 					</AlertDialog.Description>
 				</AlertDialog.Header>
 				<ul class="flex max-h-64 flex-col gap-1 overflow-y-auto text-sm">

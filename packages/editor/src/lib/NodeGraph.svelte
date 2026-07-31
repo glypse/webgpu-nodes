@@ -33,9 +33,9 @@
 							<Breadcrumb.Link
 								href="#"
 								onclick={(e: MouseEvent) => {
-									e.preventDefault();
-									graph.jumpToPath([]);
-								}}
+	e.preventDefault();
+	graph.jumpToPath([]);
+}}
 							>
 								Root
 							</Breadcrumb.Link>
@@ -51,9 +51,9 @@
 									<Breadcrumb.Link
 										href="#"
 										onclick={(e: MouseEvent) => {
-											e.preventDefault();
-											graph.jumpToPath(graph.path.slice(0, i + 1));
-										}}
+	e.preventDefault();
+	graph.jumpToPath(graph.path.slice(0, i + 1));
+}}
 									>
 										{segment.label}
 									</Breadcrumb.Link>

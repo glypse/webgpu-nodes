@@ -210,10 +210,10 @@
 {/if}
 <div
 	class={cn(
-		"group/scrub relative flex grow items-center overflow-clip rounded-sm transition-colors",
-		!readonly && "hover:bg-foreground/5 nodrag nokey",
-		className,
-	)}
+	"group/scrub relative flex grow items-center overflow-clip rounded-sm transition-colors",
+	!readonly && "hover:bg-foreground/5 nodrag nokey",
+	className,
+)}
 	data-slot={dataSlot}
 >
 	{#if !readonly}

@@ -34,8 +34,8 @@
 		"check:root": "bunx tsc --noEmit -p tsconfig.json",
 		"lint": "bun nx run-many -t lint",
 		"lint:root": "bunx eslint oxfmt.config.ts eslint.config.ts",
-		"format": "bun --bun oxfmt",
-		"format:check": "bun --bun oxfmt --check",
+		"format": "bun --bun rsvelte-fmt",
+		"format:check": "bun --bun rsvelte-fmt --check",
 		"prepare": "husky && bun nx run-many -t prepare",
 		"release": "changeset tag"
 	},
@@ -44,12 +44,13 @@
 		"@changesets/cli": "^2.31.1",
 		"@eslint/js": "catalog:",
 		"@nx/eslint-plugin": "23.1.0",
+		"@rsvelte/fmt": "^0.7.4",
 		"@typescript/native-preview": "catalog:",
 		"eslint": "catalog:",
 		"eslint-plugin-svelte": "catalog:",
 		"husky": "^9.1.7",
 		"nx": "23.1.0",
-		"oxfmt": "^0.59.0",
+		"oxfmt": "^0.61.0",
 		"typescript-eslint": "catalog:"
 	}
 }

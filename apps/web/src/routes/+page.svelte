@@ -19,17 +19,15 @@
 		</li>
 		<li><Kbd.Root>UV</Kbd.Root> nodes CANNOT be grouped at this time</li>
 		<li>
-			When selecting a node group or when inside it, press <Kbd.Root>N</Kbd.Root> to bring up its
-			settings.
+			When selecting a node group or when inside it, press <Kbd.Root>N</Kbd.Root> to bring up its settings.
 		</li>
 		<li>
-			You can create your own, editable copy of any node group by opening its settings sheet
-			and pressing "Copy & Edit".
+			You can create your own, editable copy of any node group by opening its settings sheet and
+			pressing "Copy & Edit".
 		</li>
 		<li>
-			Nodes with <TreeViewIcon class="bg-muted inline size-5 rounded-sm p-1" /> are a node group.
-			Click the <TreeViewIcon class="bg-muted inline size-5 rounded-sm p-1" /> button to enter said
-			node group.
+			Nodes with <TreeViewIcon class="bg-muted inline size-5 rounded-sm p-1" /> are a node group. Click the
+			<TreeViewIcon class="bg-muted inline size-5 rounded-sm p-1" /> button to enter said node group.
 		</li>
 		<li>Select a node group and press <Kbd.Root>Enter</Kbd.Root> to enter it.</li>
 	</ul>

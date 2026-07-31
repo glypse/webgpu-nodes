@@ -14,8 +14,8 @@
 	bind:ref
 	data-slot="menubar-trigger"
 	class={cn(
-		"hover:bg-muted aria-expanded:bg-muted bg-muted/50 flex items-center rounded-sm px-1.5 py-[2px] text-sm font-medium select-none",
-		className,
-	)}
+	"hover:bg-muted aria-expanded:bg-muted bg-muted/50 flex items-center rounded-sm px-1.5 py-[2px] text-sm font-medium select-none",
+	className,
+)}
 	{...restProps}
 />

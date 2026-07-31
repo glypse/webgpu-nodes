@@ -84,13 +84,13 @@
 						)}
 						<pre
 							class="bg-muted/70 mt-2 max-h-32 overflow-auto rounded p-2 text-[11px] leading-tight">{lines.join(
-								"\n",
-							)}</pre>
+		"\n",
+	)}</pre>
 					{:else if shaderError.details.length > 0}
 						<pre
 							class="bg-muted/50 mt-2 max-h-32 overflow-auto rounded p-2 text-[11px] leading-tight">{shaderError.details.join(
-								"\n",
-							)}</pre>
+		"\n",
+	)}</pre>
 					{/if}
 				</div>
 			{/if}

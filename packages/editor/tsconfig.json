@@ -3,12 +3,6 @@
 	"compilerOptions": {
 		"types": ["svelte", "vite/client"]
 	},
-	"include": [
-		"src/**/*",
-		"oxfmt.config.ts",
-		"svelte.config.ts",
-		"vite.config.ts",
-		"eslint.config.ts"
-	],
+	"include": ["src/**/*", "svelte.config.ts", "vite.config.ts", "eslint.config.ts"],
 	"exclude": ["../node_modules/**"]
 }

@@ -430,54 +430,54 @@
 				onbeforedelete={isLocked ? () => Promise.resolve(false) : undefined}
 				isValidConnection={(connection) => graph.isValidConnection(connection)}
 				onmove={(_event, viewport) => {
-					graph.activeDocument.viewport = { ...viewport };
-				}}
+	graph.activeDocument.viewport = { ...viewport };
+}}
 				onconnect={(connection) => {
-					const { source, target, sourceHandle, targetHandle } = connection;
-					if (!source || !target || !sourceHandle || !targetHandle) return;
+	const { source, target, sourceHandle, targetHandle } = connection;
+	if (!source || !target || !sourceHandle || !targetHandle) return;
 
-					const edge = {
-						...connection,
-						id: crypto.randomUUID(),
-						sourceHandle,
-						targetHandle,
-						type: "gradient",
-					};
+	const edge = {
+		...connection,
+		id: crypto.randomUUID(),
+		sourceHandle,
+		targetHandle,
+		type: "gradient",
+	};
 
-					// Skip replacement logic for variadic inputs — they accept many edges.
-					const targetNode = nodes.find((n) => n.id === target);
-					if (targetNode) {
-						const descriptor = graph.resolveDescriptor(targetNode);
-						const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
-						if (inputDef?.variadic) {
-							edges = [
-								...edges.filter(
-									(e) =>
-										!(
-											e.source === source &&
-											e.sourceHandle === sourceHandle &&
-											e.target === target &&
-											e.targetHandle === targetHandle
-										),
-								),
-								edge,
-							];
-							return;
-						}
-					}
-
-					// Single source of data per non-variadic input: drop any existing
-					// edge into the same target handle, then add the new one.
-					edges = [
-						...edges.filter(
-							(e) => !(e.target === target && e.targetHandle === targetHandle),
+	// Skip replacement logic for variadic inputs — they accept many edges.
+	const targetNode = nodes.find((n) => n.id === target);
+	if (targetNode) {
+		const descriptor = graph.resolveDescriptor(targetNode);
+		const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
+		if (inputDef?.variadic) {
+			edges = [
+				...edges.filter(
+					(e) =>
+						!(
+							e.source === source &&
+							e.sourceHandle === sourceHandle &&
+							e.target === target &&
+							e.targetHandle === targetHandle
 						),
-						edge,
-					];
-				}}
+				),
+				edge,
+			];
+			return;
+		}
+	}
+
+	// Single source of data per non-variadic input: drop any existing
+	// edge into the same target handle, then add the new one.
+	edges = [
+		...edges.filter(
+			(e) => !(e.target === target && e.targetHandle === targetHandle),
+		),
+		edge,
+	];
+}}
 				onselectionchange={({ nodes: selectedNodes }) => {
-					graph.selectedNodeIds = selectedNodes.map((n) => n.id);
-				}}
+	graph.selectedNodeIds = selectedNodes.map((n) => n.id);
+}}
 			>
 				<Controls showLock={false} showZoom={false} />
 				<Background class="bg-background" />
@@ -493,14 +493,14 @@
 							<ContextMenu.Item
 								disabled={graph.wouldCreateCycle(item.id)}
 								onclick={() => {
-									if (item.id === "node-group") {
-										createGroup();
-									} else if (item.fromLibrary) {
-										addFromLibrary(item.id);
-									} else {
-										addNode(item.id);
-									}
-								}}
+	if (item.id === "node-group") {
+		createGroup();
+	} else if (item.fromLibrary) {
+		addFromLibrary(item.id);
+	} else {
+		addNode(item.id);
+	}
+}}
 							>
 								{item.label}
 							</ContextMenu.Item>
@@ -524,9 +524,9 @@
 										size="icon-sm"
 										class="ml-auto"
 										onclick={(e: MouseEvent) => {
-											e.stopPropagation();
-											graph.deleteDefinition(group.definitionRef);
-										}}
+	e.stopPropagation();
+	graph.deleteDefinition(group.definitionRef);
+}}
 									>
 										<TrashIcon />
 									</Button>
@@ -556,10 +556,10 @@
 				<Button
 					variant="outline"
 					onclick={() => {
-						if (graph.sheetGroupId) {
-							graph.deepClone(graph.sheetGroupId);
-						}
-					}}
+	if (graph.sheetGroupId) {
+		graph.deepClone(graph.sheetGroupId);
+	}
+}}
 				>
 					Clone & Edit
 				</Button>
@@ -572,8 +572,8 @@
 						disabled={sheetLocked}
 						aria-invalid={groupLabelInvalid}
 						oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-							groupLabelBuffer = e.currentTarget.value;
-						}}
+	groupLabelBuffer = e.currentTarget.value;
+}}
 						onblur={commitGroupLabel}
 						onkeydown={handleEnterBlur}
 					/>
@@ -584,25 +584,23 @@
 						<span class="text-sm font-medium">Inputs</span>
 						{#each sheetInputHandles as handle (handle.id)}
 							<div class="flex items-center gap-2">
-								<span class="text-muted-foreground w-16 shrink-0 text-xs"
-									>{handle.type}</span
-								>
+								<span class="text-muted-foreground w-16 shrink-0 text-xs">{handle.type}</span>
 								<Input
 									value={handleLabelValue(handle.id)}
 									disabled={sheetLocked}
 									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-										handleLabelBuffer[handle.id] = e.currentTarget.value;
-									}}
+	handleLabelBuffer[handle.id] = e.currentTarget.value;
+}}
 									onblur={() => {
-										if (sheetGroupNode.group && sheetInputNodeId) {
-											commitHandleLabel(
-												sheetGroupNode.group.definitionRef,
-												sheetInputNodeId,
-												handle.id,
-												handleLabelBuffer[handle.id] ?? "",
-											);
-										}
-									}}
+	if (sheetGroupNode.group && sheetInputNodeId) {
+		commitHandleLabel(
+			sheetGroupNode.group.definitionRef,
+			sheetInputNodeId,
+			handle.id,
+			handleLabelBuffer[handle.id] ?? "",
+		);
+	}
+}}
 									onkeydown={handleEnterBlur}
 								/>
 								{#if !sheetLocked}
@@ -611,14 +609,14 @@
 										size="icon"
 										class="size-8 shrink-0"
 										onclick={() => {
-											if (sheetGroupNode.group && sheetInputNodeId) {
-												graph.removeHandle(
-													sheetGroupNode.group.definitionRef,
-													sheetInputNodeId,
-													handle.id,
-												);
-											}
-										}}
+	if (sheetGroupNode.group && sheetInputNodeId) {
+		graph.removeHandle(
+			sheetGroupNode.group.definitionRef,
+			sheetInputNodeId,
+			handle.id,
+		);
+	}
+}}
 									>
 										-
 									</Button>
@@ -633,25 +631,23 @@
 						<span class="text-sm font-medium">Outputs</span>
 						{#each sheetOutputHandles as handle (handle.id)}
 							<div class="flex items-center gap-2">
-								<span class="text-muted-foreground w-16 shrink-0 text-xs"
-									>{handle.type}</span
-								>
+								<span class="text-muted-foreground w-16 shrink-0 text-xs">{handle.type}</span>
 								<Input
 									value={handleLabelValue(handle.id)}
 									disabled={sheetLocked}
 									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-										handleLabelBuffer[handle.id] = e.currentTarget.value;
-									}}
+	handleLabelBuffer[handle.id] = e.currentTarget.value;
+}}
 									onblur={() => {
-										if (sheetGroupNode.group && sheetOutputNodeId) {
-											commitHandleLabel(
-												sheetGroupNode.group.definitionRef,
-												sheetOutputNodeId,
-												handle.id,
-												handleLabelBuffer[handle.id] ?? "",
-											);
-										}
-									}}
+	if (sheetGroupNode.group && sheetOutputNodeId) {
+		commitHandleLabel(
+			sheetGroupNode.group.definitionRef,
+			sheetOutputNodeId,
+			handle.id,
+			handleLabelBuffer[handle.id] ?? "",
+		);
+	}
+}}
 									onkeydown={handleEnterBlur}
 								/>
 								{#if !sheetLocked}
@@ -661,14 +657,14 @@
 										class="size-8 shrink-0"
 										disabled={sheetOutputHandles.length <= 1}
 										onclick={() => {
-											if (sheetGroupNode.group && sheetOutputNodeId) {
-												graph.removeHandle(
-													sheetGroupNode.group.definitionRef,
-													sheetOutputNodeId,
-													handle.id,
-												);
-											}
-										}}
+	if (sheetGroupNode.group && sheetOutputNodeId) {
+		graph.removeHandle(
+			sheetGroupNode.group.definitionRef,
+			sheetOutputNodeId,
+			handle.id,
+		);
+	}
+}}
 									>
 										-
 									</Button>

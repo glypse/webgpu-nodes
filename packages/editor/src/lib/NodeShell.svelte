@@ -340,9 +340,7 @@
 							>
 						</div>
 					{:else if connected}
-						<span
-							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
-						>
+						<span class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs">
 							{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}
 						</span>
 					{:else}
@@ -354,20 +352,18 @@
 								{#each COMPONENT_KEYS[effectiveType] as comp, i (comp)}
 									<Scrubbable
 										class={"node-shell__input" +
-											(i > 0 ? "border-border border-t" : "")}
+	(i > 0 ? "border-border border-t" : "")}
 										readonly={isLocked}
 										value={getComponentValue(inputDef.id, effectiveType, comp)}
-										oninput={(
-											e: Event & { currentTarget: HTMLInputElement },
-										) => {
-											const val = parseFloat(e.currentTarget.value) || 0;
-											setComponentValue(
-												inputDef.id,
-												effectiveType,
-												comp,
-												val,
-											);
-										}}
+										oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+	const val = parseFloat(e.currentTarget.value) || 0;
+	setComponentValue(
+		inputDef.id,
+		effectiveType,
+		comp,
+		val,
+	);
+}}
 									/>
 								{/each}
 							</div>
