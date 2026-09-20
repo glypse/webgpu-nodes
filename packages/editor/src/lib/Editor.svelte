@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Resizable } from "$theme";
-	import { FragCanvas, defineMaterial } from "@motion-core/motion-gpu/svelte";
+	import { FragCanvas, defineMaterial } from "spektral/svelte";
 
 	import NodeGraph from "./NodeGraph.svelte";
 

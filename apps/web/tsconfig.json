@@ -12,6 +12,7 @@
 		"sourceMap": true,
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
-		"moduleResolution": "bundler"
+		"moduleResolution": "bundler",
+		"types": ["bun"]
 	}
 }

@@ -375,14 +375,14 @@ export const declareNode: NodeDescriptor = {
 };
 
 // Input — uniforms
-export const timeNode = uniformReader("time", "Time", "time", "f32", "motiongpuFrame.time");
-export const deltaNode = uniformReader("delta", "Delta", "delta", "f32", "motiongpuFrame.delta");
+export const timeNode = uniformReader("time", "Time", "time", "f32", "spektralFrame.time");
+export const deltaNode = uniformReader("delta", "Delta", "delta", "f32", "spektralFrame.delta");
 export const resolutionNode = uniformReader(
 	"resolution",
 	"Resolution",
 	"resolution",
 	"vec2f",
-	"motiongpuFrame.resolution",
+	"spektralFrame.resolution",
 );
 export const uvNode = uniformReader("uv", "UV", "uv", "vec2f", "uv");
 

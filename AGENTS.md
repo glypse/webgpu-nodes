@@ -5,7 +5,7 @@ A web-based node-based fragment shader editor for WGSL
 ### Roadmap
 
 - A WGSL string builder handling all major value types and operations
-- A proper handling of Motion GPU native & custom uniforms (ie: time, canvas resolution, texture, texture dimensions and texture sampling, etc)
+- A proper handling of Spektral native & custom uniforms (ie: time, canvas resolution, texture, texture dimensions and texture sampling, etc)
 - A user-friendly UI for handling the node editor
 - A JSON load/save system for user-created scenes
 - A Tauri desktop app bundling a WebGPU runtime, allowing for local, offline shader creation
@@ -21,7 +21,7 @@ This project is in pre-alpha: every change can afford to be breaking, no backwar
 - Nx as the monorepo orchestrator tool
 - Svelte as framework, SvelteKit as meta-framework
 - (Not yet implemented) Tauri as the desktop app framework
-- Motion GPU as the WGSL runtime
+- Spektral as the WGSL runtime
 
 ## Instructions
 

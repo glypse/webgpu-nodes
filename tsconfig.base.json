@@ -18,6 +18,7 @@
 		"target": "esnext",
 		"verbatimModuleSyntax": true,
 		"customConditions": ["development"],
-		"noUncheckedIndexedAccess": true
+		"noUncheckedIndexedAccess": true,
+		"types": ["bun"]
 	}
 }
