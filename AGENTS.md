@@ -25,7 +25,7 @@ This project is in pre-alpha: every change can afford to be breaking, no backwar
 
 ## Instructions
 
-Assume your knowledge of these tools to be vastly outdated, don't be afraid to fetch the appropriate documentation (ideally via an MCP server if your user has some available for you, or via your built-in web scraping tool, or as a last resort via reading the source code in `node_modules`), or use the skills available at [.agents/skills](.agents/skills).
+Assume your knowledge of these tools to be vastly outdated, don't be afraid to fetch the appropriate documentation (ideally via an MCP server if your user has some available for you, or via your built-in web scraping tool, or as a last resort via reading the source code in `node_modules`).
 
 Whenever you're done working on a feature, run check and lint on the whole package or packages you've been working on. Example: `bun run format && bun nx run-many --projects=editor,web --targets=check,lint`. Always prefer using NX run-many because it's much faster (parallel execution) than individual commands, and is configured for caching.
 
