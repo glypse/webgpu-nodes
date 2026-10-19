@@ -50,21 +50,83 @@
 	@apply bg-foreground pointer-events-auto;
 }
 
+/* Handle colour follows the value's component count (set inline as
+   --handle-color), its shape follows the scalar kind: circle for f32, square
+   for i32, diamond for u32, triangle for bool.
+   Each shape is drawn by two layers: ::before is the outline (the card colour,
+   like a plain handle's border), ::after the fill, inset by about a pixel.
+   Clip-paths can't have borders and rotations would skew SvelteFlow's
+   centring translate, hence the layers. */
 .node-shell__handle {
-	&.f32 {
-		@apply bg-f32;
+	&.kind-f32,
+	&.kind-i32,
+	&.kind-u32,
+	&.kind-bool {
+		border: none;
+		border-radius: 0;
+		background: transparent;
+
+		&::before,
+		&::after {
+			content: "";
+			position: absolute;
+			pointer-events: none;
+		}
+
+		&::before {
+			inset: 0;
+			background: var(--card);
+		}
+
+		&::after {
+			inset: 1px;
+			background: var(--handle-color, var(--muted-foreground));
+		}
+
+		/* Highlight the shape only: SvelteFlow's hover rule would paint the whole box. */
+		&.connectionindicator:hover {
+			background: transparent;
+		}
+
+		&.connectionindicator:hover::after {
+			background: var(--foreground);
+		}
 	}
 
-	&.vec2f {
-		@apply bg-vec2f;
+	&.kind-f32 {
+		&::before,
+		&::after {
+			border-radius: 9999px;
+		}
 	}
 
-	&.vec3f {
-		@apply bg-vec3f;
+	&.kind-u32 {
+		width: 11px;
+		height: 11px;
+
+		&::before,
+		&::after {
+			clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+		}
+
+		/* A 1.5px inset leaves ~1px of outline along the diagonals. */
+		&::after {
+			inset: 1.5px;
+		}
 	}
 
-	&.vec4f {
-		@apply bg-vec4f;
+	&.kind-bool {
+		width: 10px;
+		height: 10px;
+
+		&::before,
+		&::after {
+			clip-path: polygon(0 0, 100% 50%, 0 100%);
+		}
+
+		&::after {
+			inset: 1.5px;
+		}
 	}
 
 	&.variadic {

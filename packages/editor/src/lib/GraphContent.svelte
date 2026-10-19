@@ -54,9 +54,8 @@
 	const categoryMap = $derived.by(() => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
 		const map = new Map<NodeCategory, { id: string; label: string; fromLibrary: boolean }[]>();
-		const CONTEXT_MENU_EXCLUDED = new Set(["frag-output"]);
 		for (const [type, desc] of Object.entries(nodeRegistry)) {
-			if (CONTEXT_MENU_EXCLUDED.has(type)) continue;
+			if (desc.hidden) continue;
 			const list = map.get(desc.category) ?? [];
 			list.push({ id: type, label: desc.label, fromLibrary: false });
 			map.set(desc.category, list);
@@ -301,11 +300,15 @@
 	});
 
 	const CATEGORY_LABELS: Record<NodeCategory, string> = {
-		math: "Math",
 		input: "Input",
-		misc: "Miscellaneous",
-		color: "Color",
+		math: "Math",
 		vector: "Vector",
+		logic: "Logic",
+		integer: "Integer",
+		converter: "Converter",
+		zone: "Zones",
+		color: "Color",
+		misc: "Miscellaneous",
 	};
 
 	function handleContextMenu(e: MouseEvent) {

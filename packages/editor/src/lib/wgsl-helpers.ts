@@ -1,100 +1,56 @@
-import type { WgslType } from "./types";
+import { type HelperName, type WgslType, wgslTypeName } from "./types";
 
-// ── Component-wise operation helpers ──────────────────────────────────────────
+// ── Shared helper functions ──────────────────────────────────────────────────
 //
-// WGSL built-in functions (sin, cos, min, max, clamp, mix, pow, abs, ...)
-// already work on vec types natively.  Arithmetic operators (+, -, *, /)
-// also work component-wise.  The only gap is *custom* helpers like safeDiv
-// that must be explicitly overloaded for each type.
+// WGSL built-ins (sin, min, clamp, ...) and operators already work on every
+// vector type. Helpers cover the gaps: guarded division / modulo / pow that
+// must not produce inf/NaN (or shader-creation errors on constant operands).
 //
-// This module provides a tiny system for generating those overloads.
+// Each helper is overloaded per concrete type (`safeDivVec3i`, ...). Nodes ask
+// for the overload they need through `WgslCtx.helper`; the code generator
+// records the request and only emits overloads the shader actually uses.
+//
+// Helpers are written vector-wise: `T()` is the zero value of `T`, and
+// comparisons on vectors yield bool vectors, which `select` accepts.
 
-const ALL_TYPES: WgslType[] = ["f32", "vec2f", "vec3f", "vec4f"];
-
-const COMPONENTS: Record<WgslType, string[]> = {
-	f32: [],
-	vec2f: ["x", "y"],
-	vec3f: ["x", "y", "z"],
-	vec4f: ["x", "y", "z", "w"],
+const HELPER_BODIES: Record<HelperName, (t: string) => string> = {
+	/** `a / b`, returning 0 where `b == 0` (instead of inf/NaN). */
+	safeDiv: (t) => `select(a / b, ${t}(), b == ${t}())`,
+	/** `a % b`, returning 0 where `b == 0`. */
+	safeMod: (t) => `select(a % b, ${t}(), b == ${t}())`,
+	/** `pow(a, b)`, returning 1 where `b == 0` (x^0 = 1, where WGSL may give NaN). */
+	safePow: (t) => `select(pow(a, b), ${t}(1), b == ${t}())`,
 };
 
 /**
- * Describes a scalar binary operation to be overloaded for all WGSL types.
- *
- * @param name        WGSL function name (e.g. "safeDiv")
- * @param scalarImpl  Given two WGSL expression strings for scalars,
- *                    return the WGSL expression for the result.
+ * Map a helper + type to its overload name.
+ * `("safeDiv", "f32")` → `"safeDivF32"`, `("safeDiv", "vec2b")` → `"safeDivVec2b"`.
  */
-export type ComponentWiseBinaryOp = {
-	name: string;
-	scalarImpl: (a: string, b: string) => string;
-};
-
-/**
- * Generate WGSL function overloads for a binary operation across all types.
- *
- * Each overload gets a unique name: `{name}F32`, `{name}Vec2f`, etc.
- *
- * @example
- * ```wgsl
- * fn safeDivF32(a: f32, b: f32) -> f32 {
- *   return select(a / b, 0.0, b == 0.0);
- * }
- * fn safeDivVec2f(a: vec2f, b: vec2f) -> vec2f {
- *   return vec2f(select(a.x / b.x, 0.0, b.x == 0.0), select(a.y / b.y, 0.0, b.y == 0.0));
- * }
- * ```
- */
-export function generateBinaryOverloads(op: ComponentWiseBinaryOp): string[] {
-	return ALL_TYPES.map((type) => {
-		const fnName = cwFnName(op.name, type);
-		const args = `a: ${type}, b: ${type}`;
-		let body: string;
-		if (type === "f32") {
-			body = `  return ${op.scalarImpl("a", "b")};`;
-		} else {
-			const comps = COMPONENTS[type];
-			const perComponent = comps.map((c) => op.scalarImpl(`a.${c}`, `b.${c}`)).join(", ");
-			body = `  return ${type}(${perComponent});`;
-		}
-		return `fn ${fnName}(${args}) -> ${type} {\n${body}\n}`;
-	});
-}
-
-/**
- * Map a WgslType to a typed function name.
- * `"f32"` → `"safeDivF32"`, `"vec2f"` → `"safeDivVec2f"`, etc.
- */
-export function cwFnName(op: string, type: WgslType): string {
+export function cwFnName(op: HelperName, type: WgslType): string {
 	const suffix = type.charAt(0).toUpperCase() + type.slice(1);
 	return `${op}${suffix}`;
 }
 
-// ── Built-in operations ──────────────────────────────────────────────────────
+/** Emit the WGSL source of one helper overload. */
+export function emitHelper(op: HelperName, type: WgslType): string {
+	const t = wgslTypeName(type);
+	return `fn ${cwFnName(op, type)}(a: ${t}, b: ${t}) -> ${t} {\n  return ${HELPER_BODIES[op](t)};\n}`;
+}
 
-/**
- * `safeDiv(a, b)` → `a / b` with a zero-divisor guard.
- * Returns 0.0 when b == 0 instead of producing inf/NaN.
- */
-export const safeDivOp: ComponentWiseBinaryOp = {
-	name: "safeDiv",
-	scalarImpl: (a, b) => `select(${a} / ${b}, 0.0, ${b} == 0.0)`,
-};
+/** Collects the helper overloads requested while generating one shader. */
+export class HelperRegistry {
+	private used = new Map<string, { op: HelperName; type: WgslType }>();
 
-/**
- * `safePow(a, b)` → `pow(a, b)` with a zero-exponent guard.
- * Returns 1.0 when b == 0 (mathematically correct: x^0 = 1)
- * instead of producing undefined/NaN from WGSL's `pow`.
- */
-export const safePowOp: ComponentWiseBinaryOp = {
-	name: "safePow",
-	scalarImpl: (a, b) => `select(pow(${a}, ${b}), 1.0, ${b} == 0.0)`,
-};
+	use(op: HelperName, type: WgslType): string {
+		const name = cwFnName(op, type);
+		if (!this.used.has(name)) this.used.set(name, { op, type });
+		return name;
+	}
 
-/**
- * Emit all required helper overloads.  Call this once per shader;
- * the returned strings should go into the "Common libraries" section.
- */
-export function emitHelperFunctions(): string[] {
-	return [...generateBinaryOverloads(safeDivOp), ...generateBinaryOverloads(safePowOp)];
+	/** Every requested overload, in a stable (sorted) order. */
+	emit(): string[] {
+		return [...this.used.entries()]
+			.toSorted(([a], [b]) => a.localeCompare(b))
+			.map(([, { op, type }]) => emitHelper(op, type));
+	}
 }

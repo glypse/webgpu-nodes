@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, Popover, Scrubbable, Select } from "$theme";
+	import { Button, Checkbox, Popover, Scrubbable, Select } from "$theme";
 	import { Handle, Position, useNodeConnections, useSvelteFlow } from "@xyflow/svelte";
 	import ArrowUUpLeftIcon from "phosphor-svelte/lib/ArrowUUpLeftIcon";
 	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
@@ -7,14 +7,23 @@
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
-	import { type HandleDef, type WgslType, WGSL_TYPES } from "./types";
+	import {
+		type HandleDef,
+		type NodeSetting,
+		type WgslType,
+		WGSL_TYPES,
+		isWgslType,
+		typeComponents,
+		typeKind,
+	} from "./types";
 
-	const COMPONENT_KEYS: Record<WgslType, string[]> = {
-		f32: ["_"],
-		vec2f: ["x", "y"],
-		vec3f: ["x", "y", "z"],
-		vec4f: ["x", "y", "z", "w"],
-	};
+	const VECTOR_KEYS = ["x", "y", "z", "w"];
+
+	/** Keys of the per-component editors for a type ("_" for scalars). */
+	function componentKeys(type: WgslType): string[] {
+		const n = typeComponents(type);
+		return n === 1 ? ["_"] : VECTOR_KEYS.slice(0, n);
+	}
 
 	let {
 		id,
@@ -57,12 +66,16 @@
 
 	let popoverOpen = $state(false);
 
-	/** The first input's types array, used as the node's type family key. */
+	/** The input driving the node's type dropdown (and representative type). */
+	const primaryInput = $derived(
+		descriptor?.inputs.find((i) => i.id === descriptor.primaryInput) ?? descriptor?.inputs[0],
+	);
+
+	/** The types offered by the node's type dropdown. */
 	const nodeTypes = $derived.by(() => {
 		if (!descriptor) return undefined;
 		if (descriptor.typeFamily) return descriptor.typeFamily.types;
-		if (descriptor.inputs.length === 0) return undefined;
-		return descriptor.inputs[0]?.types;
+		return primaryInput?.types;
 	});
 
 	/** The family key derived from nodeTypes. */
@@ -76,45 +89,36 @@
 		nodeTypes !== undefined && nodeTypes.length > 1 && nodeType !== "node-group",
 	);
 
-	/** Whether the type is inferable from connections (first input has > 1 type). */
-	const typeInferable = $derived(
-		descriptor !== undefined &&
-			descriptor.inputs.length > 0 &&
-			(descriptor.inputs[0]?.types.length ?? 0) > 1,
-	);
+	/** Whether the type is inferable from connections (primary input has > 1 type). */
+	const typeInferable = $derived((primaryInput?.types.length ?? 0) > 1);
 
-	/** Whether the node's type family is in forced (manual override) mode. */
-	const isForced = $derived.by(() => {
-		if (!nodeFamilyKey) return false;
-		if (descriptor?.typeFamily) {
-			return (data[descriptor.typeFamily.key] as WgslType | undefined) !== undefined;
+	/** The user-forced type of the node's family, if any. */
+	const forcedType = $derived.by((): WgslType | undefined => {
+		if (!nodeFamilyKey) return undefined;
+		const forced = descriptor?.typeFamily
+			? data[descriptor.typeFamily.key]
+			: (data.__nodeTypeOverrides as Record<string, unknown> | undefined)?.[nodeFamilyKey];
+		return isWgslType(forced) ? forced : undefined;
+	});
+
+	/** The type shown in the dropdown: the forced type, or the resolved one. */
+	const triggerLabel = $derived.by((): WgslType => {
+		if (forcedType) return forcedType;
+		if (descriptor?.typeFamily) return graph.resolveNodeOutputType(id);
+		return primaryInput ? graph.resolveInputType(id, primaryInput.id) : "f32";
+	});
+
+	/** Family types grouped by scalar kind, for the dropdown. */
+	const familyGroups = $derived.by(() => {
+		const groups: { kind: string; types: WgslType[] }[] = [];
+		for (const t of nodeTypes ?? []) {
+			const kind = typeKind(t);
+			const group = groups.find((g) => g.kind === kind);
+			if (group) group.types.push(t);
+			else groups.push({ kind, types: [t] });
 		}
-		const overrides = (data.__nodeTypeOverrides as Record<string, WgslType> | undefined) ?? {};
-		return overrides[nodeFamilyKey] !== undefined;
+		return groups;
 	});
-
-	/** The resolved type to display in the dropdown. */
-	const resolvedType = $derived.by(() => {
-		if (!descriptor || descriptor.inputs.length === 0) return "f32";
-		const first = descriptor.inputs[0];
-		if (!first) return "f32";
-		return graph.resolveInputType(id, first.id);
-	});
-
-	/** The override type if forced, otherwise the resolved type. */
-	const triggerLabel = $derived.by(() => {
-		if (isForced && nodeFamilyKey) {
-			if (descriptor?.typeFamily) {
-				return (data[descriptor.typeFamily.key] as WgslType | undefined) ?? resolvedType;
-			}
-			const overrides = data.__nodeTypeOverrides as Record<string, WgslType> | undefined;
-			return overrides?.[nodeFamilyKey] ?? resolvedType;
-		}
-		return resolvedType;
-	});
-
-	/** All types in the node's family (for the dropdown). */
-	const familyTypes = $derived(nodeTypes ?? []);
 
 	function handleTypeSelect(value: string) {
 		if (!nodeFamilyKey) return;
@@ -152,34 +156,56 @@
 		graph.invalidateTypes([id]);
 	}
 
+	function settingValue(setting: NodeSetting): string {
+		const value = data[setting.key];
+		const match = setting.options.find((o) => o.value === value);
+		return (match ?? setting.options[0])?.value ?? "";
+	}
+
+	function settingLabel(setting: NodeSetting): string {
+		const value = settingValue(setting);
+		return setting.options.find((o) => o.value === value)?.label ?? value;
+	}
+
+	function handleSettingSelect(setting: NodeSetting, value: string) {
+		updateNodeData(id, { ...data, [setting.key]: value });
+		graph.invalidateTypes([id]);
+	}
+
 	function resolvedInputType(inputDef: { id: string }): WgslType {
 		return graph.resolveInputType(id, inputDef.id);
 	}
 
-	/** The resolved output type — reads from the TypeResolver cache (single source of truth). */
-	const resolvedOutputType = $derived(graph.resolveNodeOutputType(id));
-
-	function getComponentValue(inputId: string, type: WgslType, comp: string): number {
-		if (type === "f32") return (data[inputId] as number | undefined) ?? 0;
-		const obj = data[inputId];
-		if (obj && typeof obj === "object" && comp in (obj as Record<string, unknown>)) {
-			return Number((obj as Record<string, unknown>)[comp]) || 0;
+	/**
+	 * Read one component of a stored input value. Vectors are stored as
+	 * `{ x, y, ... }`; a plain scalar fills every component (codegen agrees).
+	 */
+	function getComponentValue(inputId: string, comp: string): number {
+		const stored = data[inputId];
+		if (stored && typeof stored === "object") {
+			const raw = (stored as Record<string, unknown>)[comp === "_" ? "x" : comp];
+			return typeof raw === "boolean" ? Number(raw) : Number(raw) || 0;
 		}
-		return 0;
+		if (typeof stored === "boolean") return Number(stored);
+		return Number(stored) || 0;
 	}
 
 	function setComponentValue(inputId: string, type: WgslType, comp: string, val: number) {
-		if (type === "f32") {
+		if (typeComponents(type) === 1) {
 			updateNodeData(id, { ...data, [inputId]: val });
-		} else {
-			const current = data[inputId];
-			const obj =
-				current && typeof current === "object"
-					? { ...(current as Record<string, unknown>) }
-					: {};
-			obj[comp] = val;
-			updateNodeData(id, { ...data, [inputId]: obj });
+			return;
 		}
+		const current = data[inputId];
+		const obj: Record<string, unknown> =
+			current && typeof current === "object"
+				? { ...(current as Record<string, unknown>) }
+				: Object.fromEntries(componentKeys(type).map((c) => [c, Number(current) || 0]));
+		obj[comp] = val;
+		updateNodeData(id, { ...data, [inputId]: obj });
+	}
+
+	function handleStyle(type: WgslType): string {
+		return `--handle-color: var(--color-${type})`;
 	}
 
 	function addHandle(type: WgslType) {
@@ -207,7 +233,7 @@
 			{/snippet}
 		</Popover.Trigger>
 		<Popover.Content class="w-auto p-1" sideOffset={4} side="top">
-			<div class="flex flex-col">
+			<div class="grid grid-cols-4 gap-0.5">
 				{#each WGSL_TYPES as t (t)}
 					<button
 						class="hover:bg-accent rounded px-2 py-1 text-left text-xs"
@@ -219,6 +245,43 @@
 			</div>
 		</Popover.Content>
 	</Popover.Root>
+{/snippet}
+
+{#snippet valueEditor(inputId: string, type: WgslType)}
+	{@const kind = typeKind(type)}
+	{#if kind === "bool"}
+		<div class="flex items-center gap-2 py-1">
+			{#each componentKeys(type) as comp (comp)}
+				<label class="flex items-center gap-1 text-xs">
+					<Checkbox
+						class="nodrag"
+						disabled={isLocked}
+						checked={getComponentValue(inputId, comp) !== 0}
+						onCheckedChange={(checked: boolean) => {
+							setComponentValue(inputId, type, comp, checked ? 1 : 0);
+						}}
+					/>
+					{#if comp !== "_"}<span class="text-muted-foreground">{comp}</span>{/if}
+				</label>
+			{/each}
+		</div>
+	{:else}
+		<div class="*:not-first:rounded-t-none *:not-last:rounded-b-none">
+			{#each componentKeys(type) as comp, i (comp)}
+				<Scrubbable
+					class={"node-shell__input" + (i > 0 ? "border-border border-t" : "")}
+					readonly={isLocked}
+					integer={kind !== "f32"}
+					min={kind === "u32" ? 0 : undefined}
+					value={getComponentValue(inputId, comp)}
+					oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+						const val = parseFloat(e.currentTarget.value) || 0;
+						setComponentValue(inputId, type, comp, val);
+					}}
+				/>
+			{/each}
+		</div>
+	{/if}
 {/snippet}
 
 {#if descriptor}
@@ -271,17 +334,19 @@
 						{triggerLabel}
 					</Select.Trigger>
 					<Select.Content>
-						<Select.Group>
-							<Select.Label>Types</Select.Label>
-							{#each familyTypes as t (t)}
-								<Select.Item value={t} label={t}>
-									{t}
-								</Select.Item>
-							{/each}
-						</Select.Group>
+						{#each familyGroups as group (group.kind)}
+							<Select.Group>
+								<Select.Label>{group.kind}</Select.Label>
+								{#each group.types as t (t)}
+									<Select.Item value={t} label={t}>
+										{t}
+									</Select.Item>
+								{/each}
+							</Select.Group>
+						{/each}
 					</Select.Content>
 				</Select.Root>
-				{#if isForced && typeInferable}
+				{#if forcedType && typeInferable}
 					<Button
 						variant="secondary"
 						type="button"
@@ -293,24 +358,44 @@
 				{/if}
 			</div>
 		{/if}
+		{#each descriptor.settings ?? [] as setting (setting.key)}
+			<Select.Root
+				type="single"
+				name="{id}-{setting.key}"
+				value={settingValue(setting)}
+				disabled={isLocked}
+				onValueChange={(value: string) => handleSettingSelect(setting, value)}
+			>
+				<Select.Trigger class="w-full" title={setting.label}>
+					{settingLabel(setting)}
+				</Select.Trigger>
+				<Select.Content>
+					<Select.Group>
+						<Select.Label>{setting.label}</Select.Label>
+						{#each setting.options as option (option.value)}
+							<Select.Item value={option.value} label={option.label}>
+								{option.label}
+							</Select.Item>
+						{/each}
+					</Select.Group>
+				</Select.Content>
+			</Select.Root>
+		{/each}
 	</div>
 
 	<div class="node-shell__body">
 		<div class="node-shell__outputs">
 			{#each outputs as outputDef (outputDef.id)}
-				{@const handleOutputType =
-					nodeType === "group-input" || nodeType === "node-group"
-						? outputDef.type
-						: resolvedOutputType}
 				<div class="node-shell__row node-shell__row--right">
 					<span class="node-shell__handle-label"
-						>{nodeLabels.outputs[outputDef.id] ?? outputDef.label}: {handleOutputType}</span
+						>{nodeLabels.outputs[outputDef.id] ?? outputDef.label}: {outputDef.type}</span
 					>
 					<Handle
 						type="source"
 						position={Position.Right}
 						id={outputDef.id}
-						class="node-shell__handle {handleOutputType}"
+						class="node-shell__handle kind-{typeKind(outputDef.type)}"
+						style={handleStyle(outputDef.type)}
 					/>
 				</div>
 			{/each}
@@ -324,53 +409,35 @@
 			{#each inputs as inputDef (inputDef.id)}
 				{@const effectiveType = resolvedInputType(inputDef)}
 				{@const connected = connectedHandles.has(inputDef.id)}
+				{@const inputLabel = nodeLabels.inputs[inputDef.id] ?? inputDef.label}
 				<div class="node-shell__row">
 					<Handle
 						type="target"
 						position={Position.Left}
 						id={inputDef.id}
-						class="node-shell__handle {effectiveType} {inputDef.variadic
+						class="node-shell__handle kind-{typeKind(effectiveType)} {inputDef.variadic
 							? 'variadic'
 							: ''}"
+						style={handleStyle(effectiveType)}
 					/>
 					{#if inputDef.variadic}
 						<div class="flex flex-col gap-0.5">
 							<span class="node-shell__handle-label"
-								>{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}</span
+								>{inputLabel}: {effectiveType}</span
 							>
 						</div>
 					{:else if connected}
 						<span
 							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
 						>
-							{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}
+							{inputLabel}: {effectiveType}
 						</span>
 					{:else}
 						<div class="flex flex-1 flex-col gap-0.5">
 							<span class="node-shell__handle-label"
-								>{nodeLabels.inputs[inputDef.id] ?? inputDef.label}: {effectiveType}</span
+								>{inputLabel}: {effectiveType}</span
 							>
-							<div class="*:not-first:rounded-t-none *:not-last:rounded-b-none">
-								{#each COMPONENT_KEYS[effectiveType] as comp, i (comp)}
-									<Scrubbable
-										class={"node-shell__input" +
-											(i > 0 ? "border-border border-t" : "")}
-										readonly={isLocked}
-										value={getComponentValue(inputDef.id, effectiveType, comp)}
-										oninput={(
-											e: Event & { currentTarget: HTMLInputElement },
-										) => {
-											const val = parseFloat(e.currentTarget.value) || 0;
-											setComponentValue(
-												inputDef.id,
-												effectiveType,
-												comp,
-												val,
-											);
-										}}
-									/>
-								{/each}
-							</div>
+							{@render valueEditor(inputDef.id, effectiveType)}
 						</div>
 					{/if}
 				</div>

@@ -1,6 +1,6 @@
 import type { GraphDocumentEdge, HydratedGraphProject } from "./graph-types";
 import type { GroupedNode, NodeDescriptor, NodeInputDef, NodeOutputDef, WgslType } from "./types";
-import { WGSL_COMPONENTS, highestType, inputDefaultType, inputFamilyKey } from "./types";
+import { highestType, inputDefaultType, inputFamilyKey, isWgslType } from "./types";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -103,7 +103,7 @@ function resolveGroupOutputNodeTypes(
 }
 
 /**
- * The standard 4-phase type resolution for non-boundary nodes.
+ * The standard type resolution for non-boundary nodes.
  */
 function resolveRegularNodeTypes(
 	descriptor: NodeDescriptor,
@@ -116,77 +116,99 @@ function resolveRegularNodeTypes(
 ): ResolvedNodeTypes {
 	const nodeOverrides = nodeData.__nodeTypeOverrides as Record<string, WgslType> | undefined;
 
+	// Phase 0: user-selected output type (typeFamily nodes such as "declare")
+	// decides which inputs are active, so resolve it before the inputs.
+	let familyOutputType: WgslType | undefined;
+	if (descriptor.typeFamily) {
+		const selected = nodeData[descriptor.typeFamily.key];
+		familyOutputType = isWgslType(selected)
+			? selected
+			: (descriptor.typeFamily.types[0] ?? "f32");
+	}
+	const activeInputs =
+		familyOutputType && descriptor.resolveInputs
+			? descriptor.resolveInputs(familyOutputType)
+			: descriptor.inputs;
+
 	// Phase 1: infer each input independently
 	const rawInferred: Record<string, WgslType> = {};
-	for (const inputDef of descriptor.inputs) {
+	for (const inputDef of activeInputs) {
 		const familyOverride = nodeOverrides?.[inputFamilyKey(inputDef)];
-		if (familyOverride) {
+		if (familyOverride && isWgslType(familyOverride)) {
 			rawInferred[inputDef.id] = familyOverride;
 			continue;
 		}
 		const edgesForInput = incoming.filter((e) => e.targetHandle === inputDef.id);
-		if (edgesForInput.length === 0) {
+		if (edgesForInput.length === 0 || inputDef.types.length === 1) {
 			rawInferred[inputDef.id] = inputDefaultType(inputDef);
-			continue;
-		}
-		if (inputDef.types.length === 1) {
-			rawInferred[inputDef.id] = inputDef.types[0] ?? inputDefaultType(inputDef);
 			continue;
 		}
 		const sourceTypes = edgesForInput.map((e) =>
 			inferHandleType(e, resolveNode, resolveDescriptor, getIncomingEdges, definitions),
 		);
-		rawInferred[inputDef.id] = highestType(sourceTypes, inputDefaultType(inputDef));
+		rawInferred[inputDef.id] = highestType(sourceTypes, inputDef.types);
 	}
 
-	// Phase 2: group by family, pick highest per family
-	const familyHighest = new Map<string, WgslType>();
-	for (const inputDef of descriptor.inputs) {
-		const current = rawInferred[inputDef.id] ?? inputDefaultType(inputDef);
+	// Phase 2: join every input of a family. Unconnected inputs only count when
+	// the family is overridden, so a lone i32 source isn't widened to f32 by its
+	// unconnected (default-typed) siblings.
+	const familyCandidates = new Map<string, { types: readonly WgslType[]; found: WgslType[] }>();
+	for (const inputDef of activeInputs) {
 		const family = inputFamilyKey(inputDef);
-		const existing = familyHighest.get(family);
-		if (!existing || WGSL_COMPONENTS[current] > WGSL_COMPONENTS[existing]) {
-			familyHighest.set(family, current);
-		}
+		const entry = familyCandidates.get(family) ?? { types: inputDef.types, found: [] };
+		const connected = incoming.some((e) => e.targetHandle === inputDef.id);
+		const overridden = nodeOverrides?.[family] !== undefined;
+		const inferred = rawInferred[inputDef.id];
+		if (inferred && (connected || overridden)) entry.found.push(inferred);
+		familyCandidates.set(family, entry);
+	}
+	const familyResolved = new Map<string, WgslType>();
+	for (const [family, { types, found }] of familyCandidates) {
+		familyResolved.set(family, highestType(found, types));
 	}
 
 	// Phase 3: all inputs in the same family get the family's resolved type
 	const inputTypes: Record<string, WgslType> = {};
-	for (const inputDef of descriptor.inputs) {
+	for (const inputDef of activeInputs) {
 		inputTypes[inputDef.id] =
-			familyHighest.get(inputFamilyKey(inputDef)) ?? inputDefaultType(inputDef);
+			familyResolved.get(inputFamilyKey(inputDef)) ?? inputDefaultType(inputDef);
 	}
 
-	// Phase 4: resolve output type
-	const representativeType = descriptor.inputs[0]
-		? (inputTypes[descriptor.inputs[0].id] ?? inputDefaultType(descriptor.inputs[0]))
+	// Phase 4: resolve output type from the primary input
+	const primary = activeInputs.find((i) => i.id === descriptor.primaryInput) ?? activeInputs[0];
+	const representativeType = primary
+		? (inputTypes[primary.id] ?? inputDefaultType(primary))
 		: (descriptor.outputs[0]?.type ?? "f32");
 
-	let outputType: WgslType;
-	if (descriptor.typeFamily) {
-		const familyOverride = nodeData[descriptor.typeFamily.key] as WgslType | undefined;
-		outputType = familyOverride ?? descriptor.typeFamily.types[0] ?? "f32";
-	} else {
-		outputType = descriptor.resolveOutputType
+	const outputType =
+		familyOutputType ??
+		(descriptor.resolveOutputType
 			? descriptor.resolveOutputType(representativeType)
-			: representativeType;
-	}
+			: representativeType);
 
-	// Phase 5: resolve dynamic inputs and outputs
-	const resolvedOutputs = descriptor.resolveOutputs
+	// Phase 5: resolve dynamic inputs and outputs. Outputs carry their concrete
+	// type so downstream consumers can read per-handle types directly.
+	const rawOutputs = descriptor.resolveOutputs
 		? descriptor.resolveOutputs(representativeType)
 		: descriptor.outputs;
-	const resolvedInputs = descriptor.resolveInputs
-		? descriptor.resolveInputs(outputType)
-		: descriptor.inputs;
+	const resolvedOutputs = descriptor.staticOutputTypes
+		? rawOutputs
+		: rawOutputs.map((o) => ({ ...o, type: outputType }));
+	const resolvedInputs =
+		familyOutputType === undefined && descriptor.resolveInputs
+			? descriptor.resolveInputs(outputType)
+			: activeInputs;
 
 	return { inputTypes, outputType, resolvedInputs, resolvedOutputs };
 }
 
+/** The type carried by one output handle of a resolved node. */
+function outputHandleType(resolved: ResolvedNodeTypes, handleId: string): WgslType {
+	return resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType;
+}
+
 /**
  * Recursively resolve the WGSL type produced by an edge's source handle.
- * Uses memoized `resolveNodeTypes` on the source node to get its dynamic
- * output type (handles `resolveOutputType` callbacks correctly).
  */
 function inferHandleType(
 	edge: GraphDocumentEdge,
@@ -198,17 +220,9 @@ function inferHandleType(
 	const sourceNode = resolveNode(edge.source);
 	if (!sourceNode) return "f32";
 
-	// group-input: type comes directly from the handle definition
-	if (sourceNode.type === "group-input") {
-		const handle = (
-			sourceNode.data.handles as { id: string; type: WgslType }[] | undefined
-		)?.find((h) => h.id === edge.sourceHandle);
-		return handle?.type ?? "f32";
-	}
-
 	const descriptor = resolveDescriptor(sourceNode);
 	const incoming = getIncomingEdges(edge.source);
-	const { outputType } = resolveNodeTypesForNode(
+	const resolved = resolveNodeTypesForNode(
 		sourceNode,
 		descriptor,
 		incoming,
@@ -218,7 +232,7 @@ function inferHandleType(
 		getIncomingEdges,
 		definitions,
 	);
-	return outputType;
+	return outputHandleType(resolved, edge.sourceHandle);
 }
 
 // ── TypeResolver class ────────────────────────────────────────────────────────
@@ -304,11 +318,8 @@ export class TypeResolver {
 			if (!node) return "f32";
 			cached = this.resolveNodeTypes(node, incoming, resolveNode);
 		}
-		const resolvedNode = resolveNode(nodeId);
-		if (!resolvedNode) return "f32";
-		const inputDef = this.resolveDescriptor(resolvedNode).inputs.find((i) => i.id === inputId);
-		if (!inputDef) return "f32";
-		return cached.inputTypes[inputId] ?? inputDefaultType(inputDef);
+		const inputDef = cached.resolvedInputs.find((i) => i.id === inputId);
+		return cached.inputTypes[inputId] ?? (inputDef ? inputDefaultType(inputDef) : "f32");
 	}
 
 	/**
@@ -373,18 +384,8 @@ export class TypeResolver {
 		edge: GraphDocumentEdge,
 		resolveNode: (id: string) => GroupedNode | undefined,
 	): WgslType {
-		const sourceNode = resolveNode(edge.source);
-		if (!sourceNode) return "f32";
-
-		if (sourceNode.type === "group-input") {
-			const handle = (
-				sourceNode.data.handles as { id: string; type: WgslType }[] | undefined
-			)?.find((h) => h.id === edge.sourceHandle);
-			return handle?.type ?? "f32";
-		}
-
 		const cached = this.cache.get(edge.source);
-		if (cached) return cached.outputType;
+		if (cached) return outputHandleType(cached, edge.sourceHandle);
 
 		return inferHandleType(
 			edge,

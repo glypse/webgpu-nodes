@@ -1,47 +1,74 @@
 import type { Node } from "@xyflow/svelte";
 
 import type { GraphManager } from "./graph-state.svelte";
-import { ROOT_ID, type GraphDocumentEdge, type HydratedEdge } from "./graph-types";
+import { ROOT_ID, type HydratedEdge } from "./graph-types";
 import type { HydratedGraphDocument } from "./hydrated-document.svelte";
-import type { TypeResolver } from "./type-resolver";
-import type { GroupedNode, HandleDef, NodeDescriptor, WgslType } from "./types";
-import { WGSL_DEFAULTS, promoteVar, inputDefaultType } from "./types";
-import { emitHelperFunctions } from "./wgsl-helpers";
+import type { GroupedNode, HandleDef, ScalarKind, WgslType } from "./types";
+import {
+	WGSL_DEFAULTS,
+	convertVar,
+	inputDefaultType,
+	typeComponents,
+	typeKind,
+	wgslTypeName,
+} from "./types";
+import { HelperRegistry } from "./wgsl-helpers";
 
-/**
- * Safely convert an unknown value to a numeric WGSL literal component.
- */
-function toNum(v: unknown, fallback: number): string {
-	const n = Number(v);
-	return String(Number.isFinite(n) ? n : fallback);
+// ── Literals ─────────────────────────────────────────────────────────────────
+
+const SCALAR_LIMITS = {
+	i32: { min: -2147483647, max: 2147483647 },
+	u32: { min: 0, max: 4294967295 },
+};
+
+/** Format a stored data value as a WGSL scalar literal of the given kind. */
+function scalarLiteral(kind: ScalarKind, value: unknown): string {
+	if (kind === "bool") {
+		const truthy =
+			value === true || value === "true" || (typeof value === "number" && value !== 0);
+		return truthy ? "true" : "false";
+	}
+	const raw = Number(value);
+	const n = Number.isFinite(raw) ? raw : 0;
+	if (kind === "f32") return `f32(${String(n)})`;
+	const { min, max } = SCALAR_LIMITS[kind];
+	const int = Math.min(max, Math.max(min, Math.trunc(n)));
+	return `${kind}(${String(int)})`;
 }
 
+const LITERAL_COMPONENTS = ["x", "y", "z", "w"];
+
 /**
- * Format a data value as a WGSL literal for a given type.
+ * Format a stored data value as a WGSL literal for a given type. Vectors are
+ * stored as `{ x, y, z, w }` objects; a plain scalar fills every component
+ * (the editor UI shows it the same way).
  */
-function formatWgslLiteral(type: WgslType, value: unknown): string {
-	if (type === "f32") {
-		return `f32(${toNum(value, 0)})`;
-	}
-	if (typeof value === "object" && value !== null) {
-		const obj = value as Record<string, unknown>;
-		switch (type) {
-			case "vec2f":
-				return `vec2f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}))`;
-			case "vec3f":
-				return `vec3f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}))`;
-			case "vec4f":
-				return `vec4f(f32(${toNum(obj.x, 0)}), f32(${toNum(obj.y, 0)}), f32(${toNum(obj.z, 0)}), f32(${toNum(obj.w, 0)}))`;
+export function formatWgslLiteral(type: WgslType, value: unknown): string {
+	const kind = typeKind(type);
+	const components = typeComponents(type);
+	if (components === 1) {
+		if (typeof value === "object" && value !== null) {
+			return scalarLiteral(kind, (value as Record<string, unknown>).x);
 		}
+		return scalarLiteral(kind, value);
 	}
-	return WGSL_DEFAULTS[type];
+	if (value === undefined || value === null) return WGSL_DEFAULTS[type];
+	if (typeof value === "object") {
+		const obj = value as Record<string, unknown>;
+		const parts = LITERAL_COMPONENTS.slice(0, components).map((c) =>
+			scalarLiteral(kind, obj[c]),
+		);
+		return `${wgslTypeName(type)}(${parts.join(", ")})`;
+	}
+	return `${wgslTypeName(type)}(${scalarLiteral(kind, value)})`;
 }
+
+// ── Graph walking ────────────────────────────────────────────────────────────
 
 /**
  * Walk backwards from seed-type nodes through edges to find all node IDs
  * that contribute to the final output. `seedType` is "frag-output" at root,
- * "group-output" inside any group's own subgraph - that's the only thing
- * that differs between generating the root shader and generating one group's function.
+ * "group-output" inside any group's own subgraph.
  */
 function findReachableNodeIds(
 	nodes: Map<string, Node>,
@@ -49,17 +76,11 @@ function findReachableNodeIds(
 	seedType: string,
 ): Set<string> {
 	const reverseAdj = new Map<string, string[]>();
-	for (const node of nodes.values()) {
-		reverseAdj.set(node.id, []);
-	}
-	for (const edge of edges) {
-		const sources = reverseAdj.get(edge.target);
-		if (sources) sources.push(edge.source);
-	}
+	for (const node of nodes.values()) reverseAdj.set(node.id, []);
+	for (const edge of edges) reverseAdj.get(edge.target)?.push(edge.source);
 
 	const reachable = new Set<string>();
 	const queue: string[] = [];
-
 	for (const node of nodes.values()) {
 		if (node.type === seedType) {
 			reachable.add(node.id);
@@ -69,7 +90,7 @@ function findReachableNodeIds(
 
 	while (queue.length > 0) {
 		const current = queue.shift();
-		if (!current) break;
+		if (current === undefined) break;
 		for (const source of reverseAdj.get(current) ?? []) {
 			if (!reachable.has(source)) {
 				reachable.add(source);
@@ -84,30 +105,26 @@ function findReachableNodeIds(
 /**
  * Topological sort of node IDs. Works on a DAG; throws if a cycle is detected.
  */
-function topologicalSort(nodes: Map<string, Node>, edges: HydratedEdge[]): string[] {
+function topologicalSort(ids: Iterable<string>, edges: HydratedEdge[]): string[] {
 	const adjacency = new Map<string, string[]>();
 	const inDegree = new Map<string, number>();
-
-	for (const node of nodes.values()) {
-		adjacency.set(node.id, []);
-		inDegree.set(node.id, 0);
+	for (const id of ids) {
+		adjacency.set(id, []);
+		inDegree.set(id, 0);
 	}
-
 	for (const edge of edges) {
-		const targets = adjacency.get(edge.source);
-		if (targets) targets.push(edge.target);
+		if (!adjacency.has(edge.source) || !inDegree.has(edge.target)) continue;
+		adjacency.get(edge.source)?.push(edge.target);
 		inDegree.set(edge.target, (inDegree.get(edge.target) ?? 0) + 1);
 	}
 
 	const queue: string[] = [];
-	for (const [id, degree] of inDegree) {
-		if (degree === 0) queue.push(id);
-	}
+	for (const [id, degree] of inDegree) if (degree === 0) queue.push(id);
 
 	const sorted: string[] = [];
 	while (queue.length > 0) {
 		const nodeId = queue.shift();
-		if (!nodeId) throw new Error("Unexpected empty queue");
+		if (nodeId === undefined) break;
 		sorted.push(nodeId);
 		for (const neighbor of adjacency.get(nodeId) ?? []) {
 			const newDegree = (inDegree.get(neighbor) ?? 0) - 1;
@@ -116,150 +133,55 @@ function topologicalSort(nodes: Map<string, Node>, edges: HydratedEdge[]): strin
 		}
 	}
 
-	if (sorted.length !== nodes.size) {
+	if (sorted.length !== inDegree.size) {
 		throw new Error("Cycle detected in the node graph - cannot generate shader");
 	}
-
 	return sorted;
 }
 
-function getVarName(nodeId: string): string {
-	return `v_${nodeId.replace(/[.-]/g, "_")}`;
-}
-
 /** WGSL identifiers can't contain characters like "-" from a UUID's dashes. */
+function identSuffix(id: string): string {
+	return id.replace(/[^A-Za-z0-9_]/g, "_");
+}
+
+function getVarName(nodeId: string): string {
+	return `v_${identSuffix(nodeId)}`;
+}
+
 function sanitizeIdent(id: string): string {
-	return `h_${id.replace(/[.-]/g, "_")}`;
+	return `h_${identSuffix(id)}`;
 }
 
-export function debugSort(nodes: Node[], edges: HydratedEdge[]): string[] {
-	const nodeMap = new Map<string, Node>();
-	for (const node of nodes) {
-		nodeMap.set(node.id, node);
-	}
-	return topologicalSort(nodeMap, edges);
-}
+// ── Hashing ──────────────────────────────────────────────────────────────────
 
-/**
- * Resolve the WGSL variable name for a given edge's source.
- * - Single-output sources: `v_nodeId`.
- * - Multi-output sources (ordinary nodes): `v_nodeId_outputName`.
- * - Group-node sources: `v_nodeId.outputHandleId` - a field access on the
- *   struct the group's generated function returns, since a group's "outputs"
- *   are all produced by ONE function call, not separate `let` statements.
- */
-function getSourceVar(
-	edge: HydratedEdge,
-	nodes: Map<string, Node>,
-	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
-): string {
-	const sourceNode = nodes.get(edge.source);
-	if (sourceNode?.type === "group-input") {
-		return sanitizeIdent(edge.sourceHandle); // it's a function parameter, not a let-var
-	}
-	const base = getVarName(edge.source);
-	if (sourceNode?.type) {
-		if (sourceNode.type === "node-group") {
-			return `${base}.${sanitizeIdent(edge.sourceHandle)}`;
-		}
-		const sourceDescriptor = resolveDescriptor(sourceNode);
-		if (sourceDescriptor.outputs.length > 1) {
-			return base + "_" + edge.sourceHandle;
+function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
+	const out: Record<string, unknown> = {};
+	for (const [k, v] of Object.entries(data)) {
+		if (k === "handles" && Array.isArray(v)) {
+			out[k] = v.map((h): { id: string; type: string } => {
+				if (typeof h === "object" && h !== null && "id" in h && "type" in h) {
+					const handle = h as { id: string; type: string };
+					return { id: handle.id, type: handle.type };
+				}
+				return { id: "", type: "" };
+			});
+		} else {
+			out[k] = v;
 		}
 	}
-	return base;
+	return out;
 }
 
-/**
- * Resolve the WGSL type produced by an edge's source handle. Uses the
- * TypeResolver for dynamic output types (not static descriptor types).
- * Returns "f32" if it can't be determined (fail soft).
- */
-function getSourceType(
-	edge: HydratedEdge,
-	typeResolver: TypeResolver,
-	resolveNode: (id: string) => GroupedNode | undefined,
-): WgslType {
-	const sourceNode = resolveNode(edge.source);
-	if (!sourceNode) return "f32";
-	if (sourceNode.type === "group-input") {
-		const handle = (sourceNode.data.handles as HandleDef[] | undefined)?.find(
-			(h) => h.id === edge.sourceHandle,
-		);
-		return handle?.type ?? "f32";
-	}
-	return typeResolver.inferHandleType(
-		{
-			id: "",
-			source: edge.source,
-			sourceHandle: edge.sourceHandle,
-			target: "",
-			targetHandle: "",
-		},
-		resolveNode,
-	);
-}
-
-/**
- * Compute a stable hash from the graph state that actually affects the shader output.
- */
-export function shaderHash(nodes: Node[], edges: HydratedEdge[]): string {
-	return JSON.stringify({
-		nodes: nodes.map((n) => ({ id: n.id, type: n.type, data: n.data })),
-		edges: edges.map((e) => ({
+function hashDoc(doc: { nodes: Node[]; edges: HydratedEdge[] }) {
+	return {
+		nodes: doc.nodes.map((n) => ({ id: n.id, type: n.type, data: stripLabels(n.data) })),
+		edges: doc.edges.map((e) => ({
 			source: e.source,
 			target: e.target,
 			sourceHandle: e.sourceHandle,
 			targetHandle: e.targetHandle,
 		})),
-	});
-}
-
-/**
- * Hash the entire project (all definitions) so that edits inside any
- * subgraph also trigger a re-generation of the shader.
- */
-export function projectHash(project: {
-	definitions: Map<string, { nodes: Node[]; edges: HydratedEdge[] }>;
-}): string {
-	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
-		const out: Record<string, unknown> = {};
-		for (const [k, v] of Object.entries(data)) {
-			if (k === "handles" && Array.isArray(v)) {
-				out[k] = v.map((h): { id: string; type: string } => {
-					if (typeof h === "object" && h !== null && "id" in h && "type" in h) {
-						const handle = h as { id: string; label: string; type: string };
-						return { id: handle.id, type: handle.type };
-					}
-					return { id: "", type: "" };
-				});
-			} else {
-				out[k] = v;
-			}
-		}
-		return out;
-	}
-
-	return JSON.stringify(
-		Object.fromEntries(
-			[...project.definitions.entries()].map(([key, doc]) => [
-				key,
-				{
-					nodes: doc.nodes.map((n) => ({
-						id: n.id,
-						type: n.type,
-						data: stripLabels(n.data),
-					})),
-					edges: doc.edges.map((e) => ({
-						source: e.source,
-						target: e.target,
-						sourceHandle: e.sourceHandle,
-						targetHandle: e.targetHandle,
-					})),
-				},
-			]),
-		),
-	);
+	};
 }
 
 /**
@@ -272,81 +194,30 @@ export function projectHash(project: {
 export function reachableShaderHash(project: {
 	definitions: Map<string, { nodes: Node[]; edges: HydratedEdge[] }>;
 }): string {
-	function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
-		const out: Record<string, unknown> = {};
-		for (const [k, v] of Object.entries(data)) {
-			if (k === "handles" && Array.isArray(v)) {
-				out[k] = v.map((h): { id: string; type: string } => {
-					if (typeof h === "object" && h !== null && "id" in h && "type" in h) {
-						const handle = h as { id: string; label: string; type: string };
-						return { id: handle.id, type: handle.type };
-					}
-					return { id: "", type: "" };
-				});
-			} else {
-				out[k] = v;
-			}
-		}
-		return out;
-	}
-
-	function hashDoc(doc: { nodes: Node[]; edges: HydratedEdge[] }) {
-		return {
-			nodes: doc.nodes.map((n) => ({
-				id: n.id,
-				type: n.type,
-				data: stripLabels(n.data),
-			})),
-			edges: doc.edges.map((e) => ({
-				source: e.source,
-				target: e.target,
-				sourceHandle: e.sourceHandle,
-				targetHandle: e.targetHandle,
-			})),
-		};
-	}
-
 	const root = project.definitions.get(ROOT_ID);
 	if (!root) return "";
 
-	// 1. Find reachable node IDs from frag-output in the root document.
 	const nodeMap = new Map<string, GroupedNode>();
 	for (const node of root.nodes) nodeMap.set(node.id, node);
 	const reachableRootIds = findReachableNodeIds(nodeMap, root.edges, "frag-output");
 
-	// 2. Collect group definitions referenced by reachable group nodes (recursively).
 	const visitedGroupDefs = new Set<string>();
 	const defQueue: string[] = [];
+	const visit = (node: GroupedNode) => {
+		if (node.type !== "node-group" || !node.group) return;
+		if (visitedGroupDefs.has(node.group.definitionRef)) return;
+		visitedGroupDefs.add(node.group.definitionRef);
+		defQueue.push(node.group.definitionRef);
+	};
 	for (const nodeId of reachableRootIds) {
 		const node = nodeMap.get(nodeId);
-		if (node?.type === "node-group" && node.group) {
-			if (!visitedGroupDefs.has(node.group.definitionRef)) {
-				visitedGroupDefs.add(node.group.definitionRef);
-				defQueue.push(node.group.definitionRef);
-			}
-		}
+		if (node) visit(node);
 	}
 	while (defQueue.length > 0) {
 		const ref = defQueue.pop();
 		if (ref === undefined) break;
-		const def = project.definitions.get(ref);
-		if (!def) continue;
-		for (const node of def.nodes) {
-			const groupedNode = node as GroupedNode;
-			if (groupedNode.type === "node-group" && groupedNode.group) {
-				if (!visitedGroupDefs.has(groupedNode.group.definitionRef)) {
-					visitedGroupDefs.add(groupedNode.group.definitionRef);
-					defQueue.push(groupedNode.group.definitionRef);
-				}
-			}
-		}
+		for (const node of project.definitions.get(ref)?.nodes ?? []) visit(node);
 	}
-
-	// 3. Hash only the reachable root nodes/edges and the referenced definitions.
-	const reachableRootNodes = root.nodes.filter((n) => reachableRootIds.has(n.id));
-	const reachableRootEdges = root.edges.filter(
-		(e) => reachableRootIds.has(e.source) && reachableRootIds.has(e.target),
-	);
 
 	const defs: Record<string, ReturnType<typeof hashDoc>> = {};
 	for (const ref of visitedGroupDefs) {
@@ -355,184 +226,155 @@ export function reachableShaderHash(project: {
 	}
 
 	return JSON.stringify({
-		root: hashDoc({ nodes: reachableRootNodes, edges: reachableRootEdges }),
+		root: hashDoc({
+			nodes: root.nodes.filter((n) => reachableRootIds.has(n.id)),
+			edges: root.edges.filter(
+				(e) => reachableRootIds.has(e.source) && reachableRootIds.has(e.target),
+			),
+		}),
 		defs,
 	});
 }
 
-/**
- * Every group's generated `struct` + `fn` text, collected once per distinct
- * definitionRef while walking the whole graph (root + every nested group).
- * Keying by definitionRef is what gives you memoization for free: two locked
- * instances of the same group ask for the same key, so the second lookup
- * short-circuits `emitGroupFunction` instead of generating a duplicate.
- */
-type GroupDecls = Map<
-	string,
-	{
-		structDecl: string;
-		fnDecl: string;
-		fnName: string;
-		structName: string;
-	}
+// ── Code generation ──────────────────────────────────────────────────────────
+
+/** The slice of the GraphManager that code generation depends on. */
+export type CodegenGraph = Pick<
+	GraphManager,
+	"root" | "project" | "typeResolver" | "resolveDescriptor" | "resolveNode"
 >;
 
-/**
- * The reusable "walk one subgraph and emit its body lines" logic - this is the
- * part of the old generateShader that had nothing to do with being the root.
- * Used both for the root fragment body and for every group's function body.
- *
- * Returns the emitted lines AND the variable name that should be returned -
- * for root that's whatever feeds frag-output; for a group, we build a struct
- * literal from whatever feeds group-output instead (handled by the caller).
- */
-function generateBody(
-	nodes: Node[],
-	edges: HydratedEdge[],
-	seedType: string,
-	groupDecls: GroupDecls,
-	typeResolver: TypeResolver,
-	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
-	resolveNode: (id: string) => GroupedNode | undefined,
-	getGroupDefinition: (definitionRef: string) => HydratedGraphDocument | undefined,
-): {
-	lines: string[];
-	seedNodeVarName: string | null;
+type LineMap = Map<string, { start: number; end: number }>;
+
+/** Everything shared while generating one shader. */
+type ShaderState = {
+	graph: CodegenGraph;
+	helpers: HelperRegistry;
 	/**
-	 * TODO: lineMap will be used to highlight faulty edges in-UI
+	 * Every group's generated `struct` + `fn`, keyed by definitionRef so each
+	 * definition is emitted once no matter how many instances use it.
 	 */
-	lineMap: Map<string, { start: number; end: number }>;
-} {
-	const nodeMap = new Map<string, Node>();
-	for (const node of nodes) {
-		nodeMap.set(node.id, node);
+	groupDecls: Map<string, { decl: string; fnName: string }>;
+};
+
+/**
+ * Emits the body of one document (the root fragment or a group function).
+ * Expressions for node outputs are resolved through `sourceExpr`, conversions
+ * through the TypeResolver's per-handle types.
+ */
+class BodyEmitter {
+	readonly lines: string[] = [];
+	readonly lineMap: LineMap = new Map();
+	private nodeMap = new Map<string, GroupedNode>();
+	private incomingByTarget = new Map<string, HydratedEdge[]>();
+
+	constructor(
+		private state: ShaderState,
+		doc: { nodes: GroupedNode[] },
+		edges: HydratedEdge[],
+	) {
+		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
+		for (const edge of edges) {
+			const list = this.incomingByTarget.get(edge.target) ?? [];
+			list.push(edge);
+			this.incomingByTarget.set(edge.target, list);
+		}
 	}
 
-	const reachableIds = findReachableNodeIds(nodeMap, edges, seedType);
-	const filteredEdges = edges.filter(
-		(e) => reachableIds.has(e.source) && reachableIds.has(e.target),
-	);
-	const sortedIds = topologicalSort(nodeMap, filteredEdges).filter((id) => reachableIds.has(id));
-
-	const targetEdgeMap = new Map<string, HydratedEdge[]>();
-	for (const edge of filteredEdges) {
-		const list = targetEdgeMap.get(edge.target) ?? [];
-		list.push(edge);
-		targetEdgeMap.set(edge.target, list);
+	private get typeResolver() {
+		return this.state.graph.typeResolver;
 	}
 
-	const lines: string[] = [];
-	const lineMap = new Map<string, { start: number; end: number }>();
-	let seedNodeVarName: string | null = null;
+	private resolveNode = (id: string) => this.state.graph.resolveNode(id);
 
-	for (const nodeId of sortedIds) {
-		const node = nodeMap.get(nodeId);
-		if (!node?.type) continue;
+	incoming(nodeId: string): HydratedEdge[] {
+		return this.incomingByTarget.get(nodeId) ?? [];
+	}
 
-		const varName = getVarName(nodeId);
-		const incoming = targetEdgeMap.get(nodeId) ?? [];
+	/** The WGSL expression holding the value of an edge's source handle. */
+	sourceExpr(edge: HydratedEdge): string {
+		const sourceNode = this.nodeMap.get(edge.source);
+		if (sourceNode?.type === "group-input") return sanitizeIdent(edge.sourceHandle);
+		const base = getVarName(edge.source);
+		if (sourceNode?.type === "node-group") return `${base}.${sanitizeIdent(edge.sourceHandle)}`;
+		if (sourceNode && this.state.graph.resolveDescriptor(sourceNode).outputs.length > 1) {
+			return `${base}_${edge.sourceHandle}`;
+		}
+		return base;
+	}
 
-		// Group nodes don't call descriptor.wgsl() the normal way - they need
-		// their own function generated first (recursively), THEN a one-line
-		// call to it. Every other node type falls through to the shared path below.
+	/** The type carried by an edge's source handle. */
+	sourceType(edge: HydratedEdge): WgslType {
+		return this.typeResolver.inferHandleType(edge, this.resolveNode);
+	}
+
+	/** The source expression of an edge, converted to `target`. */
+	convertedSource(edge: HydratedEdge, target: WgslType): string {
+		return convertVar(this.sourceExpr(edge), this.sourceType(edge), target);
+	}
+
+	/**
+	 * The value fed to `node`'s input `inputId`, as an expression of type
+	 * `target`: the connected source (converted) or the node's stored literal.
+	 */
+	inputExpr(node: GroupedNode, inputId: string, target: WgslType, fallback?: unknown): string {
+		const edge = this.incoming(node.id).find((e) => e.targetHandle === inputId);
+		if (edge) return this.convertedSource(edge, target);
+		return formatWgslLiteral(target, node.data[inputId] ?? fallback);
+	}
+
+	private push(nodeId: string, statements: string[], indent: string) {
+		const start = this.lines.length;
+		for (const line of statements) this.lines.push(`${indent}${line}`);
+		this.lineMap.set(nodeId, { start, end: this.lines.length });
+	}
+
+	/** Emit the statements computing one ordinary or group node. */
+	emitNode(node: GroupedNode, indent: string) {
 		if (node.type === "node-group") {
-			const groupedNode = node as GroupedNode;
-			const definitionRef = groupedNode.group?.definitionRef;
-			if (definitionRef) {
-				emitGroupFunctionIfNeeded(
-					definitionRef,
-					groupDecls,
-					typeResolver,
-					resolveDescriptor,
-					resolveNode,
-					getGroupDefinition,
-				);
-				const decl = groupDecls.get(definitionRef);
-				if (decl) {
-					const groupedDescriptor = resolveDescriptor(groupedNode);
-					const inputArgs = groupedDescriptor.inputs.map((inputDef) => {
-						const edgesForHandle = incoming.filter(
-							(e) => e.targetHandle === inputDef.id,
-						);
-						const firstEdge = edgesForHandle[0];
-						if (firstEdge) {
-							const raw = getSourceVar(firstEdge, nodeMap, resolveDescriptor);
-							const sourceType = getSourceType(firstEdge, typeResolver, resolveNode);
-							return promoteVar(raw, sourceType, inputDefaultType(inputDef));
-						}
-						const dataVal =
-							node.data[inputDef.id] ?? groupedDescriptor.defaultData[inputDef.id];
-						return formatWgslLiteral(inputDefaultType(inputDef), dataVal);
-					});
-					const callArgs = inputArgs;
-					const startLine = lines.length;
-					lines.push(`  let ${varName} = ${decl.fnName}(${callArgs.join(", ")});`);
-					lineMap.set(nodeId, { start: startLine, end: lines.length });
-				}
-			}
-			continue;
+			this.emitGroupCall(node, indent);
+			return;
 		}
 
-		if (node.type === "group-input" || node.type === "group-output") {
-			continue; // sinks/sources handled structurally by emitGroupFunctionIfNeeded, not via .wgsl()
-		}
-
-		const descriptor = resolveDescriptor(node);
-
-		// Node-wide type resolution (single source of truth via TypeResolver)
-		const incomingForResolver = incoming as GraphDocumentEdge[];
+		const graph = this.state.graph;
+		const descriptor = graph.resolveDescriptor(node);
+		const varName = getVarName(node.id);
+		const incoming = this.incoming(node.id);
 		const { inputTypes, outputType, resolvedInputs, resolvedOutputs } =
-			typeResolver.resolveNodeTypes(node, incomingForResolver, resolveNode);
+			this.typeResolver.resolveNodeTypes(node, incoming, this.resolveNode);
 
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of resolvedOutputs) {
 			outputVars[outputDef.id] =
-				resolvedOutputs.length === 1 ? varName : varName + "_" + outputDef.id;
+				descriptor.outputs.length > 1 ? `${varName}_${outputDef.id}` : varName;
 		}
 
-		// Build input variable map – variadic inputs are pre-promoted, non-variadic are raw
+		const typeOf = (id: string): WgslType => {
+			const def = resolvedInputs.find((i) => i.id === id);
+			return inputTypes[id] ?? (def ? inputDefaultType(def) : "f32");
+		};
+
+		// Variadic inputs are pre-converted, non-variadic ones are raw.
 		const ctxInputs: Record<string, string[]> = {};
 		for (const inputDef of resolvedInputs) {
 			const edgesForHandle = incoming.filter((e) => e.targetHandle === inputDef.id);
-			const resolvedType = inputTypes[inputDef.id] ?? inputDefaultType(inputDef);
-
 			if (inputDef.variadic) {
-				// Pre-promote each variadic operand to the resolved type
-				ctxInputs[inputDef.id] = edgesForHandle.map((e) => {
-					const raw = getSourceVar(e, nodeMap, resolveDescriptor);
-					const sourceType = getSourceType(e, typeResolver, resolveNode);
-					return promoteVar(raw, sourceType, resolvedType);
-				});
-			} else if (edgesForHandle.length > 0) {
-				const firstEdge = edgesForHandle[0];
-				if (firstEdge) {
-					ctxInputs[inputDef.id] = [getSourceVar(firstEdge, nodeMap, resolveDescriptor)];
-				} else {
-					ctxInputs[inputDef.id] = [];
-				}
+				ctxInputs[inputDef.id] = edgesForHandle.map((e) =>
+					this.convertedSource(e, typeOf(inputDef.id)),
+				);
 			} else {
-				const dataVal: unknown =
-					node.data[inputDef.id] ?? descriptor.defaultData[inputDef.id];
-				ctxInputs[inputDef.id] = [formatWgslLiteral(resolvedType, dataVal)];
+				const first = edgesForHandle[0];
+				ctxInputs[inputDef.id] = first ? [this.sourceExpr(first)] : [];
 			}
 		}
 
-		// Build the promoteInput helper for non-variadic inputs
 		const promoteInput = (id: string): string => {
-			const rawList = ctxInputs[id] ?? [];
-			const inputDef =
-				resolvedInputs.find((i) => i.id === id) ??
-				descriptor.inputs.find((i) => i.id === id);
-			if (!inputDef) return "f32(0.0)";
-
-			const resolvedType = inputTypes[id] ?? inputDefaultType(inputDef);
-			const raw = rawList[0] ?? WGSL_DEFAULTS[resolvedType];
-			const edge = incoming.find((e) => e.targetHandle === id);
-			const sourceType = edge ? getSourceType(edge, typeResolver, resolveNode) : resolvedType;
-			return promoteVar(raw, sourceType, resolvedType);
+			const inputDef = resolvedInputs.find((i) => i.id === id);
+			if (inputDef?.variadic) return (ctxInputs[id] ?? []).join(", ");
+			return this.inputExpr(node, id, typeOf(id), descriptor.defaultData[id]);
 		};
 
-		const wgslLines = descriptor.wgsl({
+		const statements = descriptor.wgsl({
 			varName,
 			outputVars,
 			data: node.data,
@@ -542,185 +384,138 @@ function generateBody(
 			resolvedOutputs,
 			resolvedInputs,
 			promoteInput,
+			convert: convertVar,
+			helper: (name, type) => this.state.helpers.use(name, type),
 		});
-		const startLine = lines.length;
-		for (const line of wgslLines) lines.push(`  ${line}`);
-		lineMap.set(nodeId, { start: startLine, end: lines.length });
-
-		if (node.type === seedType) seedNodeVarName = varName;
+		this.push(node.id, statements, indent);
 	}
 
-	return { lines, seedNodeVarName, lineMap };
+	private emitGroupCall(node: GroupedNode, indent: string) {
+		const definitionRef = node.group?.definitionRef;
+		if (!definitionRef) return;
+		const decl = emitGroupFunction(this.state, definitionRef);
+		if (!decl) return;
+		const descriptor = this.state.graph.resolveDescriptor(node);
+		const args = descriptor.inputs.map((inputDef) =>
+			this.inputExpr(node, inputDef.id, inputDefaultType(inputDef)),
+		);
+		this.push(
+			node.id,
+			[`let ${getVarName(node.id)} = ${decl.fnName}(${args.join(", ")});`],
+			indent,
+		);
+	}
 }
 
 /**
- * Generate one group's `struct` + `fn`, recursively (a group can contain
- * another group - this just calls generateBody again, unchanged).
- * No-ops if this definitionRef is already in groupDecls - that's the memoization.
+ * Emit the nodes of a document needed to compute `seedType` nodes, in
+ * dependency order. Boundary nodes are handled by the caller.
  */
-function emitGroupFunctionIfNeeded(
+function emitDocumentBody(
+	state: ShaderState,
+	doc: { nodes: GroupedNode[]; edges: HydratedEdge[] },
+	seedType: string,
+): BodyEmitter {
+	const nodeMap = new Map<string, GroupedNode>();
+	for (const node of doc.nodes) nodeMap.set(node.id, node);
+
+	const reachable = findReachableNodeIds(nodeMap, doc.edges, seedType);
+	const edges = doc.edges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
+	const emitter = new BodyEmitter(state, doc, edges);
+
+	for (const nodeId of topologicalSort(reachable, edges)) {
+		const node = nodeMap.get(nodeId);
+		if (!node?.type || node.type === "group-input" || node.type === "group-output") continue;
+		emitter.emitNode(node, "  ");
+	}
+	return emitter;
+}
+
+/**
+ * Generate one group's `struct` + `fn` (recursively for nested groups).
+ * Memoized per definitionRef.
+ */
+function emitGroupFunction(
+	state: ShaderState,
 	definitionRef: string,
-	groupDecls: GroupDecls,
-	typeResolver: TypeResolver,
-	resolveDescriptor: (node: GroupedNode) => NodeDescriptor,
-	resolveNode: (id: string) => GroupedNode | undefined,
-	getGroupDefinition: (definitionRef: string) => HydratedGraphDocument | undefined,
-): void {
-	if (groupDecls.has(definitionRef)) return; // memoized - already generated
+): { decl: string; fnName: string } | undefined {
+	const existing = state.groupDecls.get(definitionRef);
+	if (existing) return existing;
 
-	const definition = getGroupDefinition(definitionRef);
-	if (!definition) return;
-
-	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
-	const handles = (groupOutputNode?.data.handles ?? []) as HandleDef[];
-
-	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
-	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+	const definition: HydratedGraphDocument | undefined =
+		state.graph.project.definitions.get(definitionRef);
+	if (!definition) return undefined;
 
 	const ident = sanitizeIdent(definitionRef);
 	const fnName = `group_${ident}`;
 	const structName = `GroupOutputs_${ident}`;
 
-	const { lines } = generateBody(
-		definition.nodes,
-		definition.edges,
-		"group-output",
-		groupDecls,
-		typeResolver,
-		resolveDescriptor,
-		resolveNode,
-		getGroupDefinition,
+	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
+	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
+	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+	const outputHandles = (groupOutputNode?.data.handles ?? []) as HandleDef[];
+
+	const body = emitDocumentBody(state, definition, "group-output");
+
+	// Struct fields follow the declared handle types; whatever feeds them is
+	// converted on the way in, exactly like any other typed input.
+	const fieldValues = outputHandles.map((h) =>
+		groupOutputNode ? body.inputExpr(groupOutputNode, h.id, h.type) : WGSL_DEFAULTS[h.type],
 	);
-
-	// Resolve actual types from the internal wiring via the TypeResolver,
-	// rather than relying on HandleDef.type which can drift from the wiring.
-	const nodeMap = new Map<string, Node>();
-	for (const n of definition.nodes) nodeMap.set(n.id, n);
-
-	// Output struct fields: use the group-output node's resolved input types
-	// (these are the types the internal wiring actually delivers to each handle).
-	const resolvedOutputTypes: WgslType[] = handles.map((h) => {
-		if (!groupOutputNode) return h.type;
-		const incoming = definition.edgesByTarget.get(groupOutputNode.id) ?? [];
-		return typeResolver.resolveInputType(groupOutputNode.id, h.id, resolveNode, incoming);
-	});
-
-	// Input function parameters: use the group-input node's resolved output types
-	// (these are the types the group-input node actually produces for each handle).
-	const resolvedInputTypes: WgslType[] = inputHandles.map((h) => {
-		if (!groupInputNode) return h.type;
-		const incoming = definition.edgesByTarget.get(groupInputNode.id) ?? [];
-		const resolvedOutputs = typeResolver.resolveOutputs(
-			groupInputNode.id,
-			resolveNode,
-			incoming,
-		);
-		const outputDef = resolvedOutputs.find((o) => o.id === h.id);
-		return outputDef?.type ?? h.type;
-	});
-
-	// The group-output node itself never emits a `let` (it's a sink, not computed) -
-	// build the struct literal directly from whatever feeds each of its handles.
-	const outputEdges = groupOutputNode
-		? (definition.edgesByTarget.get(groupOutputNode.id) ?? [])
-		: [];
-
-	const fieldAssignments = handles.map((h, i) => {
-		const edge = outputEdges.find((e) => e.targetHandle === h.id);
-		const resolvedType = resolvedOutputTypes[i] ?? h.type;
-		return edge ? getSourceVar(edge, nodeMap, resolveDescriptor) : WGSL_DEFAULTS[resolvedType];
-	});
-
-	const structFields = handles
-		.map((h, i) => `  ${sanitizeIdent(h.id)}: ${resolvedOutputTypes[i] ?? h.type},`)
+	const structFields = outputHandles
+		.map((h) => `  ${sanitizeIdent(h.id)}: ${wgslTypeName(h.type)},`)
 		.join("\n");
-	const structDecl = `struct ${structName} {\n${structFields}\n}`;
-
-	// Group's inputs: use resolved types from the group-input node
 	const params = inputHandles
-		.map((h, i) => `${sanitizeIdent(h.id)}: ${resolvedInputTypes[i] ?? h.type}`)
+		.map((h) => `${sanitizeIdent(h.id)}: ${wgslTypeName(h.type)}`)
 		.join(", ");
 
-	const fnDecl = [
+	const decl = [
+		`struct ${structName} {\n${structFields}\n}`,
+		"",
 		`fn ${fnName}(${params}) -> ${structName} {`,
-		...lines,
-		`  return ${structName}(${fieldAssignments.join(", ")});`,
+		...body.lines,
+		`  return ${structName}(${fieldValues.join(", ")});`,
 		`}`,
 	].join("\n");
 
-	groupDecls.set(definitionRef, { structDecl, fnDecl, fnName, structName });
+	const entry = { decl, fnName };
+	state.groupDecls.set(definitionRef, entry);
+	return entry;
 }
 
 /**
  * Emit the full WGSL fragment shader source from the graph.
  */
-/** The slice of the GraphManager that code generation depends on. */
-export type CodegenGraph = Pick<
-	GraphManager,
-	"root" | "project" | "typeResolver" | "resolveDescriptor" | "resolveNode"
->;
+export function generateShader(graph: CodegenGraph): { shader: string; lineMap: LineMap } {
+	const state: ShaderState = { graph, helpers: new HelperRegistry(), groupDecls: new Map() };
 
-export function generateShader(graph: CodegenGraph): {
-	shader: string;
-	lineMap: Map<string, { start: number; end: number }>;
-} {
-	const { nodes, edges } = graph.root;
-	const groupDecls: GroupDecls = new Map();
-
-	const resolveDescriptor = (node: GroupedNode) => graph.resolveDescriptor(node);
-	const resolveNode = (id: string) => graph.resolveNode(id);
-	const getGroupDefinition = (definitionRef: string) =>
-		graph.project.definitions.get(definitionRef);
-
-	// Single source of truth: reuse the GraphManager's TypeResolver
-	const typeResolver = graph.typeResolver;
-
-	const { lines, seedNodeVarName, lineMap } = generateBody(
-		nodes,
-		edges,
-		"frag-output",
-		groupDecls,
-		typeResolver,
-		resolveDescriptor,
-		resolveNode,
-		getGroupDefinition,
-	);
+	const body = emitDocumentBody(state, graph.root, "frag-output");
+	const output = graph.root.nodes.find((n) => n.type === "frag-output");
+	const result = output && body.lineMap.has(output.id) ? getVarName(output.id) : undefined;
 
 	const preamble: string[] = [];
-
 	// Every group's struct + fn, emitted once each, before frag() itself.
-	for (const decl of groupDecls.values()) {
-		preamble.push(decl.structDecl, "", decl.fnDecl, "");
+	for (const { decl } of state.groupDecls.values()) preamble.push(decl, "");
+	const helpers = state.helpers.emit();
+	if (helpers.length > 0) {
+		preamble.push("// ---------- Common libraries ----------", "");
+		for (const fn of helpers) preamble.push(fn, "");
+	}
+	preamble.push("// ---------- User code ----------", "", "fn frag(uv: vec2f) -> vec4f {");
+
+	// Offset the line map so line numbers correspond to the final shader string.
+	const offset = preamble.length;
+	const lineMap: LineMap = new Map();
+	for (const [nodeId, range] of body.lineMap) {
+		lineMap.set(nodeId, { start: range.start + offset, end: range.end + offset });
 	}
 
-	preamble.push(
-		"// ---------- Common libraries ----------",
-		"",
-		...emitHelperFunctions().flatMap((fn) => [fn, ""]),
-		"// ---------- User code ----------",
-		"",
-		"fn frag(uv: vec2f) -> vec4f {",
-	);
-
-	const preambleText = preamble.join("\n");
-	const preambleLineCount = preambleText.split("\n").length;
-
-	// Offset the line map by the preamble line count so line numbers
-	// correspond to the final shader string.
-	const finalLineMap = new Map<string, { start: number; end: number }>();
-	for (const [nodeId, range] of lineMap) {
-		finalLineMap.set(nodeId, {
-			start: range.start + preambleLineCount,
-			end: range.end + preambleLineCount,
-		});
-	}
-
-	const body: string[] = [
+	const shader = [
 		...preamble,
-		...lines,
-		seedNodeVarName ? `  return ${seedNodeVarName};` : "  return vec4f(0.0, 0.0, 0.0, 0.0);",
+		...body.lines,
+		result ? `  return ${result};` : `  return ${WGSL_DEFAULTS.vec4f};`,
 		"}",
-	];
+	].join("\n");
 
-	return { shader: body.join("\n"), lineMap: finalLineMap };
+	return { shader, lineMap };
 }

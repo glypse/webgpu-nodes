@@ -13,6 +13,7 @@
 		targetPosition,
 		source,
 		target,
+		sourceHandleId,
 		targetHandleId,
 		selected,
 	}: EdgeProps = $props();
@@ -32,11 +33,7 @@
 		}),
 	);
 
-	const sourceType = $derived.by(() => {
-		const node = graph.resolveNode(source);
-		if (!node) return "f32";
-		return graph.resolveNodeOutputType(source);
-	});
+	const sourceType = $derived(graph.resolveOutputHandleType(source, sourceHandleId ?? ""));
 
 	const targetType = $derived.by(() => {
 		const node = graph.resolveNode(target);

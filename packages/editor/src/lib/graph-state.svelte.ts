@@ -1428,6 +1428,15 @@ export class GraphManager {
 	}
 
 	/**
+	 * Resolve the type carried by one output handle of a node.
+	 * Reads from the memoised type cache (single source of truth).
+	 */
+	resolveOutputHandleType(nodeId: string, handleId: string): WgslType {
+		const outputs = this.resolveNodeOutputs(nodeId);
+		return outputs.find((o) => o.id === handleId)?.type ?? this.resolveNodeOutputType(nodeId);
+	}
+
+	/**
 	 * Resolve the active inputs for a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
