@@ -1,5 +1,6 @@
 // Single-component: exported as bare names (use as <Button>, <Input>, etc.)
 export { Root as Button, buttonVariants } from "./button/index";
+export { Root as Checkbox } from "./checkbox/index";
 export { Root as Input } from "./input/index";
 export { Root as Label } from "./label/index";
 export { Root as Separator } from "./separator/index";
