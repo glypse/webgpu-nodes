@@ -34,6 +34,18 @@ import {
 	type WgslType,
 	isConnectionCompatible,
 } from "./types";
+import {
+	DEFAULT_ITERATIONS,
+	DEFAULT_MAX_ITERATIONS,
+	NEW_ITEM_HANDLE,
+	REPEAT_INPUT,
+	REPEAT_OUTPUT,
+	type ZoneAnalysis,
+	analyzeZones,
+	pairedOutputId,
+	wouldCreateCycle,
+	zoneItems,
+} from "./zones";
 
 // ── Standard library auto-import ──────────────────────────────────────────────
 
@@ -88,6 +100,18 @@ export class GraphManager {
 	 */
 	sheetOpen = $state(false);
 	sheetGroupId = $state<string | null>(null);
+
+	/**
+	 * Repeat zone settings sheet: the zone (Repeat Input node id) being edited.
+	 * Opened via the faders button on zone nodes.
+	 */
+	zoneSheetId = $state<string | null>(null);
+
+	/** Open (or toggle closed) the settings sheet of the zone a boundary node belongs to. */
+	openZoneSheet(boundaryNodeId: string) {
+		const zoneId = this.activeZones.zoneOfBoundary.get(boundaryNodeId) ?? null;
+		this.zoneSheetId = this.zoneSheetId === zoneId ? null : zoneId;
+	}
 
 	/** Open (or toggle closed) the group configuration sheet for a group node instance. */
 	openGroupSheet(targetNodeId: string) {
@@ -208,10 +232,41 @@ export class GraphManager {
 		return resolveDescriptor(node, this.project.definitions);
 	}
 
+	// ── Zones ───────────────────────────────────────────────────────────────
+
+	private zoneCache = new WeakMap<
+		HydratedGraphDocument,
+		{ nodes: GroupedNode[]; edges: HydratedEdge[]; analysis: ZoneAnalysis }
+	>();
+
 	/**
-	 * Public wrapper used by SvelteFlow's `isValidConnection` prop. Validates a
-	 * prospective edge against the WGSL type system: a higher-N value cannot be
-	 * fed into a lower-N input (the user must decompose it first).
+	 * Zone membership / invalid links of a document. Derived from its nodes and
+	 * edges (the single source of truth) and memoised on their identity.
+	 */
+	zoneAnalysis(doc: HydratedGraphDocument): ZoneAnalysis {
+		const cached = this.zoneCache.get(doc);
+		if (cached?.nodes === doc.nodes && cached.edges === doc.edges) return cached.analysis;
+		const analysis = analyzeZones(doc.nodes, doc.edges);
+		this.zoneCache.set(doc, { nodes: doc.nodes, edges: doc.edges, analysis });
+		return analysis;
+	}
+
+	/** Zone analysis of the currently-viewed document. */
+	get activeZones(): ZoneAnalysis {
+		return this.zoneAnalysis(this.activeDocument);
+	}
+
+	/** Whether an edge of the active document breaks zone rules (drawn red, ignored by codegen). */
+	isEdgeInvalid(edgeId: string): boolean {
+		return this.activeZones.invalidEdges.has(edgeId);
+	}
+
+	/**
+	 * Public wrapper used by SvelteFlow's `isValidConnection` prop. Rejects:
+	 * - connections that would close a cycle (zones included),
+	 * - type mismatches (a higher-N value into a lower-N input),
+	 * - connections breaking zone rules, or invalidating existing links.
+	 * Dropping on a zone's virtual "new item" handle accepts any type.
 	 */
 	isValidConnection(connection: {
 		source?: string | null;
@@ -220,19 +275,66 @@ export class GraphManager {
 		targetHandle?: string | null;
 	}): boolean {
 		if (!connection.source || !connection.target) return false;
-
-		const sourceNode = this.resolveNode(connection.source);
-		const targetNode = this.resolveNode(connection.target);
+		const doc = this.activeDocument;
+		const sourceNode = doc.nodesById.get(connection.source);
+		const targetNode = doc.nodesById.get(connection.target);
 		if (!sourceNode || !targetNode) return false;
 
+		const sourceHandle = connection.sourceHandle ?? "";
+		const targetHandle = connection.targetHandle ?? "";
+		if (sourceHandle === NEW_ITEM_HANDLE && targetHandle === NEW_ITEM_HANDLE) return false;
+		if (wouldCreateCycle(doc.nodes, doc.edges, connection.source, connection.target)) {
+			return false;
+		}
+
+		if (sourceHandle !== NEW_ITEM_HANDLE && targetHandle !== NEW_ITEM_HANDLE) {
+			if (!this.isTypeCompatible(sourceNode, sourceHandle, targetNode, targetHandle)) {
+				return false;
+			}
+		}
+
+		return this.respectsZones(doc, targetNode, {
+			id: "__candidate__",
+			source: connection.source,
+			sourceHandle,
+			target: connection.target,
+			targetHandle,
+		});
+	}
+
+	/**
+	 * Simulate adding `candidate` (replacing whatever already feeds a
+	 * non-variadic target) and check that neither it nor any existing link
+	 * ends up breaking zone rules.
+	 */
+	private respectsZones(
+		doc: HydratedGraphDocument,
+		targetNode: GroupedNode,
+		candidate: HydratedEdge,
+	): boolean {
+		const variadic = this.resolveDescriptor(targetNode).inputs.find(
+			(i) => i.id === candidate.targetHandle,
+		)?.variadic;
+		const kept = doc.edges.filter(
+			(e) =>
+				variadic === true ||
+				candidate.targetHandle === NEW_ITEM_HANDLE ||
+				!(e.target === candidate.target && e.targetHandle === candidate.targetHandle),
+		);
+		const before = this.zoneAnalysis(doc).invalidEdges;
+		const after = analyzeZones(doc.nodes, [...kept, candidate]).invalidEdges;
+		for (const id of after) if (!before.has(id)) return false;
+		return true;
+	}
+
+	private isTypeCompatible(
+		sourceNode: GroupedNode,
+		sourceHandle: string,
+		targetNode: GroupedNode,
+		targetHandle: string,
+	): boolean {
 		const sourceType = this.typeResolver.inferHandleType(
-			{
-				source: connection.source,
-				sourceHandle: connection.sourceHandle ?? "",
-				target: "",
-				targetHandle: "",
-				id: "",
-			},
+			{ source: sourceNode.id, sourceHandle, target: "", targetHandle: "", id: "" },
 			(id) => this.resolveNode(id),
 		);
 
@@ -240,35 +342,284 @@ export class GraphManager {
 
 		// For nodes with resolveInputs, validate against active inputs only
 		if (targetDescriptor.resolveInputs && targetDescriptor.typeFamily) {
-			const override = targetNode.data[targetDescriptor.typeFamily.key] as
-				| WgslType
-				| undefined;
-			const outputType = override ?? targetDescriptor.typeFamily.types[0] ?? "f32";
-			const activeInputs = targetDescriptor.resolveInputs(outputType);
-			const targetInputDef = activeInputs.find((i) => i.id === connection.targetHandle);
+			const activeInputs = this.resolveNodeInputs(targetNode.id);
+			const targetInputDef = activeInputs.find((i) => i.id === targetHandle);
 			if (!targetInputDef) return false;
 			return isConnectionCompatible(sourceType, targetInputDef.types[0] ?? "f32");
 		}
 
-		const targetEdgeIncoming = targetDescriptor.inputs.length === 1 && !connection.targetHandle;
-		const targetInputDef = targetDescriptor.inputs.find(
-			(i) => i.id === connection.targetHandle || targetEdgeIncoming,
-		);
+		const targetInputDef = targetDescriptor.inputs.find((i) => i.id === targetHandle);
 		if (!targetInputDef) return false;
 
 		// If the target has a node-wide override, validate against that specific type
 		const nodeOverrides = targetNode.data.__nodeTypeOverrides as
 			| Record<string, WgslType>
 			| undefined;
-		const familyKey = targetInputDef.types.join(",");
-		const overrideType = nodeOverrides?.[familyKey];
-		if (overrideType) {
-			return isConnectionCompatible(sourceType, overrideType);
-		}
+		const overrideType = nodeOverrides?.[targetInputDef.types.join(",")];
+		if (overrideType) return isConnectionCompatible(sourceType, overrideType);
 
-		// Check against the type family — connection is valid if the source can
-		// be promoted to any type within the family (up to the highest member)
+		// Valid if the source can be converted to any type within the family
 		return targetInputDef.types.some((t) => isConnectionCompatible(sourceType, t));
+	}
+
+	/**
+	 * Add a new repeat zone (paired input/output nodes) to the active document,
+	 * with one f32 state item passed straight through.
+	 * Returns the Repeat Input's id, or undefined if the document is locked.
+	 */
+	createRepeatZone(position: { x: number; y: number }): string | undefined {
+		if (this.isLocked) return undefined;
+		const inputId = crypto.randomUUID();
+		const outputId = crypto.randomUUID();
+		const item: HandleDef = { id: crypto.randomUUID(), label: "Value", type: "f32" };
+
+		const nodes: GroupedNode[] = [
+			{
+				id: inputId,
+				type: REPEAT_INPUT,
+				data: {
+					pairedOutput: outputId,
+					iterations: DEFAULT_ITERATIONS,
+					maxIterations: DEFAULT_MAX_ITERATIONS,
+					[item.id]: 0,
+				},
+				position,
+			},
+			{
+				id: outputId,
+				type: REPEAT_OUTPUT,
+				data: { items: [item] },
+				position: { x: position.x + 450, y: position.y },
+			},
+		];
+		const passthrough: HydratedEdge = {
+			id: crypto.randomUUID(),
+			source: inputId,
+			sourceHandle: item.id,
+			target: outputId,
+			targetHandle: item.id,
+		};
+
+		const doc = this.activeDocument;
+		doc.nodes = [...doc.nodes, ...nodes];
+		doc.edges = [...doc.edges, passthrough];
+		this.rebuildDocumentIndex(doc);
+		this.rebuildTypeCache();
+		return inputId;
+	}
+
+	/** The paired Repeat Input / Repeat Output nodes of a zone in the active document. */
+	private zoneNodes(zoneId: string): { input: GroupedNode; output: GroupedNode } | undefined {
+		const doc = this.activeDocument;
+		const input = doc.nodesById.get(zoneId);
+		const output = input ? doc.nodesById.get(pairedOutputId(input) ?? "") : undefined;
+		if (input?.type !== REPEAT_INPUT || output?.type !== REPEAT_OUTPUT) return undefined;
+		return { input, output };
+	}
+
+	/** State items of a zone in the active document. */
+	getZoneItems(zoneId: string): HandleDef[] {
+		return zoneItems(this.zoneNodes(zoneId)?.output);
+	}
+
+	/** Replace the data of some nodes of the active document (reactively). */
+	private patchNodeData(patches: Map<string, Record<string, unknown>>) {
+		const doc = this.activeDocument;
+		doc.nodes = doc.nodes.map((n) => {
+			const data = patches.get(n.id);
+			return data ? { ...n, data } : n;
+		});
+		this.rebuildDocumentIndex(doc);
+	}
+
+	/** Write a zone's item list (on its output node) and refresh everything derived from it. */
+	private setZoneItems(zoneId: string, items: HandleDef[]) {
+		const zone = this.zoneNodes(zoneId);
+		if (!zone || this.isLocked) return;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local patch list
+		const patches = new Map<string, Record<string, unknown>>([
+			[zone.output.id, { ...zone.output.data, items }],
+		]);
+		this.patchNodeData(patches);
+
+		// Drop links to items that no longer exist or no longer fit their type.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+		const ids = new Set(items.map((i) => i.id));
+		const doc = this.activeDocument;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+		const boundary = new Set([zone.input.id, zone.output.id]);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+		const fixed = new Set(["iterations", "iteration"]);
+		doc.edges = doc.edges.filter((e) => {
+			if (boundary.has(e.target) && !fixed.has(e.targetHandle) && !ids.has(e.targetHandle)) {
+				return false;
+			}
+			if (boundary.has(e.source) && !fixed.has(e.sourceHandle) && !ids.has(e.sourceHandle)) {
+				return false;
+			}
+			return true;
+		});
+		this.rebuildDocumentIndex(doc);
+		this.rebuildTypeCache();
+		doc.edges = doc.edges.filter((e) => {
+			if (!boundary.has(e.source) && !boundary.has(e.target)) return true;
+			const source = doc.nodesById.get(e.source);
+			const target = doc.nodesById.get(e.target);
+			return (
+				!!source &&
+				!!target &&
+				this.isTypeCompatible(source, e.sourceHandle, target, e.targetHandle)
+			);
+		});
+		this.rebuildDocumentIndex(doc);
+		this.rebuildTypeCache();
+	}
+
+	/** Append a state item to a zone. Returns the new item. */
+	addZoneItem(zoneId: string, type: WgslType, label?: string): HandleDef | undefined {
+		const zone = this.zoneNodes(zoneId);
+		if (!zone || this.isLocked) return undefined;
+		const items = zoneItems(zone.output);
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+		const existing = new Set(items.map((i) => i.label));
+		let name = label ?? "Value";
+		for (let n = 2; existing.has(name); n++) name = `${label ?? "Value"} ${String(n)}`;
+		const item: HandleDef = { id: crypto.randomUUID(), label: name, type };
+		this.setZoneItems(zoneId, [...items, item]);
+		return item;
+	}
+
+	removeZoneItem(zoneId: string, itemId: string) {
+		const items = this.getZoneItems(zoneId).filter((i) => i.id !== itemId);
+		this.setZoneItems(zoneId, items);
+	}
+
+	/** Rename a state item. Rejects empty or duplicate labels; returns whether it was applied. */
+	renameZoneItem(zoneId: string, itemId: string, label: string): boolean {
+		const trimmed = label.trim();
+		const items = this.getZoneItems(zoneId);
+		if (!trimmed || items.some((i) => i.id !== itemId && i.label === trimmed)) return false;
+		this.setZoneItems(
+			zoneId,
+			items.map((i) => (i.id === itemId ? { ...i, label: trimmed } : i)),
+		);
+		return true;
+	}
+
+	/** Change a state item's type; links that no longer fit are removed. */
+	setZoneItemType(zoneId: string, itemId: string, type: WgslType) {
+		const items = this.getZoneItems(zoneId);
+		this.setZoneItems(
+			zoneId,
+			items.map((i) => (i.id === itemId ? { ...i, type } : i)),
+		);
+	}
+
+	/** Move a state item up (-1) or down (+1) in the list. */
+	moveZoneItem(zoneId: string, itemId: string, offset: -1 | 1) {
+		const items = [...this.getZoneItems(zoneId)];
+		const index = items.findIndex((i) => i.id === itemId);
+		const target = index + offset;
+		const item = items[index];
+		const other = items[target];
+		if (!item || !other) return;
+		items[index] = other;
+		items[target] = item;
+		this.setZoneItems(zoneId, items);
+	}
+
+	/** Set a zone's iteration safety cap. */
+	setZoneMaxIterations(zoneId: string, max: number) {
+		const zone = this.zoneNodes(zoneId);
+		if (!zone || this.isLocked) return;
+		const value = Math.max(0, Math.trunc(Number.isFinite(max) ? max : DEFAULT_MAX_ITERATIONS));
+		this.patchNodeData(
+			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+			new Map([[zone.input.id, { ...zone.input.data, maxIterations: value }]]),
+		);
+	}
+
+	/**
+	 * Complete a connection dropped on a zone's virtual "new item" handle:
+	 * create an item typed after the other end, then link to it.
+	 * Returns false when the connection doesn't involve the virtual handle.
+	 */
+	connectNewZoneItem(connection: {
+		source: string;
+		sourceHandle: string;
+		target: string;
+		targetHandle: string;
+	}): boolean {
+		const toNew = connection.targetHandle === NEW_ITEM_HANDLE;
+		const fromNew = connection.sourceHandle === NEW_ITEM_HANDLE;
+		if (!toNew && !fromNew) return false;
+
+		const zoneNodeId = toNew ? connection.target : connection.source;
+		const zoneId = this.activeZones.zoneOfBoundary.get(zoneNodeId);
+		if (!zoneId) return true;
+
+		let type: WgslType;
+		let label: string | undefined;
+		if (toNew) {
+			type = this.resolveOutputHandleType(connection.source, connection.sourceHandle);
+			label = this.resolveNodeOutputs(connection.source).find(
+				(o) => o.id === connection.sourceHandle,
+			)?.label;
+		} else {
+			type = this.resolveInputType(connection.target, connection.targetHandle);
+			label = this.resolveNodeInputs(connection.target).find(
+				(i) => i.id === connection.targetHandle,
+			)?.label;
+		}
+		const item = this.addZoneItem(zoneId, type, label);
+		if (!item) return true;
+
+		const edge: HydratedEdge = {
+			id: crypto.randomUUID(),
+			source: connection.source,
+			sourceHandle: fromNew ? item.id : connection.sourceHandle,
+			target: connection.target,
+			targetHandle: toNew ? item.id : connection.targetHandle,
+		};
+		const doc = this.activeDocument;
+		const replaced = (e: HydratedEdge) =>
+			!toNew && e.target === edge.target && e.targetHandle === edge.targetHandle;
+		doc.edges = [...doc.edges.filter((e) => !replaced(e)), edge];
+		this.rebuildDocumentIndex(doc);
+		this.rebuildTypeCache();
+		return true;
+	}
+
+	/**
+	 * Zone nodes always go in pairs: extend a deletion to the partner of every
+	 * deleted zone node, and to the edges connected to those partners.
+	 */
+	expandDeletion<
+		N extends { id: string },
+		E extends { id: string; source: string; target: string },
+	>(nodes: N[], edges: E[]): { nodes: N[]; edges: E[] } {
+		const doc = this.activeDocument;
+		const zones = this.activeZones;
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+		const nodeIds = new Set(nodes.map((n) => n.id));
+		const extraNodes: N[] = [];
+		for (const node of nodes) {
+			const zone = zones.zones.get(zones.zoneOfBoundary.get(node.id) ?? "");
+			if (!zone) continue;
+			for (const partnerId of [zone.inputId, zone.outputId]) {
+				if (nodeIds.has(partnerId)) continue;
+				const partner = doc.nodesById.get(partnerId);
+				if (!partner) continue;
+				nodeIds.add(partnerId);
+				extraNodes.push(partner as unknown as N);
+			}
+		}
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local, not reactive state
+		const edgeIds = new Set(edges.map((e) => e.id));
+		const extraEdges = (doc.edges as unknown as E[]).filter(
+			(e) => !edgeIds.has(e.id) && (nodeIds.has(e.source) || nodeIds.has(e.target)),
+		);
+		return { nodes: [...nodes, ...extraNodes], edges: [...edges, ...extraEdges] };
 	}
 
 	get nodes(): GroupedNode[] {
@@ -676,8 +1027,21 @@ export class GraphManager {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const UNGROUPABLE_TYPES = new Set(["frag-output", "uv", "group-input", "group-output"]);
 
+		// A zone is grouped as a whole: selecting either boundary brings in its
+		// partner and everything inside it.
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity
+		const expandedIds = new Set(selectedNodeIds);
+		const zones = this.activeZones;
+		for (const id of selectedNodeIds) {
+			const zone = zones.zones.get(zones.zoneOfBoundary.get(id) ?? "");
+			if (!zone) continue;
+			for (const member of [zone.inputId, zone.outputId, ...zone.members]) {
+				expandedIds.add(member);
+			}
+		}
+
 		const selectedNodes = this.activeDocument.nodes.filter(
-			(node) => selectedNodeIds.has(node.id) && !UNGROUPABLE_TYPES.has(node.type ?? ""),
+			(node) => expandedIds.has(node.id) && !UNGROUPABLE_TYPES.has(node.type ?? ""),
 		);
 
 		if (selectedNodes.length === 0 || selectedNodes.every((n) => n.type === "node-group")) {
@@ -686,6 +1050,12 @@ export class GraphManager {
 
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
 		const filteredIds = new Set(selectedNodes.map((n) => n.id));
+		if (this.groupingWouldCreateCycle(filteredIds)) {
+			console.warn(
+				"[graph] cannot group: the selection depends on itself through unselected nodes",
+			);
+			return;
+		}
 		const bounds = computeSelectionBounds(selectedNodes);
 
 		const { internal, incoming, outgoing } = classifyEdges(
@@ -808,6 +1178,26 @@ export class GraphManager {
 	}
 
 	/**
+	 * Grouping collapses the selection into one node. If a path leaves the
+	 * selection and comes back into it (zone dependencies included), that node
+	 * would depend on itself.
+	 */
+	private groupingWouldCreateCycle(selection: Set<string>): boolean {
+		const doc = this.activeDocument;
+		const outside = doc.nodes.filter((n) => !selection.has(n.id));
+		const GROUP = "__grouped_selection__";
+		const collapse = (id: string) => (selection.has(id) ? GROUP : id);
+		const edges = doc.edges
+			.map((e) => ({ source: collapse(e.source), target: collapse(e.target) }))
+			.filter((e) => e.source !== e.target);
+		const nodes = [...outside, { id: GROUP, type: "node-group", data: {} }];
+		// A cycle exists iff the collapsed node reaches itself via outside nodes.
+		return edges.some(
+			(e) => e.source === GROUP && wouldCreateCycle(nodes, edges, GROUP, e.target),
+		);
+	}
+
+	/**
 	 * Ungroup the selected group node(s) in the active document: clone the group's
 	 * inner nodes (excluding group-input / group-output boundary nodes) into the
 	 * active document, centered where the group node was, and rewire the edges.
@@ -875,7 +1265,7 @@ export class GraphManager {
 		const clonedNodes: GraphDocumentNode[] = innerNodes.map((n) => ({
 			id: idMap.get(n.id) ?? n.id,
 			type: n.type ?? "",
-			data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
+			data: remapZonePairing(n.data, idMap),
 			position: { x: n.position.x + dx, y: n.position.y + dy },
 			...(n.group
 				? { group: { definitionRef: n.group.definitionRef, locked: n.group.locked } }
@@ -997,7 +1387,7 @@ export class GraphManager {
 		const clonedNodes: GraphDocumentNode[] = sourceDef.nodes.map((n) => ({
 			id: idMap.get(n.id) ?? n.id,
 			type: n.type ?? "",
-			data: JSON.parse(JSON.stringify(n.data)) as Record<string, unknown>,
+			data: remapZonePairing(n.data, idMap),
 			position: { ...n.position },
 			...(n.group
 				? { group: { definitionRef: n.group.definitionRef, locked: n.group.locked } }
@@ -1662,6 +2052,20 @@ export class GraphManager {
 			this.rebuildDocumentIndex(doc);
 		}
 	}
+}
+
+/**
+ * Deep-copy node data, pointing a Repeat Input at its partner's new id when
+ * nodes are cloned with fresh ids.
+ */
+function remapZonePairing(
+	data: Record<string, unknown>,
+	idMap: Map<string, string>,
+): Record<string, unknown> {
+	const copy = JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
+	const paired = typeof copy.pairedOutput === "string" ? idMap.get(copy.pairedOutput) : undefined;
+	if (paired) copy.pairedOutput = paired;
+	return copy;
 }
 
 // ── Grouping helpers (extracted from groupSelection) ──────────────────────────

@@ -82,18 +82,6 @@ function findNode(
 	return undefined;
 }
 
-/** Find the Repeat Input paired with a Repeat Output, in any document. */
-export function findPairedInput(
-	outputId: string,
-	definitions: Map<string, HydratedGraphDocument>,
-): MinimalNode | undefined {
-	for (const doc of definitions.values()) {
-		if (!doc.nodesById.has(outputId)) continue;
-		return doc.nodes.find((n) => n.type === REPEAT_INPUT && pairedOutputId(n) === outputId);
-	}
-	return undefined;
-}
-
 function zoneDescriptorBase(
 	type: string,
 	label: string,
