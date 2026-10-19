@@ -4,12 +4,16 @@ export { Root as Checkbox } from "./checkbox/index";
 export { Root as Input } from "./input/index";
 export { Root as Label } from "./label/index";
 export { Root as Separator } from "./separator/index";
+export { Root as Textarea } from "./textarea/index";
 export { Root as Scrubbable } from "./scrubbable/index";
 
 // Multi-component: exported as namespaces (use as <ContextMenu.Root>, <Menubar.Menu>, etc.)
 export * as AlertDialog from "./alert-dialog/index";
 export * as Breadcrumb from "./breadcrumb/index";
+export * as Command from "./command/index";
 export * as ContextMenu from "./context-menu/index";
+export * as Dialog from "./dialog/index";
+export * as InputGroup from "./input-group/index";
 export * as Kbd from "./kbd/index";
 export * as Menubar from "./menubar/index";
 export * as Popover from "./popover/index";
