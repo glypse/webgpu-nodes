@@ -1,5 +1,5 @@
 {
-	"extends": "./.svelte-kit/tsconfig.json",
+	"extends": "$app/tsconfig",
 	"compilerOptions": {
 		"customConditions": ["development"],
 		"rewriteRelativeImportExtensions": true,
@@ -13,6 +13,8 @@
 		"strict": true,
 		"noUncheckedIndexedAccess": true,
 		"moduleResolution": "bundler",
-		"types": ["bun"]
-	}
+		"types": ["$app/types", "bun"]
+	},
+	"include": ["src", "*.ts"],
+	"exclude": ["src/service-worker"]
 }

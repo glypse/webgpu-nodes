@@ -27,7 +27,7 @@
 	},
 	"dependencies": {
 		"$theme": "workspace:*",
-		"@xyflow/svelte": "^1.6.6",
+		"@xyflow/svelte": "^1.7.0",
 		"phosphor-svelte": "catalog:",
 		"spektral": "^0.17.2",
 		"valibot": "^1.5.0"

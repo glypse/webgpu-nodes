@@ -3,7 +3,7 @@ import globals from "globals";
 import ts from "typescript-eslint";
 
 import rootConfig from "../../eslint.config";
-import svelteConfig from "./svelte.config";
+import { config as svelteConfig } from "./kit.config.ts";
 
 const appGitignorePath = new URL("./.gitignore", import.meta.url).pathname;
 
