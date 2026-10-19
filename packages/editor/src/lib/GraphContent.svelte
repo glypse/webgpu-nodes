@@ -212,6 +212,20 @@
 		const tag = (event.target as HTMLElement | null)?.tagName;
 		if (tag === "INPUT" || tag === "TEXTAREA") return;
 
+		const mod = event.metaKey || event.ctrlKey;
+		const key = event.key.toLowerCase();
+		if (mod && key === "z") {
+			event.preventDefault();
+			if (event.shiftKey) graph.redo();
+			else graph.undo();
+			return;
+		}
+		if (mod && key === "y") {
+			event.preventDefault();
+			graph.redo();
+			return;
+		}
+
 		if (event.key === "Enter") {
 			const allNodes = getNodes();
 			const selected = allNodes.find((n) => n.selected);
@@ -287,6 +301,26 @@
 			}
 		}
 	}
+
+	// Undo history: record a step once the documents stop changing for a
+	// moment, so a drag or a scrub becomes one step. Node/edge arrays are
+	// reassigned on every change, which is what this effect tracks.
+	const HISTORY_DEBOUNCE_MS = 300;
+	$effect(() => {
+		const tracked = [...graph.project.definitions.values()].map((doc) => [
+			doc.nodes,
+			doc.edges,
+			doc.label,
+			doc.locked,
+		]);
+		if (tracked.length === 0) return;
+		const timer = setTimeout(() => {
+			graph.recordHistory();
+		}, HISTORY_DEBOUNCE_MS);
+		return () => {
+			clearTimeout(timer);
+		};
+	});
 
 	// Track the shader-relevant hash to avoid rebuilding on position changes.
 	// Only hash the reachable subgraph so edits to disconnected nodes or unused

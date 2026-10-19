@@ -167,3 +167,32 @@ describe("unsaved changes", () => {
 		expect(graph.hasUnsavedChanges()).toBe(false);
 	});
 });
+
+describe("undo / redo", () => {
+	it("restores previous project content, including unrecorded edits", () => {
+		const graph = managerFor([{ id: "t", type: "time" }], []);
+		const zoneId = graph.createRepeatZone({ x: 0, y: 0 });
+		if (!zoneId) throw new Error("zone not created");
+		graph.recordHistory();
+		graph.addZoneItem(zoneId, "vec3f"); // not recorded yet: undo must still catch it
+		expect(graph.getZoneItems(zoneId)).toHaveLength(2);
+
+		graph.undo();
+		expect(graph.getZoneItems(zoneId)).toHaveLength(1);
+		graph.undo();
+		expect(graph.root.nodesById.has(zoneId)).toBe(false);
+		graph.redo();
+		graph.redo();
+		expect(graph.getZoneItems(zoneId)).toHaveLength(2);
+		expect(graph.history.canRedo).toBe(false);
+	});
+
+	it("keeps cameras and types after restoring", () => {
+		const graph = managerFor([{ id: "u", type: "uv" }], []);
+		graph.root.viewport = { x: 1, y: 2, zoom: 3 };
+		graph.createRepeatZone({ x: 0, y: 0 });
+		graph.undo();
+		expect(graph.root.viewport).toEqual({ x: 1, y: 2, zoom: 3 });
+		expect(graph.resolveOutputHandleType("u", "uv")).toBe("vec2f");
+	});
+});

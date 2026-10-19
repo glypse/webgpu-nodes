@@ -154,6 +154,15 @@
 		<Menubar.Menu>
 			<Menubar.Trigger>Edit</Menubar.Trigger>
 			<Menubar.Content>
+				<Menubar.Item onSelect={() => graph.undo()} disabled={!graph.history.canUndo}>
+					Undo
+					<Menubar.Shortcut>⌘Z</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Item onSelect={() => graph.redo()} disabled={!graph.history.canRedo}>
+					Redo
+					<Menubar.Shortcut>⇧⌘Z</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
 				<Menubar.Item
 					onSelect={handleGroupSelected}
 					disabled={!(hasSelection && !graph.isLocked)}

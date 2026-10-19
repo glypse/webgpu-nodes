@@ -22,6 +22,7 @@ import {
 	ROOT_ID,
 	type StandardLibraryEntry,
 } from "./graph-types";
+import { History } from "./history.svelte";
 import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 import { nodeRegistry } from "./registry";
 import { TypeResolver } from "./type-resolver";
@@ -127,7 +128,7 @@ export class GraphManager {
 	library: StandardLibraryEntry[] = libraryEntries;
 
 	/** Centralised type resolver — single source of truth for all type resolution. */
-	typeResolver: TypeResolver;
+	typeResolver!: TypeResolver;
 
 	/**
 	 * Reactive cache of resolved types per node. Keyed by node ID.
@@ -150,23 +151,93 @@ export class GraphManager {
 	);
 
 	constructor(defaults?: GraphProject) {
-		const project: GraphProject = defaults ?? defaultScene;
-		this.project = hydrateProject(project);
+		this.setProject(defaults ?? defaultScene);
+		this.markSaved();
+		this.history.reset(this.contentSnapshot());
+	}
 
-		// Register standard library definitions so they can be referenced by group nodes
+	/**
+	 * Replace the whole project: hydrate it, register the standard library
+	 * definitions next to it (so group nodes can reference them), and rebuild
+	 * the type resolver and type cache for the new definitions.
+	 */
+	private setProject(project: GraphProject) {
+		this.project = hydrateProject(project);
 		for (const entry of this.library) {
 			const def = normaliseDocument(entry.definition);
 			def.label = entry.label;
 			this.project.definitions.set(entry.id, hydrateDocument(def));
 		}
-
 		this.typeResolver = new TypeResolver(
 			(n) => this.resolveDescriptor(n),
 			this.project.definitions,
 			(id) => this.getIncomingEdges(id),
 		);
 		this.rebuildTypeCache();
-		this.markSaved();
+	}
+
+	// ── Undo / redo ─────────────────────────────────────────────────────────
+
+	/** Content snapshots of past states (see `contentSnapshot`). */
+	history = new History();
+
+	/**
+	 * Record the current content as a history step. Cheap to call often: an
+	 * unchanged project records nothing. The editor calls it (debounced)
+	 * whenever a document changes, so drags and scrubs become single steps.
+	 */
+	recordHistory() {
+		this.history.record(this.contentSnapshot());
+	}
+
+	undo() {
+		// A change not recorded yet (still debounced) is the step to undo.
+		this.recordHistory();
+		const snapshot = this.history.undo();
+		if (snapshot !== undefined) this.restoreSnapshot(snapshot);
+	}
+
+	redo() {
+		this.recordHistory();
+		const snapshot = this.history.redo();
+		if (snapshot !== undefined) this.restoreSnapshot(snapshot);
+	}
+
+	/**
+	 * Restore a content snapshot, keeping each document's camera and as much
+	 * of the breadcrumb path as still exists.
+	 */
+	private restoreSnapshot(snapshot: string) {
+		const parsed = v.safeParse(GraphProjectSchema, JSON.parse(snapshot));
+		if (!parsed.success) {
+			console.error("[graph] corrupted history snapshot", v.flatten(parsed.issues));
+			return;
+		}
+		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- local lookup
+		const viewports = new Map(
+			[...this.project.definitions.entries()].map(([key, doc]) => [key, doc.viewport]),
+		);
+		const path = this.path;
+		this.setProject(parsed.output);
+		for (const [key, doc] of this.project.definitions) {
+			doc.viewport ??= viewports.get(key);
+		}
+
+		const validPath: string[] = [];
+		let current = this.root;
+		for (const nodeId of path) {
+			const node = current.nodesById.get(nodeId);
+			const definition =
+				node?.group && this.project.definitions.get(node.group.definitionRef);
+			if (!definition) break;
+			validPath.push(nodeId);
+			current = definition;
+		}
+		this.path = validPath;
+		this.selectedNodeIds = [];
+		// Hydration may normalise the content (e.g. fill in default data):
+		// that normalised form is the state we're now at.
+		this.history.replaceCurrent(this.contentSnapshot());
 	}
 
 	// ── Unsaved changes ─────────────────────────────────────────────────────
@@ -188,7 +259,7 @@ export class GraphManager {
 					serialiseDocument(doc.nodes, doc.edges, doc.label, doc.locked),
 				]),
 		);
-		return JSON.stringify({ definitions });
+		return stableStringify({ definitions });
 	}
 
 	/** Remember the current content as saved. */
@@ -759,24 +830,10 @@ export class GraphManager {
 			console.error("[graph] rejected invalid project JSON", v.flatten(parsed.issues));
 			return false;
 		}
-		this.project = hydrateProject(parsed.output);
+		this.setProject(parsed.output);
 		this.path = [];
-
-		// Re-register standard library definitions after loading
-		for (const entry of this.library) {
-			const def = normaliseDocument(entry.definition);
-			def.label = entry.label;
-			this.project.definitions.set(entry.id, hydrateDocument(def));
-		}
-
-		// Rebuild the type resolver with the new definitions and recompute all types
-		this.typeResolver = new TypeResolver(
-			(n) => this.resolveDescriptor(n),
-			this.project.definitions,
-			(id) => this.getIncomingEdges(id),
-		);
-		this.rebuildTypeCache();
 		this.markSaved();
+		this.history.reset(this.contentSnapshot());
 
 		return true;
 	}
@@ -2101,6 +2158,15 @@ function remapZonePairing(
 	const paired = typeof copy.pairedOutput === "string" ? idMap.get(copy.pairedOutput) : undefined;
 	if (paired) copy.pairedOutput = paired;
 	return copy;
+}
+
+/** JSON with object keys sorted, so equal content always serialises equally. */
+function stableStringify(value: unknown): string {
+	return JSON.stringify(value, (_key, v: unknown) => {
+		if (typeof v !== "object" || v === null || Array.isArray(v)) return v;
+		const entries = Object.entries(v).toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+		return Object.fromEntries(entries);
+	});
 }
 
 // ── Grouping helpers (extracted from groupSelection) ──────────────────────────
