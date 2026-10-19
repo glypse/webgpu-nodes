@@ -10,6 +10,8 @@
 		type Edge,
 		type EdgeTypes,
 		type Node,
+		type Connection,
+		type OnConnectEnd,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
 	import { tick } from "svelte";
@@ -18,7 +20,7 @@
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import { generateShader, reachableShaderHash } from "./codegen";
 	import GradientEdge from "./GradientEdge.svelte";
-	import { getGraphManager } from "./graph-state.svelte";
+	import { getGraphManager, type PendingConnection } from "./graph-state.svelte";
 	import { type HydratedGraphProject } from "./graph-types";
 	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 	import NodeShell from "./NodeShell.svelte";
@@ -100,17 +102,64 @@
 	// ── Add menu ───────────────────────────────────────────────────────────
 	// Right-click (or Shift+A) opens a searchable menu at the pointer; the
 	// picked entry is created where the menu was opened.
-	let addMenu = $state({ open: false, x: 0, y: 0 });
-	const addEntries = $derived(addMenu.open ? addMenuEntries(graph) : []);
+	// When a link is dropped on empty space, the menu only lists what can take
+	// it, and the picked node gets linked.
+	let addMenu = $state<{
+		open: boolean;
+		x: number;
+		y: number;
+		pending: PendingConnection | null;
+	}>({ open: false, x: 0, y: 0, pending: null });
 
-	function openAddMenu(x: number, y: number) {
+	const addEntries = $derived.by(() => {
+		if (!addMenu.open) return [];
+		const entries = addMenuEntries(graph);
+		const pending = addMenu.pending;
+		if (!pending) return entries;
+		return entries.filter((entry) => graph.entryHandleFor(entry, pending) !== undefined);
+	});
+
+	const addMenuPlaceholder = $derived.by(() => {
+		const pending = addMenu.pending;
+		if (!pending) return "Search nodes…";
+		if (pending.handleType === "source") {
+			const type = graph.resolveOutputHandleType(pending.nodeId, pending.handleId);
+			return `Search nodes taking a ${type}…`;
+		}
+		const type = graph.resolveInputType(pending.nodeId, pending.handleId);
+		return `Search nodes producing a ${type}…`;
+	});
+
+	function openAddMenu(x: number, y: number, pending: PendingConnection | null = null) {
 		if (isLocked) return;
-		addMenu = { open: true, x, y };
+		addMenu = { open: true, x, y, pending };
 	}
 
 	function pickAddEntry(entry: AddMenuEntry) {
-		graph.addMenuEntry(entry, screenToFlowPosition({ x: addMenu.x, y: addMenu.y }));
+		const position = screenToFlowPosition({ x: addMenu.x, y: addMenu.y });
+		if (addMenu.pending) graph.addMenuEntryConnected(entry, position, addMenu.pending);
+		else graph.addMenuEntry(entry, position);
 	}
+
+	function handleConnect(connection: Connection) {
+		const { source, target, sourceHandle, targetHandle } = connection;
+		if (!sourceHandle || !targetHandle) return;
+		graph.connect({ source, target, sourceHandle, targetHandle });
+	}
+
+	/** A link dropped on empty space opens the add menu for what can take it. */
+	const handleConnectEnd: OnConnectEnd = (event, state) => {
+		if (state.toHandle || !state.fromHandle?.id) return;
+		const target = event.target instanceof Element ? event.target : null;
+		if (target?.closest(".svelte-flow__node")) return;
+		const point = "changedTouches" in event ? event.changedTouches[0] : event;
+		if (!point) return;
+		openAddMenu(point.clientX, point.clientY, {
+			nodeId: state.fromNode.id,
+			handleId: state.fromHandle.id,
+			handleType: state.fromHandle.type,
+		});
+	};
 
 	function deleteGroupEntry(entry: AddMenuEntry) {
 		if (entry.definitionRef) graph.deleteDefinition(entry.definitionRef);
@@ -408,52 +457,8 @@
 		onmove={(_event, viewport) => {
 			graph.activeDocument.viewport = { ...viewport };
 		}}
-		onconnect={(connection) => {
-			const { source, target, sourceHandle, targetHandle } = connection;
-			if (!source || !target || !sourceHandle || !targetHandle) return;
-
-			// Dropped on a zone's virtual socket: create the state item first.
-			if (graph.connectNewZoneItem({ source, target, sourceHandle, targetHandle })) {
-				return;
-			}
-
-			const edge = {
-				...connection,
-				id: crypto.randomUUID(),
-				sourceHandle,
-				targetHandle,
-				type: "gradient",
-			};
-
-			// Skip replacement logic for variadic inputs — they accept many edges.
-			const targetNode = nodes.find((n) => n.id === target);
-			if (targetNode) {
-				const descriptor = graph.resolveDescriptor(targetNode);
-				const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
-				if (inputDef?.variadic) {
-					edges = [
-						...edges.filter(
-							(e) =>
-								!(
-									e.source === source &&
-									e.sourceHandle === sourceHandle &&
-									e.target === target &&
-									e.targetHandle === targetHandle
-								),
-						),
-						edge,
-					];
-					return;
-				}
-			}
-
-			// Single source of data per non-variadic input: drop any existing
-			// edge into the same target handle, then add the new one.
-			edges = [
-				...edges.filter((e) => !(e.target === target && e.targetHandle === targetHandle)),
-				edge,
-			];
-		}}
+		onconnect={handleConnect}
+		onconnectend={handleConnectEnd}
 		onselectionchange={({ nodes: selectedNodes }) => {
 			graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 		}}
@@ -469,6 +474,7 @@
 	x={addMenu.x}
 	y={addMenu.y}
 	entries={addEntries}
+	placeholder={addMenuPlaceholder}
 	onpick={pickAddEntry}
 	ondelete={deleteGroupEntry}
 />

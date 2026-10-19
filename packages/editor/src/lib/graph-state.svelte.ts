@@ -35,6 +35,7 @@ import {
 	type NodeOutputDef,
 	type WgslType,
 	isConnectionCompatible,
+	typeKind,
 } from "./types";
 import {
 	DEFAULT_ITERATIONS,
@@ -494,7 +495,7 @@ export class GraphManager {
 				id: outputId,
 				type: REPEAT_OUTPUT,
 				data: { items: [item] },
-				position: { x: position.x + 450, y: position.y },
+				position: { x: position.x + ZONE_SPACING, y: position.y },
 			},
 		];
 		const passthrough: HydratedEdge = {
@@ -693,6 +694,145 @@ export class GraphManager {
 		this.rebuildDocumentIndex(doc);
 		this.rebuildTypeCache();
 		return true;
+	}
+
+	/**
+	 * Link two handles of the active document, as when a link is dropped on a
+	 * handle in the editor. Non-variadic inputs keep a single incoming link
+	 * (the new one replaces it); a zone's virtual handle creates a state item.
+	 */
+	connect(connection: {
+		source: string;
+		sourceHandle: string;
+		target: string;
+		targetHandle: string;
+	}) {
+		if (this.connectNewZoneItem(connection)) return;
+		const doc = this.activeDocument;
+		const targetNode = doc.nodesById.get(connection.target);
+		const variadic = targetNode
+			? this.resolveDescriptor(targetNode).inputs.find(
+					(i) => i.id === connection.targetHandle,
+				)?.variadic === true
+			: false;
+		const replaced = (e: HydratedEdge) =>
+			e.target === connection.target &&
+			e.targetHandle === connection.targetHandle &&
+			(!variadic ||
+				(e.source === connection.source && e.sourceHandle === connection.sourceHandle));
+		const edge: HydratedEdge = { id: crypto.randomUUID(), type: "gradient", ...connection };
+		doc.edges = [...doc.edges.filter((e) => !replaced(e)), edge];
+		this.rebuildDocumentIndex(doc);
+		this.rebuildTypeCache();
+	}
+
+	/**
+	 * The handle of a freshly created `entry` that a link being dragged from
+	 * `pending` would connect to, or undefined if nothing fits. Handles whose
+	 * scalar kind matches the dragged value are preferred (a float dropped on
+	 * a Switch feeds "false", not "condition").
+	 */
+	entryHandleFor(entry: AddMenuEntry, pending: PendingConnection): string | undefined {
+		if (entry.kind === "zone") return NEW_ITEM_HANDLE;
+		if (entry.kind === "node" && entry.type === "node-group") return undefined;
+
+		const fresh = this.freshNodeTypes(entry);
+		if (!fresh) return undefined;
+		const rank = (candidates: readonly WgslType[], value: WgslType, valueIsSource: boolean) => {
+			const fits = candidates.filter((t) =>
+				valueIsSource ? isConnectionCompatible(value, t) : isConnectionCompatible(t, value),
+			);
+			if (fits.length === 0) return 2;
+			return fits.some((t) => typeKind(t) === typeKind(value)) ? 0 : 1;
+		};
+		const best = <T extends { id: string }>(items: T[], score: (item: T) => number) => {
+			let found: T | undefined;
+			let bestScore = 2;
+			for (const item of items) {
+				const value = score(item);
+				if (value < bestScore) {
+					found = item;
+					bestScore = value;
+				}
+			}
+			return found?.id;
+		};
+
+		if (pending.handleType === "source") {
+			const value = this.resolveOutputHandleType(pending.nodeId, pending.handleId);
+			return best(fresh.resolvedInputs, (input) => rank(input.types, value, true));
+		}
+		const value = this.resolveInputType(pending.nodeId, pending.handleId);
+		return best(fresh.resolvedOutputs, (output) => rank([output.type], value, false));
+	}
+
+	/** Types a node created from `entry` would have before anything is linked to it. */
+	private freshNodeTypes(entry: AddMenuEntry) {
+		const FRESH_ID = "__fresh_node__";
+		const node: GroupedNode =
+			entry.kind === "group" && entry.definitionRef
+				? {
+						id: FRESH_ID,
+						type: "node-group",
+						data: {},
+						position: { x: 0, y: 0 },
+						group: { definitionRef: entry.definitionRef, locked: true },
+					}
+				: {
+						id: FRESH_ID,
+						type: entry.type ?? "",
+						data: defaultDataForType(entry.type ?? ""),
+						position: { x: 0, y: 0 },
+					};
+		if (node.type !== "node-group" && !nodeRegistry[node.type ?? ""]) return undefined;
+		const resolved = this.typeResolver.resolveNodeTypes(node, [], (id) =>
+			id === FRESH_ID ? node : this.resolveNode(id),
+		);
+		this.typeResolver.cache.delete(FRESH_ID);
+		return resolved;
+	}
+
+	/**
+	 * Create `entry` at `position` (flow coordinates) and link it to the
+	 * handle the dragged link started from (see `entryHandleFor`).
+	 * Returns the created node's id, if any.
+	 */
+	addMenuEntryConnected(
+		entry: AddMenuEntry,
+		position: { x: number; y: number },
+		pending: PendingConnection,
+	): string | undefined {
+		const handle = this.entryHandleFor(entry, pending);
+		const upstream = pending.handleType === "target";
+		// Feeding an input: put the new node's outputs (its right side) at the drop point.
+		const offset = !upstream
+			? 0
+			: entry.kind === "zone"
+				? ZONE_SPACING + NODE_WIDTH
+				: NODE_WIDTH;
+		const created = this.addMenuEntry(entry, { x: position.x - offset, y: position.y });
+		if (!created || !handle) return created;
+
+		let nodeId = created;
+		if (entry.kind === "zone" && upstream) {
+			const input = this.activeDocument.nodesById.get(created);
+			nodeId = (input && pairedOutputId(input)) ?? created;
+		}
+		const connection = upstream
+			? {
+					source: nodeId,
+					sourceHandle: handle,
+					target: pending.nodeId,
+					targetHandle: pending.handleId,
+				}
+			: {
+					source: pending.nodeId,
+					sourceHandle: pending.handleId,
+					target: nodeId,
+					targetHandle: handle,
+				};
+		if (this.isValidConnection(connection)) this.connect(connection);
+		return created;
 	}
 
 	/**
@@ -2203,6 +2343,19 @@ function stableStringify(value: unknown): string {
 		return Object.fromEntries(entries);
 	});
 }
+
+/** A link being dragged from a handle, not dropped on another handle yet. */
+export type PendingConnection = {
+	nodeId: string;
+	handleId: string;
+	/** "source" when dragged from an output, "target" when dragged from an input. */
+	handleType: "source" | "target";
+};
+
+/** Approximate rendered node width, for placing nodes next to a drop point. */
+const NODE_WIDTH = 180;
+/** Horizontal distance between a new zone's input and output nodes. */
+const ZONE_SPACING = 450;
 
 // ── Grouping helpers (extracted from groupSelection) ──────────────────────────
 
