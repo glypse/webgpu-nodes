@@ -9,7 +9,7 @@
         "@changesets/cli": "^3.0.3",
         "@eslint/js": "catalog:",
         "@nx/eslint-plugin": "23.2.1",
-        "@types/bun": "^1.4.2",
+        "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
         "eslint": "catalog:",
         "eslint-plugin-svelte": "catalog:",
@@ -30,6 +30,7 @@
         "@sveltejs/adapter-static": "^3.0.10",
         "@sveltejs/kit": "^2.70.3",
         "@tailwindcss/vite": "catalog:",
+        "@types/bun": "catalog:",
         "@typescript/native-preview": "catalog:",
         "eslint": "catalog:",
         "globals": "catalog:",
@@ -48,7 +49,7 @@
         "$theme": "workspace:*",
         "@xyflow/svelte": "^1.6.6",
         "phosphor-svelte": "catalog:",
-        "spektral": "^0.17.0",
+        "spektral": "^0.17.2",
         "valibot": "^1.5.0",
       },
       "devDependencies": {
@@ -105,6 +106,7 @@
     "@sveltejs/package": "^2.5.8",
     "@sveltejs/vite-plugin-svelte": "^7.3.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/bun": "^1.4.2",
     "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "eslint": "^10.11.0",
     "eslint-plugin-svelte": "^3.23.0",
@@ -1198,7 +1200,7 @@
 
     "source-map-support": ["source-map-support@0.5.19", "", { "dependencies": { "buffer-from": "^1.0.0", "source-map": "^0.6.0" } }, "sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw=="],
 
-    "spektral": ["spektral@0.17.0", "", { "dependencies": { "@webgpu/types": "^0.1.71" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0", "svelte": "^5.29.0", "vue": "^3.5.2" }, "optionalPeers": ["react", "react-dom", "svelte", "vue"] }, "sha512-W8GwyFGAA0WDcljk2pXnMz/h9ImRdunV/VrETGrYG12ffoOHqdOA6L1fJZqSt04OoEfMM5JWgx8a07XFspEYqg=="],
+    "spektral": ["spektral@0.17.2", "", { "dependencies": { "@webgpu/types": "^0.1.71" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0", "svelte": "^5.29.0", "vue": "^3.5.2" }, "optionalPeers": ["react", "react-dom", "svelte", "vue"] }, "sha512-CkCJ5VLsLg/Iwy+ziMbrMteazyESXOoVWpofX90B43qCpQLXPr2GwD94elBSdf5Li2o9JcXGUgrU6ITKqhd/og=="],
 
     "string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
 

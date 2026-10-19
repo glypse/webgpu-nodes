@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Resizable } from "$theme";
-	import { FragCanvas, defineMaterial } from "spektral/svelte";
+	import { FragCanvas, defineMaterial, type SpektralErrorReport } from "spektral/svelte";
 
 	import NodeGraph from "./NodeGraph.svelte";
 
@@ -20,26 +20,15 @@
 		title: string;
 		message: string;
 		hint: string;
-		details: string[];
+		details: readonly string[];
 		phase: string;
 		sourceLine?: number;
-		snippet?: { number: number; code: string; highlight: boolean }[];
+		snippet?: readonly { number: number; code: string; highlight: boolean }[];
 	};
 
 	let shaderError = $state<ShaderError | null>(null);
 
-	function handleError(report: {
-		title: string;
-		message: string;
-		hint: string;
-		details: string[];
-		phase: string;
-		rawMessage?: string;
-		source?: {
-			line?: number;
-			snippet?: { number: number; code: string; highlight: boolean }[];
-		} | null;
-	}) {
+	function handleError(report: SpektralErrorReport) {
 		shaderError = {
 			title: report.title,
 			message: report.message,
@@ -53,8 +42,7 @@
 
 	// Clear the error whenever a new frag is generated (shader recompiled successfully).
 	$effect(() => {
-		void frag;
-		shaderError = null;
+		if (frag) shaderError = null;
 	});
 </script>
 
