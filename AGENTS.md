@@ -34,3 +34,7 @@ Given the nature of this project, it's easy for the UI to not reflect the same s
 ## Reactivity model
 
 Node/edge arrays in `HydratedGraphDocument` use `$state.raw` (not `$state`) for performance — SvelteFlow iterates them thousands of times per frame. This means **mutations to individual node properties (e.g. `node.data.foo = bar`) are not reactive**. Always use SvelteFlow's `updateNodeData` API or reassign the array to trigger UI updates. If something that should be reactive isn't, check whether you're mutating through a `$state.raw` container. See `hydrated-document.svelte.ts` and the comments there. If this section is out of sync with the actual data model, please notify the user.
+
+## Zones (repeat loops)
+
+A repeat zone is a `repeat-input` / `repeat-output` node pair: the output owns the state items (`data.items`), the input points at it (`data.pairedOutput`). Zone membership, nesting and invalid links are never stored: `analyzeZones` (`zones.ts`) derives them from the links (Blender's rules) and is the single source of truth for codegen, the bubble rendering and red links. Use `GraphManager.zoneAnalysis(doc)` (memoised on the nodes/edges arrays) rather than re-deriving them.

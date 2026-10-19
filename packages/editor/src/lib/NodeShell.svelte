@@ -16,6 +16,7 @@
 		typeComponents,
 		typeKind,
 	} from "./types";
+	import { NEW_ITEM_HANDLE, isZoneNodeType } from "./zones";
 
 	const VECTOR_KEYS = ["x", "y", "z", "w"];
 
@@ -208,6 +209,15 @@
 		return `--handle-color: var(--color-${type})`;
 	}
 
+	const isZoneNode = $derived(isZoneNodeType(nodeType));
+	/** The zone a boundary node belongs to (its Repeat Input id). */
+	const zoneId = $derived(isZoneNode ? graph.activeZones.zoneOfBoundary.get(id) : undefined);
+
+	function addZoneItem(type: WgslType) {
+		if (zoneId) graph.addZoneItem(zoneId, type);
+		popoverOpen = false;
+	}
+
 	function addHandle(type: WgslType) {
 		const handles = (data.handles ?? []) as HandleDef[];
 		const newHandle: HandleDef = {
@@ -225,7 +235,7 @@
 	}
 </script>
 
-{#snippet addHandleButton()}
+{#snippet addHandleButton(onPick: (type: WgslType) => void = addHandle)}
 	<Popover.Root bind:open={popoverOpen}>
 		<Popover.Trigger>
 			{#snippet child({ props })}
@@ -237,7 +247,7 @@
 				{#each WGSL_TYPES as t (t)}
 					<button
 						class="hover:bg-accent rounded px-2 py-1 text-left text-xs"
-						onclick={() => addHandle(t)}
+						onclick={() => onPick(t)}
 					>
 						{t}
 					</button>
@@ -286,7 +296,27 @@
 
 {#if descriptor}
 	<div class="node-shell__label">
-		<span>{label}</span>
+		{#if isZoneNode}
+			<div class="flex items-center justify-between gap-2">
+				<span>{label}</span>
+				{#if zoneId}
+					<Button
+						variant="secondary"
+						type="button"
+						size="icon-sm"
+						title="Open repeat zone settings"
+						onclick={() => graph.openZoneSheet(id)}
+					>
+						<FadersIcon />
+					</Button>
+				{/if}
+			</div>
+			{#if !zoneId}
+				<span class="text-destructive text-xs">Missing its paired node</span>
+			{/if}
+		{:else}
+			<span>{label}</span>
+		{/if}
 		{#if nodeType === "node-group"}
 			<div class="flex items-stretch gap-1 pb-1 *:flex-1">
 				<Button
@@ -403,6 +433,19 @@
 			{#if nodeType === "group-input" && !isLocked}
 				{@render addHandleButton()}
 			{/if}
+
+			{#if zoneId && !isLocked}
+				<!-- Virtual socket: drag from here to create a state item typed after the target. -->
+				<div class="node-shell__row node-shell__row--right">
+					<span class="node-shell__handle-label opacity-60">new item</span>
+					<Handle
+						type="source"
+						position={Position.Right}
+						id={NEW_ITEM_HANDLE}
+						class="node-shell__handle node-shell__handle--virtual"
+					/>
+				</div>
+			{/if}
 		</div>
 
 		<div class="node-shell__inputs">
@@ -445,6 +488,20 @@
 
 			{#if nodeType === "group-output" && !isLocked}
 				{@render addHandleButton()}
+			{/if}
+
+			{#if zoneId && !isLocked}
+				<!-- Virtual socket: drop a link here to create a state item typed after its source. -->
+				<div class="node-shell__row">
+					<Handle
+						type="target"
+						position={Position.Left}
+						id={NEW_ITEM_HANDLE}
+						class="node-shell__handle node-shell__handle--virtual"
+					/>
+					<span class="node-shell__handle-label opacity-60">new item</span>
+				</div>
+				{@render addHandleButton(addZoneItem)}
 			{/if}
 		</div>
 	</div>

@@ -24,6 +24,9 @@
 	import { nodeRegistry, defaultDataForType, DYNAMIC_NODE_TYPES } from "./registry";
 	import { type HandleDef, type NodeCategory } from "./types";
 	import { getDevContext } from "./utils";
+	import ZoneBubbles from "./ZoneBubbles.svelte";
+	import { isZoneNodeType } from "./zones";
+	import ZoneSheet from "./ZoneSheet.svelte";
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow node types accept any component
 	const nodeTypes: Record<string, any> = {};
@@ -53,7 +56,12 @@
 
 	const categoryMap = $derived.by(() => {
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
-		const map = new Map<NodeCategory, { id: string; label: string; fromLibrary: boolean }[]>();
+		const map = new Map<
+			NodeCategory,
+			{ id: string; label: string; fromLibrary: boolean; zone?: boolean }[]
+		>([
+			["zone", [{ id: "repeat-zone", label: "Repeat Zone", fromLibrary: false, zone: true }]],
+		]);
 		for (const [type, desc] of Object.entries(nodeRegistry)) {
 			if (desc.hidden) continue;
 			const list = map.get(desc.category) ?? [];
@@ -184,6 +192,14 @@
 		graph.addFromLibrary(definitionRef, position);
 	}
 
+	function createRepeatZone() {
+		const position = screenToFlowPosition({
+			x: contextMenuPosition.x,
+			y: contextMenuPosition.y,
+		});
+		graph.createRepeatZone(position);
+	}
+
 	function createGroup() {
 		const position = screenToFlowPosition({
 			x: contextMenuPosition.x,
@@ -206,7 +222,10 @@
 				graph.enterGroup(selected.id);
 			}
 		} else if (event.key === "Escape") {
-			if (graph.sheetOpen) {
+			if (graph.zoneSheetId) {
+				event.preventDefault();
+				graph.zoneSheetId = null;
+			} else if (graph.sheetOpen) {
 				event.preventDefault();
 				graph.sheetOpen = false;
 			} else if (graph.path.length > 0) {
@@ -214,6 +233,12 @@
 				graph.exitGroup();
 			}
 		} else if (event.key === "n" && !event.metaKey && !event.ctrlKey) {
+			const selectedZoneNode = getNodes().find((n) => n.selected && isZoneNodeType(n.type));
+			if (selectedZoneNode) {
+				event.preventDefault();
+				graph.openZoneSheet(selectedZoneNode.id);
+				return;
+			}
 			const selectedGroupRef = graph.selectedGroupRef;
 			let targetNodeId: string | undefined;
 
@@ -272,7 +297,13 @@
 		const hash = reachableShaderHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;
-		frag = generateShader(graph).shader;
+		try {
+			frag = generateShader(graph).shader;
+		} catch (error) {
+			// Keep the last valid shader (e.g. the graph briefly contains a cycle).
+			console.error("[shader] generation failed", error);
+			return;
+		}
 
 		if (debug) {
 			/* const sortedIds = debugSort(rootNodes, rootEdges); */
@@ -428,7 +459,10 @@
 				nodesConnectable={!isLocked}
 				elementsSelectable={!isLocked}
 				deleteKey={isLocked ? null : undefined}
-				onbeforedelete={isLocked ? () => Promise.resolve(false) : undefined}
+				onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
+					Promise.resolve(
+						isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges),
+					)}
 				isValidConnection={(connection) => graph.isValidConnection(connection)}
 				onmove={(_event, viewport) => {
 					graph.activeDocument.viewport = { ...viewport };
@@ -436,6 +470,11 @@
 				onconnect={(connection) => {
 					const { source, target, sourceHandle, targetHandle } = connection;
 					if (!source || !target || !sourceHandle || !targetHandle) return;
+
+					// Dropped on a zone's virtual socket: create the state item first.
+					if (graph.connectNewZoneItem({ source, target, sourceHandle, targetHandle })) {
+						return;
+					}
 
 					const edge = {
 						...connection,
@@ -480,6 +519,7 @@
 					graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 				}}
 			>
+				<ZoneBubbles />
 				<Controls showLock={false} showZoom={false} />
 				<Background class="bg-background" />
 			</SvelteFlow>
@@ -494,7 +534,9 @@
 							<ContextMenu.Item
 								disabled={graph.wouldCreateCycle(item.id)}
 								onclick={() => {
-									if (item.id === "node-group") {
+									if (item.zone) {
+										createRepeatZone();
+									} else if (item.id === "node-group") {
 										createGroup();
 									} else if (item.fromLibrary) {
 										addFromLibrary(item.id);
@@ -542,6 +584,8 @@
 </div>
 
 <svelte:window onkeydown={handleKeydown} />
+
+<ZoneSheet />
 
 <Sheet.Root bind:open={graph.sheetOpen}>
 	<Sheet.Content

@@ -61,6 +61,9 @@
 	--color-vec2b: var(--color-vec2f);
 	--color-vec3b: var(--color-vec3f);
 	--color-vec4b: var(--color-vec4f);
+
+	/* Zones (loops): bubble drawn under the nodes they enclose. */
+	--color-zone-repeat: oklch(0.55 0 0);
 }
 
 .dark {
@@ -95,6 +98,7 @@
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.556 0 0);
+	--color-zone-repeat: oklch(0.75 0 0);
 }
 
 /* =============================================
@@ -146,6 +150,7 @@
 	--color-vec2f: var(--color-vec2f);
 	--color-vec3f: var(--color-vec3f);
 	--color-vec4f: var(--color-vec4f);
+	--color-zone-repeat: var(--color-zone-repeat);
 }
 
 /* =============================================

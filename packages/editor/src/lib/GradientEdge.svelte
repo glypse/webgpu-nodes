@@ -41,6 +41,9 @@
 		return graph.resolveInputType(target, targetHandleId ?? "");
 	});
 
+	/** Links breaking zone rules are drawn red and ignored by codegen. */
+	const invalid = $derived(graph.isEdgeInvalid(id));
+
 	const bounds = $derived({
 		x: Math.min(sourceX, targetX) - PADDING,
 		y: Math.min(sourceY, targetY) - PADDING,
@@ -68,16 +71,30 @@
 </defs>
 
 <g class="group">
-	<!-- Gradient stroke -->
-	<rect
-		x={bounds.x}
-		y={bounds.y}
-		width={bounds.w}
-		height={bounds.h}
-		fill="url(#edge-gradient-{id})"
-		mask="url(#edge-mask-{id})"
-		class="transition-opacity {selected ? 'opacity-100' : 'opacity-60'}"
-	/>
+	{#if invalid}
+		<!-- Invalid link (leaves a zone, or merges unrelated zones) -->
+		<path
+			d={path}
+			fill="none"
+			stroke="var(--color-destructive)"
+			stroke-width="1.5"
+			stroke-dasharray="6 4"
+			class="transition-opacity {selected ? 'opacity-100' : 'opacity-80'}"
+		>
+			<title>Invalid link: it can't leave the zone it starts in</title>
+		</path>
+	{:else}
+		<!-- Gradient stroke -->
+		<rect
+			x={bounds.x}
+			y={bounds.y}
+			width={bounds.w}
+			height={bounds.h}
+			fill="url(#edge-gradient-{id})"
+			mask="url(#edge-mask-{id})"
+			class="transition-opacity {selected ? 'opacity-100' : 'opacity-60'}"
+		/>
+	{/if}
 
 	<!-- Hover overlay -->
 	<rect

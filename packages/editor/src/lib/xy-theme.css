@@ -132,6 +132,12 @@
 	&.variadic {
 		@apply min-h-6;
 	}
+
+	/* Zone "new item" socket: hollow, like Blender's virtual socket. */
+	&.node-shell__handle--virtual {
+		background-color: transparent;
+		border: 1px dashed var(--muted-foreground);
+	}
 }
 
 .svelte-flow__node:has(.svelte-flow__resize-control.line) {
