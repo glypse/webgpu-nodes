@@ -15,13 +15,13 @@
 		"@sveltejs/kit": "^2.70.3",
 		"@tailwindcss/vite": "catalog:",
 		"@types/bun": "catalog:",
-		"@typescript/native-preview": "catalog:",
 		"eslint": "catalog:",
 		"globals": "catalog:",
 		"mode-watcher": "catalog:",
 		"phosphor-svelte": "catalog:",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
+		"typescript": "catalog:",
 		"typescript-eslint": "catalog:",
 		"vite": "catalog:"
 	}

@@ -36,12 +36,12 @@
 		"@sveltejs/package": "catalog:",
 		"@sveltejs/vite-plugin-svelte": "catalog:",
 		"@tailwindcss/vite": "catalog:",
-		"@typescript/native-preview": "catalog:",
 		"eslint": "catalog:",
 		"globals": "catalog:",
 		"mode-watcher": "catalog:",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
+		"typescript": "catalog:",
 		"typescript-eslint": "catalog:",
 		"vite": "catalog:"
 	},
