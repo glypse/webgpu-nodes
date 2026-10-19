@@ -2,6 +2,7 @@ import type { Node, Edge } from "@xyflow/svelte";
 import { getContext, setContext } from "svelte";
 import * as v from "valibot";
 
+import type { AddMenuEntry } from "./add-menu";
 import defaultScene from "./defaultProject.json";
 import {
 	buildDocumentIndex,
@@ -24,7 +25,7 @@ import {
 } from "./graph-types";
 import { History } from "./history.svelte";
 import { type HydratedGraphDocument } from "./hydrated-document.svelte";
-import { nodeRegistry } from "./registry";
+import { defaultDataForType, nodeRegistry } from "./registry";
 import { TypeResolver } from "./type-resolver";
 import {
 	type GroupedNode,
@@ -1511,6 +1512,39 @@ export class GraphManager {
 	}
 
 	/**
+	 * Add a node of a registered type to the active document.
+	 * Returns its id, or undefined if the document is locked.
+	 */
+	addNode(type: string, position: { x: number; y: number }): string | undefined {
+		if (this.isLocked) return undefined;
+		const id = crypto.randomUUID();
+		const doc = this.activeDocument;
+		doc.nodes = [...doc.nodes, { id, type, data: defaultDataForType(type), position }];
+		this.rebuildDocumentIndex(doc);
+		this.rebuildTypeCache();
+		return id;
+	}
+
+	/**
+	 * Create what an add-menu entry stands for at `position` (flow coordinates).
+	 * Returns the id of the created node (a zone's Repeat Input), if any.
+	 */
+	addMenuEntry(entry: AddMenuEntry, position: { x: number; y: number }): string | undefined {
+		if (entry.disabled) return undefined;
+		switch (entry.kind) {
+			case "zone":
+				return this.createRepeatZone(position);
+			case "group":
+				return entry.definitionRef
+					? this.addFromLibrary(entry.definitionRef, position)
+					: undefined;
+			case "node":
+				if (entry.type === "node-group") return this.createGroup(position);
+				return entry.type ? this.addNode(entry.type, position) : undefined;
+		}
+	}
+
+	/**
 	 * Add a node-group to the active document from an existing definition.
 	 * Standard library definitions are referenced directly (locked).
 	 * User-created definitions are shared across all instances (unlocked).
@@ -1543,6 +1577,7 @@ export class GraphManager {
 
 		this.activeDocument.nodes = [...this.activeDocument.nodes, groupNode];
 		this.rebuildDocumentIndex(this.activeDocument);
+		this.rebuildTypeCache();
 
 		return groupNodeId;
 	}

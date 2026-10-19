@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Button, ContextMenu, Input, Sheet, cn } from "$theme";
+	import { Button, Input, Sheet, cn } from "$theme";
 
 	import "./xy-theme.css";
 	import {
@@ -12,17 +12,18 @@
 		type Node,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
-	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 	import { tick } from "svelte";
 
+	import { type AddMenuEntry, addMenuEntries } from "./add-menu";
+	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import { generateShader, reachableShaderHash } from "./codegen";
 	import GradientEdge from "./GradientEdge.svelte";
 	import { getGraphManager } from "./graph-state.svelte";
-	import { type HydratedGraphProject, ROOT_ID } from "./graph-types";
+	import { type HydratedGraphProject } from "./graph-types";
 	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 	import NodeShell from "./NodeShell.svelte";
-	import { nodeRegistry, defaultDataForType, DYNAMIC_NODE_TYPES } from "./registry";
-	import { type HandleDef, type NodeCategory } from "./types";
+	import { nodeRegistry, DYNAMIC_NODE_TYPES } from "./registry";
+	import { type HandleDef } from "./types";
 	import { getDevContext } from "./utils";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
 	import { isZoneNodeType } from "./zones";
@@ -53,28 +54,6 @@
 		edges?: Edge[];
 		frag?: string;
 	} = $props();
-
-	const categoryMap = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
-		const map = new Map<
-			NodeCategory,
-			{ id: string; label: string; fromLibrary: boolean; zone?: boolean }[]
-		>([
-			["zone", [{ id: "repeat-zone", label: "Repeat Zone", fromLibrary: false, zone: true }]],
-		]);
-		for (const [type, desc] of Object.entries(nodeRegistry)) {
-			if (desc.hidden) continue;
-			const list = map.get(desc.category) ?? [];
-			list.push({ id: type, label: desc.label, fromLibrary: false });
-			map.set(desc.category, list);
-		}
-		for (const entry of graph.library) {
-			const list = map.get(entry.category as NodeCategory) ?? [];
-			list.push({ id: entry.id, label: entry.label, fromLibrary: true });
-			map.set(entry.category as NodeCategory, list);
-		}
-		return map;
-	});
 
 	const { screenToFlowPosition, getNodes, getViewport, setViewport, fitView } = useSvelteFlow();
 	const graph = getGraphManager();
@@ -116,97 +95,29 @@
 		void applyActiveViewport();
 	});
 
-	const userGroups = $derived.by(() => {
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- static data, never mutated after creation
-		const seen = new Set<string>();
-		const stdIds = new Set(graph.library.map((e) => e.id));
-		const groups: { definitionRef: string; label: string; used: boolean }[] = [];
-
-		function collectFromDoc(doc: {
-			nodes: {
-				type?: string;
-				group?: { definitionRef: string };
-			}[];
-		}) {
-			for (const node of doc.nodes) {
-				if (
-					node.type === "node-group" &&
-					node.group &&
-					!seen.has(node.group.definitionRef)
-				) {
-					seen.add(node.group.definitionRef);
-					if (stdIds.has(node.group.definitionRef)) continue;
-					const def = graph.project.definitions.get(node.group.definitionRef);
-					groups.push({
-						definitionRef: node.group.definitionRef,
-						label: def?.label ?? "Group",
-						used: true,
-					});
-				}
-			}
-		}
-
-		for (const def of graph.project.definitions.values()) {
-			collectFromDoc(def);
-		}
-
-		// Also include definitions that exist in the project but aren't referenced
-		// by any node-group in the graph (e.g. imported from JSON but not yet placed).
-		for (const defRef of graph.project.definitions.keys()) {
-			if (seen.has(defRef) || stdIds.has(defRef) || defRef === ROOT_ID) continue;
-			seen.add(defRef);
-			const def = graph.project.definitions.get(defRef);
-			groups.push({ definitionRef: defRef, label: def?.label ?? "Group", used: false });
-		}
-
-		return groups;
-	});
-
 	const isLocked = $derived(graph.isLocked);
 
-	let contextMenuPosition = $state({ x: 0, y: 0 });
+	// ── Add menu ───────────────────────────────────────────────────────────
+	// Right-click (or Shift+A) opens a searchable menu at the pointer; the
+	// picked entry is created where the menu was opened.
+	let addMenu = $state({ open: false, x: 0, y: 0 });
+	const addEntries = $derived(addMenu.open ? addMenuEntries(graph) : []);
 
-	function addNode(type: string) {
-		const id = crypto.randomUUID();
-		const position = screenToFlowPosition({
-			x: contextMenuPosition.x,
-			y: contextMenuPosition.y,
-		});
-		nodes = [
-			...nodes,
-			{
-				id,
-				type,
-				data: defaultDataForType(type),
-				position,
-			},
-		];
-		graph.rebuildTypeCache();
+	function openAddMenu(x: number, y: number) {
+		if (isLocked) return;
+		addMenu = { open: true, x, y };
 	}
 
-	function addFromLibrary(definitionRef: string) {
-		const position = screenToFlowPosition({
-			x: contextMenuPosition.x,
-			y: contextMenuPosition.y,
-		});
-		graph.addFromLibrary(definitionRef, position);
+	function pickAddEntry(entry: AddMenuEntry) {
+		graph.addMenuEntry(entry, screenToFlowPosition({ x: addMenu.x, y: addMenu.y }));
 	}
 
-	function createRepeatZone() {
-		const position = screenToFlowPosition({
-			x: contextMenuPosition.x,
-			y: contextMenuPosition.y,
-		});
-		graph.createRepeatZone(position);
+	function deleteGroupEntry(entry: AddMenuEntry) {
+		if (entry.definitionRef) graph.deleteDefinition(entry.definitionRef);
 	}
 
-	function createGroup() {
-		const position = screenToFlowPosition({
-			x: contextMenuPosition.x,
-			y: contextMenuPosition.y,
-		});
-		graph.createGroup(position);
-	}
+	/** Last pointer position over the graph, for keyboard-opened menus. */
+	let pointer = { x: 0, y: 0 };
 
 	function handleKeydown(event: KeyboardEvent) {
 		const tag = (event.target as HTMLElement | null)?.tagName;
@@ -223,6 +134,11 @@
 		if (mod && key === "y") {
 			event.preventDefault();
 			graph.redo();
+			return;
+		}
+		if (event.shiftKey && !mod && !event.altKey && key === "a") {
+			event.preventDefault();
+			openAddMenu(pointer.x, pointer.y);
 			return;
 		}
 
@@ -364,20 +280,9 @@
 		}
 	});
 
-	const CATEGORY_LABELS: Record<NodeCategory, string> = {
-		input: "Input",
-		math: "Math",
-		vector: "Vector",
-		logic: "Logic",
-		integer: "Integer",
-		converter: "Converter",
-		zone: "Zones",
-		color: "Color",
-		misc: "Miscellaneous",
-	};
-
 	function handleContextMenu(e: MouseEvent) {
-		contextMenuPosition = { x: e.clientX, y: e.clientY };
+		e.preventDefault();
+		openAddMenu(e.clientX, e.clientY);
 	}
 
 	const sheetGroupNode = $derived.by(() => {
@@ -474,148 +379,99 @@
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
-<div oncontextmenu={handleContextMenu} class={cn("size-full", wrapperClass)}>
-	<ContextMenu.Root>
-		<ContextMenu.Trigger class="block size-full">
-			<SvelteFlow
-				bind:nodes
-				bind:edges
-				{nodeTypes}
-				{edgeTypes}
-				defaultEdgeOptions={{ type: "gradient" }}
-				colorMode={mode.current}
-				fitView
-				minZoom={0.1}
-				maxZoom={3}
-				class={cn("", className)}
-				proOptions={{ hideAttribution: !debug }}
-				nodesDraggable={!isLocked}
-				nodesConnectable={!isLocked}
-				elementsSelectable={!isLocked}
-				deleteKey={isLocked ? null : undefined}
-				onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
-					Promise.resolve(
-						isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges),
-					)}
-				isValidConnection={(connection) => graph.isValidConnection(connection)}
-				onmove={(_event, viewport) => {
-					graph.activeDocument.viewport = { ...viewport };
-				}}
-				onconnect={(connection) => {
-					const { source, target, sourceHandle, targetHandle } = connection;
-					if (!source || !target || !sourceHandle || !targetHandle) return;
+<div
+	oncontextmenu={handleContextMenu}
+	onpointermove={(e) => {
+		pointer = { x: e.clientX, y: e.clientY };
+	}}
+	class={cn("size-full", wrapperClass)}
+>
+	<SvelteFlow
+		bind:nodes
+		bind:edges
+		{nodeTypes}
+		{edgeTypes}
+		defaultEdgeOptions={{ type: "gradient" }}
+		colorMode={mode.current}
+		fitView
+		minZoom={0.1}
+		maxZoom={3}
+		class={cn("", className)}
+		proOptions={{ hideAttribution: !debug }}
+		nodesDraggable={!isLocked}
+		nodesConnectable={!isLocked}
+		elementsSelectable={!isLocked}
+		deleteKey={isLocked ? null : undefined}
+		onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
+			Promise.resolve(isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges))}
+		isValidConnection={(connection) => graph.isValidConnection(connection)}
+		onmove={(_event, viewport) => {
+			graph.activeDocument.viewport = { ...viewport };
+		}}
+		onconnect={(connection) => {
+			const { source, target, sourceHandle, targetHandle } = connection;
+			if (!source || !target || !sourceHandle || !targetHandle) return;
 
-					// Dropped on a zone's virtual socket: create the state item first.
-					if (graph.connectNewZoneItem({ source, target, sourceHandle, targetHandle })) {
-						return;
-					}
+			// Dropped on a zone's virtual socket: create the state item first.
+			if (graph.connectNewZoneItem({ source, target, sourceHandle, targetHandle })) {
+				return;
+			}
 
-					const edge = {
-						...connection,
-						id: crypto.randomUUID(),
-						sourceHandle,
-						targetHandle,
-						type: "gradient",
-					};
+			const edge = {
+				...connection,
+				id: crypto.randomUUID(),
+				sourceHandle,
+				targetHandle,
+				type: "gradient",
+			};
 
-					// Skip replacement logic for variadic inputs — they accept many edges.
-					const targetNode = nodes.find((n) => n.id === target);
-					if (targetNode) {
-						const descriptor = graph.resolveDescriptor(targetNode);
-						const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
-						if (inputDef?.variadic) {
-							edges = [
-								...edges.filter(
-									(e) =>
-										!(
-											e.source === source &&
-											e.sourceHandle === sourceHandle &&
-											e.target === target &&
-											e.targetHandle === targetHandle
-										),
-								),
-								edge,
-							];
-							return;
-						}
-					}
-
-					// Single source of data per non-variadic input: drop any existing
-					// edge into the same target handle, then add the new one.
+			// Skip replacement logic for variadic inputs — they accept many edges.
+			const targetNode = nodes.find((n) => n.id === target);
+			if (targetNode) {
+				const descriptor = graph.resolveDescriptor(targetNode);
+				const inputDef = descriptor.inputs.find((i) => i.id === targetHandle);
+				if (inputDef?.variadic) {
 					edges = [
 						...edges.filter(
-							(e) => !(e.target === target && e.targetHandle === targetHandle),
+							(e) =>
+								!(
+									e.source === source &&
+									e.sourceHandle === sourceHandle &&
+									e.target === target &&
+									e.targetHandle === targetHandle
+								),
 						),
 						edge,
 					];
-				}}
-				onselectionchange={({ nodes: selectedNodes }) => {
-					graph.selectedNodeIds = selectedNodes.map((n) => n.id);
-				}}
-			>
-				<ZoneBubbles />
-				<Controls showLock={false} showZoom={false} />
-				<Background class="bg-background" />
-			</SvelteFlow>
-		</ContextMenu.Trigger>
+					return;
+				}
+			}
 
-		<ContextMenu.Content class="w-20">
-			{#each [...categoryMap.entries()] as [category, items] (category)}
-				<ContextMenu.Sub>
-					<ContextMenu.SubTrigger>{CATEGORY_LABELS[category]}</ContextMenu.SubTrigger>
-					<ContextMenu.SubContent>
-						{#each items as item (item.id)}
-							<ContextMenu.Item
-								disabled={graph.wouldCreateCycle(item.id)}
-								onclick={() => {
-									if (item.zone) {
-										createRepeatZone();
-									} else if (item.id === "node-group") {
-										createGroup();
-									} else if (item.fromLibrary) {
-										addFromLibrary(item.id);
-									} else {
-										addNode(item.id);
-									}
-								}}
-							>
-								{item.label}
-							</ContextMenu.Item>
-						{/each}
-					</ContextMenu.SubContent>
-				</ContextMenu.Sub>
-			{/each}
-			{#if userGroups.length > 0}
-				<ContextMenu.Sub>
-					<ContextMenu.SubTrigger>Groups</ContextMenu.SubTrigger>
-					<ContextMenu.SubContent>
-						{#each userGroups as group (group.definitionRef)}
-							<ContextMenu.Item
-								disabled={graph.wouldCreateCycle(group.definitionRef)}
-								onclick={() => addFromLibrary(group.definitionRef)}
-							>
-								{group.label}
-								{#if !group.used}
-									<Button
-										variant="destructive"
-										size="icon-sm"
-										class="ml-auto"
-										onclick={(e: MouseEvent) => {
-											e.stopPropagation();
-											graph.deleteDefinition(group.definitionRef);
-										}}
-									>
-										<TrashIcon />
-									</Button>
-								{/if}
-							</ContextMenu.Item>
-						{/each}
-					</ContextMenu.SubContent>
-				</ContextMenu.Sub>
-			{/if}
-		</ContextMenu.Content>
-	</ContextMenu.Root>
+			// Single source of data per non-variadic input: drop any existing
+			// edge into the same target handle, then add the new one.
+			edges = [
+				...edges.filter((e) => !(e.target === target && e.targetHandle === targetHandle)),
+				edge,
+			];
+		}}
+		onselectionchange={({ nodes: selectedNodes }) => {
+			graph.selectedNodeIds = selectedNodes.map((n) => n.id);
+		}}
+	>
+		<ZoneBubbles />
+		<Controls showLock={false} showZoom={false} />
+		<Background class="bg-background" />
+	</SvelteFlow>
 </div>
+
+<AddNodeMenu
+	bind:open={addMenu.open}
+	x={addMenu.x}
+	y={addMenu.y}
+	entries={addEntries}
+	onpick={pickAddEntry}
+	ondelete={deleteGroupEntry}
+/>
 
 <svelte:window onkeydown={handleKeydown} />
 
