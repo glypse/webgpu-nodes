@@ -13,6 +13,18 @@ import {
 	wgslTypeName,
 } from "./types";
 import { HelperRegistry } from "./wgsl-helpers";
+import {
+	DEFAULT_ITERATIONS,
+	ITERATIONS_HANDLE,
+	ITERATION_HANDLE,
+	REPEAT_INPUT,
+	type Zone,
+	type ZoneAnalysis,
+	analyzeZones,
+	pairedOutputId,
+	zoneItems,
+	zoneMaxIterations,
+} from "./zones";
 
 // ── Literals ─────────────────────────────────────────────────────────────────
 
@@ -68,16 +80,21 @@ export function formatWgslLiteral(type: WgslType, value: unknown): string {
 /**
  * Walk backwards from seed-type nodes through edges to find all node IDs
  * that contribute to the final output. `seedType` is "frag-output" at root,
- * "group-output" inside any group's own subgraph.
+ * "group-output" inside any group's own subgraph. A Repeat Output implicitly
+ * depends on its Repeat Input.
  */
 function findReachableNodeIds(
 	nodes: Map<string, Node>,
-	edges: HydratedEdge[],
+	edges: readonly { source: string; target: string }[],
 	seedType: string,
 ): Set<string> {
 	const reverseAdj = new Map<string, string[]>();
 	for (const node of nodes.values()) reverseAdj.set(node.id, []);
 	for (const edge of edges) reverseAdj.get(edge.target)?.push(edge.source);
+	for (const node of nodes.values()) {
+		const output = node.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
+		if (output) reverseAdj.get(output)?.push(node.id);
+	}
 
 	const reachable = new Set<string>();
 	const queue: string[] = [];
@@ -105,7 +122,10 @@ function findReachableNodeIds(
 /**
  * Topological sort of node IDs. Works on a DAG; throws if a cycle is detected.
  */
-function topologicalSort(ids: Iterable<string>, edges: HydratedEdge[]): string[] {
+function topologicalSort(
+	ids: Iterable<string>,
+	edges: readonly { source: string; target: string }[],
+): string[] {
 	const adjacency = new Map<string, string[]>();
 	const inDegree = new Map<string, number>();
 	for (const id of ids) {
@@ -267,11 +287,14 @@ class BodyEmitter {
 	readonly lineMap: LineMap = new Map();
 	private nodeMap = new Map<string, GroupedNode>();
 	private incomingByTarget = new Map<string, HydratedEdge[]>();
+	/** WGSL variables standing for zone boundary outputs, keyed by node id then handle id. */
+	private zoneVars = new Map<string, Map<string, string>>();
 
 	constructor(
 		private state: ShaderState,
 		doc: { nodes: GroupedNode[] },
 		edges: HydratedEdge[],
+		readonly zones: ZoneAnalysis,
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		for (const edge of edges) {
@@ -279,6 +302,21 @@ class BodyEmitter {
 			list.push(edge);
 			this.incomingByTarget.set(edge.target, list);
 		}
+		for (const zone of zones.zones.values()) {
+			const vars = zoneVarNames(zone, this.zoneItems(zone));
+			const inputVars = new Map(vars.state);
+			inputVars.set(ITERATION_HANDLE, vars.index);
+			this.zoneVars.set(zone.inputId, inputVars);
+			this.zoneVars.set(zone.outputId, vars.state);
+		}
+	}
+
+	node(id: string): GroupedNode | undefined {
+		return this.nodeMap.get(id);
+	}
+
+	zoneItems(zone: Zone): HandleDef[] {
+		return zoneItems(this.nodeMap.get(zone.outputId));
 	}
 
 	private get typeResolver() {
@@ -295,6 +333,8 @@ class BodyEmitter {
 	sourceExpr(edge: HydratedEdge): string {
 		const sourceNode = this.nodeMap.get(edge.source);
 		if (sourceNode?.type === "group-input") return sanitizeIdent(edge.sourceHandle);
+		const zoneVar = this.zoneVars.get(edge.source)?.get(edge.sourceHandle);
+		if (zoneVar) return zoneVar;
 		const base = getVarName(edge.source);
 		if (sourceNode?.type === "node-group") return `${base}.${sanitizeIdent(edge.sourceHandle)}`;
 		if (sourceNode && this.state.graph.resolveDescriptor(sourceNode).outputs.length > 1) {
@@ -323,7 +363,7 @@ class BodyEmitter {
 		return formatWgslLiteral(target, node.data[inputId] ?? fallback);
 	}
 
-	private push(nodeId: string, statements: string[], indent: string) {
+	push(nodeId: string, statements: string[], indent: string) {
 		const start = this.lines.length;
 		for (const line of statements) this.lines.push(`${indent}${line}`);
 		this.lineMap.set(nodeId, { start, end: this.lines.length });
@@ -407,9 +447,26 @@ class BodyEmitter {
 	}
 }
 
+/** Names of the WGSL variables a zone's loop uses. */
+function zoneVarNames(zone: Zone, items: HandleDef[]) {
+	const ident = identSuffix(zone.id);
+	return {
+		index: `z_${ident}_i`,
+		count: `z_${ident}_n`,
+		state: new Map(items.map((item, k) => [item.id, `z_${ident}_s${String(k)}`])),
+		next: items.map((_, k) => `z_${ident}_next${String(k)}`),
+	};
+}
+
 /**
- * Emit the nodes of a document needed to compute `seedType` nodes, in
- * dependency order. Boundary nodes are handled by the caller.
+ * Emit the nodes of a document needed to compute `seedType` nodes.
+ *
+ * Nodes are grouped by scope: the document's top level, then each repeat zone
+ * (see `analyzeZones`). Within a scope, nodes and child zones are emitted in
+ * dependency order; a child zone becomes a `for` loop whose body is its own
+ * scope. Loop invariants live in the enclosing scope, so they are computed
+ * once before the loop. Invalid links are ignored (inputs fall back to their
+ * stored values).
  */
 function emitDocumentBody(
 	state: ShaderState,
@@ -419,15 +476,85 @@ function emitDocumentBody(
 	const nodeMap = new Map<string, GroupedNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
 
-	const reachable = findReachableNodeIds(nodeMap, doc.edges, seedType);
-	const edges = doc.edges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
-	const emitter = new BodyEmitter(state, doc, edges);
+	const zones = analyzeZones(doc.nodes, doc.edges);
+	const validEdges = doc.edges.filter((e) => !zones.invalidEdges.has(e.id));
+	const reachable = findReachableNodeIds(nodeMap, validEdges, seedType);
+	const edges = validEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
+	const emitter = new BodyEmitter(state, doc, edges, zones);
 
-	for (const nodeId of topologicalSort(reachable, edges)) {
-		const node = nodeMap.get(nodeId);
-		if (!node?.type || node.type === "group-input" || node.type === "group-output") continue;
-		emitter.emitNode(node, "  ");
-	}
+	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
+	const unitIn = (scope: string | null, nodeId: string): string | undefined => {
+		let zone = zones.nodeZone.get(nodeId) ?? null;
+		if (zone === scope) return zones.zoneOfBoundary.has(nodeId) ? undefined : nodeId;
+		while (zone !== null) {
+			const parent = zones.zones.get(zone)?.parent ?? null;
+			if (parent === scope) return `zone:${zone}`;
+			zone = parent;
+		}
+		return undefined;
+	};
+
+	const emitScope = (scope: string | null, indent: string) => {
+		const units = new Set<string>();
+		for (const id of reachable) {
+			const unit = unitIn(scope, id);
+			if (unit) units.add(unit);
+		}
+		const unitEdges: { source: string; target: string }[] = [];
+		for (const e of edges) {
+			const source = unitIn(scope, e.source);
+			const target = unitIn(scope, e.target);
+			if (source && target && source !== target) unitEdges.push({ source, target });
+		}
+		for (const unit of topologicalSort(units, unitEdges)) {
+			if (unit.startsWith("zone:")) {
+				const zone = zones.zones.get(unit.slice("zone:".length));
+				if (zone) emitZoneLoop(zone, indent);
+				continue;
+			}
+			const node = nodeMap.get(unit);
+			if (!node?.type || node.type === "group-input" || node.type === "group-output")
+				continue;
+			emitter.emitNode(node, indent);
+		}
+	};
+
+	const emitZoneLoop = (zone: Zone, indent: string) => {
+		const input = nodeMap.get(zone.inputId);
+		const output = nodeMap.get(zone.outputId);
+		if (!input || !output) return;
+		const items = emitter.zoneItems(zone);
+		const vars = zoneVarNames(zone, items);
+		const stateVar = (k: number) => [...vars.state.values()][k] ?? "";
+
+		const setup: string[] = items.map(
+			(item, k) =>
+				`var ${stateVar(k)}: ${wgslTypeName(item.type)} = ${emitter.inputExpr(input, item.id, item.type)};`,
+		);
+		const iterations = emitter.inputExpr(input, ITERATIONS_HANDLE, "i32", DEFAULT_ITERATIONS);
+		const max = String(zoneMaxIterations(input));
+		setup.push(
+			`let ${vars.count} = clamp(${iterations}, 0, ${max});`,
+			`for (var ${vars.index}: i32 = 0; ${vars.index} < ${vars.count}; ${vars.index}++) {`,
+		);
+		emitter.push(zone.inputId, setup, indent);
+
+		emitScope(zone.id, `${indent}  `);
+
+		// Compute every next value before assigning any: a next value may read
+		// another item's current value.
+		const update = [
+			...items.map(
+				(item, k) =>
+					`  let ${vars.next[k] ?? ""} = ${emitter.inputExpr(output, item.id, item.type)};`,
+			),
+			...items.map((_, k) => `  ${stateVar(k)} = ${vars.next[k] ?? ""};`),
+			"}",
+		];
+		emitter.push(zone.outputId, update, indent);
+	};
+
+	emitScope(null, "  ");
 	return emitter;
 }
 

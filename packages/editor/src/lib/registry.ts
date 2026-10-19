@@ -1,5 +1,6 @@
 import * as nodes from "./node-factories";
 import type { NodeDescriptor, NodeCategory } from "./types";
+import { ZONE_NODE_TYPES } from "./zones";
 
 /**
  * Placeholder descriptor for group nodes.
@@ -94,7 +95,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	"test-runtime-error": nodes.testRuntimeErrorNode,
 };
 
-export const DYNAMIC_NODE_TYPES = ["group-input", "group-output"];
+export const DYNAMIC_NODE_TYPES = ["group-input", "group-output", ...ZONE_NODE_TYPES];
 
 /** Helper: produce default node data for a registered type. */
 export function defaultDataForType(type: string): Record<string, unknown> {

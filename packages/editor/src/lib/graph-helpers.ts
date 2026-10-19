@@ -15,6 +15,12 @@ import {
 } from "./node-factories";
 import { nodeRegistry } from "./registry";
 import { type GroupedNode, type HandleDef, type NodeDescriptor } from "./types";
+import {
+	REPEAT_INPUT,
+	REPEAT_OUTPUT,
+	buildRepeatInputDescriptor,
+	buildRepeatOutputDescriptor,
+} from "./zones";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
 
@@ -30,6 +36,12 @@ export function resolveDescriptor(
 	}
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
+	}
+	if (node.type === REPEAT_INPUT) {
+		return buildRepeatInputDescriptor(node, definitions);
+	}
+	if (node.type === REPEAT_OUTPUT) {
+		return buildRepeatOutputDescriptor(node);
 	}
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- fallback is safe
 	return (nodeRegistry[node.type ?? ""] ?? nodeRegistry.float)!;
