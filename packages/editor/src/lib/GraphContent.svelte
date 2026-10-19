@@ -270,12 +270,10 @@
 	let prevHash = $state("");
 
 	$effect(() => {
-		const rootNodes = graph.root.nodes;
-		const rootEdges = graph.root.edges;
 		const hash = reachableShaderHash(graph.project);
 		if (hash === prevHash) return;
 		prevHash = hash;
-		frag = generateShader(rootNodes, rootEdges).shader;
+		frag = generateShader(graph).shader;
 
 		if (debug) {
 			/* const sortedIds = debugSort(rootNodes, rootEdges); */

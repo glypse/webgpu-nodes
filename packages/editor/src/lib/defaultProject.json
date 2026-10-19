@@ -185,13 +185,6 @@
 					"targetHandle": "a"
 				},
 				{
-					"id": "d8dfc458-0302-4e76-a9de-ece4a249cfe6",
-					"source": "8ee068b7-9851-4e75-a178-5d4fc48e498f",
-					"target": "7249877a-ea55-4a1c-832d-725117e6a40d",
-					"sourceHandle": "y",
-					"targetHandle": "e1"
-				},
-				{
 					"id": "9902a21b-6abd-429b-8973-8e318eeaf187",
 					"source": "7249877a-ea55-4a1c-832d-725117e6a40d",
 					"target": "9de42277-e1d8-40ba-890f-5438f451d819",

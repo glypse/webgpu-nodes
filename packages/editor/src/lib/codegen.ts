@@ -1,6 +1,6 @@
 import type { Node } from "@xyflow/svelte";
 
-import { getGraphManager } from "./graph-state.svelte";
+import type { GraphManager } from "./graph-state.svelte";
 import { ROOT_ID, type GraphDocumentEdge, type HydratedEdge } from "./graph-types";
 import type { HydratedGraphDocument } from "./hydrated-document.svelte";
 import type { TypeResolver } from "./type-resolver";
@@ -654,11 +654,17 @@ function emitGroupFunctionIfNeeded(
 /**
  * Emit the full WGSL fragment shader source from the graph.
  */
-export function generateShader(
-	nodes: Node[],
-	edges: HydratedEdge[],
-): { shader: string; lineMap: Map<string, { start: number; end: number }> } {
-	const graph = getGraphManager();
+/** The slice of the GraphManager that code generation depends on. */
+export type CodegenGraph = Pick<
+	GraphManager,
+	"root" | "project" | "typeResolver" | "resolveDescriptor" | "resolveNode"
+>;
+
+export function generateShader(graph: CodegenGraph): {
+	shader: string;
+	lineMap: Map<string, { start: number; end: number }>;
+} {
+	const { nodes, edges } = graph.root;
 	const groupDecls: GroupDecls = new Map();
 
 	const resolveDescriptor = (node: GroupedNode) => graph.resolveDescriptor(node);
