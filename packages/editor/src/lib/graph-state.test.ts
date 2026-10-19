@@ -154,3 +154,16 @@ describe("GraphManager zones", () => {
 		expect(graph.getZoneItems(zoneId).map((i) => i.label)).toEqual(["Acc", "Value 2"]);
 	});
 });
+
+describe("unsaved changes", () => {
+	it("tracks edits since load and ignores the camera", () => {
+		const graph = managerFor([{ id: "t", type: "time" }], []);
+		expect(graph.hasUnsavedChanges()).toBe(false);
+		graph.root.viewport = { x: 10, y: 20, zoom: 2 };
+		expect(graph.hasUnsavedChanges()).toBe(false);
+		graph.createRepeatZone({ x: 0, y: 0 });
+		expect(graph.hasUnsavedChanges()).toBe(true);
+		graph.markSaved();
+		expect(graph.hasUnsavedChanges()).toBe(false);
+	});
+});

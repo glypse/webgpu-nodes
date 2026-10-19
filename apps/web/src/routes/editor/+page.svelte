@@ -116,6 +116,10 @@
 		}
 	}
 
+	function handleBeforeUnload(event: BeforeUnloadEvent) {
+		if (graph.hasUnsavedChanges()) event.preventDefault();
+	}
+
 	function handleKeydown(event: KeyboardEvent) {
 		if (event.key === "m" && (event.metaKey || event.ctrlKey)) {
 			event.preventDefault();
@@ -124,7 +128,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onbeforeunload={handleBeforeUnload} />
 
 <div class="flex h-dvh w-full flex-col overflow-hidden">
 	<Menubar.Root class="h-auto gap-1 rounded-none border-t-0 border-r-0 border-l-0 p-2">

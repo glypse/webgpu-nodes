@@ -166,6 +166,39 @@ export class GraphManager {
 			(id) => this.getIncomingEdges(id),
 		);
 		this.rebuildTypeCache();
+		this.markSaved();
+	}
+
+	// ── Unsaved changes ─────────────────────────────────────────────────────
+
+	/** Content snapshot of the project as last loaded or saved. */
+	private savedSnapshot = "";
+
+	/**
+	 * Serialised content of the user's documents (standard library and
+	 * per-document cameras excluded): two projects with equal snapshots
+	 * render and edit the same.
+	 */
+	contentSnapshot(): string {
+		const definitions = Object.fromEntries(
+			[...this.project.definitions.entries()]
+				.filter(([key]) => !this.isStandardLibrary(key))
+				.map(([key, doc]) => [
+					key,
+					serialiseDocument(doc.nodes, doc.edges, doc.label, doc.locked),
+				]),
+		);
+		return JSON.stringify({ definitions });
+	}
+
+	/** Remember the current content as saved. */
+	markSaved() {
+		this.savedSnapshot = this.contentSnapshot();
+	}
+
+	/** Whether the project changed since it was last loaded or saved. */
+	hasUnsavedChanges(): boolean {
+		return this.contentSnapshot() !== this.savedSnapshot;
 	}
 
 	/**
@@ -743,6 +776,7 @@ export class GraphManager {
 			(id) => this.getIncomingEdges(id),
 		);
 		this.rebuildTypeCache();
+		this.markSaved();
 
 		return true;
 	}
@@ -782,6 +816,7 @@ export class GraphManager {
 		a.download = "webGpuNodesProject.json";
 		a.click();
 		URL.revokeObjectURL(url);
+		this.markSaved();
 	}
 
 	async upload(file: File): Promise<boolean> {
