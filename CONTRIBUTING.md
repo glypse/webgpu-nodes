@@ -35,6 +35,10 @@ cd cli
 bun i
 ```
 
+## Testing
+
+Unit tests run with Vitest: `bun run test` (or `bun nx run editor:test`). Generated shaders are validated with [naga](https://github.com/gfx-rs/wgpu/tree/trunk/naga); install its CLI once with `cargo install naga-cli` (tests needing it are skipped when it's missing).
+
 ## Generating changelogs
 
 Here is the command to generate a change set:

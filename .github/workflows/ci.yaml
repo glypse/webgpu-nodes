@@ -29,3 +29,9 @@ jobs:
 
             - name: Lint check
               run: bun run lint
+
+            - name: Install naga (WGSL validation in tests)
+              run: cargo install naga-cli --locked
+
+            - name: Tests
+              run: bun run test

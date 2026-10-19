@@ -35,6 +35,7 @@
 		"check": "bun nx run-many -t check",
 		"check:root": "bunx tsc --noEmit -p tsconfig.json",
 		"lint": "bun nx run-many -t lint",
+		"test": "bun nx run-many -t test",
 		"lint:root": "bunx eslint oxfmt.config.ts eslint.config.ts",
 		"format": "bun --bun oxfmt",
 		"format:check": "bun --bun oxfmt --check",
