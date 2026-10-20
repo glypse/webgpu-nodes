@@ -287,19 +287,31 @@ export class TypeResolver {
 		const cached = this.cache.get(node.id);
 		if (cached) return cached;
 
-		const descriptor = this.resolveDescriptor(node);
-		const result = resolveNodeTypesForNode(
+		const result = this.resolveNodeTypesUncached(node, incoming, node.data, resolveNode);
+		this.cache.set(node.id, result);
+		return result;
+	}
+
+	/**
+	 * Resolve types for a node as if it held `data`, bypassing the cache:
+	 * e.g. to see what its links infer without the user's type overrides.
+	 */
+	resolveNodeTypesUncached(
+		node: GroupedNode,
+		incoming: GraphDocumentEdge[],
+		data: Record<string, unknown>,
+		resolveNode: (id: string) => GroupedNode | undefined,
+	): ResolvedNodeTypes {
+		return resolveNodeTypesForNode(
 			node,
-			descriptor,
+			this.resolveDescriptor(node),
 			incoming,
-			node.data,
+			data,
 			resolveNode,
 			this.resolveDescriptor,
 			this.getIncomingEdges,
 			this.definitions,
 		);
-		this.cache.set(node.id, result);
-		return result;
 	}
 
 	/**

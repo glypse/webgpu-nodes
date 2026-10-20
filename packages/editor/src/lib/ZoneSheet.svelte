@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Button, Input, Popover, Scrubbable, Select, Sheet } from "$theme";
+	import { Button, Input, Scrubbable, Sheet } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
-	import { type WgslType, WGSL_TYPES, isWgslType, typeKind } from "./types";
+	import TypePicker from "./TypePicker.svelte";
+	import { type WgslType, WGSL_TYPES } from "./types";
 	import { DEFAULT_MAX_ITERATIONS, zoneMaxIterations } from "./zones";
 
 	const graph = getGraphManager();
@@ -23,18 +24,6 @@
 	const locked = $derived(graph.isLocked);
 
 	let open = $derived(zoneId !== null);
-	let addOpen = $state(false);
-
-	const typeGroups = (() => {
-		const groups: { kind: string; types: WgslType[] }[] = [];
-		for (const t of WGSL_TYPES) {
-			const kind = typeKind(t);
-			const group = groups.find((g) => g.kind === kind);
-			if (group) group.types.push(t);
-			else groups.push({ kind, types: [t] });
-		}
-		return groups;
-	})();
 
 	// Local buffer for label inputs: commit on blur so typing doesn't
 	// regenerate the shader on every keystroke.
@@ -113,28 +102,16 @@
 								onblur={() => commitLabel(item.id)}
 								onkeydown={handleEnterBlur}
 							/>
-							<Select.Root
-								type="single"
+							<TypePicker
+								types={WGSL_TYPES}
 								value={item.type}
 								disabled={locked}
-								onValueChange={(value: string) => {
-									if (zoneId && isWgslType(value)) {
-										graph.setZoneItemType(zoneId, item.id, value);
-									}
+								class="w-24 shrink-0"
+								title="Item type"
+								onpick={(type: WgslType) => {
+									if (zoneId) graph.setZoneItemType(zoneId, item.id, type);
 								}}
-							>
-								<Select.Trigger class="w-24 shrink-0">{item.type}</Select.Trigger>
-								<Select.Content>
-									{#each typeGroups as group (group.kind)}
-										<Select.Group>
-											<Select.Label>{group.kind}</Select.Label>
-											{#each group.types as t (t)}
-												<Select.Item value={t} label={t}>{t}</Select.Item>
-											{/each}
-										</Select.Group>
-									{/each}
-								</Select.Content>
-							</Select.Root>
+							/>
 							<Button
 								variant="ghost"
 								size="icon-sm"
@@ -165,28 +142,13 @@
 						</div>
 					{/each}
 					{#if !locked}
-						<Popover.Root bind:open={addOpen}>
-							<Popover.Trigger>
-								{#snippet child({ props })}
-									<Button {...props} variant="outline">Add item</Button>
-								{/snippet}
-							</Popover.Trigger>
-							<Popover.Content class="w-auto p-1" sideOffset={4}>
-								<div class="grid grid-cols-4 gap-0.5">
-									{#each WGSL_TYPES as t (t)}
-										<button
-											class="hover:bg-accent rounded px-2 py-1 text-left text-xs"
-											onclick={() => {
-												if (zoneId) graph.addZoneItem(zoneId, t);
-												addOpen = false;
-											}}
-										>
-											{t}
-										</button>
-									{/each}
-								</div>
-							</Popover.Content>
-						</Popover.Root>
+						<TypePicker
+							types={WGSL_TYPES}
+							label="Add item"
+							onpick={(type: WgslType) => {
+								if (zoneId) graph.addZoneItem(zoneId, type);
+							}}
+						/>
 					{/if}
 				</div>
 			</div>

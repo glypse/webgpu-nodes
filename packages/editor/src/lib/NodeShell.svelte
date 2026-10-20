@@ -1,12 +1,12 @@
 <script lang="ts">
-	import { Button, Checkbox, Popover, Scrubbable, Select } from "$theme";
+	import { Button, Checkbox, Scrubbable, Select } from "$theme";
 	import { Handle, Position, useNodeConnections, useSvelteFlow } from "@xyflow/svelte";
-	import ArrowUUpLeftIcon from "phosphor-svelte/lib/ArrowUUpLeftIcon";
 	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 
 	import { getGraphManager } from "./graph-state.svelte";
+	import TypePicker from "./TypePicker.svelte";
 	import {
 		type HandleDef,
 		type NodeSetting,
@@ -65,8 +65,6 @@
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
-	let popoverOpen = $state(false);
-
 	/** The input driving the node's type dropdown (and representative type). */
 	const primaryInput = $derived(
 		descriptor?.inputs.find((i) => i.id === descriptor.primaryInput) ?? descriptor?.inputs[0],
@@ -102,26 +100,16 @@
 		return isWgslType(forced) ? forced : undefined;
 	});
 
-	/** The type shown in the dropdown: the forced type, or the resolved one. */
-	const triggerLabel = $derived.by((): WgslType => {
-		if (forcedType) return forcedType;
+	/** The type the links would give the node, ignoring any forced type. */
+	const inferredType = $derived.by((): WgslType => {
 		if (descriptor?.typeFamily) return graph.resolveNodeOutputType(id);
-		return primaryInput ? graph.resolveInputType(id, primaryInput.id) : "f32";
+		return primaryInput ? graph.resolveInferredInputType(id, primaryInput.id) : "f32";
 	});
 
-	/** Family types grouped by scalar kind, for the dropdown. */
-	const familyGroups = $derived.by(() => {
-		const groups: { kind: string; types: WgslType[] }[] = [];
-		for (const t of nodeTypes ?? []) {
-			const kind = typeKind(t);
-			const group = groups.find((g) => g.kind === kind);
-			if (group) group.types.push(t);
-			else groups.push({ kind, types: [t] });
-		}
-		return groups;
-	});
+	/** The type shown in the dropdown: the forced type, or the resolved one. */
+	const triggerLabel = $derived(forcedType ?? inferredType);
 
-	function handleTypeSelect(value: string) {
+	function handleTypeSelect(value: WgslType) {
 		if (!nodeFamilyKey) return;
 		if (descriptor?.typeFamily) {
 			updateNodeData(id, { ...data, [descriptor.typeFamily.key]: value });
@@ -215,7 +203,6 @@
 
 	function addZoneItem(type: WgslType) {
 		if (zoneId) graph.addZoneItem(zoneId, type);
-		popoverOpen = false;
 	}
 
 	function addHandle(type: WgslType) {
@@ -231,30 +218,11 @@
 			[newHandle.id]: 0,
 		});
 		graph.invalidateTypes([id]);
-		popoverOpen = false;
 	}
 </script>
 
 {#snippet addHandleButton(onPick: (type: WgslType) => void = addHandle)}
-	<Popover.Root bind:open={popoverOpen}>
-		<Popover.Trigger>
-			{#snippet child({ props })}
-				<Button {...props} class="w-full">+</Button>
-			{/snippet}
-		</Popover.Trigger>
-		<Popover.Content class="w-auto p-1" sideOffset={4} side="top">
-			<div class="grid grid-cols-4 gap-0.5">
-				{#each WGSL_TYPES as t (t)}
-					<button
-						class="hover:bg-accent rounded px-2 py-1 text-left text-xs"
-						onclick={() => onPick(t)}
-					>
-						{t}
-					</button>
-				{/each}
-			</div>
-		</Popover.Content>
-	</Popover.Root>
+	<TypePicker types={WGSL_TYPES} label="+" class="w-full" title="Add a value" onpick={onPick} />
 {/snippet}
 
 {#snippet valueEditor(inputId: string, type: WgslType)}
@@ -354,38 +322,15 @@
 		{/if}
 		{#if hasTypeDropdown}
 			<div class="inline-flex gap-1 pb-1">
-				<Select.Root
-					type="single"
-					name="{id}-node-type"
-					value={triggerLabel}
-					onValueChange={handleTypeSelect}
-				>
-					<Select.Trigger class="flex-1">
-						{triggerLabel}
-					</Select.Trigger>
-					<Select.Content>
-						{#each familyGroups as group (group.kind)}
-							<Select.Group>
-								<Select.Label>{group.kind}</Select.Label>
-								{#each group.types as t (t)}
-									<Select.Item value={t} label={t}>
-										{t}
-									</Select.Item>
-								{/each}
-							</Select.Group>
-						{/each}
-					</Select.Content>
-				</Select.Root>
-				{#if forcedType && typeInferable}
-					<Button
-						variant="secondary"
-						type="button"
-						title="Reset to dynamic inference"
-						onclick={handleTypeReset}
-					>
-						<ArrowUUpLeftIcon class="size-3" />
-					</Button>
-				{/if}
+				<TypePicker
+					types={nodeTypes ?? []}
+					value={typeInferable ? forcedType : triggerLabel}
+					inferred={typeInferable ? inferredType : undefined}
+					class="flex-1"
+					title="Value type"
+					onpick={handleTypeSelect}
+					onreset={handleTypeReset}
+				/>
 			</div>
 		{/if}
 		{#each descriptor.settings ?? [] as setting (setting.key)}

@@ -25,7 +25,8 @@
 	import { type HydratedGraphDocument } from "./hydrated-document.svelte";
 	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, DYNAMIC_NODE_TYPES } from "./registry";
-	import { type HandleDef } from "./types";
+	import TypePicker from "./TypePicker.svelte";
+	import { type HandleDef, type WgslType, WGSL_TYPES } from "./types";
 	import { openContextMenuAt } from "./utils";
 	import { getDevContext } from "./utils";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
@@ -535,9 +536,23 @@
 						<span class="text-sm font-medium">Inputs</span>
 						{#each sheetInputHandles as handle (handle.id)}
 							<div class="flex items-center gap-2">
-								<span class="text-muted-foreground w-16 shrink-0 text-xs"
-									>{handle.type}</span
-								>
+								<TypePicker
+									types={WGSL_TYPES}
+									value={handle.type}
+									disabled={sheetLocked}
+									class="w-20 shrink-0"
+									title="Value type"
+									onpick={(type: WgslType) => {
+										if (sheetGroupNode.group && sheetInputNodeId) {
+											graph.setHandleType(
+												sheetGroupNode.group.definitionRef,
+												sheetInputNodeId,
+												handle.id,
+												type,
+											);
+										}
+									}}
+								/>
 								<Input
 									value={handleLabelValue(handle.id)}
 									disabled={sheetLocked}
@@ -584,9 +599,23 @@
 						<span class="text-sm font-medium">Outputs</span>
 						{#each sheetOutputHandles as handle (handle.id)}
 							<div class="flex items-center gap-2">
-								<span class="text-muted-foreground w-16 shrink-0 text-xs"
-									>{handle.type}</span
-								>
+								<TypePicker
+									types={WGSL_TYPES}
+									value={handle.type}
+									disabled={sheetLocked}
+									class="w-20 shrink-0"
+									title="Value type"
+									onpick={(type: WgslType) => {
+										if (sheetGroupNode.group && sheetOutputNodeId) {
+											graph.setHandleType(
+												sheetGroupNode.group.definitionRef,
+												sheetOutputNodeId,
+												handle.id,
+												type,
+											);
+										}
+									}}
+								/>
 								<Input
 									value={handleLabelValue(handle.id)}
 									disabled={sheetLocked}

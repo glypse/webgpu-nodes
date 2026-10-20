@@ -196,3 +196,51 @@ describe("undo / redo", () => {
 		expect(graph.resolveOutputHandleType("u", "uv")).toBe("vec2f");
 	});
 });
+
+describe("inferred types", () => {
+	it("keeps the inferred type visible under a forced one", () => {
+		const graph = managerFor(
+			[
+				{ id: "uv", type: "uv" },
+				{ id: "s", type: "sin" },
+			],
+			[["uv", "uv", "s", "e"]],
+		);
+		const family = graph.resolveNodeInputs("s")[0]?.types.join(",") ?? "";
+		graph.setNodeTypeOverride("s", family, "vec4f");
+		expect(graph.resolveInputType("s", "e")).toBe("vec4f");
+		expect(graph.resolveInferredInputType("s", "e")).toBe("vec2f");
+	});
+});
+
+describe("group handle types", () => {
+	it("retypes a handle and drops links that no longer fit, inside and outside", () => {
+		const graph = managerFor([{ id: "uv", type: "uv" }], []);
+		const groupId = graph.createGroup({ x: 0, y: 0 });
+		const group = graph.root.nodesById.get(groupId ?? "");
+		const ref = group?.group?.definitionRef ?? "";
+		const inner = graph.project.definitions.get(ref);
+		const input = inner?.nodes.find((n) => n.type === "group-input");
+		const handle = (input?.data.handles as { id: string }[] | undefined)?.[0];
+		if (!groupId || !input || !handle) throw new Error("group not created");
+
+		graph.root.edges = [
+			...graph.root.edges,
+			{
+				id: "feed",
+				source: "uv",
+				sourceHandle: "uv",
+				target: groupId,
+				targetHandle: handle.id,
+			},
+		];
+		graph.setHandleType(ref, input.id, handle.id, "vec2f");
+		expect(graph.root.edges.some((e) => e.id === "feed")).toBe(true);
+		// The inner pass-through goes to an f32 output: a vec2f no longer fits it.
+		expect(inner?.edges.some((e) => e.source === input.id)).toBe(false);
+
+		graph.setHandleType(ref, input.id, handle.id, "f32");
+		expect(graph.root.edges.some((e) => e.id === "feed")).toBe(false);
+		expect(graph.resolveNodeOutputs(input.id)[0]?.type).toBe("f32");
+	});
+});

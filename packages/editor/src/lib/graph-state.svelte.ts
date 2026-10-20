@@ -2085,6 +2085,23 @@ export class GraphManager {
 	}
 
 	/**
+	 * The type an input would get from its links alone, ignoring the type the
+	 * user forced on the node: what the type dropdown offers as "inferred".
+	 */
+	resolveInferredInputType(nodeId: string, inputId: string): WgslType {
+		const forced = this.resolveInputType(nodeId, inputId); // also tracks the type cache
+		const node = this.resolveNode(nodeId);
+		if (!node?.data.__nodeTypeOverrides) return forced;
+		const data = { ...node.data };
+		delete data.__nodeTypeOverrides;
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
+		const result = this.typeResolver.resolveNodeTypesUncached(node, incoming, data, (id) =>
+			this.resolveNode(id),
+		);
+		return result.inputTypes[inputId] ?? forced;
+	}
+
+	/**
 	 * Resolve the type carried by one output handle of a node.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
@@ -2260,6 +2277,58 @@ export class GraphManager {
 		doc.nodesById = idx.nodesById;
 		doc.edgesBySource = idx.edgesBySource;
 		doc.edgesByTarget = idx.edgesByTarget;
+	}
+
+	/**
+	 * Change the type of a handle on a group-input / group-output node. Links
+	 * that no longer fit (inside the definition, and on every instance of the
+	 * group) are removed.
+	 */
+	setHandleType(definitionRef: string, handleNodeId: string, handleId: string, type: WgslType) {
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		const handles = handleNode?.data.handles as HandleDef[] | undefined;
+		if (!def || !handleNode || !handles?.some((h) => h.id === handleId)) return;
+
+		const data = {
+			...handleNode.data,
+			handles: handles.map((h) => (h.id === handleId ? { ...h, type } : h)),
+		};
+		def.nodes = def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n));
+		this.rebuildDocumentIndex(def);
+		this.rebuildTypeCache();
+
+		const touches = (doc: HydratedGraphDocument, e: HydratedEdge) => {
+			if (doc === def) {
+				return (
+					(e.source === handleNodeId && e.sourceHandle === handleId) ||
+					(e.target === handleNodeId && e.targetHandle === handleId)
+				);
+			}
+			const isInstance = (id: string) =>
+				doc.nodesById.get(id)?.group?.definitionRef === definitionRef;
+			return (
+				(isInstance(e.source) && e.sourceHandle === handleId) ||
+				(isInstance(e.target) && e.targetHandle === handleId)
+			);
+		};
+		for (const doc of this.project.definitions.values()) {
+			const kept = doc.edges.filter((e) => {
+				if (!touches(doc, e)) return true;
+				const source = doc.nodesById.get(e.source);
+				const target = doc.nodesById.get(e.target);
+				return (
+					!!source &&
+					!!target &&
+					this.isTypeCompatible(source, e.sourceHandle, target, e.targetHandle)
+				);
+			});
+			if (kept.length !== doc.edges.length) {
+				doc.edges = kept;
+				this.rebuildDocumentIndex(doc);
+			}
+		}
+		this.rebuildTypeCache();
 	}
 
 	/** Remove a handle from a group-input/group-output node and delete all connected edges. */
