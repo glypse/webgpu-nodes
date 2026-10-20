@@ -13,6 +13,7 @@ export * as Breadcrumb from "./breadcrumb/index";
 export * as Command from "./command/index";
 export * as ContextMenu from "./context-menu/index";
 export * as Dialog from "./dialog/index";
+export * as DropdownMenu from "./dropdown-menu/index";
 export * as InputGroup from "./input-group/index";
 export * as Kbd from "./kbd/index";
 export * as Menubar from "./menubar/index";
