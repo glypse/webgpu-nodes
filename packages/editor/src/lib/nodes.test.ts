@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { formatWgslLiteral } from "./codegen";
 import { nodeRegistry } from "./registry";
-import { shaderFor, type TestEdge, type TestNode } from "./testing/graph";
+import { managerFor, shaderFor, type TestEdge, type TestNode } from "./testing/graph";
 import { nagaBin, validateFragment } from "./testing/wgsl";
 import { WGSL_TYPES, isConnectionCompatible, type WgslType } from "./types";
 
@@ -71,5 +71,83 @@ describe("formatWgslLiteral", () => {
 		expect(formatWgslLiteral("vec2b", { x: true, y: false })).toBe("vec2<bool>(true, false)");
 		expect(formatWgslLiteral("vec3i", 4)).toBe("vec3i(i32(4))");
 		expect(formatWgslLiteral("vec2f", undefined)).toBe("vec2f()");
+	});
+});
+
+describe("enum inputs and fallbacks", () => {
+	const aspectUv = (data: Record<string, unknown> = {}): TestNode => ({
+		id: "a",
+		type: "node-group",
+		data,
+		group: { definitionRef: "std-aspect-uv", locked: true },
+	});
+
+	it("aspect UV falls back to the fragment UV when unlinked", () => {
+		const shader = shaderFor([aspectUv({ mode: 1 })], [["a", "uv", "out", "color"]]);
+		// The unlinked variant uses the group's own UV, the default branch only.
+		expect(shader).toContain("let v_a = group_h_std_aspect_uv__d0(");
+		expect(shader).toMatch(/let v_coordinates = v_uv;/);
+		expect(shader).not.toMatch(/fn group_h_std_aspect_uv\(/);
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("uses linked coordinates, one function per linked/unlinked combination", () => {
+		const shader = shaderFor(
+			[
+				{ id: "u", type: "uv" },
+				aspectUv(),
+				{ ...aspectUv(), id: "b" },
+				{ id: "sum", type: "add" },
+			],
+			[
+				["u", "uv", "a", "uv"],
+				["a", "uv", "sum", "operands"],
+				["b", "uv", "sum", "operands"],
+				["sum", "result", "out", "color"],
+			],
+		);
+		expect(shader).toMatch(/fn group_h_std_aspect_uv\(/);
+		expect(shader).toMatch(/fn group_h_std_aspect_uv__d0\(/);
+		expect(shader).toMatch(/let v_coordinates = h_uv;/);
+		expect(shader.match(/struct GroupOutputs_h_std_aspect_uv /g)).toHaveLength(1);
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("exposes the mode as an enum and the coordinates as a fallback input", () => {
+		const graph = managerFor([aspectUv()], []);
+		const inputs = graph.resolveNodeInputs("a");
+		expect(inputs.find((i) => i.id === "mode")?.options).toEqual([
+			"Contain (Fit)",
+			"Cover (Fill)",
+			"Stretch",
+		]);
+		expect(inputs.find((i) => i.id === "uv")?.fallback).toBe(true);
+		expect(inputs.find((i) => i.id === "mode")?.fallback).toBeUndefined();
+	});
+
+	it("lets any scalar drive an enum input", () => {
+		const shader = shaderFor(
+			[{ id: "t", type: "time" }, aspectUv()],
+			[
+				["t", "time", "a", "mode"],
+				["a", "uv", "out", "color"],
+			],
+		);
+		expect(shader).toContain("u32(v_t))");
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("picks the default outside groups when nothing feeds the value", () => {
+		const shader = shaderFor(
+			[
+				{ id: "f", type: "fallback" },
+				{ id: "t", type: "time" },
+			],
+			[
+				["t", "time", "f", "default"],
+				["f", "result", "out", "color"],
+			],
+		);
+		expect(shader).toContain("let v_f = v_t;");
 	});
 });
