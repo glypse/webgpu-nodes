@@ -11,6 +11,7 @@
 		"prepare": "bun --bun svelte-kit sync || echo ''"
 	},
 	"dependencies": {
+		"$core": "workspace:*",
 		"$editor": "workspace:*",
 		"$theme": "workspace:*"
 	},

@@ -1,0 +1,195 @@
+import { type WgslType } from "./values";
+
+// ─── Handle / descriptor types ───────────────────────────────
+
+export type HandleDef = {
+	/** Stable, generated once, never changes — this is what edges/targetHandle reference. */
+	id: string;
+	/** User-facing, editable later, defaults to something like "Input 1". */
+	label: string;
+	/** The WGSL type this handle carries. */
+	type: WgslType;
+	/** On a group input: makes it an enum input (see `NodeInputDef.options`; type u32). */
+	options?: string[];
+};
+
+export type NodeInputDef = {
+	/** Stable port identifier. Doubles as the UI handle id and the key edges reference. */
+	id: string;
+	label: string;
+	/**
+	 * The concrete WGSL types this input accepts. The first element is the
+	 * default type used when nothing is connected and no user override is set.
+	 *
+	 * Inputs sharing the same `types` array are in the same "family" — they
+	 * resolve to one concrete type across the whole node (node-wide resolution).
+	 */
+	types: readonly WgslType[];
+	/**
+	 * If true, every edge connected to this handle is collected.
+	 * The descriptor's wgsl receives `inputs[id]` as an array of upstream vars.
+	 * For non-variadic, it's always 0 or 1 elements.
+	 */
+	variadic?: boolean;
+	/**
+	 * Makes the input an enum: a u32 whose values are indices into these
+	 * user-facing options (the first option is 0). Unconnected, it shows a
+	 * dropdown; connected, any scalar drives it.
+	 */
+	options?: readonly string[];
+	/**
+	 * On a group node: the group computes its own value when this socket is
+	 * unlinked (a Fallback node inside it), so no editor is shown for it.
+	 */
+	fallback?: boolean;
+};
+
+/** Default type for an input: the first type in its `types` array. */
+export function inputDefaultType(input: NodeInputDef): WgslType {
+	return input.types[0] ?? "f32";
+}
+
+/**
+ * Stable string key for grouping inputs into families.
+ * Two inputs are in the same family when their `types` arrays are equal.
+ */
+export function inputFamilyKey(input: NodeInputDef): string {
+	return familyKey(input.types);
+}
+
+/** The family key of inputs accepting `types` (see `inputFamilyKey`). */
+export function familyKey(types: readonly WgslType[]): string {
+	return types.join(",");
+}
+
+export type NodeOutputDef = {
+	/** Stable port identifier. Doubles as the UI handle id and the key edges reference. */
+	id: string;
+	label: string;
+	type: WgslType;
+};
+
+/** A user-facing enum setting shown on the node (e.g. a comparison operator). */
+export type NodeSetting = {
+	/** Key in node data holding the selected value. */
+	key: string;
+	label: string;
+	options: readonly { value: string; label: string }[];
+};
+
+/** Read an enum setting from node data, falling back to the first option. */
+export function settingValue(data: Record<string, unknown>, setting: NodeSetting): string {
+	const value = data[setting.key];
+	const match = setting.options.find((o) => o.value === value);
+	return (match ?? setting.options[0])?.value ?? "";
+}
+
+export type NodeCategory =
+	| "input"
+	| "math"
+	| "vector"
+	| "logic"
+	| "integer"
+	| "converter"
+	| "zone"
+	| "color"
+	| "misc";
+
+/** Shader helper functions nodes may request through `WgslCtx.helper`. */
+export type HelperName = "safeDiv" | "safeMod" | "safePow";
+
+export type WgslCtx = {
+	varName: string;
+	/**
+	 * Map from output port id to its WGSL variable name.
+	 * For single-output nodes this always has one entry pointing at the same variable as `varName`.
+	 * For multi-output nodes each entry has a unique suffix: `{ x: "v_id_x", y: "v_id_y" }`.
+	 */
+	outputVars: Record<string, string>;
+	data: Record<string, unknown>;
+	/**
+	 * Map from input port id → WGSL expressions of the upstream node(s).
+	 * For non-variadic inputs: always 0 or 1 elements (raw, unconverted).
+	 * For variadic inputs: N elements (one per connected edge), pre-converted
+	 * to the resolved input type.
+	 */
+	inputs: Record<string, string[]>;
+	/**
+	 * The node-wide resolved type for each input handle.
+	 * All inputs in the same TypeFamily share the same resolved type.
+	 */
+	inputTypes: Record<string, WgslType>;
+	/**
+	 * The resolved output type for this node instance.
+	 * Determined by the node's `resolveOutputType` callback.
+	 */
+	outputType: WgslType;
+	/** The active outputs for this node instance (with their resolved types). */
+	resolvedOutputs: NodeOutputDef[];
+	/** The active inputs for this node instance. */
+	resolvedInputs: NodeInputDef[];
+	/**
+	 * Return a WGSL expression for the given input handle, converted to its
+	 * resolved type. For variadic inputs, joins the operands with ", ".
+	 */
+	promoteInput: (id: string) => string;
+	/**
+	 * Whether an input carries a value, known while compiling: false when
+	 * nothing feeds it, or when it comes from a group input whose socket the
+	 * calling group node left unlinked (see the Fallback node).
+	 */
+	isPresent: (id: string) => boolean;
+	/** Convert an expression between two types (see `convertVar`). */
+	convert: (expr: string, source: WgslType, target: WgslType) => string;
+	/** Request a shared helper function overload; returns its name. */
+	helper: (name: HelperName, type: WgslType) => string;
+};
+
+export type NodeDescriptor = {
+	type: string;
+	label: string;
+	category: NodeCategory;
+	/** Hide from the "add node" menu (e.g. nodes created in pairs). */
+	hidden?: boolean;
+	inputs: NodeInputDef[];
+	outputs: NodeOutputDef[];
+	defaultData: Record<string, unknown>;
+	/** Enum settings rendered on the node; their values live in node data. */
+	settings?: NodeSetting[];
+	/**
+	 * The input whose family drives the node's "representative" type.
+	 * Defaults to the first input.
+	 */
+	primaryInput?: string;
+	/**
+	 * When true, each output keeps the type declared in its `NodeOutputDef`
+	 * (group boundaries, zones). Otherwise every output carries the node-wide
+	 * resolved `outputType`.
+	 */
+	staticOutputTypes?: boolean;
+	/**
+	 * Resolve the output type from the representative input type.
+	 * When omitted, defaults to identity.
+	 */
+	resolveOutputType?: (resolvedType: WgslType) => WgslType;
+	/**
+	 * Resolve the active outputs based on the representative input type.
+	 * When omitted, defaults to the static `outputs` array.
+	 */
+	resolveOutputs?: (resolvedInputType: WgslType) => NodeOutputDef[];
+	/**
+	 * Resolve the active inputs based on the resolved output type.
+	 * When omitted, defaults to the static `inputs` array.
+	 */
+	resolveInputs?: (resolvedOutputType: WgslType) => NodeInputDef[];
+	/**
+	 * Declare a type family for this node's output type selection.
+	 * When present, the type dropdown shows these types (instead of the
+	 * primary input's types), and the override is stored under `key` in node data.
+	 */
+	typeFamily?: { key: string; types: readonly WgslType[] };
+	/** Emit WGSL line(s) that define `varName`.
+	 *  Each returned string becomes one statement in the current scope.
+	 *  The `let ` / `var ` prefix is the node's own choice. */
+	wgsl: (ctx: WgslCtx) => string[];
+};

@@ -26,11 +26,11 @@
 		}
 	},
 	"dependencies": {
+		"$core": "workspace:*",
 		"$theme": "workspace:*",
 		"@xyflow/svelte": "^1.7.0",
 		"phosphor-svelte": "catalog:",
-		"spektral": "^0.17.2",
-		"valibot": "^1.5.0"
+		"spektral": "^0.17.2"
 	},
 	"devDependencies": {
 		"@sveltejs/package": "catalog:",

@@ -31,10 +31,16 @@ Whenever you're done working on a feature, run check and lint on the whole packa
 
 Given the nature of this project, it's easy for the UI to not reflect the same state as the computed types and codegen, group references, etc. Make an effort to keep a single source of truth.
 
+## Packages
+
+- `packages/core` (`$core`): the headless graph model (`GraphModel`: documents, groups, repeat zones, type inference, connection rules, undo history), the node library, the standard library and WGSL code generation. Plain TypeScript: **no Svelte, no SvelteFlow, no DOM**. Any graph edit or rule belongs here, so another front end (or none, e.g. tests) behaves the same.
+- `packages/editor` (`$editor`): the Svelte / SvelteFlow front end. `GraphManager` extends `GraphModel`, making its state reactive and adding UI-only state (sheets) and browser file I/O. Components call model methods (e.g. `graph.updateNodeData`, `graph.setNodeType`) rather than editing node data themselves.
+- `packages/theme` (`$theme`): shared UI components and tokens.
+
 ## Reactivity model
 
-Node/edge arrays in `HydratedGraphDocument` use `$state.raw` (not `$state`) for performance — SvelteFlow iterates them thousands of times per frame. This means **mutations to individual node properties (e.g. `node.data.foo = bar`) are not reactive**. Always use SvelteFlow's `updateNodeData` API or reassign the array to trigger UI updates. If something that should be reactive isn't, check whether you're mutating through a `$state.raw` container. See `hydrated-document.svelte.ts` and the comments there. If this section is out of sync with the actual data model, please notify the user.
+`GraphModel` keeps its state behind overridable factories (`createState`, `createDocument`, `createHistoryCounts`); the editor's `GraphManager` returns Svelte state from them. In the editor, documents are `ReactiveGraphDocument`s whose node/edge arrays use `$state.raw` (not `$state`) for performance — SvelteFlow iterates them thousands of times per frame. This means **mutations to individual node properties (e.g. `node.data.foo = bar`) are not reactive**: the model only ever replaces nodes and reassigns arrays (e.g. `updateNodeData`), and new model code must do the same. If something that should be reactive isn't, check whether you're mutating through a `$state.raw` container. See `reactive-document.svelte.ts` and the comments there. If this section is out of sync with the actual data model, please notify the user.
 
 ## Zones (repeat loops)
 
-A repeat zone is a `repeat-input` / `repeat-output` node pair: the output owns the state items (`data.items`), the input points at it (`data.pairedOutput`). Zone membership, nesting and invalid links are never stored: `analyzeZones` (`zones.ts`) derives them from the links (Blender's rules) and is the single source of truth for codegen, the bubble rendering and red links. Use `GraphManager.zoneAnalysis(doc)` (memoised on the nodes/edges arrays) rather than re-deriving them.
+A repeat zone is a `repeat-input` / `repeat-output` node pair: the output owns the state items (`data.items`), the input points at it (`data.pairedOutput`). Zone membership, nesting and invalid links are never stored: `analyzeZones` (`packages/core/src/zones/analysis.ts`) derives them from the links (Blender's rules) and is the single source of truth for codegen, the bubble rendering and red links. Use `GraphModel.zoneAnalysis(doc)` (memoised on the nodes/edges arrays) rather than re-deriving them.

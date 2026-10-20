@@ -1,11 +1,6 @@
 <script lang="ts">
-	import {
-		Editor,
-		GraphManager,
-		setDevContext,
-		setGraphManager,
-		type GraphDocument,
-	} from "$editor";
+	import { type GraphDocument } from "$core";
+	import { Editor, GraphManager, setDevContext, setGraphManager } from "$editor";
 	import { Menubar, AlertDialog } from "$theme";
 	import { toggleMode } from "mode-watcher";
 

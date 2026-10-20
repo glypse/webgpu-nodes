@@ -1,0 +1,9 @@
+{
+	"extends": "../../tsconfig.base.json",
+	"compilerOptions": {
+		"resolveJsonModule": true,
+		"lib": ["esnext"],
+		"types": ["bun"]
+	},
+	"include": ["src/**/*", "vite.config.ts", "eslint.config.ts"]
+}
