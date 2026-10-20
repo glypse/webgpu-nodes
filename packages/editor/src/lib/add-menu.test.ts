@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { CATEGORY_LABELS, addMenuEntries, groupByHeading } from "./add-menu";
+import { CATEGORY_LABELS, addMenuEntries, groupByHeading, searchEntries } from "./add-menu";
 import type { PendingConnection } from "./graph-state.svelte";
 import { managerFor } from "./testing/graph";
 
@@ -144,5 +144,24 @@ describe("adding from a dropped link", () => {
 			targetHandle: "operands",
 		});
 		expect(graph.root.edges.filter((e) => e.target === "sum")).toHaveLength(2);
+	});
+});
+
+describe("searchEntries", () => {
+	const entries = addMenuEntries(managerFor([], []));
+	const labels = (query: string) => searchEntries(entries, query).map((e) => e.label);
+
+	it("ranks label prefixes first, then word prefixes, then substrings", () => {
+		const result = labels("to");
+		expect(result.slice(0, 4).every((l) => l.startsWith("To "))).toBe(true);
+		expect(labels("tan")[0]).toBe("Tangent");
+		expect(labels("tangent")).toContain("Arc Tangent");
+	});
+
+	it("matches headings and requires every word", () => {
+		expect(labels("logic not")).toEqual(["Not"]);
+		expect(labels("zones")).toContain("Repeat Zone");
+		expect(labels("   ")).toEqual([]);
+		expect(labels("no such node")).toEqual([]);
 	});
 });

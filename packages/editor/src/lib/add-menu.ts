@@ -126,3 +126,33 @@ export function groupByHeading(
 	}
 	return groups;
 }
+
+/**
+ * Entries matching a search query, best first: labels starting with the
+ * query, then labels with a word starting with it, then labels containing it,
+ * then entries whose heading matches. Every word of the query must match.
+ */
+export function searchEntries(entries: readonly AddMenuEntry[], query: string): AddMenuEntry[] {
+	const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
+	if (words.length === 0) return [];
+	const score = (entry: AddMenuEntry): number | undefined => {
+		const label = entry.label.toLowerCase();
+		const heading = entry.heading.toLowerCase();
+		let total = 0;
+		for (const word of words) {
+			if (label.startsWith(word)) total += 0;
+			else if (label.split(/[\s/-]+/).some((w) => w.startsWith(word))) total += 1;
+			else if (label.includes(word)) total += 2;
+			else if (heading.includes(word)) total += 3;
+			else return undefined;
+		}
+		return total;
+	};
+	return entries
+		.flatMap((entry) => {
+			const s = score(entry);
+			return s === undefined ? [] : [{ entry, s }];
+		})
+		.toSorted((a, b) => a.s - b.s || a.entry.label.localeCompare(b.entry.label))
+		.map(({ entry }) => entry);
+}

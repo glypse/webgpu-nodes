@@ -26,6 +26,7 @@
 	import NodeShell from "./NodeShell.svelte";
 	import { nodeRegistry, DYNAMIC_NODE_TYPES } from "./registry";
 	import { type HandleDef } from "./types";
+	import { openContextMenuAt } from "./utils";
 	import { getDevContext } from "./utils";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
 	import { isZoneNodeType } from "./zones";
@@ -100,44 +101,56 @@
 	const isLocked = $derived(graph.isLocked);
 
 	// ── Add menu ───────────────────────────────────────────────────────────
-	// Right-click (or Shift+A) opens a searchable menu at the pointer; the
-	// picked entry is created where the menu was opened.
-	// When a link is dropped on empty space, the menu only lists what can take
-	// it, and the picked node gets linked.
-	let addMenu = $state<{
-		open: boolean;
-		x: number;
-		y: number;
-		pending: PendingConnection | null;
-	}>({ open: false, x: 0, y: 0, pending: null });
+	// Right-click (or Shift+A) opens the add menu at the pointer; the picked
+	// entry is created where the menu was opened. When a link is dropped on
+	// empty space, the menu only lists what can take it, and the picked node
+	// gets linked.
+	/** The add menu's trigger, which opening events are dispatched on. */
+	let addMenuTrigger = $state<HTMLElement | null>(null);
+	let addMenuOpen = $state<boolean>(false);
+	let addMenuAt = $state<{ x: number; y: number; pending: PendingConnection | null }>({
+		x: 0,
+		y: 0,
+		pending: null,
+	});
+	/** Connection to attach to the next opening (set by `openAddMenu`). */
+	let nextPending: PendingConnection | null = null;
 
 	const addEntries = $derived.by(() => {
-		if (!addMenu.open) return [];
+		if (!addMenuOpen) return [];
 		const entries = addMenuEntries(graph);
-		const pending = addMenu.pending;
+		const pending = addMenuAt.pending;
 		if (!pending) return entries;
 		return entries.filter((entry) => graph.entryHandleFor(entry, pending) !== undefined);
 	});
 
 	const addMenuPlaceholder = $derived.by(() => {
-		const pending = addMenu.pending;
+		const pending = addMenuAt.pending;
 		if (!pending) return "Search nodes…";
 		if (pending.handleType === "source") {
 			const type = graph.resolveOutputHandleType(pending.nodeId, pending.handleId);
-			return `Search nodes taking a ${type}…`;
+			return `Nodes taking a ${type}…`;
 		}
 		const type = graph.resolveInputType(pending.nodeId, pending.handleId);
-		return `Search nodes producing a ${type}…`;
+		return `Nodes producing a ${type}…`;
 	});
 
+	/** Open the add menu at a point, as a right-click there would. */
 	function openAddMenu(x: number, y: number, pending: PendingConnection | null = null) {
 		if (isLocked) return;
-		addMenu = { open: true, x, y, pending };
+		nextPending = pending;
+		if (addMenuTrigger) openContextMenuAt(addMenuTrigger, x, y);
+	}
+
+	/** Every opening (real right-click or `openAddMenu`) goes through here. */
+	function handleContextMenu(e: MouseEvent) {
+		addMenuAt = { x: e.clientX, y: e.clientY, pending: nextPending };
+		nextPending = null;
 	}
 
 	function pickAddEntry(entry: AddMenuEntry) {
-		const position = screenToFlowPosition({ x: addMenu.x, y: addMenu.y });
-		if (addMenu.pending) graph.addMenuEntryConnected(entry, position, addMenu.pending);
+		const position = screenToFlowPosition({ x: addMenuAt.x, y: addMenuAt.y });
+		if (addMenuAt.pending) graph.addMenuEntryConnected(entry, position, addMenuAt.pending);
 		else graph.addMenuEntry(entry, position);
 	}
 
@@ -329,11 +342,6 @@
 		}
 	});
 
-	function handleContextMenu(e: MouseEvent) {
-		e.preventDefault();
-		openAddMenu(e.clientX, e.clientY);
-	}
-
 	const sheetGroupNode = $derived.by(() => {
 		if (!graph.sheetGroupId) return undefined;
 		if (graph.path.length > 0) {
@@ -435,49 +443,51 @@
 	}}
 	class={cn("size-full", wrapperClass)}
 >
-	<SvelteFlow
-		bind:nodes
-		bind:edges
-		{nodeTypes}
-		{edgeTypes}
-		defaultEdgeOptions={{ type: "gradient" }}
-		colorMode={mode.current}
-		fitView
-		minZoom={0.1}
-		maxZoom={3}
-		class={cn("", className)}
-		proOptions={{ hideAttribution: !debug }}
-		nodesDraggable={!isLocked}
-		nodesConnectable={!isLocked}
-		elementsSelectable={!isLocked}
-		deleteKey={isLocked ? null : undefined}
-		onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
-			Promise.resolve(isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges))}
-		isValidConnection={(connection) => graph.isValidConnection(connection)}
-		onmove={(_event, viewport) => {
-			graph.activeDocument.viewport = { ...viewport };
-		}}
-		onconnect={handleConnect}
-		onconnectend={handleConnectEnd}
-		onselectionchange={({ nodes: selectedNodes }) => {
-			graph.selectedNodeIds = selectedNodes.map((n) => n.id);
-		}}
+	<AddNodeMenu
+		bind:trigger={addMenuTrigger}
+		bind:open={addMenuOpen}
+		disabled={isLocked}
+		entries={addEntries}
+		placeholder={addMenuPlaceholder}
+		onpick={pickAddEntry}
+		ondelete={deleteGroupEntry}
 	>
-		<ZoneBubbles />
-		<Controls showLock={false} showZoom={false} />
-		<Background class="bg-background" />
-	</SvelteFlow>
+		<SvelteFlow
+			bind:nodes
+			bind:edges
+			{nodeTypes}
+			{edgeTypes}
+			defaultEdgeOptions={{ type: "gradient" }}
+			colorMode={mode.current}
+			fitView
+			minZoom={0.1}
+			maxZoom={3}
+			class={cn("", className)}
+			proOptions={{ hideAttribution: !debug }}
+			nodesDraggable={!isLocked}
+			nodesConnectable={!isLocked}
+			elementsSelectable={!isLocked}
+			deleteKey={isLocked ? null : undefined}
+			onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
+				Promise.resolve(
+					isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges),
+				)}
+			isValidConnection={(connection) => graph.isValidConnection(connection)}
+			onmove={(_event, viewport) => {
+				graph.activeDocument.viewport = { ...viewport };
+			}}
+			onconnect={handleConnect}
+			onconnectend={handleConnectEnd}
+			onselectionchange={({ nodes: selectedNodes }) => {
+				graph.selectedNodeIds = selectedNodes.map((n) => n.id);
+			}}
+		>
+			<ZoneBubbles />
+			<Controls showLock={false} showZoom={false} />
+			<Background class="bg-background" />
+		</SvelteFlow>
+	</AddNodeMenu>
 </div>
-
-<AddNodeMenu
-	bind:open={addMenu.open}
-	x={addMenu.x}
-	y={addMenu.y}
-	entries={addEntries}
-	placeholder={addMenuPlaceholder}
-	onpick={pickAddEntry}
-	ondelete={deleteGroupEntry}
-/>
 
 <svelte:window onkeydown={handleKeydown} />
 
