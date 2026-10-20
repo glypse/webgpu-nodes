@@ -16,6 +16,7 @@ const HandleSchema = v.object({
 	id: v.string(),
 	label: v.string(),
 	type: v.picklist(WGSL_TYPES),
+	options: v.optional(v.array(v.string())),
 });
 
 // Group boundary nodes carry a typed `handles` array; every other node can hold

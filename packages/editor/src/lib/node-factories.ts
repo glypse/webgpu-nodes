@@ -424,7 +424,9 @@ export const resolutionNode = uniformReader(
 	"vec2f",
 	"spektralFrame.resolution",
 );
-export const uvNode = uniformReader("uv", "UV", "uv", "vec2f", "uv");
+// Spektral's per-fragment context, readable from any function (unlike frag()'s
+// own `uv` parameter), so UV nodes also work inside groups.
+export const uvNode = uniformReader("uv", "UV", "uv", "vec2f", "spektralFragment.uv");
 
 // Logic
 const COMPARE_SETTING: NodeSetting = {
@@ -545,6 +547,61 @@ export const reduceBooleanNode: NodeDescriptor = {
 		`let ${ctx.varName} = ${settingValue(ctx, REDUCE_SETTING)}(${ctx.promoteInput("e")});`,
 	],
 };
+
+/**
+ * Use `value` if it carries one, `default` otherwise. Presence is known while
+ * compiling (it's never a runtime "null"): `value` is absent when nothing
+ * feeds it, or when it comes from a group input whose socket the calling
+ * group node left unlinked. Only the chosen branch is used, so a group can
+ * compute its own default (e.g. the fragment's UV) for an unlinked input.
+ */
+export const fallbackNode: NodeDescriptor = {
+	type: "fallback",
+	label: "Fallback",
+	category: "logic",
+	inputs: [
+		{ id: "value", label: "value", types: WGSL_TYPES },
+		{ id: "default", label: "default", types: WGSL_TYPES },
+	],
+	outputs: [{ id: "result", label: "result", type: "f32" }],
+	defaultData: { default: 0 },
+	wgsl: (ctx) => {
+		const chosen = ctx.isPresent("value") ? "value" : "default";
+		return [`let ${ctx.varName} = ${ctx.promoteInput(chosen)};`];
+	},
+};
+
+/**
+ * Group-input handles of a definition whose value goes straight into a
+ * Fallback node: unlinked on a group node, they fall back to the group's
+ * own default instead of showing an editor.
+ */
+export function fallbackHandleIds(definition: {
+	nodes: readonly { id: string; type?: string }[];
+	edges: readonly {
+		source: string;
+		sourceHandle: string;
+		target: string;
+		targetHandle: string;
+	}[];
+}): Set<string> {
+	const inputIds = new Set(
+		definition.nodes.filter((n) => n.type === "group-input").map((n) => n.id),
+	);
+	const fallbackIds = new Set(
+		definition.nodes.filter((n) => n.type === "fallback").map((n) => n.id),
+	);
+	return new Set(
+		definition.edges
+			.filter(
+				(e) =>
+					inputIds.has(e.source) &&
+					fallbackIds.has(e.target) &&
+					e.targetHandle === "value",
+			)
+			.map((e) => e.sourceHandle),
+	);
+}
 
 // Integer
 const BITWISE_SETTING: NodeSetting = {
@@ -703,6 +760,7 @@ export function buildGroupDescriptor(
 
 	const inputNode = definition.nodes.find((n) => n.type === "group-input");
 	const outputNode = definition.nodes.find((n) => n.type === "group-output");
+	const fallbacks = fallbackHandleIds(definition);
 
 	const handles = {
 		inputs: (inputNode?.data.handles ?? []) as HandleDef[],
@@ -714,7 +772,13 @@ export function buildGroupDescriptor(
 		label: definition.label ?? definitionRef,
 		category: "misc",
 		staticOutputTypes: true,
-		inputs: handles.inputs.map((h) => ({ id: h.id, label: h.label, types: [h.type] })),
+		inputs: handles.inputs.map((h) => ({
+			id: h.id,
+			label: h.label,
+			types: [h.type],
+			...(h.options ? { options: h.options } : {}),
+			...(fallbacks.has(h.id) ? { fallback: true } : {}),
+		})),
 		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
 		defaultData: {},
 		wgsl: () => [],

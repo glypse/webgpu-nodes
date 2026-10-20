@@ -1256,9 +1256,8 @@ export class GraphManager {
 	}
 
 	groupSelection(selectedNodeIds: Set<string>): void {
-		// TODO: temporarily exclude uv nodes from grouping - revisit once subgraph wiring supports them
 		// eslint-disable-next-line svelte/prefer-svelte-reactivity
-		const UNGROUPABLE_TYPES = new Set(["frag-output", "uv", "group-input", "group-output"]);
+		const UNGROUPABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
 
 		// A zone is grouped as a whole: selecting either boundary brings in its
 		// partner and everything inside it.

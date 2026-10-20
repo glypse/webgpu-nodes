@@ -271,10 +271,13 @@ type ShaderState = {
 	graph: CodegenGraph;
 	helpers: HelperRegistry;
 	/**
-	 * Every group's generated `struct` + `fn`, keyed by definitionRef so each
-	 * definition is emitted once no matter how many instances use it.
+	 * Every group's generated function (and, for the first one, its output
+	 * struct), keyed by definitionRef plus the absent fallback inputs, so each
+	 * variant is emitted once no matter how many instances use it.
 	 */
 	groupDecls: Map<string, { decl: string; fnName: string }>;
+	/** Definitions whose output struct has already been declared. */
+	groupStructs: Set<string>;
 };
 
 /**
@@ -295,6 +298,8 @@ class BodyEmitter {
 		doc: { nodes: GroupedNode[] },
 		edges: HydratedEdge[],
 		readonly zones: ZoneAnalysis,
+		/** Group-input handles the calling group node left unlinked (absent values). */
+		private absentInputs: ReadonlySet<string> = new Set(),
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		for (const edge of edges) {
@@ -327,6 +332,14 @@ class BodyEmitter {
 
 	incoming(nodeId: string): HydratedEdge[] {
 		return this.incomingByTarget.get(nodeId) ?? [];
+	}
+
+	/** Whether `node`'s input `inputId` carries a value (see `WgslCtx.isPresent`). */
+	isPresent(node: GroupedNode, inputId: string): boolean {
+		const edge = this.incoming(node.id).find((e) => e.targetHandle === inputId);
+		if (!edge) return false;
+		const source = this.nodeMap.get(edge.source);
+		return !(source?.type === "group-input" && this.absentInputs.has(edge.sourceHandle));
 	}
 
 	/** The WGSL expression holding the value of an edge's source handle. */
@@ -424,6 +437,7 @@ class BodyEmitter {
 			resolvedOutputs,
 			resolvedInputs,
 			promoteInput,
+			isPresent: (id) => this.isPresent(node, id),
 			convert: convertVar,
 			helper: (name, type) => this.state.helpers.use(name, type),
 		});
@@ -433,9 +447,15 @@ class BodyEmitter {
 	private emitGroupCall(node: GroupedNode, indent: string) {
 		const definitionRef = node.group?.definitionRef;
 		if (!definitionRef) return;
-		const decl = emitGroupFunction(this.state, definitionRef);
-		if (!decl) return;
 		const descriptor = this.state.graph.resolveDescriptor(node);
+		// Fallback inputs this call leaves without a value pick the group's own default.
+		const absent = new Set(
+			descriptor.inputs
+				.filter((i) => i.fallback && !this.isPresent(node, i.id))
+				.map((i) => i.id),
+		);
+		const decl = emitGroupFunction(this.state, definitionRef, absent);
+		if (!decl) return;
 		const args = descriptor.inputs.map((inputDef) =>
 			this.inputExpr(node, inputDef.id, inputDefaultType(inputDef)),
 		);
@@ -472,6 +492,7 @@ function emitDocumentBody(
 	state: ShaderState,
 	doc: { nodes: GroupedNode[]; edges: HydratedEdge[] },
 	seedType: string,
+	absentInputs: ReadonlySet<string> = new Set(),
 ): BodyEmitter {
 	const nodeMap = new Map<string, GroupedNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -480,7 +501,7 @@ function emitDocumentBody(
 	const validEdges = doc.edges.filter((e) => !zones.invalidEdges.has(e.id));
 	const reachable = findReachableNodeIds(nodeMap, validEdges, seedType);
 	const edges = validEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
-	const emitter = new BodyEmitter(state, doc, edges, zones);
+	const emitter = new BodyEmitter(state, doc, edges, zones, absentInputs);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
 	const unitIn = (scope: string | null, nodeId: string): string | undefined => {
@@ -565,24 +586,32 @@ function emitDocumentBody(
 function emitGroupFunction(
 	state: ShaderState,
 	definitionRef: string,
+	absentInputs: ReadonlySet<string> = new Set(),
 ): { decl: string; fnName: string } | undefined {
-	const existing = state.groupDecls.get(definitionRef);
-	if (existing) return existing;
-
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
 	if (!definition) return undefined;
 
+	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
+	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+
+	// One function per combination of absent fallback inputs, so each only
+	// contains the branches it uses: `group_x` with everything linked,
+	// `group_x__d0_2` when inputs 0 and 2 fall back to the group's defaults.
+	const absentIndices = inputHandles.flatMap((h, i) => (absentInputs.has(h.id) ? [i] : []));
+	const key = [definitionRef, ...absentIndices].join("|");
+	const existing = state.groupDecls.get(key);
+	if (existing) return existing;
+
 	const ident = sanitizeIdent(definitionRef);
-	const fnName = `group_${ident}`;
+	const fnName =
+		absentIndices.length > 0 ? `group_${ident}__d${absentIndices.join("_")}` : `group_${ident}`;
 	const structName = `GroupOutputs_${ident}`;
 
-	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
 	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
-	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
 	const outputHandles = (groupOutputNode?.data.handles ?? []) as HandleDef[];
 
-	const body = emitDocumentBody(state, definition, "group-output");
+	const body = emitDocumentBody(state, definition, "group-output", absentInputs);
 
 	// Struct fields follow the declared handle types; whatever feeds them is
 	// converted on the way in, exactly like any other typed input.
@@ -596,9 +625,11 @@ function emitGroupFunction(
 		.map((h) => `${sanitizeIdent(h.id)}: ${wgslTypeName(h.type)}`)
 		.join(", ");
 
+	// Every specialisation of a definition shares one output struct.
+	const firstOfDefinition = !state.groupStructs.has(definitionRef);
+	state.groupStructs.add(definitionRef);
 	const decl = [
-		`struct ${structName} {\n${structFields}\n}`,
-		"",
+		...(firstOfDefinition ? [`struct ${structName} {\n${structFields}\n}`, ""] : []),
 		`fn ${fnName}(${params}) -> ${structName} {`,
 		...body.lines,
 		`  return ${structName}(${fieldValues.join(", ")});`,
@@ -606,7 +637,7 @@ function emitGroupFunction(
 	].join("\n");
 
 	const entry = { decl, fnName };
-	state.groupDecls.set(definitionRef, entry);
+	state.groupDecls.set(key, entry);
 	return entry;
 }
 
@@ -614,7 +645,12 @@ function emitGroupFunction(
  * Emit the full WGSL fragment shader source from the graph.
  */
 export function generateShader(graph: CodegenGraph): { shader: string; lineMap: LineMap } {
-	const state: ShaderState = { graph, helpers: new HelperRegistry(), groupDecls: new Map() };
+	const state: ShaderState = {
+		graph,
+		helpers: new HelperRegistry(),
+		groupDecls: new Map(),
+		groupStructs: new Set(),
+	};
 
 	const body = emitDocumentBody(state, graph.root, "frag-output");
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");

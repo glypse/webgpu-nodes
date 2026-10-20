@@ -197,6 +197,8 @@ export type HandleDef = {
 	label: string;
 	/** The WGSL type this handle carries. */
 	type: WgslType;
+	/** On a group input: makes it an enum input (see `NodeInputDef.options`; type u32). */
+	options?: string[];
 };
 
 export type NodeInputDef = {
@@ -217,6 +219,17 @@ export type NodeInputDef = {
 	 * For non-variadic, it's always 0 or 1 elements.
 	 */
 	variadic?: boolean;
+	/**
+	 * Makes the input an enum: a u32 whose values are indices into these
+	 * user-facing options (the first option is 0). Unconnected, it shows a
+	 * dropdown; connected, any scalar drives it.
+	 */
+	options?: readonly string[];
+	/**
+	 * On a group node: the group computes its own value when this socket is
+	 * unlinked (a Fallback node inside it), so no editor is shown for it.
+	 */
+	fallback?: boolean;
 };
 
 /** Default type for an input: the first type in its `types` array. */
@@ -304,6 +317,12 @@ export type WgslCtx = {
 	 * resolved type. For variadic inputs, joins the operands with ", ".
 	 */
 	promoteInput: (id: string) => string;
+	/**
+	 * Whether an input carries a value, known while compiling: false when
+	 * nothing feeds it, or when it comes from a group input whose socket the
+	 * calling group node left unlinked (see the Fallback node).
+	 */
+	isPresent: (id: string) => boolean;
 	/** Convert an expression between two types (see `convertVar`). */
 	convert: (expr: string, source: WgslType, target: WgslType) => string;
 	/** Request a shared helper function overload; returns its name. */

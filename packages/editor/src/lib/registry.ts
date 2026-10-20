@@ -72,6 +72,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	"boolean-math": nodes.booleanMathNode,
 	not: nodes.notNode,
 	"reduce-boolean": nodes.reduceBooleanNode,
+	fallback: nodes.fallbackNode,
 
 	// Integer
 	bitwise: nodes.bitwiseNode,

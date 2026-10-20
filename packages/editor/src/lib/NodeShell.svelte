@@ -225,6 +225,29 @@
 	<TypePicker types={WGSL_TYPES} label="+" class="w-full" title="Add a value" onpick={onPick} />
 {/snippet}
 
+{#snippet enumEditor(inputId: string, inputLabel: string, options: readonly string[])}
+	{@const index = Math.trunc(getComponentValue(inputId, "_"))}
+	<div class="flex flex-1 flex-col gap-0.5">
+		<span class="node-shell__handle-label">{inputLabel}</span>
+		<Select.Root
+			type="single"
+			name="{id}-{inputId}"
+			value={String(index)}
+			disabled={isLocked}
+			onValueChange={(value: string) => {
+				setComponentValue(inputId, "u32", "_", Number(value));
+			}}
+		>
+			<Select.Trigger class="w-full">{options[index] ?? `#${String(index)}`}</Select.Trigger>
+			<Select.Content>
+				{#each options as option, i (option)}
+					<Select.Item value={String(i)} label={option}>{option}</Select.Item>
+				{/each}
+			</Select.Content>
+		</Select.Root>
+	</div>
+{/snippet}
+
 {#snippet valueEditor(inputId: string, type: WgslType)}
 	{@const kind = typeKind(type)}
 	{#if kind === "bool"}
@@ -420,6 +443,13 @@
 						>
 							{inputLabel}: {effectiveType}
 						</span>
+					{:else if inputDef.fallback}
+						<span class="node-shell__handle-label">
+							{inputLabel}: {effectiveType}
+							<span class="opacity-60">(default)</span>
+						</span>
+					{:else if inputDef.options}
+						{@render enumEditor(inputDef.id, inputLabel, inputDef.options)}
 					{:else}
 						<div class="flex flex-1 flex-col gap-0.5">
 							<span class="node-shell__handle-label"
