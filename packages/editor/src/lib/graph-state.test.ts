@@ -244,3 +244,28 @@ describe("group handle types", () => {
 		expect(graph.resolveNodeOutputs(input.id)[0]?.type).toBe("f32");
 	});
 });
+
+describe("reroute", () => {
+	it("forwards the type of whatever feeds it", () => {
+		const graph = managerFor(
+			[
+				{ id: "uv", type: "uv" },
+				{ id: "r1", type: "reroute" },
+				{ id: "r2", type: "reroute" },
+			],
+			[
+				["uv", "uv", "r1", "in"],
+				["r1", "out", "r2", "in"],
+			],
+		);
+		expect(graph.resolveOutputHandleType("r2", "out")).toBe("vec2f");
+		expect(
+			graph.isValidConnection({
+				source: "r2",
+				sourceHandle: "out",
+				target: "out",
+				targetHandle: "color",
+			}),
+		).toBe(true);
+	});
+});

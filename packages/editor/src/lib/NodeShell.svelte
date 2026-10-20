@@ -285,7 +285,29 @@
 	{/if}
 {/snippet}
 
-{#if descriptor}
+{#if nodeType === "reroute"}
+	<!-- Just a handle: the output sits on top of the input, so dragging from the
+	     dot starts a new link while links dropped on it reach the input. -->
+	{@const rerouteType = resolvedInputType({ id: "in" })}
+	<div class="reroute" title="Reroute ({rerouteType})">
+		<Handle
+			type="target"
+			position={Position.Left}
+			id="in"
+			class="node-shell__handle reroute__handle kind-{typeKind(rerouteType)}"
+			style={handleStyle(rerouteType)}
+		/>
+		<Handle
+			type="source"
+			position={Position.Right}
+			id="out"
+			class="node-shell__handle reroute__handle reroute__handle--out kind-{typeKind(
+				rerouteType,
+			)}"
+			style={handleStyle(rerouteType)}
+		/>
+	</div>
+{:else if descriptor}
 	<div class="node-shell__label">
 		{#if isZoneNode}
 			<div class="flex items-center justify-between gap-2">

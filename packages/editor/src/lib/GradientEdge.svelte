@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getBezierPath, type EdgeProps } from "@xyflow/svelte";
 
+	import { bezierMidpointAngle } from "./edge-geometry";
 	import { getGraphManager } from "./graph-state.svelte";
 
 	let {
@@ -22,7 +23,7 @@
 
 	const graph = getGraphManager();
 
-	const [path] = $derived(
+	const [path, midX, midY] = $derived(
 		getBezierPath({
 			sourceX,
 			sourceY,
@@ -39,6 +40,14 @@
 		const node = graph.resolveNode(target);
 		if (!node) return "f32";
 		return graph.resolveInputType(target, targetHandleId ?? "");
+	});
+
+	/** Links between two reroutes get a direction arrow at their middle. */
+	const arrowAngle = $derived.by(() => {
+		const between =
+			graph.resolveNode(source)?.type === "reroute" &&
+			graph.resolveNode(target)?.type === "reroute";
+		return between ? bezierMidpointAngle(sourceX, sourceY, targetX, targetY) : null;
 	});
 
 	/** Links breaking zone rules are drawn red and ignored by codegen. */
@@ -106,6 +115,15 @@
 		mask="url(#edge-mask-{id})"
 		class="opacity-0 transition-opacity group-hover:opacity-40"
 	/>
+
+	{#if arrowAngle !== null && !invalid}
+		<path
+			d="M -4 -4.5 L 5 0 L -4 4.5 Z"
+			transform="translate({midX} {midY}) rotate({arrowAngle})"
+			fill="var(--color-{sourceType})"
+			class="pointer-events-none transition-opacity {selected ? 'opacity-100' : 'opacity-80'}"
+		/>
+	{/if}
 
 	<!-- Invisible interaction path for click/hover detection -->
 	<path {id} d={path} fill="none" stroke="transparent" stroke-width="20" class="cursor-pointer" />

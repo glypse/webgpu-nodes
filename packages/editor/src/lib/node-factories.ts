@@ -669,6 +669,20 @@ export const toBoolNode = convertNode("to-bool", "To Boolean", "bool", false);
 
 // ── Standalone nodes (unique patterns) ───────────────────────────────────────
 
+/**
+ * A bare handle to route links through: forwards whatever it receives,
+ * keeping its type. Drawn as just a handle (see NodeShell).
+ */
+export const rerouteNode: NodeDescriptor = {
+	type: "reroute",
+	label: "Reroute",
+	category: "misc",
+	inputs: [{ id: "in", label: "in", types: WGSL_TYPES }],
+	outputs: [{ id: "out", label: "out", type: "f32" }],
+	defaultData: {},
+	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("in")};`],
+};
+
 export const outputNode: NodeDescriptor = {
 	type: "frag-output",
 	label: "Output",

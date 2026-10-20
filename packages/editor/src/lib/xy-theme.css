@@ -7,6 +7,40 @@
 	box-shadow: 0 0 10px var(--background);
 }
 
+/* Reroute nodes are a bare handle: no card around it. */
+.svelte-flow__node-reroute {
+	width: auto;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
+}
+
+.reroute {
+	position: relative;
+	width: 18px;
+	height: 18px;
+	border-radius: 9999px;
+}
+
+.svelte-flow__node-reroute.selected .reroute {
+	outline: 1px solid var(--primary);
+}
+
+/* Both handles on the node's centre, the output on top. */
+.reroute .reroute__handle {
+	top: 50%;
+	right: auto;
+	left: 50%;
+	margin: 0;
+	transform: translate(-50%, -50%);
+}
+
+.reroute .reroute__handle--out {
+	z-index: 1;
+}
+
 .node-shell__label {
 	@apply flex flex-col gap-1 border-b px-3 pt-3 pb-2;
 }
