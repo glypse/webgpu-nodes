@@ -67,7 +67,9 @@
 				"id": "one",
 				"type": "declare",
 				"data": {
-					"x": 1
+					"values": {
+						"x": 1
+					}
 				},
 				"position": {
 					"x": 240,
@@ -87,8 +89,10 @@
 				"id": "ratio-raw",
 				"type": "div",
 				"data": {
-					"a": 0,
-					"b": 0
+					"values": {
+						"a": 0,
+						"b": 0
+					}
 				},
 				"position": {
 					"x": 720,
@@ -99,7 +103,9 @@
 				"id": "epsilon",
 				"type": "declare",
 				"data": {
-					"x": 0.000001
+					"values": {
+						"x": 0.000001
+					}
 				},
 				"position": {
 					"x": 720,
@@ -119,8 +125,10 @@
 				"id": "inverse",
 				"type": "div",
 				"data": {
-					"a": 1,
-					"b": 0
+					"values": {
+						"a": 1,
+						"b": 0
+					}
 				},
 				"position": {
 					"x": 1200,
@@ -131,9 +139,13 @@
 				"id": "wide",
 				"type": "compare",
 				"data": {
-					"a": 0,
-					"b": 1,
-					"op": ">="
+					"values": {
+						"a": 0,
+						"b": 1
+					},
+					"settings": {
+						"op": ">="
+					}
 				},
 				"position": {
 					"x": 1200,
@@ -144,9 +156,13 @@
 				"id": "tall-scale",
 				"type": "declare",
 				"data": {
-					"declare": "vec2f",
-					"x": 1,
-					"y": 0
+					"values": {
+						"x": 1,
+						"y": 0
+					},
+					"types": {
+						"declare": "vec2f"
+					}
 				},
 				"position": {
 					"x": 1440,
@@ -157,9 +173,13 @@
 				"id": "wide-scale",
 				"type": "declare",
 				"data": {
-					"declare": "vec2f",
-					"x": 0,
-					"y": 1
+					"values": {
+						"x": 0,
+						"y": 1
+					},
+					"types": {
+						"declare": "vec2f"
+					}
 				},
 				"position": {
 					"x": 1440,
@@ -170,9 +190,11 @@
 				"id": "contain",
 				"type": "switch",
 				"data": {
-					"condition": false,
-					"false": 0,
-					"true": 0
+					"values": {
+						"condition": false,
+						"false": 0,
+						"true": 0
+					}
 				},
 				"position": {
 					"x": 1680,
@@ -183,9 +205,11 @@
 				"id": "cover",
 				"type": "switch",
 				"data": {
-					"condition": false,
-					"false": 0,
-					"true": 0
+					"values": {
+						"condition": false,
+						"false": 0,
+						"true": 0
+					}
 				},
 				"position": {
 					"x": 1680,
@@ -196,9 +220,13 @@
 				"id": "is-contain",
 				"type": "compare",
 				"data": {
-					"a": 0,
-					"b": 0,
-					"op": "=="
+					"values": {
+						"a": 0,
+						"b": 0
+					},
+					"settings": {
+						"op": "=="
+					}
 				},
 				"position": {
 					"x": 240,
@@ -209,9 +237,13 @@
 				"id": "is-cover",
 				"type": "compare",
 				"data": {
-					"a": 0,
-					"b": 1,
-					"op": "=="
+					"values": {
+						"a": 0,
+						"b": 1
+					},
+					"settings": {
+						"op": "=="
+					}
 				},
 				"position": {
 					"x": 240,
@@ -222,9 +254,11 @@
 				"id": "cover-or-stretch",
 				"type": "switch",
 				"data": {
-					"condition": false,
-					"false": 1,
-					"true": 0
+					"values": {
+						"condition": false,
+						"false": 1,
+						"true": 0
+					}
 				},
 				"position": {
 					"x": 1920,
@@ -235,9 +269,11 @@
 				"id": "scale",
 				"type": "switch",
 				"data": {
-					"condition": false,
-					"false": 0,
-					"true": 0
+					"values": {
+						"condition": false,
+						"false": 0,
+						"true": 0
+					}
 				},
 				"position": {
 					"x": 1920,
@@ -266,7 +302,9 @@
 				"id": "coordinates",
 				"type": "fallback",
 				"data": {
-					"default": 0
+					"values": {
+						"default": 0
+					}
 				},
 				"position": {
 					"x": 480,

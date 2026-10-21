@@ -19,15 +19,32 @@ const HandleSchema = v.object({
 	options: v.optional(v.array(v.string())),
 });
 
-// Group boundary nodes carry a typed `handles` array; every other node can hold
-// arbitrary serialised data, so we accept a generic record as a fallback.
-const BoundaryNodeDataSchema = v.object({ handles: v.array(HandleSchema) });
-const GenericNodeDataSchema = v.record(v.string(), v.unknown());
+const ScalarValueSchema = v.union([v.number(), v.boolean()]);
+
+const InputValueSchema = v.union([
+	ScalarValueSchema,
+	v.strictObject({
+		x: v.optional(ScalarValueSchema),
+		y: v.optional(ScalarValueSchema),
+		z: v.optional(ScalarValueSchema),
+		w: v.optional(ScalarValueSchema),
+	}),
+]);
+
+const NodeDataSchema = v.strictObject({
+	values: v.optional(v.record(v.string(), InputValueSchema)),
+	settings: v.optional(v.record(v.string(), v.string())),
+	types: v.optional(v.record(v.string(), v.picklist(WGSL_TYPES))),
+	handles: v.optional(v.array(HandleSchema)),
+	items: v.optional(v.array(HandleSchema)),
+	pairedOutput: v.optional(v.string()),
+	maxIterations: v.optional(v.number()),
+});
 
 const GraphDocumentNodeSchema = v.object({
 	id: v.string(),
 	type: v.string(),
-	data: v.union([BoundaryNodeDataSchema, GenericNodeDataSchema]),
+	data: NodeDataSchema,
 	position: PositionSchema,
 	group: v.optional(GroupSchema),
 });
@@ -46,7 +63,7 @@ const ViewportSchema = v.object({
 	zoom: v.number(),
 });
 
-const GraphDocumentSchema = v.object({
+export const GraphDocumentSchema = v.object({
 	nodes: v.array(GraphDocumentNodeSchema),
 	edges: v.array(GraphDocumentEdgeSchema),
 	label: v.optional(v.string()),
@@ -58,7 +75,7 @@ export const GraphProjectSchema = v.object({
 	definitions: v.record(v.string(), GraphDocumentSchema),
 });
 
-const StandardLibraryEntrySchema = v.object({
+export const StandardLibraryEntrySchema = v.object({
 	id: v.string(),
 	label: v.string(),
 	category: v.string(),

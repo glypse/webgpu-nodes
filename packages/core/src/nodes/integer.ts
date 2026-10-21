@@ -19,7 +19,7 @@ export const bitwiseNode: NodeDescriptor = {
 		(a, b, ctx) => `${a} ${settingValue(ctx.data, BITWISE_SETTING)} ${b}`,
 		{ types: INTEGER_TYPES, category: "integer" },
 	),
-	defaultData: { a: 0, b: 0, op: "&" },
+	defaultData: { values: { a: 0, b: 0 }, settings: { op: "&" } },
 	settings: [BITWISE_SETTING],
 };
 
@@ -46,7 +46,7 @@ export const bitShiftNode: NodeDescriptor = {
 		{ id: "b", label: "shift", types: UINT_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "i32" }],
-	defaultData: { a: 0, b: 0, op: "<<" },
+	defaultData: { values: { a: 0, b: 0 }, settings: { op: "<<" } },
 	settings: [SHIFT_SETTING],
 	wgsl: (ctx) => {
 		// WGSL wants the shift amount as u32 (or a u32 vector of the value's

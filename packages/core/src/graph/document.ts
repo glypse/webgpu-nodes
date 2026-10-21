@@ -1,3 +1,5 @@
+import type { NodeData } from "../types";
+
 /** A document's camera: pan offset and zoom. */
 export type Viewport = { x: number; y: number; zoom: number };
 
@@ -22,7 +24,7 @@ export type GraphDocument = {
 export type GraphDocumentNode = {
 	id: string;
 	type: string;
-	data: Record<string, unknown>;
+	data: NodeData;
 	position: { x: number; y: number };
 	/**
 	 * Present only on group-type nodes.
@@ -61,7 +63,7 @@ export type GraphProject = {
 export type GraphNode = {
 	id: string;
 	type?: string;
-	data: Record<string, unknown>;
+	data: NodeData;
 	position: { x: number; y: number };
 	/** Present only on group-type nodes. */
 	group?: {

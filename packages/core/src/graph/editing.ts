@@ -1,4 +1,4 @@
-import type { HandleDef } from "../types";
+import type { HandleDef, NodeData } from "../types";
 import type { TypeResolver } from "../types/resolver";
 import type {
 	GraphDocumentEdge,
@@ -11,8 +11,8 @@ import type {
 export const BOUNDARY_TYPES: ReadonlySet<string> = new Set(["group-input", "group-output"]);
 
 /** The handles declared on a group boundary node. */
-export function handlesOf(node: { data: Record<string, unknown> } | undefined): HandleDef[] {
-	return (node?.data.handles ?? []) as HandleDef[];
+export function handlesOf(node: { data: NodeData } | undefined): HandleDef[] {
+	return node?.data.handles ?? [];
 }
 
 /** Definitions referenced by the group nodes of a document. */
@@ -26,12 +26,9 @@ export function groupRefsOf(doc: Pick<HydratedGraphDocument, "nodes">): string[]
  * Deep-copy node data, pointing a Repeat Input at its partner's new id when
  * nodes are cloned with fresh ids.
  */
-export function remapZonePairing(
-	data: Record<string, unknown>,
-	idMap: Map<string, string>,
-): Record<string, unknown> {
-	const copy = JSON.parse(JSON.stringify(data)) as Record<string, unknown>;
-	const paired = typeof copy.pairedOutput === "string" ? idMap.get(copy.pairedOutput) : undefined;
+export function remapZonePairing(data: NodeData, idMap: Map<string, string>): NodeData {
+	const copy = structuredClone(data);
+	const paired = copy.pairedOutput === undefined ? undefined : idMap.get(copy.pairedOutput);
 	if (paired) copy.pairedOutput = paired;
 	return copy;
 }

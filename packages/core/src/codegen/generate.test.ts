@@ -3,8 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateShader } from ".";
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
-import debugProject from "../scenes/debug.json";
-import defaultProject from "../scenes/default.json";
+import { debugScene as debugProject, defaultScene as defaultProject } from "../scenes";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 
 describe.skipIf(!nagaBin)("generated WGSL validates with naga", () => {

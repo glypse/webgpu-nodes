@@ -1,5 +1,6 @@
 import type { NodeDescriptor, NodeInputDef, NodeOutputDef, WgslType } from ".";
-import { highestType, inputDefaultType, inputFamilyKey, isWgslType } from ".";
+import type { NodeData } from ".";
+import { highestType, inputDefaultType, inputFamilyKey } from ".";
 import type { GraphDocumentEdge, HydratedGraphProject } from "../graph/document";
 import type { GraphNode } from "../graph/document";
 
@@ -30,7 +31,7 @@ function resolveNodeTypesForNode(
 	node: GraphNode,
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
-	nodeData: Record<string, unknown>,
+	nodeData: NodeData,
 	resolveNode: (id: string) => GraphNode | undefined,
 	resolveDescriptor: ResolveDescriptor,
 	getIncomingEdges: GetIncomingEdges,
@@ -109,22 +110,20 @@ function resolveGroupOutputNodeTypes(
 function resolveRegularNodeTypes(
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
-	nodeData: Record<string, unknown>,
+	nodeData: NodeData,
 	resolveNode: (id: string) => GraphNode | undefined,
 	resolveDescriptor: ResolveDescriptor,
 	getIncomingEdges: GetIncomingEdges,
 	definitions: HydratedGraphProject["definitions"],
 ): ResolvedNodeTypes {
-	const nodeOverrides = nodeData.__nodeTypeOverrides as Record<string, WgslType> | undefined;
+	const nodeOverrides = nodeData.types;
 
 	// Phase 0: user-selected output type (typeFamily nodes such as "declare")
 	// decides which inputs are active, so resolve it before the inputs.
 	let familyOutputType: WgslType | undefined;
 	if (descriptor.typeFamily) {
-		const selected = nodeData[descriptor.typeFamily.key];
-		familyOutputType = isWgslType(selected)
-			? selected
-			: (descriptor.typeFamily.types[0] ?? "f32");
+		familyOutputType =
+			nodeData.types?.[descriptor.typeFamily.key] ?? descriptor.typeFamily.types[0] ?? "f32";
 	}
 	const activeInputs =
 		familyOutputType && descriptor.resolveInputs
@@ -135,7 +134,7 @@ function resolveRegularNodeTypes(
 	const rawInferred: Record<string, WgslType> = {};
 	for (const inputDef of activeInputs) {
 		const familyOverride = nodeOverrides?.[inputFamilyKey(inputDef)];
-		if (familyOverride && isWgslType(familyOverride)) {
+		if (familyOverride) {
 			rawInferred[inputDef.id] = familyOverride;
 			continue;
 		}
@@ -300,7 +299,7 @@ export class TypeResolver {
 	resolveNodeTypesUncached(
 		node: GraphNode,
 		incoming: GraphDocumentEdge[],
-		data: Record<string, unknown>,
+		data: NodeData,
 		resolveNode: (id: string) => GraphNode | undefined,
 	): ResolvedNodeTypes {
 		return resolveNodeTypesForNode(

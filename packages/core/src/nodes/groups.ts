@@ -64,8 +64,8 @@ export function buildGroupDescriptor(
 	const fallbacks = fallbackHandleIds(definition);
 
 	const handles = {
-		inputs: (inputNode?.data.handles ?? []) as HandleDef[],
-		outputs: (outputNode?.data.handles ?? []) as HandleDef[],
+		inputs: inputNode?.data.handles ?? [],
+		outputs: outputNode?.data.handles ?? [],
 	};
 
 	return {

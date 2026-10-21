@@ -1,5 +1,5 @@
 import * as nodes from ".";
-import type { NodeDescriptor, NodeCategory } from "../types";
+import type { NodeCategory, NodeData, NodeDescriptor } from "../types";
 import { ZONE_NODE_TYPES } from "../zones";
 
 /**
@@ -102,8 +102,8 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 export const DYNAMIC_NODE_TYPES = ["group-input", "group-output", ...ZONE_NODE_TYPES];
 
 /** Helper: produce default node data for a registered type. */
-export function defaultDataForType(type: string): Record<string, unknown> {
-	return { ...nodeRegistry[type]?.defaultData };
+export function defaultDataForType(type: string): NodeData {
+	return structuredClone(nodeRegistry[type]?.defaultData ?? {});
 }
 
 /** Convenience: list all categories and their nodes for an AddNode menu. */

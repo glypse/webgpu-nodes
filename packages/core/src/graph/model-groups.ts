@@ -768,7 +768,7 @@ export abstract class GroupModel extends ZoneModel {
 		if (!def) return false;
 		const handleNode = def.nodesById.get(handleNodeId);
 		if (!handleNode) return false;
-		const handles = handleNode.data.handles as HandleDef[] | undefined;
+		const handles = handleNode.data.handles;
 		if (!handles) return false;
 		const handle = handles.find((h) => h.id === handleId);
 		if (!handle) return false;
@@ -826,7 +826,10 @@ export abstract class GroupModel extends ZoneModel {
 			label: `Handle ${String(handles.length + 1)}`,
 			type,
 		};
-		this.updateNodeData(nodeId, { handles: [...handles, handle], [handle.id]: 0 });
+		this.updateNodeData(nodeId, {
+			handles: [...handles, handle],
+			values: { ...node.data.values, [handle.id]: 0 },
+		});
 		return handle;
 	}
 
@@ -838,7 +841,7 @@ export abstract class GroupModel extends ZoneModel {
 	setHandleType(definitionRef: string, handleNodeId: string, handleId: string, type: WgslType) {
 		const def = this.project.definitions.get(definitionRef);
 		const handleNode = def?.nodesById.get(handleNodeId);
-		const handles = handleNode?.data.handles as HandleDef[] | undefined;
+		const handles = handleNode?.data.handles;
 		if (!def || !handleNode || !handles?.some((h) => h.id === handleId)) return;
 
 		const data = {
@@ -890,7 +893,7 @@ export abstract class GroupModel extends ZoneModel {
 		// Remove the handle from the node's data
 		const handleNode = def.nodesById.get(handleNodeId);
 		if (!handleNode) return;
-		const handles = handleNode.data.handles as HandleDef[] | undefined;
+		const handles = handleNode.data.handles;
 		if (!handles) return;
 		const idx = handles.findIndex((h) => h.id === handleId);
 		if (idx === -1) return;

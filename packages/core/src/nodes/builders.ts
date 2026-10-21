@@ -33,7 +33,7 @@ export function unaryFn(
 		category,
 		inputs: [{ id: "e", label: "e", types }],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
-		defaultData: { e: 0 },
+		defaultData: { values: { e: 0 } },
 		wgsl: (ctx) => [`let ${ctx.varName} = ${wgslFn}(${ctx.promoteInput("e")});`],
 	};
 }
@@ -103,7 +103,7 @@ export function binaryNode(
 			{ id: idB, label: labelB, types },
 		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
-		defaultData: { [idA]: 0, [idB]: 0 },
+		defaultData: { values: { [idA]: 0, [idB]: 0 } },
 		wgsl: (ctx) => [
 			`let ${ctx.varName} = ${emit(ctx.promoteInput(idA), ctx.promoteInput(idB), ctx)};`,
 		],
@@ -125,7 +125,7 @@ export function nAryFn(
 		category: "math",
 		inputs: inputDefs,
 		outputs: [{ id: "result", label: "result", type: "f32" }],
-		defaultData: defaults,
+		defaultData: { values: defaults },
 		wgsl: (ctx) => {
 			const args = inputDefs.map((d) => ctx.promoteInput(d.id)).join(", ");
 			return [`let ${ctx.varName} = ${wgslFn}(${args});`];
@@ -178,7 +178,10 @@ export function convertNode(
 		category: "converter",
 		inputs: [{ id: "e", label: "e", types: WGSL_TYPES }],
 		outputs: [{ id: "result", label: "result", type: kind }],
-		defaultData: rounding ? { e: 0, rounding: "trunc" } : { e: 0 },
+		defaultData: {
+			values: { e: 0 },
+			...(rounding ? { settings: { rounding: "trunc" } } : {}),
+		},
 		settings: rounding ? [ROUNDING_SETTING] : undefined,
 		resolveOutputType: (t) => makeType(kind, typeComponents(t)),
 		wgsl: (ctx) => {

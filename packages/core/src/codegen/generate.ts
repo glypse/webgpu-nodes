@@ -2,7 +2,7 @@ import { ROOT_ID, type GraphEdge } from "../graph/document";
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
 import type { GraphModel } from "../graph/model";
-import type { HandleDef, WgslType } from "../types";
+import type { HandleDef, InputValue, NodeData, WgslType } from "../types";
 import { WGSL_DEFAULTS, convertVar, inputDefaultType, wgslTypeName } from "../types";
 import {
 	DEFAULT_ITERATIONS,
@@ -116,22 +116,10 @@ function sanitizeIdent(id: string): string {
 
 // ── Hashing ──────────────────────────────────────────────────────────────────
 
-function stripLabels(data: Record<string, unknown>): Record<string, unknown> {
-	const out: Record<string, unknown> = {};
-	for (const [k, v] of Object.entries(data)) {
-		if (k === "handles" && Array.isArray(v)) {
-			out[k] = v.map((h): { id: string; type: string } => {
-				if (typeof h === "object" && h !== null && "id" in h && "type" in h) {
-					const handle = h as { id: string; type: string };
-					return { id: handle.id, type: handle.type };
-				}
-				return { id: "", type: "" };
-			});
-		} else {
-			out[k] = v;
-		}
-	}
-	return out;
+function stripLabels(data: NodeData): NodeData {
+	return data.handles
+		? { ...data, handles: data.handles.map(({ id, type }) => ({ id, type, label: "" })) }
+		: data;
 }
 
 function hashDoc(doc: { nodes: GraphNode[]; edges: GraphEdge[] }) {
@@ -304,10 +292,10 @@ class BodyEmitter {
 	 * The value fed to `node`'s input `inputId`, as an expression of type
 	 * `target`: the connected source (converted) or the node's stored literal.
 	 */
-	inputExpr(node: GraphNode, inputId: string, target: WgslType, fallback?: unknown): string {
+	inputExpr(node: GraphNode, inputId: string, target: WgslType, fallback?: InputValue): string {
 		const edge = this.incoming(node.id).find((e) => e.targetHandle === inputId);
 		if (edge) return this.convertedSource(edge, target);
-		return formatWgslLiteral(target, node.data[inputId] ?? fallback);
+		return formatWgslLiteral(target, node.data.values?.[inputId] ?? fallback);
 	}
 
 	push(nodeId: string, statements: string[], indent: string) {
@@ -357,7 +345,7 @@ class BodyEmitter {
 		const promoteInput = (id: string): string => {
 			const inputDef = resolvedInputs.find((i) => i.id === id);
 			if (inputDef?.variadic) return (ctxInputs[id] ?? []).join(", ");
-			return this.inputExpr(node, id, typeOf(id), descriptor.defaultData[id]);
+			return this.inputExpr(node, id, typeOf(id), descriptor.defaultData.values?.[id]);
 		};
 
 		const statements = descriptor.wgsl({
@@ -522,7 +510,7 @@ function emitGroupFunction(
 	if (!definition) return undefined;
 
 	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
-	const inputHandles = (groupInputNode?.data.handles ?? []) as HandleDef[];
+	const inputHandles = groupInputNode?.data.handles ?? [];
 
 	// One function per combination of absent fallback inputs, so each only
 	// contains the branches it uses.
@@ -537,7 +525,7 @@ function emitGroupFunction(
 	const structName = `GroupOutputs_${ident}`;
 
 	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
-	const outputHandles = (groupOutputNode?.data.handles ?? []) as HandleDef[];
+	const outputHandles = groupOutputNode?.data.handles ?? [];
 
 	const body = emitDocumentBody(state, definition, "group-output", absentInputs);
 

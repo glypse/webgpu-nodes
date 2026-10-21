@@ -1,10 +1,13 @@
 import { standardLibrary } from "../library";
 import { nodeRegistry } from "../nodes/registry";
 import {
+	type InputValue,
+	type NodeData,
 	type NodeDescriptor,
 	type NodeInputDef,
 	type NodeOutputDef,
 	type WgslType,
+	familyKey,
 	isConnectionCompatible,
 } from "../types";
 import { TypeResolver } from "../types/resolver";
@@ -305,10 +308,7 @@ export abstract class GraphModelBase {
 		if (!targetInputDef) return false;
 
 		// If the target has a node-wide override, validate against that specific type
-		const nodeOverrides = targetNode.data.__nodeTypeOverrides as
-			| Record<string, WgslType>
-			| undefined;
-		const overrideType = nodeOverrides?.[targetInputDef.types.join(",")];
+		const overrideType = targetNode.data.types?.[familyKey(targetInputDef.types)];
 		if (overrideType) return isConnectionCompatible(sourceType, overrideType);
 
 		// Valid if the source can be converted to any type within the family
@@ -316,7 +316,7 @@ export abstract class GraphModelBase {
 	}
 
 	/** Replace the data of some nodes of the active document (reactively). */
-	protected patchNodeData(patches: Map<string, Record<string, unknown>>) {
+	protected patchNodeData(patches: Map<string, NodeData>) {
 		const doc = this.activeDocument;
 		doc.nodes = doc.nodes.map((n) => {
 			const data = patches.get(n.id);
@@ -454,9 +454,8 @@ export abstract class GraphModelBase {
 	resolveInferredInputType(nodeId: string, inputId: string): WgslType {
 		const forced = this.resolveInputType(nodeId, inputId); // also tracks the type cache
 		const node = this.resolveNode(nodeId);
-		if (!node?.data.__nodeTypeOverrides) return forced;
-		const data = { ...node.data };
-		delete data.__nodeTypeOverrides;
+		if (!node?.data.types) return forced;
+		const data = { ...node.data, types: undefined };
 		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
 		const result = this.typeResolver.resolveNodeTypesUncached(node, incoming, data, (id) =>
 			this.resolveNode(id),
@@ -592,17 +591,42 @@ export abstract class GraphModelBase {
 
 	/**
 	 * Merge `patch` into a node's data in the active document (`undefined`
-	 * removes a key). The node object is replaced, never mutated, so front
+	 * clears a field). The node object is replaced, never mutated, so front
 	 * ends notice. Types are re-resolved unless `retype` is false (plain value
 	 * edits, e.g. while scrubbing).
 	 */
-	updateNodeData(nodeId: string, patch: Record<string, unknown>, { retype = true } = {}) {
+	updateNodeData(nodeId: string, patch: Partial<NodeData>, { retype = true } = {}) {
 		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return;
-		const data = Object.fromEntries(
-			Object.entries({ ...node.data, ...patch }).filter(([, value]) => value !== undefined),
-		);
+		const data: NodeData = { ...node.data, ...patch };
 		this.patchNodeData(new Map([[nodeId, data]]));
 		if (retype) this.invalidateTypes([nodeId]);
 	}
+
+	/** Set the value an input holds while unlinked (`undefined` clears it). */
+	setInputValue(nodeId: string, inputId: string, value: InputValue | undefined) {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (!node) return;
+		const values = withEntry(node.data.values, inputId, value);
+		this.updateNodeData(nodeId, { values }, { retype: false });
+	}
+
+	/** Pick an option of one of the node's settings. */
+	setSetting(nodeId: string, key: string, value: string) {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (!node) return;
+		this.updateNodeData(nodeId, { settings: withEntry(node.data.settings, key, value) });
+	}
+}
+
+/** `record` with `key` set to `value` (removed when undefined); undefined once empty. */
+export function withEntry<T>(
+	record: Readonly<Record<string, T>> | undefined,
+	key: string,
+	value: T | undefined,
+): Record<string, T> | undefined {
+	const entries = Object.entries({ ...record, [key]: value }).filter(
+		(entry): entry is [string, T] => entry[1] !== undefined,
+	);
+	return entries.length > 0 ? Object.fromEntries(entries) : undefined;
 }

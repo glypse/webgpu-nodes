@@ -2,13 +2,13 @@ import * as v from "valibot";
 
 import type { AddMenuEntry } from "../catalog/add-menu";
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
-import { type WgslType, familyKey, isConnectionCompatible, isWgslType, typeKind } from "../types";
+import { type WgslType, familyKey, isConnectionCompatible, typeKind } from "../types";
 import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
 import { type GraphEdge, type GraphNode, type GraphProject } from "./document";
 import { stableStringify } from "./editing";
 import { History } from "./history";
 import { indexDocument, serialiseDocument } from "./hydrate";
-import { emptyProject } from "./model-base";
+import { emptyProject, withEntry } from "./model-base";
 import { GroupModel } from "./model-groups";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
@@ -22,10 +22,6 @@ export type TypeChoice = {
 	/** The type the node has without a pick. */
 	inferred: WgslType;
 };
-
-function typeOverrides(node: GraphNode): Record<string, unknown> {
-	return (node.data.__nodeTypeOverrides as Record<string, unknown> | undefined) ?? {};
-}
 
 /**
  * The whole editable project, headless: documents and groups, repeat zones,
@@ -411,11 +407,10 @@ export class GraphModel extends GroupModel {
 		const family = descriptor.typeFamily;
 		const types = family?.types ?? primary?.types ?? [];
 		if (types.length < 2) return undefined;
-		const forced = family ? node.data[family.key] : typeOverrides(node)[familyKey(types)];
 		return {
 			types,
 			inferable: !family && types.length > 1,
-			forced: isWgslType(forced) ? forced : undefined,
+			forced: node.data.types?.[family?.key ?? familyKey(types)],
 			inferred: family
 				? this.resolveNodeOutputType(nodeId)
 				: primary
@@ -429,16 +424,8 @@ export class GraphModel extends GroupModel {
 		const node = this.activeDocument.nodesById.get(nodeId);
 		const choice = this.typeChoice(nodeId);
 		if (!node || !choice) return;
-		const family = this.resolveDescriptor(node).typeFamily;
-		if (family) {
-			this.updateNodeData(nodeId, { [family.key]: type });
-			return;
-		}
-		const overrides = { ...typeOverrides(node), [familyKey(choice.types)]: type };
-		const kept = Object.entries(overrides).filter(([, t]) => t !== undefined);
-		this.updateNodeData(nodeId, {
-			__nodeTypeOverrides: kept.length > 0 ? Object.fromEntries(kept) : undefined,
-		});
+		const key = this.resolveDescriptor(node).typeFamily?.key ?? familyKey(choice.types);
+		this.updateNodeData(nodeId, { types: withEntry(node.data.types, key, type) });
 	}
 }
 

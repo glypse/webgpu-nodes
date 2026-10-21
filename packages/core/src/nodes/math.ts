@@ -92,7 +92,7 @@ export const remapNode: NodeDescriptor = {
 		{ id: "out_max", label: "out_max", types: FLOAT_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { e: 0, in_min: 0, in_max: 1, out_min: 0, out_max: 1 },
+	defaultData: { values: { e: 0, in_min: 0, in_max: 1, out_min: 0, out_max: 1 } },
 	wgsl: (ctx) => {
 		const e = ctx.promoteInput("e");
 		const inMin = ctx.promoteInput("in_min");

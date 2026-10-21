@@ -21,6 +21,6 @@ export const testRuntimeErrorNode: NodeDescriptor = {
 	dev: true,
 	inputs: [{ id: "e", label: "e", types: FLOAT_TYPES }],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { e: 0 },
+	defaultData: { values: { e: 0 } },
 	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("e")} / f32(0.0);`],
 };

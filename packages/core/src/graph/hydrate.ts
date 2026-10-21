@@ -4,7 +4,7 @@ import {
 	buildGroupOutputDescriptor,
 } from "../nodes/groups";
 import { nodeRegistry } from "../nodes/registry";
-import { type HandleDef, type NodeDescriptor } from "../types";
+import { type NodeDescriptor, withDefaults } from "../types";
 import {
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
@@ -30,10 +30,10 @@ export function resolveDescriptor(
 	definitions: Map<string, HydratedGraphDocument>,
 ): NodeDescriptor {
 	if (node.type === "group-input") {
-		return buildGroupInputDescriptor((node.data.handles ?? []) as HandleDef[]);
+		return buildGroupInputDescriptor(node.data.handles ?? []);
 	}
 	if (node.type === "group-output") {
-		return buildGroupOutputDescriptor((node.data.handles ?? []) as HandleDef[]);
+		return buildGroupOutputDescriptor(node.data.handles ?? []);
 	}
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
@@ -52,12 +52,12 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 	const nodes: GraphDocumentNode[] = [];
 	for (const node of doc.nodes) {
 		if (node.group) {
-			nodes.push({ ...node, data: { ...node.data } });
+			nodes.push({ ...node, data: structuredClone(node.data) });
 			continue;
 		}
 
 		const desc = resolveDescriptor(node, new Map());
-		nodes.push({ ...node, data: { ...desc.defaultData, ...node.data } });
+		nodes.push({ ...node, data: withDefaults(node.data, desc.defaultData) });
 	}
 	const result: GraphDocument = { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
 	if (doc.viewport) result.viewport = doc.viewport;

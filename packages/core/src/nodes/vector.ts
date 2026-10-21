@@ -25,7 +25,7 @@ export const lengthNode: NodeDescriptor = {
 	category: "vector",
 	inputs: [{ id: "e1", label: "e1", types: FLOAT_VEC_TYPES }],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { e1: 0 },
+	defaultData: { values: { e1: 0 } },
 	resolveOutputType: () => "f32",
 	wgsl: (ctx) => [`let ${ctx.varName} = length(${ctx.promoteInput("e1")});`],
 };

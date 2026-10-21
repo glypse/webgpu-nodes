@@ -22,21 +22,18 @@
 
 	let {
 		id,
-		data: rawData,
 		type: nodeType,
 	}: {
 		id: string;
-		data: Record<string, unknown>;
 		type: string;
 	} = $props();
-
-	let data = $derived({ ...rawData });
 
 	const graph = getGraphManager();
 
 	const isLocked = $derived(graph.isLocked);
 
 	const fullNode = $derived(graph.activeDocument.nodes.find((n) => n.id === id));
+	const data = $derived(fullNode?.data ?? {});
 	const descriptor = $derived(fullNode ? graph.resolveDescriptor(fullNode) : undefined);
 
 	const nodeLocked = $derived(fullNode?.group?.locked ?? false);
@@ -78,7 +75,7 @@
 	}
 
 	function handleSettingSelect(setting: NodeSetting, value: string) {
-		graph.updateNodeData(id, { [setting.key]: value });
+		graph.setSetting(id, setting.key, value);
 	}
 
 	function resolvedInputType(inputDef: { id: string }): WgslType {
@@ -86,12 +83,11 @@
 	}
 
 	function getComponentValue(inputId: string, comp: string): number {
-		return readComponent(data[inputId], comp);
+		return readComponent(data.values?.[inputId], comp);
 	}
 
 	function setComponentValue(inputId: string, type: WgslType, comp: string, val: number) {
-		const value = withComponent(data[inputId], type, comp, val);
-		graph.updateNodeData(id, { [inputId]: value }, { retype: false });
+		graph.setInputValue(id, inputId, withComponent(data.values?.[inputId], type, comp, val));
 	}
 
 	function handleStyle(type: WgslType): string {

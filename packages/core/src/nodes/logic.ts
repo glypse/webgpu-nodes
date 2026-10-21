@@ -24,7 +24,7 @@ export const compareNode: NodeDescriptor = {
 		{ id: "b", label: "b", types: NUMERIC_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "bool" }],
-	defaultData: { a: 0, b: 0, op: "<" },
+	defaultData: { values: { a: 0, b: 0 }, settings: { op: "<" } },
 	settings: [COMPARE_SETTING],
 	resolveOutputType: (t) => makeType("bool", typeComponents(t)),
 	wgsl: (ctx) => {
@@ -44,7 +44,7 @@ export const switchNode: NodeDescriptor = {
 		{ id: "true", label: "true", types: WGSL_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { condition: false, false: 0, true: 1 },
+	defaultData: { values: { condition: false, false: 0, true: 1 } },
 	wgsl: (ctx) => {
 		const valueType = ctx.outputType;
 		const conditionType = ctx.inputTypes.condition ?? "bool";
@@ -92,13 +92,13 @@ export const booleanMathNode: NodeDescriptor = {
 		},
 		{ types: BOOL_TYPES, category: "logic" },
 	),
-	defaultData: { a: false, b: false, op: "and" },
+	defaultData: { values: { a: false, b: false }, settings: { op: "and" } },
 	settings: [BOOLEAN_MATH_SETTING],
 };
 
 export const notNode: NodeDescriptor = {
 	...unaryFn("not", "Not", "", BOOL_TYPES, "logic"),
-	defaultData: { e: false },
+	defaultData: { values: { e: false } },
 	wgsl: (ctx) => [`let ${ctx.varName} = !(${ctx.promoteInput("e")});`],
 };
 
@@ -113,7 +113,7 @@ const REDUCE_SETTING: NodeSetting = {
 
 export const reduceBooleanNode: NodeDescriptor = {
 	...unaryFn("reduce-boolean", "Any / All", "", BOOL_TYPES, "logic"),
-	defaultData: { e: false, op: "any" },
+	defaultData: { values: { e: false }, settings: { op: "any" } },
 	settings: [REDUCE_SETTING],
 	resolveOutputType: () => "bool",
 	wgsl: (ctx) => [
@@ -137,7 +137,7 @@ export const fallbackNode: NodeDescriptor = {
 		{ id: "default", label: "default", types: WGSL_TYPES },
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { default: 0 },
+	defaultData: { values: { default: 0 } },
 	wgsl: (ctx) => {
 		const chosen = ctx.isPresent("value") ? "value" : "default";
 		return [`let ${ctx.varName} = ${ctx.promoteInput(chosen)};`];

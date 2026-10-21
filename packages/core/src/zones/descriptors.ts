@@ -1,5 +1,5 @@
 import type { HydratedGraphDocument } from "../graph/document";
-import { type HandleDef, type NodeDescriptor, isWgslType } from "../types";
+import { type HandleDef, type NodeData, type NodeDescriptor } from "../types";
 
 //
 // A repeat zone is a pair of nodes, like Blender's geometry-nodes repeat zone:
@@ -32,7 +32,7 @@ export const NEW_ITEM_HANDLE = "__new_item__";
 export const DEFAULT_ITERATIONS = 1;
 export const DEFAULT_MAX_ITERATIONS = 1024;
 
-export type MinimalNode = { id: string; type?: string; data: Record<string, unknown> };
+export type MinimalNode = { id: string; type?: string; data: NodeData };
 export type MinimalEdge = { id: string; source: string; target: string };
 
 export function isZoneNodeType(type: string | undefined): boolean {
@@ -41,27 +41,17 @@ export function isZoneNodeType(type: string | undefined): boolean {
 
 /** The id of the Repeat Output a Repeat Input is paired with. */
 export function pairedOutputId(node: MinimalNode): string | undefined {
-	const id = node.data.pairedOutput;
-	return typeof id === "string" ? id : undefined;
+	return node.data.pairedOutput;
 }
 
-/** The state items declared on a Repeat Output node (validated). */
+/** The state items declared on a Repeat Output node. */
 export function zoneItems(outputNode: MinimalNode | undefined): HandleDef[] {
-	const raw = outputNode?.data.items;
-	if (!Array.isArray(raw)) return [];
-	return raw.filter(
-		(item): item is HandleDef =>
-			typeof item === "object" &&
-			item !== null &&
-			typeof (item as HandleDef).id === "string" &&
-			typeof (item as HandleDef).label === "string" &&
-			isWgslType((item as HandleDef).type),
-	);
+	return outputNode?.data.items ?? [];
 }
 
 /** The safety cap applied to a zone's iteration count. */
 export function zoneMaxIterations(inputNode: MinimalNode): number {
-	const raw = Number(inputNode.data.maxIterations);
+	const raw = inputNode.data.maxIterations ?? DEFAULT_MAX_ITERATIONS;
 	return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : DEFAULT_MAX_ITERATIONS;
 }
 
@@ -102,7 +92,10 @@ export function buildRepeatInputDescriptor(
 	const items = zoneItems(findNode(pairedOutputId(node), definitions));
 	return {
 		...zoneDescriptorBase(REPEAT_INPUT, "Repeat Input"),
-		defaultData: { iterations: DEFAULT_ITERATIONS, maxIterations: DEFAULT_MAX_ITERATIONS },
+		defaultData: {
+			values: { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS },
+			maxIterations: DEFAULT_MAX_ITERATIONS,
+		},
 		inputs: [
 			{ id: ITERATIONS_HANDLE, label: "Iterations", types: ["i32"] },
 			...items.map((item) => ({ id: item.id, label: item.label, types: [item.type] })),

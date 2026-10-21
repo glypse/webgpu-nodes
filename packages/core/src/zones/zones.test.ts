@@ -6,15 +6,15 @@ import { ROOT_ID } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import { edge, rootProject, shaderFor, type TestEdge, type TestNode } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
-import type { HandleDef } from "../types";
+import type { HandleDef, NodeData } from "../types";
 
 /** A repeat zone `<id>_in` / `<id>_out` with the given state items. */
-function zone(id: string, items: HandleDef[], inputData: Record<string, unknown> = {}): TestNode[] {
+function zone(id: string, items: HandleDef[], inputData: NodeData = {}): TestNode[] {
 	return [
 		{
 			id: `${id}_in`,
 			type: "repeat-input",
-			data: { pairedOutput: `${id}_out`, iterations: 3, ...inputData },
+			data: { pairedOutput: `${id}_out`, values: { iterations: 3 }, ...inputData },
 		},
 		{ id: `${id}_out`, type: "repeat-output", data: { items } },
 	];
@@ -38,7 +38,7 @@ function expectValid(shader: string) {
 const accumulate = {
 	nodes: [
 		...zone("z", [ACC]),
-		{ id: "init", type: "declare", data: { x: 1 } },
+		{ id: "init", type: "declare", data: { values: { x: 1 } } },
 		{ id: "body", type: "add" },
 	] satisfies TestNode[],
 	edges: [

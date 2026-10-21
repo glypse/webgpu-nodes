@@ -10,7 +10,7 @@ export const declareNode: NodeDescriptor = {
 	category: "input",
 	inputs: DECLARE_COMPONENTS.map((c) => ({ id: c, label: c, types: ["f32"] as const })),
 	outputs: [{ id: "value", label: "value", type: "f32" }],
-	defaultData: Object.fromEntries(DECLARE_COMPONENTS.map((c) => [c, 0])),
+	defaultData: { values: Object.fromEntries(DECLARE_COMPONENTS.map((c) => [c, 0])) },
 	typeFamily: { key: "declare", types: WGSL_TYPES },
 	resolveInputs: (resolvedOutputType) => {
 		const scalar = makeType(typeKind(resolvedOutputType), 1);

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { formatWgslLiteral } from "../codegen";
 import { managerFor, shaderFor, type TestEdge, type TestNode } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
-import { WGSL_TYPES, isConnectionCompatible, type WgslType } from "../types";
+import { type NodeData, WGSL_TYPES, isConnectionCompatible, type WgslType } from "../types";
 import { nodeRegistry } from "./registry";
 
 const SKIPPED = new Set(["frag-output", "node-group"]);
@@ -12,7 +12,7 @@ const SKIPPED = new Set(["frag-output", "node-group"]);
 function* cases(): Generator<{ name: string; nodes: TestNode[]; edges: TestEdge[] }> {
 	for (const [type, descriptor] of Object.entries(nodeRegistry)) {
 		if (SKIPPED.has(type) || descriptor.dev) continue;
-		const settingVariants: Record<string, unknown>[] = [{}];
+		const settingVariants: Record<string, string>[] = [{}];
 		for (const setting of descriptor.settings ?? []) {
 			settingVariants.splice(
 				0,
@@ -27,14 +27,14 @@ function* cases(): Generator<{ name: string; nodes: TestNode[]; edges: TestEdge[
 		for (const settings of settingVariants) {
 			for (const sourceType of sourceTypes) {
 				const nodes: TestNode[] = [
-					{ id: "n", type, data: { ...descriptor.defaultData, ...settings } },
+					{ id: "n", type, data: { ...descriptor.defaultData, settings } },
 				];
 				const edges: TestEdge[] = [];
 				if (sourceType) {
 					nodes.push({
 						id: "src",
 						type: "declare",
-						data: { declare: sourceType, x: 1, y: 2 },
+						data: { types: { declare: sourceType }, values: { x: 1, y: 2 } },
 					});
 					for (const input of descriptor.inputs) {
 						if (input.types.some((t) => isConnectionCompatible(sourceType, t))) {
@@ -75,7 +75,7 @@ describe("formatWgslLiteral", () => {
 });
 
 describe("enum inputs and fallbacks", () => {
-	const aspectUv = (data: Record<string, unknown> = {}): TestNode => ({
+	const aspectUv = (data: NodeData = {}): TestNode => ({
 		id: "a",
 		type: "node-group",
 		data,
@@ -83,7 +83,10 @@ describe("enum inputs and fallbacks", () => {
 	});
 
 	it("aspect UV falls back to the fragment UV when unlinked", () => {
-		const shader = shaderFor([aspectUv({ mode: 1 })], [["a", "uv", "out", "color"]]);
+		const shader = shaderFor(
+			[aspectUv({ values: { mode: 1 } })],
+			[["a", "uv", "out", "color"]],
+		);
 		// The unlinked variant uses the group's own UV, the default branch only.
 		expect(shader).toContain("let v_a = group_h_std_aspect_uv__d0(");
 		expect(shader).toMatch(/let v_coordinates = v_uv;/);
@@ -156,7 +159,7 @@ describe("output", () => {
 	const declare = (type: WgslType): TestNode => ({
 		id: "d",
 		type: "declare",
-		data: { declare: type, x: 0.25, y: 0.5, z: 0.75, w: 0.5 },
+		data: { types: { declare: type }, values: { x: 0.25, y: 0.5, z: 0.75, w: 0.5 } },
 	});
 
 	it("makes a vec3f opaque instead of padding its alpha with 0", () => {

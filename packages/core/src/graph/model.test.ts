@@ -212,7 +212,7 @@ describe("inferred types", () => {
 		expect(graph.typeChoice("s")).toMatchObject({ forced: "vec4f", inferred: "vec2f" });
 		graph.setNodeType("s", undefined);
 		expect(graph.typeChoice("s")).toMatchObject({ forced: undefined, inferred: "vec2f" });
-		expect(graph.root.nodesById.get("s")?.data.__nodeTypeOverrides).toBeUndefined();
+		expect(graph.root.nodesById.get("s")?.data.types).toBeUndefined();
 	});
 });
 
@@ -277,12 +277,14 @@ describe("node data edits", () => {
 	it("replaces the node instead of mutating it", () => {
 		const graph = managerFor([{ id: "s", type: "sin" }], []);
 		const before = graph.root.nodesById.get("s");
-		graph.updateNodeData("s", { e: 2 });
+		graph.setInputValue("s", "e", 2);
 		const after = graph.root.nodesById.get("s");
 		expect(after).not.toBe(before);
-		expect(after?.data.e).toBe(2);
-		graph.updateNodeData("s", { e: undefined });
-		expect("e" in (graph.root.nodesById.get("s")?.data ?? {})).toBe(false);
+		expect(after?.data.values?.e).toBe(2);
+		graph.setInputValue("s", "e", undefined);
+		expect(graph.root.nodesById.get("s")?.data.values).toBeUndefined();
+		graph.setSetting("s", "op", "x");
+		expect(graph.root.nodesById.get("s")?.data.settings).toEqual({ op: "x" });
 	});
 
 	it("adds handles to group boundary nodes only", () => {

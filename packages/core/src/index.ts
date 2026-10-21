@@ -15,4 +15,4 @@ export * from "./graph/model-base";
 export * from "./graph/model-zones";
 export * from "./graph/model-groups";
 export * from "./graph/model";
-export { default as defaultScene } from "./scenes/default.json";
+export { defaultScene } from "./scenes";

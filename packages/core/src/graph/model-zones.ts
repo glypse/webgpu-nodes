@@ -2,6 +2,7 @@ import { type HandleDef, type WgslType } from "../types";
 import {
 	DEFAULT_ITERATIONS,
 	DEFAULT_MAX_ITERATIONS,
+	ITERATIONS_HANDLE,
 	NEW_ITEM_HANDLE,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
@@ -65,9 +66,8 @@ export abstract class ZoneModel extends GraphModelBase {
 				type: REPEAT_INPUT,
 				data: {
 					pairedOutput: outputId,
-					iterations: DEFAULT_ITERATIONS,
+					values: { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS, [item.id]: 0 },
 					maxIterations: DEFAULT_MAX_ITERATIONS,
-					[item.id]: 0,
 				},
 				position,
 			},

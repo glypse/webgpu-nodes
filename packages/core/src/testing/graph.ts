@@ -6,11 +6,12 @@ import {
 	ROOT_ID,
 } from "../graph/document";
 import { GraphModel } from "../graph/model";
+import type { NodeData } from "../types";
 
 export type TestNode = {
 	id: string;
 	type: string;
-	data?: Record<string, unknown>;
+	data?: NodeData;
 	group?: GraphDocumentNode["group"];
 };
 

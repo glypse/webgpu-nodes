@@ -1,3 +1,4 @@
+import type { NodeData } from "./node-data";
 import { type WgslType } from "./values";
 
 // ─── Handle / descriptor types ───────────────────────────────
@@ -71,15 +72,15 @@ export type NodeOutputDef = {
 
 /** A user-facing enum setting shown on the node (e.g. a comparison operator). */
 export type NodeSetting = {
-	/** Key in node data holding the selected value. */
+	/** Key of the selected value in the node's `settings`. */
 	key: string;
 	label: string;
 	options: readonly { value: string; label: string }[];
 };
 
 /** Read an enum setting from node data, falling back to the first option. */
-export function settingValue(data: Record<string, unknown>, setting: NodeSetting): string {
-	const value = data[setting.key];
+export function settingValue(data: NodeData, setting: NodeSetting): string {
+	const value = data.settings?.[setting.key];
 	const match = setting.options.find((o) => o.value === value);
 	return (match ?? setting.options[0])?.value ?? "";
 }
@@ -106,7 +107,7 @@ export type WgslCtx = {
 	 * For multi-output nodes each entry has a unique suffix: `{ x: "v_id_x", y: "v_id_y" }`.
 	 */
 	outputVars: Record<string, string>;
-	data: Record<string, unknown>;
+	data: NodeData;
 	/**
 	 * Map from input port id → WGSL expressions of the upstream node(s).
 	 * For non-variadic inputs: always 0 or 1 elements (raw, unconverted).
@@ -155,7 +156,7 @@ export type NodeDescriptor = {
 	dev?: boolean;
 	inputs: NodeInputDef[];
 	outputs: NodeOutputDef[];
-	defaultData: Record<string, unknown>;
+	defaultData: NodeData;
 	/** Enum settings rendered on the node; their values live in node data. */
 	settings?: NodeSetting[];
 	/**
@@ -187,7 +188,7 @@ export type NodeDescriptor = {
 	/**
 	 * Declare a type family for this node's output type selection.
 	 * When present, the type dropdown shows these types (instead of the
-	 * primary input's types), and the override is stored under `key` in node data.
+	 * primary input's types), and the override is stored under `key` in the node's `types`.
 	 */
 	typeFamily?: { key: string; types: readonly WgslType[] };
 	/** Emit WGSL line(s) that define `varName`.
