@@ -1,5 +1,5 @@
 import type { NodeDescriptor } from "../types";
-import { FLOAT_TYPES, WGSL_TYPES } from "../types";
+import { WGSL_TYPES } from "../types";
 
 // ── Standalone nodes (unique patterns) ───────────────────────────────────────
 
@@ -32,26 +32,4 @@ export const outputNode: NodeDescriptor = {
 		const rgba = ctx.inputTypes.color === "vec3f" ? `vec4f(${color}, 1.0)` : color;
 		return [`let ${ctx.varName} = ${rgba};`];
 	},
-};
-
-// ── Test nodes (for error handling UI testing) ────────────────────────────────
-
-export const testInvalidWgslNode: NodeDescriptor = {
-	type: "test-invalid-wgsl",
-	label: "⚠ Test: Bad WGSL",
-	category: "misc",
-	inputs: [],
-	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: {},
-	wgsl: (ctx) => [`let ${ctx.varName} = this_is_not_valid_wgsl;`],
-};
-
-export const testRuntimeErrorNode: NodeDescriptor = {
-	type: "test-runtime-error",
-	label: "⚠ Test: Runtime Error",
-	category: "misc",
-	inputs: [{ id: "e", label: "e", types: FLOAT_TYPES }],
-	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { e: 0 },
-	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("e")} / f32(0.0);`],
 };

@@ -94,7 +94,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	// Groups (placeholder - shape derived from subgraph at runtime)
 	"node-group": groupNode,
 
-	// Test nodes (for error handling UI)
+	// Developer tools
 	"test-invalid-wgsl": nodes.testInvalidWgslNode,
 	"test-runtime-error": nodes.testRuntimeErrorNode,
 };

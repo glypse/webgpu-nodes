@@ -1,13 +1,15 @@
 <script lang="ts">
+	import { dev } from "$app/env";
 	import { type GraphDocument } from "$core";
-	import { Editor, GraphManager, setDevContext, setGraphManager } from "$editor";
+	import { DevTools, Editor, GraphManager, setDevTools, setGraphManager } from "$editor";
 	import { Menubar, AlertDialog } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
 	const graph = new GraphManager();
 	setGraphManager(graph);
 
-	setDevContext(true); // TODO: Replace with `dev` from `$app/env` past 1.0 release
+	const devTools = new DevTools(dev);
+	setDevTools(devTools);
 
 	function pickFiles(opts: { accept: string; multiple?: boolean }): Promise<File[]> {
 		return new Promise((resolve) => {
@@ -143,6 +145,10 @@
 					Export selected group
 				</Menubar.Item>
 				<Menubar.Item onSelect={handleImportGroups}>Import groups</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.CheckboxItem bind:checked={devTools.enabled}>
+					Developer tools
+				</Menubar.CheckboxItem>
 			</Menubar.Content>
 		</Menubar.Menu>
 

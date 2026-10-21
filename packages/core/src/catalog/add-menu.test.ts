@@ -10,13 +10,20 @@ describe("add menu entries", () => {
 		const keys = entries.map((e) => e.key);
 		expect(keys).toContain("zone:repeat");
 		expect(keys).toContain("node:add");
-		expect(keys).toContain("group:std-dummy");
+		expect(keys).toContain("group:std-aspect-uv");
 		expect(keys).not.toContain("node:frag-output");
+		expect(keys).not.toContain("node:test-invalid-wgsl");
 		expect(keys.some((k) => k.includes("repeat-input"))).toBe(false);
 
 		const headings = groupByHeading(entries).map((g) => g.heading);
 		const known = Object.values(CATEGORY_LABELS);
 		expect(headings).toEqual(known.filter((h) => headings.includes(h)));
+	});
+
+	it("lists developer-tool nodes with developer tools only", () => {
+		const keys = addMenuEntries(managerFor([], []), { devTools: true }).map((e) => e.key);
+		expect(keys).toContain("node:test-invalid-wgsl");
+		expect(keys).toContain("node:add");
 	});
 
 	it("offers to delete unused user groups only", () => {
@@ -42,7 +49,7 @@ describe("add menu entries", () => {
 		const at = { x: 0, y: 0 };
 		const sin = graph.addMenuEntry(byKey("node:sin"), at);
 		const zone = graph.addMenuEntry(byKey("zone:repeat"), at);
-		const library = graph.addMenuEntry(byKey("group:std-dummy"), at);
+		const library = graph.addMenuEntry(byKey("group:std-aspect-uv"), at);
 		const fresh = graph.addMenuEntry(byKey("node:node-group"), at);
 		const types = [sin, zone, library, fresh].map(
 			(id) => graph.root.nodesById.get(id ?? "")?.type,

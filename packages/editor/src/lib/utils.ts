@@ -1,7 +1,3 @@
-import { createContext } from "svelte";
-
-export const [getDevContext, setDevContext] = createContext<boolean>();
-
 /**
  * Open a context menu at a point (client coordinates) from code, exactly as
  * a right-click there would: its trigger positions the menu from the event.

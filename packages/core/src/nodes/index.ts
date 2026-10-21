@@ -7,3 +7,4 @@ export * from "./integer";
 export * from "./convert";
 export * from "./misc";
 export * from "./groups";
+export * from "./dev";

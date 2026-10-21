@@ -151,6 +151,8 @@ export type NodeDescriptor = {
 	category: NodeCategory;
 	/** Hide from the "add node" menu (e.g. nodes created in pairs). */
 	hidden?: boolean;
+	/** A debugging aid: only offered while developer tools are enabled. */
+	dev?: boolean;
 	inputs: NodeInputDef[];
 	outputs: NodeOutputDef[];
 	defaultData: Record<string, unknown>;

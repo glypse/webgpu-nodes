@@ -1,6 +1,5 @@
 import type { GraphDocument, StandardLibraryEntry } from "../graph/document";
 import aspectUv from "./std-aspect-uv.json";
-import dummy from "./std-dummy.json";
 
 /** A standard-library file: a locked group definition shipped with the editor. */
 type LibraryFile = {
@@ -11,7 +10,7 @@ type LibraryFile = {
 	definition: GraphDocument;
 };
 
-const files: LibraryFile[] = [aspectUv, dummy];
+const files: LibraryFile[] = [aspectUv];
 
 /** The standard library: group definitions every project can reference. */
 export const standardLibrary: readonly StandardLibraryEntry[] = files.map((file) => ({

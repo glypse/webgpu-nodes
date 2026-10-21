@@ -31,9 +31,9 @@
 	import { mode } from "mode-watcher";
 	import { tick } from "svelte";
 
+	import { getDevTools } from "../dev-tools.svelte";
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { openContextMenuAt } from "../utils";
-	import { getDevContext } from "../utils";
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
 	import NodeShell from "./NodeShell.svelte";
@@ -51,7 +51,7 @@
 		gradient: GradientEdge,
 	};
 
-	let debug = getDevContext();
+	const devTools = getDevTools();
 
 	let {
 		class: className,
@@ -127,7 +127,7 @@
 
 	const addEntries = $derived.by(() => {
 		if (!addMenuOpen) return [];
-		const entries = addMenuEntries(graph);
+		const entries = addMenuEntries(graph, { devTools: devTools.enabled });
 		const pending = addMenuAt.pending;
 		if (!pending) return entries;
 		return entries.filter((entry) => graph.entryHandleFor(entry, pending) !== undefined);
@@ -326,7 +326,7 @@
 			return;
 		}
 
-		if (debug) {
+		if (devTools.enabled) {
 			/* const sortedIds = debugSort(rootNodes, rootEdges); */
 			console.groupCollapsed("[shader debug]");
 			console.log("// Compiled fragment shader:\n", frag);
@@ -472,7 +472,7 @@
 			minZoom={0.1}
 			maxZoom={3}
 			class={cn("", className)}
-			proOptions={{ hideAttribution: !debug }}
+			proOptions={{ hideAttribution: !devTools.enabled }}
 			nodesDraggable={!isLocked}
 			nodesConnectable={!isLocked}
 			elementsSelectable={!isLocked}

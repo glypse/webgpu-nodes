@@ -44,9 +44,11 @@ const headingOf = (category: string): string =>
 /**
  * Every entry of the add menu, grouped by heading in menu order: registered
  * nodes and standard-library groups by category, then the user's groups.
+ * Developer-tool nodes are only listed with `devTools`.
  */
 export function addMenuEntries(
 	graph: Pick<GraphModel, "library" | "project" | "wouldCreateCycle">,
+	{ devTools = false }: { devTools?: boolean } = {},
 ): AddMenuEntry[] {
 	const entries: AddMenuEntry[] = [
 		{
@@ -59,7 +61,7 @@ export function addMenuEntries(
 		},
 	];
 	for (const [type, descriptor] of Object.entries(nodeRegistry)) {
-		if (descriptor.hidden) continue;
+		if (descriptor.hidden || (descriptor.dev && !devTools)) continue;
 		entries.push({
 			key: `node:${type}`,
 			label: descriptor.label,

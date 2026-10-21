@@ -6,12 +6,12 @@ import { nagaBin, validateFragment } from "../testing/wgsl";
 import { WGSL_TYPES, isConnectionCompatible, type WgslType } from "../types";
 import { nodeRegistry } from "./registry";
 
-const SKIPPED = new Set(["frag-output", "node-group", "test-invalid-wgsl", "test-runtime-error"]);
+const SKIPPED = new Set(["frag-output", "node-group"]);
 
 /** Every registered node, each setting option, fed by `declare` nodes of each type. */
 function* cases(): Generator<{ name: string; nodes: TestNode[]; edges: TestEdge[] }> {
 	for (const [type, descriptor] of Object.entries(nodeRegistry)) {
-		if (SKIPPED.has(type)) continue;
+		if (SKIPPED.has(type) || descriptor.dev) continue;
 		const settingVariants: Record<string, unknown>[] = [{}];
 		for (const setting of descriptor.settings ?? []) {
 			settingVariants.splice(
