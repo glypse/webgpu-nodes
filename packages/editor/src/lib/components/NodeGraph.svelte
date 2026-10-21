@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ShaderSource } from "$core";
 	import { Breadcrumb, Button } from "$theme";
 	import { SvelteFlowProvider } from "@xyflow/svelte";
 	import ArrowElbowLeftUpIcon from "phosphor-svelte/lib/ArrowElbowLeftUpIcon";
@@ -9,7 +10,8 @@
 
 	const graph = getGraphManager();
 
-	let { class: className, frag = $bindable() }: { class?: string; frag?: string } = $props();
+	let { class: className, shader = $bindable() }: { class?: string; shader?: ShaderSource } =
+		$props();
 </script>
 
 <SvelteFlowProvider>
@@ -79,7 +81,7 @@
 		<GraphContent
 			bind:nodes={graph.nodes}
 			bind:edges={graph.edges}
-			bind:frag
+			bind:shader
 			class={className}
 			wrapperClass="min-h-0 flex-1"
 		/>

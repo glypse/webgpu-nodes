@@ -3,6 +3,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
+import type { UniformValue } from "../codegen";
+
 /**
  * Mirror of the module Spektral wraps around our `frag()` function. Spektral
  * doesn't export its shader builder publicly, so this stub declares the same
@@ -17,6 +19,7 @@ struct SpektralFrame {
 };
 
 @group(0) @binding(0) var<uniform> spektralFrame: SpektralFrame;
+@group(0) @binding(1) var<uniform> spektralUniforms: SpektralUniforms;
 
 struct SpektralFragment {
 	uv: vec2f,
@@ -32,6 +35,16 @@ fn spektralFragmentMain(@location(0) uv: vec2f) -> @location(0) vec4f {
 	return frag(uv);
 }
 `;
+
+/** The uniform struct Spektral declares for a uniform map (a placeholder when empty). */
+function uniformsStruct(uniforms: Record<string, UniformValue>): string {
+	const fields = Object.entries(uniforms).map(([name, value]) => {
+		const n = typeof value === "number" ? 1 : value.length;
+		return `\t${name}: ${n === 1 ? "f32" : `vec${String(n)}f`},`;
+	});
+	if (fields.length === 0) fields.push("\tspektral_unused: vec4f,");
+	return `struct SpektralUniforms {\n${fields.join("\n")}\n};`;
+}
 
 function findNaga(): string | null {
 	const candidates = [
@@ -54,12 +67,18 @@ export const nagaBin = findNaga();
  * Validate a generated fragment (everything our codegen emits) with naga.
  * Returns `null` when valid, or naga's error report.
  */
-export function validateFragment(fragment: string): string | null {
+export function validateFragment(
+	fragment: string,
+	uniforms: Record<string, UniformValue> = {},
+): string | null {
 	if (!nagaBin) throw new Error("naga is not installed");
 	const dir = mkdtempSync(join(tmpdir(), "webgpu-nodes-"));
 	const file = join(dir, "shader.wgsl");
 	try {
-		writeFileSync(file, `${SPEKTRAL_PRELUDE}\n${fragment}\n${SPEKTRAL_ENTRY}`);
+		writeFileSync(
+			file,
+			`${uniformsStruct(uniforms)}\n${SPEKTRAL_PRELUDE}\n${fragment}\n${SPEKTRAL_ENTRY}`,
+		);
 		const result = spawnSync(nagaBin, [file], { encoding: "utf8" });
 		if (result.status === 0) return null;
 		return `${result.stdout}\n${result.stderr}`.trim();

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { formatWgslLiteral } from "../codegen";
+import { formatWgslLiteral, generateShader } from "../codegen";
+import { ROOT_ID } from "../graph/document";
 import {
 	libraryEntry,
 	managerFor,
@@ -64,6 +65,11 @@ describe.skipIf(!nagaBin)("every node generates valid WGSL for every input type"
 			const shader = shaderFor(nodes, edges);
 			const error = validateFragment(shader);
 			expect(error, `${error ?? ""}\n\n${shader}`).toBeNull();
+
+			// The same with every value read from uniforms.
+			const scoped = generateShader(managerFor(nodes, edges), { uniformScope: ROOT_ID });
+			const scopedError = validateFragment(scoped.shader, scoped.uniforms);
+			expect(scopedError, `${scopedError ?? ""}\n\n${scoped.shader}`).toBeNull();
 		});
 	}
 });

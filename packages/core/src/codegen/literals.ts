@@ -6,15 +6,21 @@ const SCALAR_LIMITS = {
 	u32: { min: 0, max: 4294967295 },
 };
 
-function scalarLiteral(kind: ScalarKind, value: ScalarValue | undefined): string {
+/** A stored component as a number of `kind`'s range (bools are 0 or 1). */
+export function scalarNumber(kind: ScalarKind, value: ScalarValue | undefined): number {
 	if (kind === "bool")
-		return value === true || (typeof value === "number" && value !== 0) ? "true" : "false";
+		return value === true || (typeof value === "number" && value !== 0) ? 1 : 0;
 	const raw = Number(value);
 	const n = Number.isFinite(raw) ? raw : 0;
-	if (kind === "f32") return `f32(${String(n)})`;
+	if (kind === "f32") return n;
 	const { min, max } = SCALAR_LIMITS[kind];
-	const int = Math.min(max, Math.max(min, Math.trunc(n)));
-	return `${kind}(${String(int)})`;
+	return Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
+function scalarLiteral(kind: ScalarKind, value: ScalarValue | undefined): string {
+	const n = scalarNumber(kind, value);
+	if (kind === "bool") return n === 1 ? "true" : "false";
+	return `${kind}(${String(n)})`;
 }
 
 const LITERAL_COMPONENTS = ["x", "y", "z", "w"] as const;

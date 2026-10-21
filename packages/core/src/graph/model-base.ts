@@ -257,6 +257,13 @@ export abstract class GraphModelBase {
 		return current;
 	}
 
+	/** The key of the active document in `project.definitions`. */
+	get activeDefinitionRef(): string {
+		let ref = ROOT_ID;
+		for (const { group } of this.walkPath()) ref = group.definitionRef;
+		return ref;
+	}
+
 	resolveDescriptor(node: GraphNode): NodeDescriptor {
 		return resolveDescriptor(node, this.project.definitions);
 	}

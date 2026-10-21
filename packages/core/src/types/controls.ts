@@ -15,6 +15,19 @@ export type InputControl =
 
 export type InputControlKind = InputControl["kind"];
 
+/**
+ * Whether values edited by `control` are passed to the shader as uniforms,
+ * so editing them doesn't recompile it.
+ */
+export function isUniformControl(control: InputControl): boolean {
+	switch (control.kind) {
+		case "number":
+		case "toggle":
+		case "enum":
+			return true;
+	}
+}
+
 /** The control editing an input of resolved type `type`. */
 export function inputControl(input: NodeInputDef, type: WgslType): InputControl {
 	if (input.control) return input.control;

@@ -2,8 +2,18 @@ import { ROOT_ID, type GraphEdge } from "../graph/document";
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
 import type { GraphModel } from "../graph/model";
+import { componentKeys, readComponent } from "../graph/values";
 import type { HandleDef, InputValue, NodeData, WgslType } from "../types";
-import { WGSL_DEFAULTS, convertVar, inputDefaultType, wgslTypeName } from "../types";
+import {
+	WGSL_DEFAULTS,
+	convertVar,
+	inputControl,
+	inputDefaultType,
+	isUniformControl,
+	makeType,
+	typeKind,
+	wgslTypeName,
+} from "../types";
 import {
 	DEFAULT_ITERATIONS,
 	ITERATIONS_HANDLE,
@@ -17,7 +27,7 @@ import {
 	zoneMaxIterations,
 } from "../zones";
 import { HelperRegistry } from "./helpers";
-import { formatWgslLiteral } from "./literals";
+import { formatWgslLiteral, scalarNumber } from "./literals";
 
 // ── Graph walking ────────────────────────────────────────────────────────────
 
@@ -206,7 +216,35 @@ type ShaderState = {
 	groupDecls: Map<string, { decl: string; fnName: string }>;
 	/** Definitions whose output struct has already been declared. */
 	groupStructs: Set<string>;
+	/** The definition whose input values are uniforms (see `ShaderOptions`). */
+	uniformScope: string | undefined;
+	uniforms: Map<string, UniformValue>;
 };
+
+/**
+ * A uniform's value: a number for an f32, its components for a vecNf.
+ * Uniforms are always floats, converted to the input's type in the shader.
+ */
+export type UniformValue =
+	| number
+	| [number, number]
+	| [number, number, number]
+	| [number, number, number, number];
+
+/** A generated fragment and the uniform values it reads. */
+export type ShaderSource = { fragment: string; uniforms: Record<string, UniformValue> };
+
+export type ShaderOptions = {
+	/**
+	 * The definition (`ROOT_ID` for the root) whose unlinked input values are
+	 * read from uniforms rather than written into the shader: editing them
+	 * then only changes the uniforms. Values of other documents stay literals.
+	 */
+	uniformScope?: string;
+};
+
+/** Reads uniforms from the struct Spektral declares. */
+const UNIFORMS_VAR = "spektralUniforms";
 
 /**
  * Emits the body of one document (the root fragment or a group function).
@@ -226,6 +264,8 @@ class BodyEmitter {
 		readonly zones: ZoneAnalysis,
 		/** Group-input handles the calling group node left unlinked (absent values). */
 		private absentInputs: ReadonlySet<string> = new Set(),
+		/** Whether unlinked input values are read from uniforms. */
+		private uniforms = false,
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		for (const edge of edges) {
@@ -295,7 +335,40 @@ class BodyEmitter {
 	inputExpr(node: GraphNode, inputId: string, target: WgslType, fallback?: InputValue): string {
 		const edge = this.incoming(node.id).find((e) => e.targetHandle === inputId);
 		if (edge) return this.convertedSource(edge, target);
-		return formatWgslLiteral(target, node.data.values?.[inputId] ?? fallback);
+		const value = node.data.values?.[inputId] ?? fallback;
+		if (this.uniforms) {
+			const input = this.state.graph
+				.resolveDescriptor(node)
+				.inputs.find((i) => i.id === inputId);
+			if (!input || isUniformControl(inputControl(input, target))) {
+				return this.uniformExpr(
+					`u_${identSuffix(node.id)}_${identSuffix(inputId)}`,
+					target,
+					value,
+				);
+			}
+		}
+		return formatWgslLiteral(target, value);
+	}
+
+	/** Declare a uniform holding `value`, and read it as `target`. */
+	private uniformExpr(name: string, target: WgslType, value: InputValue | undefined): string {
+		const kind = typeKind(target);
+		const components = componentKeys(target).map((c) =>
+			scalarNumber(kind, readComponent(value, c)),
+		);
+		const [x = 0, y = 0, z = 0, w = 0] = components;
+		const uniform: UniformValue =
+			components.length === 1
+				? x
+				: components.length === 2
+					? [x, y]
+					: components.length === 3
+						? [x, y, z]
+						: [x, y, z, w];
+		this.state.uniforms.set(name, uniform);
+		const source = makeType("f32", components.length);
+		return convertVar(`${UNIFORMS_VAR}.${name}`, source, target);
 	}
 
 	push(nodeId: string, statements: string[], indent: string) {
@@ -413,6 +486,7 @@ function emitDocumentBody(
 	doc: { nodes: GraphNode[]; edges: GraphEdge[] },
 	seedType: string,
 	absentInputs: ReadonlySet<string> = new Set(),
+	uniforms = false,
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -421,7 +495,7 @@ function emitDocumentBody(
 	const validEdges = doc.edges.filter((e) => !zones.invalidEdges.has(e.id));
 	const reachable = findReachableNodeIds(nodeMap, validEdges, seedType);
 	const edges = validEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
-	const emitter = new BodyEmitter(state, doc, edges, zones, absentInputs);
+	const emitter = new BodyEmitter(state, doc, edges, zones, absentInputs, uniforms);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
 	const unitIn = (scope: string | null, nodeId: string): string | undefined => {
@@ -527,7 +601,13 @@ function emitGroupFunction(
 	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
 	const outputHandles = groupOutputNode?.data.handles ?? [];
 
-	const body = emitDocumentBody(state, definition, "group-output", absentInputs);
+	const body = emitDocumentBody(
+		state,
+		definition,
+		"group-output",
+		absentInputs,
+		state.uniformScope === definitionRef,
+	);
 
 	// Struct fields follow the declared handle types; whatever feeds them is
 	// converted on the way in, exactly like any other typed input.
@@ -560,15 +640,26 @@ function emitGroupFunction(
 /**
  * Emit the full WGSL fragment shader source from the graph.
  */
-export function generateShader(graph: CodegenGraph): { shader: string; lineMap: LineMap } {
+export function generateShader(
+	graph: CodegenGraph,
+	{ uniformScope }: ShaderOptions = {},
+): { shader: string; lineMap: LineMap; uniforms: Record<string, UniformValue> } {
 	const state: ShaderState = {
 		graph,
 		helpers: new HelperRegistry(),
 		groupDecls: new Map(),
 		groupStructs: new Set(),
+		uniformScope,
+		uniforms: new Map(),
 	};
 
-	const body = emitDocumentBody(state, graph.root, "frag-output");
+	const body = emitDocumentBody(
+		state,
+		graph.root,
+		"frag-output",
+		new Set(),
+		uniformScope === ROOT_ID,
+	);
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");
 	const result = output && body.lineMap.has(output.id) ? getVarName(output.id) : undefined;
 
@@ -596,5 +687,5 @@ export function generateShader(graph: CodegenGraph): { shader: string; lineMap: 
 		"}",
 	].join("\n");
 
-	return { shader, lineMap };
+	return { shader, lineMap, uniforms: Object.fromEntries(state.uniforms) };
 }

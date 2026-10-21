@@ -10,6 +10,7 @@
 		isZoneNodeType,
 		nodeRegistry,
 		type PendingConnection,
+		type ShaderSource,
 		reachableShaderHash,
 		WGSL_TYPES,
 		type WgslType,
@@ -29,7 +30,7 @@
 		type OnConnectEnd,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
-	import { tick } from "svelte";
+	import { tick, untrack } from "svelte";
 
 	import { getDevTools } from "../dev-tools.svelte";
 	import { getGraphManager } from "../graph-manager.svelte";
@@ -58,13 +59,13 @@
 		wrapperClass,
 		nodes = $bindable([]),
 		edges = $bindable([]),
-		frag = $bindable(""),
+		shader = $bindable(),
 	}: {
 		class?: string;
 		wrapperClass?: string;
 		nodes?: Node[];
 		edges?: Edge[];
-		frag?: string;
+		shader?: ShaderSource;
 	} = $props();
 
 	const { screenToFlowPosition, getNodes, getViewport, setViewport, fitView } = useSvelteFlow();
@@ -309,27 +310,34 @@
 		};
 	});
 
-	// Track the shader-relevant hash to avoid rebuilding on position changes.
+	// Track the shader-relevant hash to avoid regenerating on position changes.
 	// Only hash the reachable subgraph so edits to disconnected nodes or unused
 	// group definitions don't trigger unnecessary shader regeneration.
-	let prevHash = $state("");
+	let prevHash = "";
 
+	// The values of the document in view are uniforms: editing them only
+	// changes the uniforms, while the fragment (and its compiled pipeline)
+	// stays the same.
 	$effect(() => {
-		const hash = reachableShaderHash(graph.project);
+		const uniformScope = graph.isLocked ? undefined : graph.activeDefinitionRef;
+		const hash = `${uniformScope ?? ""}|${reachableShaderHash(graph.project)}`;
 		if (hash === prevHash) return;
 		prevHash = hash;
+		let generated: ReturnType<typeof generateShader>;
 		try {
-			frag = generateShader(graph).shader;
+			generated = generateShader(graph, { uniformScope });
 		} catch (error) {
 			// Keep the last valid shader (e.g. the graph briefly contains a cycle).
 			console.error("[shader] generation failed", error);
 			return;
 		}
+		const fragmentChanged = generated.shader !== untrack(() => shader?.fragment);
+		shader = { fragment: generated.shader, uniforms: generated.uniforms };
 
-		if (devTools.enabled) {
+		if (devTools.enabled && fragmentChanged) {
 			/* const sortedIds = debugSort(rootNodes, rootEdges); */
 			console.groupCollapsed("[shader debug]");
-			console.log("// Compiled fragment shader:\n", frag);
+			console.log("// Compiled fragment shader:\n", generated.shader);
 			/* console.log("Sorted order:\n", sortedIds.join("\n"));
 			console.log(JSON.parse(graph.getProjectJson())); */
 			console.groupEnd();

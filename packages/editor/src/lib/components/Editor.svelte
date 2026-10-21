@@ -1,4 +1,5 @@
 <script lang="ts">
+	import type { ShaderSource } from "$core";
 	import { Resizable } from "$theme";
 	import { FragCanvas, defineMaterial, type SpektralErrorReport } from "spektral/svelte";
 
@@ -8,11 +9,14 @@
 
 	const DEFAULT_SHADER = `fn frag(uv: vec2f) -> vec4f {\n\treturn vec4f(0.0, 1.0, 1.0, 1.0);\n}`;
 
-	let frag = $state(DEFAULT_SHADER);
+	let shader = $state<ShaderSource>({ fragment: DEFAULT_SHADER, uniforms: {} });
 
+	// A new material with the same fragment and uniform names reuses the
+	// compiled pipeline: only the uniform values are updated.
 	const material = $derived(
 		defineMaterial({
-			fragment: frag,
+			fragment: shader.fragment,
+			uniforms: shader.uniforms,
 		}),
 	);
 
@@ -40,9 +44,9 @@
 		};
 	}
 
-	// Clear the error whenever a new frag is generated (shader recompiled successfully).
+	// Clear the error whenever a new fragment is generated (shader recompiled successfully).
 	$effect(() => {
-		if (frag) shaderError = null;
+		if (shader.fragment) shaderError = null;
 	});
 </script>
 
@@ -86,7 +90,7 @@
 	</Resizable.Pane>
 	<Resizable.Handle />
 	<Resizable.Pane defaultSize={70}>
-		<NodeGraph bind:frag />
+		<NodeGraph bind:shader />
 	</Resizable.Pane>
 </Resizable.PaneGroup>
 
