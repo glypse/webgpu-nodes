@@ -1,3 +1,4 @@
+import type { InputControl } from "./controls";
 import type { NodeData } from "./node-data";
 import { type WgslType } from "./values";
 
@@ -10,7 +11,7 @@ export type HandleDef = {
 	label: string;
 	/** The WGSL type this handle carries. */
 	type: WgslType;
-	/** On a group input: makes it an enum input (see `NodeInputDef.options`; type u32). */
+	/** On a group input: makes it an enum input, of these options (type u32). */
 	options?: string[];
 };
 
@@ -33,11 +34,10 @@ export type NodeInputDef = {
 	 */
 	variadic?: boolean;
 	/**
-	 * Makes the input an enum: a u32 whose values are indices into these
-	 * user-facing options (the first option is 0). Unconnected, it shows a
-	 * dropdown; connected, any scalar drives it.
+	 * How the input's value is edited while unlinked. Defaults to one
+	 * following its resolved type (see `inputControl`).
 	 */
-	options?: readonly string[];
+	control?: InputControl;
 	/**
 	 * On a group node: the group computes its own value when this socket is
 	 * unlinked (a Fallback node inside it), so no editor is shown for it.

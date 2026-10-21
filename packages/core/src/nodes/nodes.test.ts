@@ -128,11 +128,10 @@ describe("enum inputs and fallbacks", () => {
 	it("exposes the mode as an enum and the coordinates as a fallback input", () => {
 		const graph = managerFor([aspectUv()], []);
 		const inputs = graph.resolveNodeInputs("a");
-		expect(inputs.find((i) => i.id === "mode")?.options).toEqual([
-			"Contain (Fit)",
-			"Cover (Fill)",
-			"Stretch",
-		]);
+		expect(inputs.find((i) => i.id === "mode")?.control).toEqual({
+			kind: "enum",
+			options: ["Contain (Fit)", "Cover (Fill)", "Stretch"],
+		});
 		expect(inputs.find((i) => i.id === "uv")?.fallback).toBe(true);
 		expect(inputs.find((i) => i.id === "mode")?.fallback).toBeUndefined();
 	});

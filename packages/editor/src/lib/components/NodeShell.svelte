@@ -1,17 +1,17 @@
 <script lang="ts">
 	import {
-		componentKeys,
+		inputControl,
+		type InputValue,
 		isZoneNodeType,
 		NEW_ITEM_HANDLE,
+		type NodeData,
 		type NodeSetting,
-		readComponent,
 		settingValue as storedSetting,
 		typeKind,
 		WGSL_TYPES,
-		withComponent,
 		type WgslType,
 	} from "$core";
-	import { Button, Checkbox, Scrubbable, Select } from "$theme";
+	import { Button, Select } from "$theme";
 	import { Handle, Position, useNodeConnections } from "@xyflow/svelte";
 	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
@@ -19,6 +19,7 @@
 	import WarningIcon from "phosphor-svelte/lib/WarningIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
+	import InputEditor from "./controls/InputEditor.svelte";
 	import TypePicker from "./TypePicker.svelte";
 
 	let {
@@ -34,7 +35,7 @@
 	const isLocked = $derived(graph.isLocked);
 
 	const fullNode = $derived(graph.activeDocument.nodes.find((n) => n.id === id));
-	const data = $derived(fullNode?.data ?? {});
+	const data: NodeData = $derived(fullNode?.data ?? {});
 	const descriptor = $derived(fullNode ? graph.resolveDescriptor(fullNode) : undefined);
 
 	const nodeLocked = $derived(fullNode?.group?.locked ?? false);
@@ -90,14 +91,6 @@
 		return graph.resolveInputType(id, inputDef.id);
 	}
 
-	function getComponentValue(inputId: string, comp: string): number {
-		return readComponent(data.values?.[inputId], comp);
-	}
-
-	function setComponentValue(inputId: string, type: WgslType, comp: string, val: number) {
-		graph.setInputValue(id, inputId, withComponent(data.values?.[inputId], type, comp, val));
-	}
-
 	function handleStyle(type: WgslType): string {
 		return `--handle-color: var(--color-${type})`;
 	}
@@ -117,66 +110,6 @@
 
 {#snippet addHandleButton(onPick: (type: WgslType) => void = addHandle)}
 	<TypePicker types={WGSL_TYPES} label="+" class="w-full" title="Add a value" onpick={onPick} />
-{/snippet}
-
-{#snippet enumEditor(inputId: string, inputLabel: string, options: readonly string[])}
-	{@const index = Math.trunc(getComponentValue(inputId, "_"))}
-	<div class="flex flex-1 flex-col gap-0.5">
-		<span class="node-shell__handle-label">{inputLabel}</span>
-		<Select.Root
-			type="single"
-			name="{id}-{inputId}"
-			value={String(index)}
-			disabled={isLocked}
-			onValueChange={(value: string) => {
-				setComponentValue(inputId, "u32", "_", Number(value));
-			}}
-		>
-			<Select.Trigger class="w-full">{options[index] ?? `#${String(index)}`}</Select.Trigger>
-			<Select.Content>
-				{#each options as option, i (option)}
-					<Select.Item value={String(i)} label={option}>{option}</Select.Item>
-				{/each}
-			</Select.Content>
-		</Select.Root>
-	</div>
-{/snippet}
-
-{#snippet valueEditor(inputId: string, type: WgslType)}
-	{@const kind = typeKind(type)}
-	{#if kind === "bool"}
-		<div class="flex items-center gap-2 py-1">
-			{#each componentKeys(type) as comp (comp)}
-				<label class="flex items-center gap-1 text-xs">
-					<Checkbox
-						class="nodrag"
-						disabled={isLocked}
-						checked={getComponentValue(inputId, comp) !== 0}
-						onCheckedChange={(checked: boolean) => {
-							setComponentValue(inputId, type, comp, checked ? 1 : 0);
-						}}
-					/>
-					{#if comp !== "_"}<span class="text-muted-foreground">{comp}</span>{/if}
-				</label>
-			{/each}
-		</div>
-	{:else}
-		<div class="*:not-first:rounded-t-none *:not-last:rounded-b-none">
-			{#each componentKeys(type) as comp, i (comp)}
-				<Scrubbable
-					class={"node-shell__input" + (i > 0 ? "border-border border-t" : "")}
-					readonly={isLocked}
-					integer={kind !== "f32"}
-					min={kind === "u32" ? 0 : undefined}
-					value={getComponentValue(inputId, comp)}
-					oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-						const val = parseFloat(e.currentTarget.value) || 0;
-						setComponentValue(inputId, type, comp, val);
-					}}
-				/>
-			{/each}
-		</div>
-	{/if}
 {/snippet}
 
 {#if nodeType === "reroute"}
@@ -373,14 +306,21 @@
 							{inputLabel}: {effectiveType}
 							<span class="opacity-60">(default)</span>
 						</span>
-					{:else if inputDef.options}
-						{@render enumEditor(inputDef.id, inputLabel, inputDef.options)}
 					{:else}
+						{@const control = inputControl(inputDef, effectiveType)}
 						<div class="flex flex-1 flex-col gap-0.5">
-							<span class="node-shell__handle-label"
-								>{inputLabel}: {effectiveType}</span
-							>
-							{@render valueEditor(inputDef.id, effectiveType)}
+							<span class="node-shell__handle-label">
+								{inputLabel}{control.kind === "enum" ? "" : `: ${effectiveType}`}
+							</span>
+							<InputEditor
+								{control}
+								type={effectiveType}
+								value={data.values?.[inputDef.id]}
+								disabled={isLocked}
+								name="{id}-{inputDef.id}"
+								onchange={(value: InputValue) =>
+									graph.setInputValue(id, inputDef.id, value)}
+							/>
 						</div>
 					{/if}
 				</div>

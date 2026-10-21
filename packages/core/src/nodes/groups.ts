@@ -77,7 +77,7 @@ export function buildGroupDescriptor(
 			id: h.id,
 			label: h.label,
 			types: [h.type],
-			...(h.options ? { options: h.options } : {}),
+			...(h.options ? { control: { kind: "enum", options: h.options } } : {}),
 			...(fallbacks.has(h.id) ? { fallback: true } : {}),
 		})),
 		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
