@@ -33,7 +33,7 @@ Given the nature of this project, it's easy for the UI to not reflect the same s
 
 ## Packages
 
-- `packages/core` (`$core`): the headless graph model (`GraphModel`: documents, groups, repeat zones, type inference, connection rules, undo history), the node library, the standard library and WGSL code generation. Plain TypeScript: **no Svelte, no SvelteFlow, no DOM**. Any graph edit or rule belongs here, so another front end (or none, e.g. tests) behaves the same.
+- `packages/core` (`$core`): the headless graph model (`GraphModel`: documents, groups, repeat zones, type inference, connection rules, undo history), the node library, the standard library and WGSL code generation. Plain TypeScript: **no Svelte, no SvelteFlow, no DOM**. Any graph edit or rule belongs here, so another front end (or none, e.g. tests) behaves the same. `GraphModel` is one class layered across files, each extending the previous: `model-base.ts` (state, documents, navigation, types), `model-zones.ts`, `model-groups.ts`, then `model.ts` (history, load/save, connections).
 - `packages/editor` (`$editor`): the Svelte / SvelteFlow front end. `GraphManager` extends `GraphModel`, making its state reactive and adding UI-only state (sheets) and browser file I/O. Components call model methods (e.g. `graph.updateNodeData`, `graph.setNodeType`) rather than editing node data themselves.
 - `packages/theme` (`$theme`): shared UI components and tokens.
 
