@@ -22,10 +22,16 @@ export const outputNode: NodeDescriptor = {
 	label: "Output",
 	category: "misc",
 	hidden: true,
-	inputs: [{ id: "color", label: "color", types: ["vec4f"] }],
+	// Padding a vec3f to vec4f would give it a zero alpha: an opaque colour is
+	// meant instead, so vec3f is accepted as is and gets an alpha of 1 here.
+	inputs: [{ id: "color", label: "color", types: ["vec4f", "vec3f"] }],
 	outputs: [],
 	defaultData: {},
-	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("color")};`],
+	wgsl: (ctx) => {
+		const color = ctx.promoteInput("color");
+		const rgba = ctx.inputTypes.color === "vec3f" ? `vec4f(${color}, 1.0)` : color;
+		return [`let ${ctx.varName} = ${rgba};`];
+	},
 };
 
 // ── Test nodes (for error handling UI testing) ────────────────────────────────

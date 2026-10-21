@@ -151,3 +151,27 @@ describe("enum inputs and fallbacks", () => {
 		expect(shader).toContain("let v_f = v_t;");
 	});
 });
+
+describe("output", () => {
+	const declare = (type: WgslType): TestNode => ({
+		id: "d",
+		type: "declare",
+		data: { declare: type, x: 0.25, y: 0.5, z: 0.75, w: 0.5 },
+	});
+
+	it("makes a vec3f opaque instead of padding its alpha with 0", () => {
+		const shader = shaderFor([declare("vec3f")], [["d", "value", "out", "color"]]);
+		expect(shader).toContain("let v_out = vec4f(v_d, 1.0);");
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("keeps a vec4f's alpha", () => {
+		const shader = shaderFor([declare("vec4f")], [["d", "value", "out", "color"]]);
+		expect(shader).toContain("let v_out = v_d;");
+	});
+
+	it("widens narrower values to an opaque vec3f", () => {
+		const graph = managerFor([declare("vec2f")], [["d", "value", "out", "color"]]);
+		expect(graph.resolveInputType("out", "color")).toBe("vec3f");
+	});
+});
