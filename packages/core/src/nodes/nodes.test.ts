@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import { formatWgslLiteral } from "../codegen";
-import { managerFor, shaderFor, type TestEdge, type TestNode } from "../testing/graph";
+import {
+	libraryEntry,
+	managerFor,
+	shaderFor,
+	type TestEdge,
+	type TestNode,
+} from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { type NodeData, WGSL_TYPES, isConnectionCompatible, type WgslType } from "../types";
 import { nodeRegistry } from "./registry";
@@ -75,11 +81,14 @@ describe("formatWgslLiteral", () => {
 });
 
 describe("enum inputs and fallbacks", () => {
+	const ASPECT_UV = libraryEntry("std-aspect-uv");
+	const fn = `group_h_${ASPECT_UV.ref.replace(/[^A-Za-z0-9_]/g, "_")}`;
+
 	const aspectUv = (data: NodeData = {}): TestNode => ({
 		id: "a",
 		type: "node-group",
 		data,
-		group: { definitionRef: "std-aspect-uv", locked: true },
+		group: { definitionRef: ASPECT_UV.ref, locked: true },
 	});
 
 	it("aspect UV falls back to the fragment UV when unlinked", () => {
@@ -88,9 +97,9 @@ describe("enum inputs and fallbacks", () => {
 			[["a", "uv", "out", "color"]],
 		);
 		// The unlinked variant uses the group's own UV, the default branch only.
-		expect(shader).toContain("let v_a = group_h_std_aspect_uv__d0(");
+		expect(shader).toContain(`let v_a = ${fn}__d0(`);
 		expect(shader).toMatch(/let v_coordinates = v_uv;/);
-		expect(shader).not.toMatch(/fn group_h_std_aspect_uv\(/);
+		expect(shader).not.toContain(`fn ${fn}(`);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 
@@ -109,10 +118,10 @@ describe("enum inputs and fallbacks", () => {
 				["sum", "result", "out", "color"],
 			],
 		);
-		expect(shader).toMatch(/fn group_h_std_aspect_uv\(/);
-		expect(shader).toMatch(/fn group_h_std_aspect_uv__d0\(/);
+		expect(shader).toContain(`fn ${fn}(`);
+		expect(shader).toContain(`fn ${fn}__d0(`);
 		expect(shader).toMatch(/let v_coordinates = h_uv;/);
-		expect(shader.match(/struct GroupOutputs_h_std_aspect_uv /g)).toHaveLength(1);
+		expect(shader.split(`struct GroupOutputs_${fn.slice("group_".length)} `)).toHaveLength(2);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 

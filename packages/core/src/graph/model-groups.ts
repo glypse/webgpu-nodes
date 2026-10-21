@@ -26,7 +26,7 @@ import {
 } from "./editing";
 import { indexDocument, normaliseDocument, serialiseEdge, serialiseNode } from "./hydrate";
 import { ZoneModel } from "./model-zones";
-import { StandardLibraryEntriesSchema } from "./schema";
+import { GroupFilesSchema } from "./schema";
 
 // ── Definitions and references ──────────────────────────────────────────────
 
@@ -135,7 +135,7 @@ export abstract class GroupModel extends ZoneModel {
 		if (!def) return undefined;
 
 		const deps = this.collectNestedRefs(definitionRef);
-		const entry = this.library.find((e) => e.id === definitionRef);
+		const entry = this.library.find((e) => e.ref === definitionRef);
 
 		return {
 			id: definitionRef,
@@ -172,7 +172,7 @@ export abstract class GroupModel extends ZoneModel {
 	 * All files are loaded first, then dependencies are checked.
 	 * Missing dependencies trigger a console warning but don't block the import.
 	 */
-	importGroups(
+	async importGroups(
 		jsonFiles: {
 			id?: string;
 			label?: string;
@@ -180,8 +180,8 @@ export abstract class GroupModel extends ZoneModel {
 			dependencies?: string[];
 			definition?: GraphDocument;
 		}[],
-	): { imported: number; missing: string[]; rejected: string[] } {
-		const parsed = v.safeParse(StandardLibraryEntriesSchema, jsonFiles);
+	): Promise<{ imported: number; missing: string[]; rejected: string[] }> {
+		const parsed = v.safeParse(GroupFilesSchema, jsonFiles);
 		if (!parsed.success) {
 			console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
 			return {
@@ -192,6 +192,7 @@ export abstract class GroupModel extends ZoneModel {
 		}
 
 		const entries = parsed.output;
+		await this.fetchArchivedVersions(entries.map((file) => file.definition));
 		// Phase 1: Load all definitions
 		for (const file of entries) {
 			const normalised = normaliseDocument(file.definition);
@@ -199,6 +200,7 @@ export abstract class GroupModel extends ZoneModel {
 			normalised.locked = true;
 			this.setDefinitions([[file.id, this.hydrate(normalised)]]);
 		}
+		this.registerLibraryRefs();
 
 		// Phase 2: Check dependencies
 		const missing: string[] = [];

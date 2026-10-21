@@ -4,8 +4,10 @@ import {
 	type GraphDocumentNode,
 	type GraphProject,
 	ROOT_ID,
+	type StandardLibraryEntry,
 } from "../graph/document";
 import { GraphModel } from "../graph/model";
+import { standardLibrary } from "../library";
 import type { NodeData } from "../types";
 
 export type TestNode = {
@@ -49,4 +51,11 @@ export function managerFor(nodes: TestNode[], edges: TestEdge[]): GraphModel {
 
 export function shaderFor(nodes: TestNode[], edges: TestEdge[]): string {
 	return generateShader(managerFor(nodes, edges)).shader;
+}
+
+/** The latest version of a standard-library entry. */
+export function libraryEntry(id: string): StandardLibraryEntry {
+	const entry = standardLibrary.find((e) => e.id === id);
+	if (!entry) throw new Error(`no standard-library entry "${id}"`);
+	return entry;
 }

@@ -322,12 +322,14 @@ export class GraphModel extends GroupModel {
 		this.rebuildTypeCache();
 	}
 
-	loadProject(project: unknown): boolean {
+	/** Replace the project with a saved one, once the library versions it uses are fetched. */
+	async loadProject(project: unknown): Promise<boolean> {
 		const parsed = v.safeParse(GraphProjectSchema, project);
 		if (!parsed.success) {
 			console.error("[graph] rejected invalid project JSON", v.flatten(parsed.issues));
 			return false;
 		}
+		await this.fetchArchivedVersions(Object.values(parsed.output.definitions));
 		this.setProject(parsed.output);
 		this.path = [];
 		this.markSaved();
@@ -350,10 +352,10 @@ export class GraphModel extends GroupModel {
 		return JSON.stringify(project, null, "\t");
 	}
 
-	loadFromString(text: string): boolean {
+	async loadFromString(text: string): Promise<boolean> {
 		try {
 			const project = JSON.parse(text) as unknown;
-			return this.loadProject(project);
+			return await this.loadProject(project);
 		} catch (err) {
 			console.error("[graph] failed to parse JSON", err);
 			return false;

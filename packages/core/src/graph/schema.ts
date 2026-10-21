@@ -75,7 +75,8 @@ export const GraphProjectSchema = v.object({
 	definitions: v.record(v.string(), GraphDocumentSchema),
 });
 
-export const StandardLibraryEntrySchema = v.object({
+/** A group exported on its own (see `GraphModel.exportGroupFiles`). */
+const GroupFileSchema = v.object({
 	id: v.string(),
 	label: v.string(),
 	category: v.string(),
@@ -83,7 +84,4 @@ export const StandardLibraryEntrySchema = v.object({
 	definition: GraphDocumentSchema,
 });
 
-export const StandardLibraryEntriesSchema = v.array(StandardLibraryEntrySchema);
-
-export type ParsedGraphProject = v.InferOutput<typeof GraphProjectSchema>;
-export type ParsedStandardLibraryEntry = v.InferOutput<typeof StandardLibraryEntrySchema>;
+export const GroupFilesSchema = v.array(GroupFileSchema);

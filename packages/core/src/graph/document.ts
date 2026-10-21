@@ -119,6 +119,10 @@ export type HydratedGraphProject = {
 
 export type StandardLibraryEntry = {
 	id: string;
+	/** Changes whenever the definition does (see `libraryVersion`). */
+	version: string;
+	/** What group nodes reference: the id and version (see `libraryRef`). */
+	ref: string;
 	label: string;
 	category: string;
 	dependencies: string[];

@@ -107,7 +107,7 @@
 					},
 			),
 		);
-		const result = graph.importGroups(entries);
+		const result = await graph.importGroups(entries);
 		if (result.missing.length > 0) {
 			console.warn("Import completed with missing dependencies:", result.missing);
 		}

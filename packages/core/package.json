@@ -19,6 +19,9 @@
 			"default": "./dist/index.js"
 		}
 	},
+	"scripts": {
+		"stdlib:archive": "bun scripts/archive-stdlib.ts"
+	},
 	"dependencies": {
 		"valibot": "^1.5.0"
 	},

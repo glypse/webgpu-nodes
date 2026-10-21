@@ -5,5 +5,5 @@
 		"lib": ["esnext"],
 		"types": ["bun"]
 	},
-	"include": ["src/**/*", "vite.config.ts", "eslint.config.ts"]
+	"include": ["src/**/*", "scripts/**/*", "vite.config.ts", "eslint.config.ts"]
 }

@@ -83,7 +83,7 @@ export class GraphManager extends GraphModel {
 	/** Load a project from a JSON file picked by the user. */
 	async upload(file: File): Promise<boolean> {
 		try {
-			return this.loadFromString(await file.text());
+			return await this.loadFromString(await file.text());
 		} catch (err) {
 			console.error("[graph] failed to read uploaded file", err);
 			return false;

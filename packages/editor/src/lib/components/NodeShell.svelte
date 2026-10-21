@@ -16,6 +16,7 @@
 	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
+	import WarningIcon from "phosphor-svelte/lib/WarningIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
 	import TypePicker from "./TypePicker.svelte";
@@ -37,6 +38,13 @@
 	const descriptor = $derived(fullNode ? graph.resolveDescriptor(fullNode) : undefined);
 
 	const nodeLocked = $derived(fullNode?.group?.locked ?? false);
+
+	const outdated = $derived(graph.outdatedLibraryVersion(id));
+	const outdatedMessage = $derived(
+		outdated?.archived
+			? `Uses an older version of ${outdated.label}, kept as it was saved. Add a new ${outdated.label} node for the latest version.`
+			: `Saved with an older version of ${outdated?.label ?? "this group"}, which isn't available: the latest version is used instead, so its links may not match.`,
+	);
 
 	const inputs = $derived(graph.resolveNodeInputs(id));
 	const outputs = $derived(graph.resolveNodeOutputs(id));
@@ -213,6 +221,13 @@
 			{#if !zoneId}
 				<span class="text-destructive text-xs">Missing its paired node</span>
 			{/if}
+		{:else if outdated}
+			<div class="flex items-center justify-between gap-2">
+				<span>{label}</span>
+				<span class="text-amber-500" title={outdatedMessage}>
+					<WarningIcon class="size-4" weight="fill" />
+				</span>
+			</div>
 		{:else}
 			<span>{label}</span>
 		{/if}

@@ -1,5 +1,6 @@
 import { ROOT_ID } from "../graph/document";
 import type { GraphModel } from "../graph/model";
+import { parseLibraryRef } from "../library";
 import { nodeRegistry } from "../nodes/registry";
 import type { NodeCategory } from "../types";
 
@@ -78,14 +79,15 @@ export function addMenuEntries(
 			label: entry.label,
 			heading: headingOf(entry.category),
 			kind: "group",
-			definitionRef: entry.id,
-			disabled: graph.wouldCreateCycle(entry.id),
+			definitionRef: entry.ref,
+			disabled: graph.wouldCreateCycle(entry.ref),
 			deletable: false,
 		});
 	}
 
 	// User groups: every non-library definition, used or not (e.g. imported).
 	const libraryIds = new Set(graph.library.map((e) => e.id));
+	const isLibrary = (ref: string) => libraryIds.has(parseLibraryRef(ref)?.id ?? "");
 	const used = new Set<string>();
 	for (const doc of graph.project.definitions.values()) {
 		for (const node of doc.nodes) {
@@ -93,7 +95,7 @@ export function addMenuEntries(
 		}
 	}
 	for (const [ref, doc] of graph.project.definitions) {
-		if (ref === ROOT_ID || libraryIds.has(ref)) continue;
+		if (ref === ROOT_ID || isLibrary(ref)) continue;
 		entries.push({
 			key: `group:${ref}`,
 			label: doc.label ?? "Group",

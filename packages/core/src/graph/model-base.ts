@@ -1,4 +1,9 @@
-import { standardLibrary } from "../library";
+import {
+	ARCHIVED_VERSIONS_ENABLED,
+	loadArchivedVersion,
+	parseLibraryRef,
+	standardLibrary,
+} from "../library";
 import { nodeRegistry } from "../nodes/registry";
 import {
 	type InputValue,
@@ -14,6 +19,7 @@ import { TypeResolver } from "../types/resolver";
 import { type ZoneAnalysis, analyzeZones } from "../zones";
 import {
 	type GraphDocument,
+	type GraphDocumentNode,
 	type GraphEdge,
 	type GraphNode,
 	type GraphProject,
@@ -144,13 +150,9 @@ export abstract class GraphModelBase {
 	 * the type resolver and type cache for the new definitions.
 	 */
 	protected setProject(project: GraphProject) {
-		const create = () => this.createDocument();
-		this.project = hydrateProject(project, create);
-		for (const entry of this.library) {
-			const def = normaliseDocument(entry.definition);
-			def.label = entry.label;
-			this.project.definitions.set(entry.id, hydrateDocument(def, create));
-		}
+		this.project = hydrateProject(project, () => this.createDocument());
+		for (const entry of this.library) this.registerLibraryEntry(entry.ref, entry);
+		this.registerLibraryRefs();
 		this.typeResolver = new TypeResolver(
 			(n) => this.resolveDescriptor(n),
 			this.project.definitions,
@@ -396,9 +398,104 @@ export abstract class GraphModelBase {
 		this.path = [...newPath];
 	}
 
-	/** Check if a definitionRef belongs to the standard library. */
+	// ── Standard library versions ───────────────────────────────────────────────
+
+	/** Older standard-library versions fetched so far, by ref. */
+	protected readonly archivedLibrary = new Map<string, StandardLibraryEntry>();
+
+	protected archivedVersionsEnabled = ARCHIVED_VERSIONS_ENABLED;
+
+	protected loadArchivedVersion = loadArchivedVersion;
+
+	/** Check if a definitionRef belongs to the standard library (any version). */
 	protected isStandardLibrary(definitionRef: string): boolean {
-		return this.library.some((e) => e.id === definitionRef);
+		const id = parseLibraryRef(definitionRef)?.id;
+		return this.library.some((e) => e.id === id);
+	}
+
+	private registerLibraryEntry(ref: string, entry: StandardLibraryEntry) {
+		const def = normaliseDocument(entry.definition);
+		def.label = entry.label;
+		def.locked = true;
+		this.project.definitions.set(
+			ref,
+			hydrateDocument(def, () => this.createDocument()),
+		);
+	}
+
+	/** Standard-library refs the group nodes of `documents` point at. */
+	private libraryRefsIn(
+		documents: Iterable<{ nodes: readonly Pick<GraphDocumentNode, "group">[] }>,
+	): Set<string> {
+		const refs = new Set<string>();
+		for (const doc of documents) {
+			for (const node of doc.nodes) {
+				const ref = node.group?.definitionRef;
+				if (ref && this.isStandardLibrary(ref)) refs.add(ref);
+			}
+		}
+		return refs;
+	}
+
+	/**
+	 * Give every standard-library version the project references a
+	 * definition: the archived one if it was fetched, the latest otherwise.
+	 */
+	protected registerLibraryRefs() {
+		for (let missing = this.missingLibraryRefs(); missing.length > 0;) {
+			for (const ref of missing) {
+				const id = parseLibraryRef(ref)?.id;
+				const entry =
+					this.archivedLibrary.get(ref) ?? this.library.find((e) => e.id === id);
+				if (entry) this.registerLibraryEntry(ref, entry);
+			}
+			missing = this.missingLibraryRefs();
+		}
+	}
+
+	private missingLibraryRefs(): string[] {
+		const refs = this.libraryRefsIn(this.project.definitions.values());
+		return [...refs].filter((ref) => !this.project.definitions.has(ref));
+	}
+
+	/**
+	 * Fetch the archived standard-library versions `documents` reference
+	 * (and those they nest), so `registerLibraryRefs` can use them.
+	 */
+	protected async fetchArchivedVersions(documents: Iterable<GraphDocument>): Promise<void> {
+		if (!this.archivedVersionsEnabled) return;
+		const latest = new Set(this.library.map((e) => e.ref));
+		let pending = [...this.libraryRefsIn(documents)];
+		while (pending.length > 0) {
+			const fetched = await Promise.all(
+				pending
+					.filter((ref) => !latest.has(ref) && !this.archivedLibrary.has(ref))
+					.map(async (ref) => [ref, await this.loadArchivedVersion(ref)] as const),
+			);
+			const loaded: GraphDocument[] = [];
+			for (const [ref, entry] of fetched) {
+				if (!entry) {
+					console.warn(`[graph] standard-library version "${ref}" is not archived`);
+					continue;
+				}
+				this.archivedLibrary.set(ref, entry);
+				loaded.push(entry.definition);
+			}
+			pending = [...this.libraryRefsIn(loaded)];
+		}
+	}
+
+	/**
+	 * For a group node using a standard-library version other than the
+	 * latest: its label, and whether that version itself was loaded (or the
+	 * latest stands in for it). Undefined otherwise.
+	 */
+	outdatedLibraryVersion(nodeId: string): { label: string; archived: boolean } | undefined {
+		const ref = this.resolveNode(nodeId)?.group?.definitionRef;
+		const id = ref ? parseLibraryRef(ref)?.id : undefined;
+		const latest = this.library.find((e) => e.id === id);
+		if (!ref || !latest || latest.ref === ref) return undefined;
+		return { label: latest.label, archived: this.archivedLibrary.has(ref) };
 	}
 
 	// ── Types ───────────────────────────────────────────────────────────────────

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 
 import { generateShader } from "../codegen";
-import { managerFor } from "../testing/graph";
+import { libraryRef } from "../library";
+import { libraryEntry, managerFor, rootProject, type TestNode } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { NEW_ITEM_HANDLE, pairedOutputId } from "../zones";
-import { ROOT_ID } from "./document";
+import { type GraphProject, ROOT_ID } from "./document";
+import { GraphModel } from "./model";
 
 /** A manager holding one fresh repeat zone, plus a few loose nodes. */
 function setup() {
@@ -302,25 +304,58 @@ describe("node data edits", () => {
 	});
 });
 
-describe("saving", () => {
-	it("leaves the standard library out, and finds it again on load", () => {
-		const graph = managerFor(
-			[
-				{
-					id: "a",
-					type: "node-group",
-					group: { definitionRef: "std-aspect-uv", locked: true },
-				},
-			],
-			[["a", "uv", "out", "color"]],
-		);
-		const saved = JSON.parse(graph.getProjectJson()) as {
-			definitions: Record<string, unknown>;
-		};
+describe("standard-library versions", () => {
+	const aspectUv = libraryEntry("std-aspect-uv");
+	const oldRef = libraryRef(aspectUv.id, "0000000000old");
+	const instance = (ref: string): TestNode => ({
+		id: "a",
+		type: "node-group",
+		group: { definitionRef: ref, locked: true },
+	});
+
+	it("saves the version a node uses, not the library itself", async () => {
+		const graph = managerFor([instance(aspectUv.ref)], [["a", "uv", "out", "color"]]);
+		const saved = JSON.parse(graph.getProjectJson()) as GraphProject;
 		expect(Object.keys(saved.definitions)).toEqual([ROOT_ID]);
 
 		const loaded = managerFor([], []);
-		expect(loaded.loadProject(saved)).toBe(true);
+		expect(await loaded.loadProject(saved)).toBe(true);
 		expect(loaded.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv"]);
+		expect(loaded.outdatedLibraryVersion("a")).toBeUndefined();
+	});
+
+	it("stands the latest version in for an older one while archives are off", () => {
+		const graph = managerFor([instance(oldRef)], [["a", "uv", "out", "color"]]);
+		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv"]);
+		expect(graph.outdatedLibraryVersion("a")).toEqual({
+			label: aspectUv.label,
+			archived: false,
+		});
+	});
+
+	it("fetches the archived versions a project uses, only when loading it", async () => {
+		const requested: string[] = [];
+		class ArchivingModel extends GraphModel {
+			protected override archivedVersionsEnabled = true;
+			protected override loadArchivedVersion = (ref: string) => {
+				requested.push(ref);
+				const definition = structuredClone(aspectUv.definition);
+				const output = definition.nodes.find((n) => n.type === "group-output");
+				output?.data.handles?.push({ id: "extra", label: "Extra", type: "f32" });
+				return Promise.resolve({ ...aspectUv, ref, version: "0000000000old", definition });
+			};
+		}
+		const graph = new ArchivingModel();
+		expect(requested).toEqual([]);
+
+		const project = rootProject([instance(oldRef), { ...instance(aspectUv.ref), id: "b" }], []);
+		expect(await graph.loadProject(project)).toBe(true);
+		expect(requested).toEqual([oldRef]);
+		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv", "extra"]);
+		expect(graph.resolveNodeOutputs("b").map((o) => o.id)).toEqual(["uv"]);
+		expect(graph.outdatedLibraryVersion("a")).toEqual({
+			label: aspectUv.label,
+			archived: true,
+		});
 	});
 });
