@@ -4,6 +4,7 @@ import { generateShader } from "../codegen";
 import { managerFor } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { NEW_ITEM_HANDLE, pairedOutputId } from "../zones";
+import { ROOT_ID } from "./document";
 
 /** A manager holding one fresh repeat zone, plus a few loose nodes. */
 function setup() {
@@ -296,5 +297,28 @@ describe("node data edits", () => {
 			"f32",
 			"vec3f",
 		]);
+	});
+});
+
+describe("saving", () => {
+	it("leaves the standard library out, and finds it again on load", () => {
+		const graph = managerFor(
+			[
+				{
+					id: "a",
+					type: "node-group",
+					group: { definitionRef: "std-aspect-uv", locked: true },
+				},
+			],
+			[["a", "uv", "out", "color"]],
+		);
+		const saved = JSON.parse(graph.getProjectJson()) as {
+			definitions: Record<string, unknown>;
+		};
+		expect(Object.keys(saved.definitions)).toEqual([ROOT_ID]);
+
+		const loaded = managerFor([], []);
+		expect(loaded.loadProject(saved)).toBe(true);
+		expect(loaded.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv"]);
 	});
 });

@@ -1036,12 +1036,15 @@ export class GraphModel {
 		return true;
 	}
 
+	/** The project as saved: the user's documents, the standard library being the app's own. */
 	getProjectJson(): string {
 		const definitions = Object.fromEntries(
-			[...this.project.definitions.entries()].map(([key, definition]) => [
-				key,
-				serialiseDocument(definition, { viewport: true }),
-			]),
+			[...this.project.definitions.entries()]
+				.filter(([key]) => !this.isStandardLibrary(key))
+				.map(([key, definition]) => [
+					key,
+					serialiseDocument(definition, { viewport: true }),
+				]),
 		);
 		const project = { definitions };
 		return JSON.stringify(project, null, "\t");
