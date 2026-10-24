@@ -21,6 +21,7 @@
 	import { getGraphManager } from "../graph-manager.svelte";
 	import InputEditor from "./controls/InputEditor.svelte";
 	import TypePicker from "./TypePicker.svelte";
+	import ColorWidget from "./widgets/ColorWidget.svelte";
 
 	let {
 		id,
@@ -273,6 +274,10 @@
 				</div>
 			{/if}
 		</div>
+
+		{#if descriptor.widget?.kind === "color"}
+			<ColorWidget {id} {data} connected={connectedHandles} disabled={isLocked} />
+		{/if}
 
 		<div class="node-shell__inputs">
 			{#each inputs as inputDef (inputDef.id)}

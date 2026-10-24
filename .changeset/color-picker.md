@@ -4,4 +4,4 @@
 "$theme": minor
 ---
 
-Add a Color node (vec3f / vec4f) and a colour input control: unlinked, its input is a swatch opening a Blender-like colour picker (hue / saturation wheel, value slider, RGB, HSV and OKLch fields, alpha, hex and a screen eyedropper where the browser has one). Colours are stored as linear RGB, what the shader computes with; hex, HSV and swatches are shown sRGB-encoded. The Output node's colour uses it too.
+Add a Color node and a colour input control. The Color node (vec3f / vec4f) builds a colour from RGB, HSV or OKLch components (and alpha), each a regular input, converted to linear RGB in the shader; unlinked, they're edited with a hue / saturation wheel and value ramp drawn on the node. The colour control turns a vec3f / vec4f input (e.g. the Output node's) into a swatch opening a compact colour picker: wheel, value ramp, RGB, HSV or OKLch fields, alpha, hex and a screen eyedropper where the browser has one. Colours are stored as linear RGB; hex, HSV and swatches are shown sRGB-encoded.

@@ -132,7 +132,7 @@ describe("adding from a dropped link", () => {
 			handleType: "target",
 		};
 		const entries = graph.connectableEntries(addMenuEntries(graph), toColor);
-		const [first] = searchEntries(entries, "combine");
+		const [first] = searchEntries(entries, "combine vector");
 		expect(first?.entry.label).toBe("Declare vec4f");
 		expect(first?.alias).toBe("Combine Vector");
 		expect(searchEntries(entries, "vec4").map((r) => r.entry.label)).toEqual([

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { colorNode } from "../nodes";
+import { outputNode } from "../nodes";
 import { inputControl } from "./controls";
 
 describe("inputControl", () => {
-	const [input] = colorNode.inputs;
+	const [input] = outputNode.inputs;
 	if (!input) throw new Error("missing color input");
 
 	it("edits RGB and RGBA inputs as colours", () => {

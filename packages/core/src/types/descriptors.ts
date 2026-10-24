@@ -85,6 +85,14 @@ export function settingValue(data: NodeData, setting: NodeSetting): string {
 	return (match ?? setting.options[0])?.value ?? "";
 }
 
+/**
+ * A larger editor drawn in a node's body, editing the values of its unlinked
+ * inputs. Each kind has its own component in a front end.
+ */
+export type NodeWidget =
+	/** A hue / saturation wheel and a value ramp, for a Color node's components. */
+	{ kind: "color" };
+
 export type NodeCategory =
 	| "input"
 	| "math"
@@ -186,16 +194,19 @@ export type NodeDescriptor = {
 	 */
 	resolveOutputs?: (resolvedInputType: WgslType) => NodeOutputDef[];
 	/**
-	 * Resolve the active inputs based on the resolved output type.
+	 * Resolve the active inputs based on the resolved output type and the
+	 * node's data (e.g. a setting renaming them).
 	 * When omitted, defaults to the static `inputs` array.
 	 */
-	resolveInputs?: (resolvedOutputType: WgslType) => NodeInputDef[];
+	resolveInputs?: (resolvedOutputType: WgslType, data: NodeData) => NodeInputDef[];
 	/**
 	 * Declare a type family for this node's output type selection.
 	 * When present, the type dropdown shows these types (instead of the
 	 * primary input's types), and the override is stored under `key` in the node's `types`.
 	 */
 	typeFamily?: { key: string; types: readonly WgslType[] };
+	/** An editor drawn in the node's body, for the values of its inputs. */
+	widget?: NodeWidget;
 	/** Emit WGSL line(s) that define `varName`.
 	 *  Each returned string becomes one statement in the current scope.
 	 *  The `let ` / `var ` prefix is the node's own choice. */

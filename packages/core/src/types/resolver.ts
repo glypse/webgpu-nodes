@@ -127,7 +127,7 @@ function resolveRegularNodeTypes(
 	}
 	const activeInputs =
 		familyOutputType && descriptor.resolveInputs
-			? descriptor.resolveInputs(familyOutputType)
+			? descriptor.resolveInputs(familyOutputType, nodeData)
 			: descriptor.inputs;
 
 	// Phase 1: infer each input independently
@@ -196,7 +196,7 @@ function resolveRegularNodeTypes(
 		: rawOutputs.map((o) => ({ ...o, type: outputType }));
 	const resolvedInputs =
 		familyOutputType === undefined && descriptor.resolveInputs
-			? descriptor.resolveInputs(outputType)
+			? descriptor.resolveInputs(outputType, nodeData)
 			: activeInputs;
 
 	return { inputTypes, outputType, resolvedInputs, resolvedOutputs };

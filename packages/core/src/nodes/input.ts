@@ -10,8 +10,6 @@ export const declareNode: NodeDescriptor = {
 	aliases: [
 		"Combine Vector",
 		"Combine XYZ",
-		"Combine Color",
-		"Combine RGB",
 		"Make Vector",
 		"Make Float3",
 		"Append",
