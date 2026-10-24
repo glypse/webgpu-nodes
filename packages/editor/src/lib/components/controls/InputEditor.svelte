@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ColorControl from "./ColorControl.svelte";
 	import EnumControl from "./EnumControl.svelte";
 	import NumberControl from "./NumberControl.svelte";
 	import ToggleControl from "./ToggleControl.svelte";
@@ -13,6 +14,8 @@
 	<NumberControl {...props} control={props.control} />
 {:else if props.control.kind === "toggle"}
 	<ToggleControl {...props} control={props.control} />
+{:else if props.control.kind === "color"}
+	<ColorControl {...props} control={props.control} />
 {:else}
 	<EnumControl {...props} control={props.control} />
 {/if}

@@ -85,6 +85,9 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	"to-uint": nodes.toUintNode,
 	"to-bool": nodes.toBoolNode,
 
+	// Color
+	color: nodes.colorNode,
+
 	// Misc
 	reroute: nodes.rerouteNode,
 

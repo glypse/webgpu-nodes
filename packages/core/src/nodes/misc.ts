@@ -25,7 +25,9 @@ export const outputNode: NodeDescriptor = {
 	hidden: true,
 	// Padding a vec3f to vec4f would give it a zero alpha: an opaque colour is
 	// meant instead, so vec3f is accepted as is and gets an alpha of 1 here.
-	inputs: [{ id: "color", label: "color", types: ["vec4f", "vec3f"] }],
+	inputs: [
+		{ id: "color", label: "color", types: ["vec4f", "vec3f"], control: { kind: "color" } },
+	],
 	outputs: [],
 	defaultData: {},
 	wgsl: (ctx) => {

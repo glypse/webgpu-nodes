@@ -19,8 +19,6 @@ export const declareNode: NodeDescriptor = {
 		"Value",
 		"Constant",
 		"Float",
-		"RGB",
-		"Color",
 	],
 	category: "input",
 	inputs: DECLARE_COMPONENTS.map((c) => ({ id: c, label: c, types: ["f32"] as const })),

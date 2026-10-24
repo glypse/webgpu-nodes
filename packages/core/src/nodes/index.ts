@@ -6,5 +6,6 @@ export * from "./logic";
 export * from "./integer";
 export * from "./convert";
 export * from "./misc";
+export * from "./color";
 export * from "./groups";
 export * from "./dev";

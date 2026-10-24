@@ -10,6 +10,8 @@ export type InputControl =
 	| { kind: "number" }
 	/** An on/off switch per component. */
 	| { kind: "toggle" }
+	/** A colour swatch opening a picker; vec3f / vec4f only (linear RGB, alpha). */
+	| { kind: "color" }
 	/** A choice among named options, stored as the option's index (a u32); linked, any scalar drives it. */
 	| { kind: "enum"; options: readonly string[] };
 
@@ -23,6 +25,7 @@ export function isUniformControl(control: InputControl): boolean {
 	switch (control.kind) {
 		case "number":
 		case "toggle":
+		case "color":
 		case "enum":
 			return true;
 	}
@@ -30,6 +33,9 @@ export function isUniformControl(control: InputControl): boolean {
 
 /** The control editing an input of resolved type `type`. */
 export function inputControl(input: NodeInputDef, type: WgslType): InputControl {
+	if (input.control?.kind === "color" && type !== "vec3f" && type !== "vec4f") {
+		return { kind: "number" };
+	}
 	if (input.control) return input.control;
 	return typeKind(type) === "bool" ? { kind: "toggle" } : { kind: "number" };
 }
