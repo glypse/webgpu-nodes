@@ -2,7 +2,7 @@ import { ROOT_ID } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { parseLibraryRef } from "../library";
 import { nodeRegistry } from "../nodes/registry";
-import type { NodeCategory } from "../types";
+import type { NodeCategory, WgslType } from "../types";
 
 /** Category headings, in menu order. */
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
@@ -34,6 +34,8 @@ export type AddMenuEntry = {
 	 */
 	kind: "node" | "group" | "zone";
 	type?: string;
+	/** The type a node with a type picker is created with (see `GraphModel.connectableEntries`). */
+	forcedType?: WgslType;
 	definitionRef?: string;
 	/** Adding it here would make a group contain itself. */
 	disabled: boolean;

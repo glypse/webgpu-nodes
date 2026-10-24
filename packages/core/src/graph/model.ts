@@ -2,7 +2,13 @@ import * as v from "valibot";
 
 import type { AddMenuEntry } from "../catalog/add-menu";
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
-import { type WgslType, familyKey, isConnectionCompatible, typeKind } from "../types";
+import {
+	type NodeData,
+	type WgslType,
+	familyKey,
+	isConnectionCompatible,
+	typeKind,
+} from "../types";
 import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
 import { type GraphEdge, type GraphNode, type GraphProject } from "./document";
 import { stableStringify } from "./editing";
@@ -196,6 +202,48 @@ export class GraphModel extends GroupModel {
 	}
 
 	/**
+	 * The entries a link dragged from `pending` can be dropped into. A node
+	 * whose type is picked rather than inferred comes as one entry per type
+	 * with a handle of exactly the dragged type, e.g. "Declare vec3f" to feed
+	 * a vec3f input, or "Declare vec2f" … "Declare vec4f" to take an f32. A
+	 * variant of the dragged type itself would only pass the value through,
+	 * so it isn't offered.
+	 */
+	connectableEntries(
+		entries: readonly AddMenuEntry[],
+		pending: PendingConnection,
+	): AddMenuEntry[] {
+		const fromOutput = pending.handleType === "source";
+		const value = fromOutput
+			? this.resolveOutputHandleType(pending.nodeId, pending.handleId)
+			: this.resolveInputType(pending.nodeId, pending.handleId);
+		const variantsOf = (entry: AddMenuEntry): AddMenuEntry[] => {
+			const family =
+				entry.kind === "node" ? nodeRegistry[entry.type ?? ""]?.typeFamily : undefined;
+			if (!family) return [];
+			return family.types.flatMap((type) => {
+				if (fromOutput && type === value) return [];
+				const variant = {
+					...entry,
+					key: `${entry.key}:${type}`,
+					label: `${entry.label} ${type}`,
+					forcedType: type,
+				};
+				const fresh = this.freshNodeTypes(variant);
+				const exact = fromOutput
+					? fresh?.resolvedInputs.some((input) => input.types.includes(value))
+					: fresh?.resolvedOutputs.some((output) => output.type === value);
+				return exact ? [variant] : [];
+			});
+		};
+		return entries.flatMap((entry) => {
+			const variants = variantsOf(entry);
+			if (variants.length > 0) return variants;
+			return this.entryHandleFor(entry, pending) === undefined ? [] : [entry];
+		});
+	}
+
+	/**
 	 * The handle of a freshly created `entry` that a link being dragged from
 	 * `pending` would connect to, or undefined if nothing fits. Handles whose
 	 * scalar kind matches the dragged value are preferred.
@@ -249,7 +297,7 @@ export class GraphModel extends GroupModel {
 				: {
 						id: FRESH_ID,
 						type: entry.type ?? "",
-						data: defaultDataForType(entry.type ?? ""),
+						data: entryNodeData(entry.type ?? "", entry.forcedType),
 						position: { x: 0, y: 0 },
 					};
 		if (node.type !== "node-group" && !nodeRegistry[node.type ?? ""]) return undefined;
@@ -366,11 +414,15 @@ export class GraphModel extends GroupModel {
 	 * Add a node of a registered type to the active document.
 	 * Returns its id, or undefined if the document is locked.
 	 */
-	addNode(type: string, position: { x: number; y: number }): string | undefined {
+	addNode(
+		type: string,
+		position: { x: number; y: number },
+		data: NodeData = defaultDataForType(type),
+	): string | undefined {
 		if (this.isLocked) return undefined;
 		const id = crypto.randomUUID();
 		const doc = this.activeDocument;
-		doc.nodes = [...doc.nodes, { id, type, data: defaultDataForType(type), position }];
+		doc.nodes = [...doc.nodes, { id, type, data, position }];
 		indexDocument(doc);
 		this.rebuildTypeCache();
 		return id;
@@ -391,7 +443,13 @@ export class GraphModel extends GroupModel {
 					: undefined;
 			case "node":
 				if (entry.type === "node-group") return this.createGroup(position);
-				return entry.type ? this.addNode(entry.type, position) : undefined;
+				return entry.type
+					? this.addNode(
+							entry.type,
+							position,
+							entryNodeData(entry.type, entry.forcedType),
+						)
+					: undefined;
 		}
 	}
 
@@ -438,6 +496,14 @@ export type PendingConnection = {
 	/** "source" when dragged from an output, "target" when dragged from an input. */
 	handleType: "source" | "target";
 };
+
+/** Default data of a node of `type`, with `forcedType` picked in its type picker. */
+function entryNodeData(type: string, forcedType: WgslType | undefined): NodeData {
+	const data = defaultDataForType(type);
+	const family = nodeRegistry[type]?.typeFamily;
+	if (!forcedType || !family) return data;
+	return { ...data, types: withEntry(data.types, family.key, forcedType) };
+}
 
 /** Approximate rendered node width, for placing nodes next to a drop point. */
 const NODE_WIDTH = 180;

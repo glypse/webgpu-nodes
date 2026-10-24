@@ -61,9 +61,7 @@ describe("add menu entries", () => {
 
 describe("adding from a dropped link", () => {
 	const keysFor = (graph: ReturnType<typeof managerFor>, pending: PendingConnection) =>
-		addMenuEntries(graph)
-			.filter((e) => graph.entryHandleFor(e, pending) !== undefined)
-			.map((e) => e.key);
+		graph.connectableEntries(addMenuEntries(graph), pending).map((e) => e.key);
 
 	it("only offers nodes that can take the dragged value", () => {
 		const graph = managerFor([{ id: "uv", type: "uv" }], []);
@@ -71,7 +69,7 @@ describe("adding from a dropped link", () => {
 		const keys = keysFor(graph, fromUv);
 		expect(keys).toEqual(expect.arrayContaining(["node:sin", "node:cross", "zone:repeat"]));
 		// Declare takes scalars only; a fresh empty group has nothing to plug into.
-		expect(keys).not.toContain("node:declare");
+		expect(keys.some((k) => k.startsWith("node:declare"))).toBe(false);
 		expect(keys).not.toContain("node:node-group");
 		expect(keys).not.toContain("node:time");
 	});
@@ -88,6 +86,56 @@ describe("adding from a dropped link", () => {
 		expect(keys).toEqual(expect.arrayContaining(["node:time", "node:dot", "node:add"]));
 		expect(keys).not.toContain("node:uv");
 		expect(keys).not.toContain("node:cross");
+	});
+
+	it("offers a Declare of the input's type to feed it", () => {
+		const graph = managerFor([], []);
+		const toColor: PendingConnection = {
+			nodeId: "out",
+			handleId: "color",
+			handleType: "target",
+		};
+		const entries = graph.connectableEntries(addMenuEntries(graph), toColor);
+		const declares = entries.filter((e) => e.type === "declare");
+		expect(declares.map((e) => e.label)).toEqual(["Declare vec4f"]);
+
+		const [vec4] = declares;
+		if (!vec4) throw new Error("missing Declare vec4f");
+		const declare = graph.addMenuEntryConnected(vec4, { x: 0, y: 0 }, toColor) ?? "";
+		expect(graph.resolveNodeOutputType(declare)).toBe("vec4f");
+		expect(graph.root.edges).toContainEqual(
+			expect.objectContaining({ source: declare, target: "out", targetHandle: "color" }),
+		);
+	});
+
+	it("offers Declares of vectors of the dragged scalar to combine it", () => {
+		const graph = managerFor([{ id: "t", type: "time" }], []);
+		const fromTime: PendingConnection = { nodeId: "t", handleId: "time", handleType: "source" };
+		const entries = graph.connectableEntries(addMenuEntries(graph), fromTime);
+		const declares = entries.filter((e) => e.type === "declare");
+		expect(declares.map((e) => e.forcedType)).toEqual(["vec2f", "vec3f", "vec4f"]);
+
+		const vec3 = declares.find((e) => e.forcedType === "vec3f");
+		if (!vec3) throw new Error("missing Declare vec3f");
+		const declare = graph.addMenuEntryConnected(vec3, { x: 0, y: 0 }, fromTime) ?? "";
+		expect(graph.resolveNodeOutputType(declare)).toBe("vec3f");
+		expect(graph.root.edges).toContainEqual(
+			expect.objectContaining({ source: "t", target: declare, targetHandle: "x" }),
+		);
+	});
+
+	it("searches typed variants by their type and aliases", () => {
+		const graph = managerFor([], []);
+		const toColor: PendingConnection = {
+			nodeId: "out",
+			handleId: "color",
+			handleType: "target",
+		};
+		const entries = graph.connectableEntries(addMenuEntries(graph), toColor);
+		const [first] = searchEntries(entries, "combine");
+		expect(first?.entry.label).toBe("Declare vec4f");
+		expect(first?.alias).toBe("Combine Vector");
+		expect(searchEntries(entries, "vec4")[0]?.entry.label).toBe("Declare vec4f");
 	});
 
 	it("prefers handles of the same scalar kind", () => {

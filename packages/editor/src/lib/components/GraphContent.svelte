@@ -131,7 +131,7 @@
 		const entries = addMenuEntries(graph, { devTools: devTools.enabled });
 		const pending = addMenuAt.pending;
 		if (!pending) return entries;
-		return entries.filter((entry) => graph.entryHandleFor(entry, pending) !== undefined);
+		return graph.connectableEntries(entries, pending);
 	});
 
 	const addMenuPlaceholder = $derived.by(() => {
