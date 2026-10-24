@@ -9,6 +9,7 @@ export const dotNode: NodeDescriptor = {
 		ids: ["e1", "e2"],
 		category: "vector",
 	}),
+	aliases: ["Scalar Product", "Inner Product", "Vector Math"],
 	resolveOutputType: () => "f32",
 };
 export const distanceNode: NodeDescriptor = {
@@ -17,11 +18,13 @@ export const distanceNode: NodeDescriptor = {
 		ids: ["e1", "e2"],
 		category: "vector",
 	}),
+	aliases: ["Vector Math"],
 	resolveOutputType: () => "f32",
 };
 export const lengthNode: NodeDescriptor = {
 	type: "length",
 	label: "Length",
+	aliases: ["Magnitude", "Norm", "Vector Math"],
 	category: "vector",
 	inputs: [{ id: "e1", label: "e1", types: FLOAT_VEC_TYPES }],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
@@ -29,33 +32,45 @@ export const lengthNode: NodeDescriptor = {
 	resolveOutputType: () => "f32",
 	wgsl: (ctx) => [`let ${ctx.varName} = length(${ctx.promoteInput("e1")});`],
 };
-export const normalizeNode = unaryFn(
-	"normalize",
-	"Normalize",
-	"normalize",
-	FLOAT_VEC_TYPES,
-	"vector",
-);
+export const normalizeNode: NodeDescriptor = {
+	...unaryFn("normalize", "Normalize", "normalize", FLOAT_VEC_TYPES, "vector"),
+	aliases: ["Normalise", "Unit Vector", "Vector Math"],
+};
 export const crossNode: NodeDescriptor = {
 	...binaryNode("cross", "Cross Product", (a, b) => `cross(${a}, ${b})`, {
 		types: ["vec3f"],
 		ids: ["e1", "e2"],
 		category: "vector",
 	}),
+	aliases: ["Vector Product", "Vector Math"],
 	resolveOutputType: () => "vec3f",
 };
-export const reflectNode = binaryNode("reflect", "Reflect", (a, b) => `reflect(${a}, ${b})`, {
-	types: FLOAT_VEC_TYPES,
-	ids: ["e1", "e2"],
-	labels: ["incident", "normal"],
-	category: "vector",
-});
+export const reflectNode: NodeDescriptor = {
+	...binaryNode("reflect", "Reflect", (a, b) => `reflect(${a}, ${b})`, {
+		types: FLOAT_VEC_TYPES,
+		ids: ["e1", "e2"],
+		labels: ["incident", "normal"],
+		category: "vector",
+	}),
+	aliases: ["Reflection", "Vector Math"],
+};
 
 const SEPARATE_COMPONENTS = ["x", "y", "z", "w"];
 
 export const separateVectorNode: NodeDescriptor = {
 	type: "separate-vector",
 	label: "Separate Vector",
+	aliases: [
+		"Separate XYZ",
+		"Separate Color",
+		"Separate RGB",
+		"Split Vector",
+		"Break Vector",
+		"Break Out Float3 Components",
+		"Component Mask",
+		"Swizzle",
+		"Shuffle",
+	],
 	category: "vector",
 	inputs: [{ id: "v", label: "v", types: VEC_TYPES }],
 	outputs: SEPARATE_COMPONENTS.map((c) => ({ id: c, label: c, type: "f32" })),

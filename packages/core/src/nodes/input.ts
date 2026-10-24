@@ -7,6 +7,21 @@ const DECLARE_COMPONENTS = ["x", "y", "z", "w"];
 export const declareNode: NodeDescriptor = {
 	type: "declare",
 	label: "Declare",
+	aliases: [
+		"Combine Vector",
+		"Combine XYZ",
+		"Combine Color",
+		"Combine RGB",
+		"Make Vector",
+		"Make Float3",
+		"Append",
+		"Vector",
+		"Value",
+		"Constant",
+		"Float",
+		"RGB",
+		"Color",
+	],
 	category: "input",
 	inputs: DECLARE_COMPONENTS.map((c) => ({ id: c, label: c, types: ["f32"] as const })),
 	outputs: [{ id: "value", label: "value", type: "f32" }],
@@ -28,15 +43,27 @@ export const declareNode: NodeDescriptor = {
 };
 
 // Input — uniforms
-export const timeNode = uniformReader("time", "Time", "time", "f32", "spektralFrame.time");
-export const deltaNode = uniformReader("delta", "Delta", "delta", "f32", "spektralFrame.delta");
-export const resolutionNode = uniformReader(
-	"resolution",
-	"Resolution",
-	"resolution",
-	"vec2f",
-	"spektralFrame.resolution",
-);
+export const timeNode: NodeDescriptor = {
+	...uniformReader("time", "Time", "time", "f32", "spektralFrame.time"),
+	aliases: ["Scene Time", "Absolute Time", "Seconds", "iTime"],
+};
+export const deltaNode: NodeDescriptor = {
+	...uniformReader("delta", "Delta", "delta", "f32", "spektralFrame.delta"),
+	aliases: ["Delta Time", "Frame Time", "iTimeDelta"],
+};
+export const resolutionNode: NodeDescriptor = {
+	...uniformReader("resolution", "Resolution", "resolution", "vec2f", "spektralFrame.resolution"),
+	aliases: ["Screen Size", "View Size", "Canvas Size", "iResolution"],
+};
 // Spektral's per-fragment context, readable from any function (unlike frag()'s
 // own `uv` parameter), so UV nodes also work inside groups.
-export const uvNode = uniformReader("uv", "UV", "uv", "vec2f", "spektralFragment.uv");
+export const uvNode: NodeDescriptor = {
+	...uniformReader("uv", "UV", "uv", "vec2f", "spektralFragment.uv"),
+	aliases: [
+		"Texture Coordinate",
+		"TexCoord",
+		"Screen Position",
+		"Fragment Coordinate",
+		"fragCoord",
+	],
+};

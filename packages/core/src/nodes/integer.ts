@@ -19,12 +19,14 @@ export const bitwiseNode: NodeDescriptor = {
 		(a, b, ctx) => `${a} ${settingValue(ctx.data, BITWISE_SETTING)} ${b}`,
 		{ types: INTEGER_TYPES, category: "integer" },
 	),
+	aliases: ["Bitwise And", "Bitwise Or", "Bitwise Xor"],
 	defaultData: { values: { a: 0, b: 0 }, settings: { op: "&" } },
 	settings: [BITWISE_SETTING],
 };
 
 export const bitwiseNotNode: NodeDescriptor = {
 	...unaryFn("bitwise-not", "Bitwise Not", "", INTEGER_TYPES, "integer"),
+	aliases: ["Complement", "Bit Invert"],
 	wgsl: (ctx) => [`let ${ctx.varName} = ~(${ctx.promoteInput("e")});`],
 };
 
@@ -40,6 +42,7 @@ const SHIFT_SETTING: NodeSetting = {
 export const bitShiftNode: NodeDescriptor = {
 	type: "bit-shift",
 	label: "Bit Shift",
+	aliases: ["Shift Left", "Shift Right", "Left Shift", "Right Shift"],
 	category: "integer",
 	inputs: [
 		{ id: "a", label: "value", types: INTEGER_TYPES },

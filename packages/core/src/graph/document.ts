@@ -124,6 +124,7 @@ export type StandardLibraryEntry = {
 	/** What group nodes reference: the id and version (see `libraryRef`). */
 	ref: string;
 	label: string;
+	aliases: string[];
 	category: string;
 	dependencies: string[];
 	definition: GraphDocument;

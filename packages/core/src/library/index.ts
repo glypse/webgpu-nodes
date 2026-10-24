@@ -19,6 +19,8 @@ export const ARCHIVED_VERSIONS_ENABLED = false;
 export const LibraryFileSchema = v.object({
 	id: v.string(),
 	name: v.string(),
+	/** Other names it's found by in the add menu (see `NodeDescriptor.aliases`). */
+	aliases: v.optional(v.array(v.string()), []),
 	category: v.string(),
 	dependencies: v.array(v.string()),
 	definition: GraphDocumentSchema,
@@ -34,6 +36,7 @@ function toEntry(json: unknown): StandardLibraryEntry {
 		version,
 		ref: libraryRef(file.id, version),
 		label: file.name,
+		aliases: file.aliases,
 		category: file.category,
 		dependencies: file.dependencies,
 		definition: file.definition,

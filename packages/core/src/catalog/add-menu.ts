@@ -23,6 +23,8 @@ export type AddMenuEntry = {
 	/** Unique across the menu. */
 	key: string;
 	label: string;
+	/** Other names search finds it by (see `NodeDescriptor.aliases`). */
+	aliases: readonly string[];
 	/** Heading the entry is listed under. */
 	heading: string;
 	/**
@@ -55,6 +57,7 @@ export function addMenuEntries(
 		{
 			key: "zone:repeat",
 			label: "Repeat Zone",
+			aliases: ["Loop", "For Loop", "For Each", "Iterate", "While"],
 			heading: CATEGORY_LABELS.zone,
 			kind: "zone",
 			disabled: false,
@@ -66,6 +69,7 @@ export function addMenuEntries(
 		entries.push({
 			key: `node:${type}`,
 			label: descriptor.label,
+			aliases: descriptor.aliases ?? [],
 			heading: headingOf(descriptor.category),
 			kind: "node",
 			type,
@@ -77,6 +81,7 @@ export function addMenuEntries(
 		entries.push({
 			key: `group:${entry.id}`,
 			label: entry.label,
+			aliases: entry.aliases,
 			heading: headingOf(entry.category),
 			kind: "group",
 			definitionRef: entry.ref,
@@ -99,6 +104,7 @@ export function addMenuEntries(
 		entries.push({
 			key: `group:${ref}`,
 			label: doc.label ?? "Group",
+			aliases: [],
 			heading: GROUPS_HEADING,
 			kind: "group",
 			definitionRef: ref,
@@ -128,32 +134,54 @@ export function groupByHeading(
 	return groups;
 }
 
+export type SearchResult = {
+	entry: AddMenuEntry;
+	/** The alias the query matched, when it matched the entry by one rather than its label. */
+	alias?: string;
+};
+
+/** Matching by an alias ranks just below matching the label as well. */
+const ALIAS_PENALTY = 0.5;
+
 /**
- * Entries matching a search query, best first: labels starting with the
- * query, then labels with a word starting with it, then labels containing it,
+ * Entries matching a search query, best first: names starting with the
+ * query, then names with a word starting with it, then names containing it,
  * then entries whose heading matches. Every word of the query must match.
+ * The label and each alias are tried separately, the best one counting.
  */
-export function searchEntries(entries: readonly AddMenuEntry[], query: string): AddMenuEntry[] {
+export function searchEntries(entries: readonly AddMenuEntry[], query: string): SearchResult[] {
 	const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
 	if (words.length === 0) return [];
-	const score = (entry: AddMenuEntry): number | undefined => {
-		const label = entry.label.toLowerCase();
-		const heading = entry.heading.toLowerCase();
+	const scoreName = (name: string, heading: string): number | undefined => {
+		const lower = name.toLowerCase();
 		let total = 0;
 		for (const word of words) {
-			if (label.startsWith(word)) total += 0;
-			else if (label.split(/[\s/-]+/).some((w) => w.startsWith(word))) total += 1;
-			else if (label.includes(word)) total += 2;
+			if (lower.startsWith(word)) total += 0;
+			else if (lower.split(/[\s/-]+/).some((w) => w.startsWith(word))) total += 1;
+			else if (lower.includes(word)) total += 2;
 			else if (heading.includes(word)) total += 3;
 			else return undefined;
 		}
 		return total;
 	};
+	const score = (entry: AddMenuEntry): { s: number; alias?: string } | undefined => {
+		const heading = entry.heading.toLowerCase();
+		const labelScore = scoreName(entry.label, heading);
+		let best: { s: number; alias?: string } | undefined =
+			labelScore === undefined ? undefined : { s: labelScore };
+		for (const alias of entry.aliases) {
+			const aliasScore = scoreName(alias, heading);
+			if (aliasScore === undefined) continue;
+			const s = aliasScore + ALIAS_PENALTY;
+			if (!best || s < best.s) best = { s, alias };
+		}
+		return best;
+	};
 	return entries
 		.flatMap((entry) => {
-			const s = score(entry);
-			return s === undefined ? [] : [{ entry, s }];
+			const match = score(entry);
+			return match ? [{ entry, ...match }] : [];
 		})
 		.toSorted((a, b) => a.s - b.s || a.entry.label.localeCompare(b.entry.label))
-		.map(({ entry }) => entry);
+		.map(({ entry, alias }) => (alias === undefined ? { entry } : { entry, alias }));
 }

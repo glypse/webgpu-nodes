@@ -47,8 +47,8 @@
 	function handleSearchKeydown(event: KeyboardEvent) {
 		if (event.key === "Enter") {
 			event.preventDefault();
-			const first = results.find((entry) => !entry.disabled);
-			if (first) pick(first);
+			const first = results.find(({ entry }) => !entry.disabled);
+			if (first) pick(first.entry);
 			return;
 		}
 		// Arrows and Escape go to the menu (navigation, closing); everything
@@ -59,14 +59,17 @@
 	}
 </script>
 
-{#snippet entryItem(entry: AddMenuEntry, withHeading: boolean)}
+{#snippet entryItem(entry: AddMenuEntry, withHeading: boolean, alias?: string)}
 	<ContextMenu.Item
 		disabled={entry.disabled}
 		onSelect={() => {
 			pick(entry);
 		}}
 	>
-		<span class="truncate">{entry.label}</span>
+		<span class="truncate">
+			{entry.label}
+			{#if alias}<span class="text-muted-foreground">({alias})</span>{/if}
+		</span>
 		{#if withHeading}
 			<span class="text-muted-foreground ml-auto pl-2 text-xs">{entry.heading}</span>
 		{/if}
@@ -113,8 +116,8 @@
 		<ContextMenu.Separator />
 		{#if searching}
 			<div class="max-h-80 overflow-y-auto">
-				{#each results as entry (entry.key)}
-					{@render entryItem(entry, true)}
+				{#each results as { entry, alias } (entry.key)}
+					{@render entryItem(entry, true, alias)}
 				{:else}
 					<div class="text-muted-foreground px-2 py-1.5 text-sm">No matching node.</div>
 				{/each}

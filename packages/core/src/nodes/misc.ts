@@ -10,6 +10,7 @@ import { WGSL_TYPES } from "../types";
 export const rerouteNode: NodeDescriptor = {
 	type: "reroute",
 	label: "Reroute",
+	aliases: ["Null", "Knot", "Dot", "Passthrough"],
 	category: "misc",
 	inputs: [{ id: "in", label: "in", types: WGSL_TYPES }],
 	outputs: [{ id: "out", label: "out", type: "f32" }],

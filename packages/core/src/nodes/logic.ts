@@ -18,6 +18,7 @@ const COMPARE_SETTING: NodeSetting = {
 export const compareNode: NodeDescriptor = {
 	type: "compare",
 	label: "Compare",
+	aliases: ["Greater Than", "Less Than", "Equal", "Not Equal", "Comparison", "If"],
 	category: "logic",
 	inputs: [
 		{ id: "a", label: "a", types: NUMERIC_TYPES },
@@ -36,6 +37,7 @@ export const compareNode: NodeDescriptor = {
 export const switchNode: NodeDescriptor = {
 	type: "switch",
 	label: "Switch",
+	aliases: ["If", "Select", "Branch", "Conditional", "Ternary", "Static Switch"],
 	category: "logic",
 	primaryInput: "false",
 	inputs: [
@@ -92,12 +94,14 @@ export const booleanMathNode: NodeDescriptor = {
 		},
 		{ types: BOOL_TYPES, category: "logic" },
 	),
+	aliases: ["And", "Or", "Xor", "Nand", "Nor", "Logic"],
 	defaultData: { values: { a: false, b: false }, settings: { op: "and" } },
 	settings: [BOOLEAN_MATH_SETTING],
 };
 
 export const notNode: NodeDescriptor = {
 	...unaryFn("not", "Not", "", BOOL_TYPES, "logic"),
+	aliases: ["Logical Not", "Boolean Not", "Invert Boolean"],
 	defaultData: { values: { e: false } },
 	wgsl: (ctx) => [`let ${ctx.varName} = !(${ctx.promoteInput("e")});`],
 };
@@ -113,6 +117,7 @@ const REDUCE_SETTING: NodeSetting = {
 
 export const reduceBooleanNode: NodeDescriptor = {
 	...unaryFn("reduce-boolean", "Any / All", "", BOOL_TYPES, "logic"),
+	aliases: ["Reduce"],
 	defaultData: { values: { e: false }, settings: { op: "any" } },
 	settings: [REDUCE_SETTING],
 	resolveOutputType: () => "bool",
@@ -131,6 +136,7 @@ export const reduceBooleanNode: NodeDescriptor = {
 export const fallbackNode: NodeDescriptor = {
 	type: "fallback",
 	label: "Fallback",
+	aliases: ["Default Value", "Coalesce", "Optional"],
 	category: "logic",
 	inputs: [
 		{ id: "value", label: "value", types: WGSL_TYPES },

@@ -1,6 +1,7 @@
 {
 	"id": "std-aspect-uv",
 	"name": "Aspect UV",
+	"aliases": ["Aspect Ratio", "Aspect Correction", "Square UV"],
 	"category": "input",
 	"dependencies": [],
 	"definition": {

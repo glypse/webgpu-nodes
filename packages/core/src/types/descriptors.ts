@@ -149,6 +149,11 @@ export type WgslCtx = {
 export type NodeDescriptor = {
 	type: string;
 	label: string;
+	/**
+	 * Other names the add menu's search finds it by: what the equivalent node
+	 * is called in other tools (Blender, TouchDesigner, Unreal, …).
+	 */
+	aliases?: readonly string[];
 	category: NodeCategory;
 	/** Hide from the "add node" menu (e.g. nodes created in pairs). */
 	hidden?: boolean;

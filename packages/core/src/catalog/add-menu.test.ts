@@ -156,7 +156,7 @@ describe("adding from a dropped link", () => {
 
 describe("searchEntries", () => {
 	const entries = addMenuEntries(managerFor([], []));
-	const labels = (query: string) => searchEntries(entries, query).map((e) => e.label);
+	const labels = (query: string) => searchEntries(entries, query).map((r) => r.entry.label);
 
 	it("ranks label prefixes first, then word prefixes, then substrings", () => {
 		const result = labels("to");
@@ -166,9 +166,26 @@ describe("searchEntries", () => {
 	});
 
 	it("matches headings and requires every word", () => {
-		expect(labels("logic not")).toEqual(["Not"]);
+		expect(labels("logic not")[0]).toBe("Not");
+		expect(labels("integer not")).toEqual(["Bitwise Not"]);
 		expect(labels("zones")).toContain("Repeat Zone");
 		expect(labels("   ")).toEqual([]);
 		expect(labels("no such node")).toEqual([]);
+	});
+
+	it("finds entries by alias, saying which one matched", () => {
+		const [first] = searchEntries(entries, "combine xyz");
+		expect(first?.entry.key).toBe("node:declare");
+		expect(first?.alias).toBe("Combine XYZ");
+		expect(labels("map range")[0]).toBe("Remap");
+		expect(labels("loop")).toContain("Repeat Zone");
+		expect(labels("aspect ratio")).toContain("Aspect UV");
+	});
+
+	it("ranks label matches above alias matches, without reporting an alias", () => {
+		const results = searchEntries(entries, "dot");
+		expect(results[0]?.entry.label).toBe("Dot Product");
+		expect(results[0]?.alias).toBeUndefined();
+		expect(results.find((r) => r.entry.label === "Reroute")?.alias).toBe("Dot");
 	});
 });
