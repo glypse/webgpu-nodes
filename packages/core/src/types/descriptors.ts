@@ -207,6 +207,18 @@ export type NodeDescriptor = {
 	typeFamily?: { key: string; types: readonly WgslType[] };
 	/** An editor drawn in the node's body, for the values of its inputs. */
 	widget?: NodeWidget;
+	/**
+	 * The node's data once setting `key` is set to `value`, for a setting
+	 * changing what stored values mean (e.g. converting them so they keep
+	 * their meaning). `linked` holds the ids of linked inputs, whose stored
+	 * values aren't used. When omitted, only the setting changes.
+	 */
+	withSetting?: (
+		data: NodeData,
+		key: string,
+		value: string,
+		linked: ReadonlySet<string>,
+	) => NodeData;
 	/** Emit WGSL line(s) that define `varName`.
 	 *  Each returned string becomes one statement in the current scope.
 	 *  The `let ` / `var ` prefix is the node's own choice. */

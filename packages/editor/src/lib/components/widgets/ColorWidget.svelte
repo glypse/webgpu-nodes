@@ -3,20 +3,17 @@
 		COLOR_COMPONENTS,
 		type ColorMode,
 		colorMode,
-		type NodeData,
-		readComponent,
-	} from "$core";
-	import {
-		ColorValueRamp,
-		ColorWheel,
+		colorToLinear,
 		decodeRgb,
 		encodeRgb,
 		type Hsv,
 		hsvToRgb,
-		linearToOklch,
-		oklchToLinear,
+		linearToColor,
+		type NodeData,
+		readComponent,
 		rgbToHsv,
-	} from "$theme";
+	} from "$core";
+	import { ColorValueRamp, ColorWheel } from "$theme";
 	import { untrack } from "svelte";
 
 	import { getGraphManager } from "../../graph-manager.svelte";
@@ -55,19 +52,16 @@
 			const clamp01 = (n: number) => Math.min(1, Math.max(0, n));
 			return { h: x - Math.floor(x), s: clamp01(y), v: clamp01(z) };
 		}
-		const linear = of === "rgb" ? { r: x, g: y, b: z } : oklchToLinear({ l: x, c: y, h: z });
-		const next = rgbToHsv(encodeRgb(linear));
+		const next = rgbToHsv(encodeRgb(colorToLinear(of, [x, y, z])));
 		if (next.v < EPSILON) return { ...previous, v: 0 };
 		return next.s < EPSILON ? { ...next, h: previous.h } : next;
 	}
 
 	function componentsOf(next: Hsv): Components {
 		if (mode === "hsv") return [next.h, next.s, next.v];
-		const linear = decodeRgb(hsvToRgb(next));
-		if (mode === "rgb") return [linear.r, linear.g, linear.b];
-		const lch = linearToOklch(linear);
 		const [, , hue] = components;
-		return [lch.l, lch.c, lch.c < 1e-4 ? hue : lch.h];
+		const turns = mode === "oklch" ? hue / 360 : 0;
+		return [...linearToColor(mode, decodeRgb(hsvToRgb(next)), turns)];
 	}
 
 	$effect.pre(() => {

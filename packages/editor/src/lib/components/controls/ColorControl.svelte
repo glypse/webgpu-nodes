@@ -1,6 +1,6 @@
 <script lang="ts">
-	import { readComponent } from "$core";
-	import { ColorPicker, linearToCss, Popover, type Rgba } from "$theme";
+	import { readComponent, type Rgba } from "$core";
+	import { ColorPicker, linearToCss, Popover } from "$theme";
 
 	import type { ControlProps } from "./types";
 

@@ -3,14 +3,13 @@ import { describe, expect, it } from "vitest";
 import {
 	hexToLinear,
 	hsvToRgb,
-	linearToCss,
 	linearToHex,
 	linearToOklch,
 	oklchToLinear,
 	rgbToHsv,
 	srgbDecode,
 	srgbEncode,
-} from "./color";
+} from "./convert";
 
 const close = (actual: Record<string, number>, expected: Record<string, number>, digits = 4) => {
 	for (const [key, value] of Object.entries(expected)) {
@@ -53,9 +52,5 @@ describe("colour conversions", () => {
 		close(hexToLinear("f008") ?? {}, { r: 1, g: 0, b: 0, a: 136 / 255 });
 		expect(hexToLinear("#12345")).toBeUndefined();
 		expect(hexToLinear("nothex")).toBeUndefined();
-	});
-
-	it("shows linear colours as CSS", () => {
-		expect(linearToCss({ r: 1, g: 0, b: 4, a: 1 })).toBe("rgb(255 0 255 / 1)");
 	});
 });

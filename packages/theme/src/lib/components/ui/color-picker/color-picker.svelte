@@ -6,9 +6,6 @@
 </script>
 
 <script lang="ts">
-	import EyedropperIcon from "phosphor-svelte/lib/EyedropperIcon";
-	import { untrack } from "svelte";
-
 	import {
 		decodeRgb,
 		encodeRgb,
@@ -16,13 +13,16 @@
 		hexToLinear,
 		hsvToRgb,
 		type Lch,
-		linearToCss,
 		linearToHex,
 		linearToOklch,
 		oklchToLinear,
 		type Rgba,
 		rgbToHsv,
-	} from "../../../color.js";
+	} from "$core";
+	import EyedropperIcon from "phosphor-svelte/lib/EyedropperIcon";
+	import { untrack } from "svelte";
+
+	import { linearToCss } from "../../../color-css.js";
 	import { cn } from "../../../utils.js";
 	import { Root as Scrubbable } from "../scrubbable/index.js";
 	import ColorWheel from "./color-wheel.svelte";

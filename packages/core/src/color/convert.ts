@@ -1,5 +1,5 @@
 /**
- * Colour conversions for the colour picker. Colours are held as linear RGB
+ * Colour conversions. Colours are held as linear RGB
  * (what shaders compute with), components unbounded above for HDR; hex, HSV
  * and on-screen swatches are sRGB-encoded, as Blender shows them.
  */
@@ -111,15 +111,4 @@ export function hexToLinear(hex: string): Rgba | undefined {
 		...decodeRgb({ r: byte(0), g: byte(2), b: byte(4) }),
 		a: digits.length === 8 ? byte(6) : 1,
 	};
-}
-
-/** A CSS colour showing an (encoded) RGB colour, clipped to the display's range. */
-export function rgbToCss({ r, g, b }: Rgb, alpha = 1): string {
-	const byte = (n: number) => Math.round(clamp01(n) * 255);
-	return `rgb(${String(byte(r))} ${String(byte(g))} ${String(byte(b))} / ${String(clamp01(alpha))})`;
-}
-
-/** A CSS colour showing a linear colour. */
-export function linearToCss(color: Rgba): string {
-	return rgbToCss(encodeRgb(color), color.a);
 }

@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./color";
 export * from "./nodes";
 export * from "./nodes/registry";
 export * from "./zones";

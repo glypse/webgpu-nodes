@@ -715,11 +715,19 @@ export abstract class GraphModelBase {
 		this.updateNodeData(nodeId, { values }, { retype: false });
 	}
 
-	/** Pick an option of one of the node's settings. */
+	/** Pick an option of one of the node's settings (see `NodeDescriptor.withSetting`). */
 	setSetting(nodeId: string, key: string, value: string) {
 		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return;
-		this.updateNodeData(nodeId, { settings: withEntry(node.data.settings, key, value) });
+		const settings = withEntry(node.data.settings, key, value);
+		const withSetting = this.resolveDescriptor(node).withSetting;
+		if (!withSetting) {
+			this.updateNodeData(nodeId, { settings });
+			return;
+		}
+		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
+		const linked = new Set(incoming.map((e) => e.targetHandle));
+		this.updateNodeData(nodeId, { ...withSetting(node.data, key, value, linked), settings });
 	}
 }
 

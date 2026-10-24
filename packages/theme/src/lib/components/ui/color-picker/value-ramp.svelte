@@ -1,5 +1,7 @@
 <script lang="ts">
-	import { type Hsv, hsvToRgb, rgbToCss } from "../../../color.js";
+	import { type Hsv, hsvToRgb } from "$core";
+
+	import { rgbToCss } from "../../../color-css.js";
 	import { cn } from "../../../utils.js";
 	import { drag } from "./drag.js";
 

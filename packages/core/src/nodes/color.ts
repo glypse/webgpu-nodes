@@ -1,4 +1,14 @@
 import {
+	decodeRgb,
+	encodeRgb,
+	hsvToRgb,
+	linearToOklch,
+	oklchToLinear,
+	type Rgb,
+	rgbToHsv,
+} from "../color";
+import { readComponent } from "../graph/values";
+import {
 	type NodeData,
 	type NodeDescriptor,
 	type NodeInputDef,
@@ -36,6 +46,40 @@ const COMPONENT_LABELS: Record<ColorMode, readonly [string, string, string]> = {
 	hsv: ["Hue", "Saturation", "Value"],
 	oklch: ["Lightness", "Chroma", "Hue"],
 };
+
+/** Three components of a colour, in a `ColorMode`. */
+export type ColorComponents = readonly [number, number, number];
+
+/** The linear RGB of components in `mode`, as the shader computes it. */
+export function colorToLinear(mode: ColorMode, [x, y, z]: ColorComponents): Rgb {
+	switch (mode) {
+		case "rgb":
+			return { r: x, g: y, b: z };
+		case "hsv":
+			return decodeRgb(hsvToRgb({ h: x - Math.floor(x), s: y, v: z }));
+		case "oklch":
+			return oklchToLinear({ l: x, c: y, h: z });
+	}
+}
+
+/**
+ * The components in `mode` of a linear RGB colour. A hue that doesn't show
+ * (grey, black) is `turns` instead, so it survives going through them.
+ */
+export function linearToColor(mode: ColorMode, rgb: Rgb, turns = 0): ColorComponents {
+	switch (mode) {
+		case "rgb":
+			return [rgb.r, rgb.g, rgb.b];
+		case "hsv": {
+			const { h, s, v } = rgbToHsv(encodeRgb(rgb));
+			return [s > 0 && v > 0 ? h : turns, s, v];
+		}
+		case "oklch": {
+			const { l, c, h } = linearToOklch(rgb);
+			return c < 1e-4 ? [l, 0, turns * 360] : [l, c, h];
+		}
+	}
+}
 
 export function colorMode(data: NodeData): ColorMode {
 	const mode = settingValue(data, COLOR_MODE_SETTING);
@@ -103,6 +147,24 @@ export const colorNode: NodeDescriptor = {
 	typeFamily: { key: "color", types: ["vec3f", "vec4f"] },
 	resolveInputs: colorInputs,
 	widget: { kind: "color" },
+	// Changing the mode converts the components, so the colour stays the same
+	// (unlike Blender's Combine Color, which keeps the numbers). Only possible
+	// while none is linked: a linked one's value is only known in the shader.
+	withSetting: (data, key, value, linked) => {
+		const from = colorMode(data);
+		const to = colorMode({ settings: { [key]: value } });
+		if (key !== COLOR_MODE_SETTING.key || from === to) return data;
+		if (COLOR_COMPONENTS.some((c) => linked.has(c))) return data;
+		const current = COLOR_COMPONENTS.map((c) => readComponent(data.values?.[c], "_"));
+		const [x = 0, y = 0, z = 0] = current;
+		const turns = from === "hsv" ? x : from === "oklch" ? z / 360 : 0;
+		const next = linearToColor(to, colorToLinear(from, [x, y, z]), turns);
+		const values = { ...data.values };
+		COLOR_COMPONENTS.forEach((c, i) => {
+			values[c] = next[i] ?? 0;
+		});
+		return { ...data, values };
+	},
 	wgsl: (ctx) => {
 		const [x = "0.0", y = "0.0", z = "0.0"] = COLOR_COMPONENTS.map((id) =>
 			ctx.promoteInput(id),
