@@ -113,9 +113,13 @@ export function hexToLinear(hex: string): Rgba | undefined {
 	};
 }
 
-/** A CSS colour showing a linear colour (clipped to the display's range). */
-export function linearToCss(color: Rgba): string {
-	const { r, g, b } = encodeRgb(color);
+/** A CSS colour showing an (encoded) RGB colour, clipped to the display's range. */
+export function rgbToCss({ r, g, b }: Rgb, alpha = 1): string {
 	const byte = (n: number) => Math.round(clamp01(n) * 255);
-	return `rgb(${String(byte(r))} ${String(byte(g))} ${String(byte(b))} / ${String(clamp01(color.a))})`;
+	return `rgb(${String(byte(r))} ${String(byte(g))} ${String(byte(b))} / ${String(clamp01(alpha))})`;
+}
+
+/** A CSS colour showing a linear colour. */
+export function linearToCss(color: Rgba): string {
+	return rgbToCss(encodeRgb(color), color.a);
 }

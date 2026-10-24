@@ -26,7 +26,7 @@
 	import { cn } from "../../../utils.js";
 	import { Root as Scrubbable } from "../scrubbable/index.js";
 	import ColorWheel from "./color-wheel.svelte";
-	import { drag } from "./drag.js";
+	import ValueRamp from "./value-ramp.svelte";
 
 	let {
 		value,
@@ -131,11 +131,6 @@
 			// Cancelled (Escape).
 		}
 	}
-
-	const valueGradient = $derived.by(() => {
-		const { r, g, b } = hsvToRgb({ ...hsv, v: 1 });
-		return `linear-gradient(rgb(${String(r * 255)} ${String(g * 255)} ${String(b * 255)}), black)`;
-	});
 </script>
 
 {#snippet field(label: string, current: number, set: (n: number) => void)}
@@ -150,25 +145,15 @@
 	</div>
 {/snippet}
 
-<div class={cn("flex w-56 flex-col gap-2.5", className)}>
-	<div class="flex gap-2.5">
-		<ColorWheel class="min-w-0 flex-1" {hsv} onchange={setHsv} />
-		<div
-			role="slider"
-			tabindex="-1"
-			aria-label="Value"
-			aria-valuenow={hsv.v}
-			class="relative w-4 shrink-0 touch-none rounded-sm select-none"
-			style:background={valueGradient}
-			{@attach drag((e, rect) => {
-				setHsv({ v: clamp(1 - (e.clientY - rect.top) / rect.height, 0, 1) });
-			})}
-		>
-			<div
-				class="pointer-events-none absolute inset-x-[-2px] h-1.5 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgb(0_0_0/0.5)]"
-				style:top="{(1 - hsv.v) * 100}%"
-			></div>
-		</div>
+<div class={cn("flex w-44 flex-col gap-2", className)}>
+	<div class="flex justify-center gap-2">
+		<ColorWheel class="size-32" {hsv} onchange={setHsv} />
+		<ValueRamp
+			{hsv}
+			onchange={(v: number) => {
+				setHsv({ v });
+			}}
+		/>
 	</div>
 
 	<div class="bg-muted flex rounded-md p-0.5" role="tablist">
