@@ -50,7 +50,8 @@
 			: `Saved with an older version of ${outdated?.label ?? "this group"}, which isn't available: the latest version is used instead, so its links may not match.`,
 	);
 
-	const inputs = $derived(graph.resolveNodeInputs(id));
+	const hiddenInputs = $derived(graph.hiddenInputs(id));
+	const inputs = $derived(graph.resolveNodeInputs(id).filter((i) => !hiddenInputs.has(i.id)));
 	const outputs = $derived(graph.resolveNodeOutputs(id));
 	const label = $derived(descriptor?.label);
 
@@ -324,7 +325,8 @@
 							<InputEditor
 								{control}
 								type={effectiveType}
-								value={data.values?.[inputDef.id]}
+								value={data.values?.[inputDef.id] ??
+									descriptor.defaultData.values?.[inputDef.id]}
 								disabled={isLocked}
 								name="{id}-{inputDef.id}"
 								onchange={(value: InputValue) =>

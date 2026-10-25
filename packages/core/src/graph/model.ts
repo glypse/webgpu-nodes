@@ -558,15 +558,18 @@ export class GraphModel extends GroupModel {
 	private nodeRows(doc: HydratedGraphDocument, node: GraphNode): NodeRows {
 		const descriptor = this.resolveDescriptor(node);
 		const linked = new Set((doc.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle));
+		const hidden = this.hiddenInputs(node.id);
 		return {
 			header: (descriptor.settings?.length ?? 0) + (this.typeChoice(node.id) ? 1 : 0),
 			outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
 			// The colour wheel and its value ramp.
 			widget: descriptor.widget ? 6 : 0,
-			inputs: this.resolveNodeInputs(node.id).map((i) => ({
-				id: i.id,
-				editor: !linked.has(i.id) && !i.fallback && !i.variadic,
-			})),
+			inputs: this.resolveNodeInputs(node.id)
+				.filter((i) => !hidden.has(i.id))
+				.map((i) => ({
+					id: i.id,
+					editor: !linked.has(i.id) && !i.fallback && !i.variadic,
+				})),
 		};
 	}
 

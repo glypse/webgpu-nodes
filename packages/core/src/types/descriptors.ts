@@ -13,6 +13,12 @@ export type HandleDef = {
 	type: WgslType;
 	/** On a group input: makes it an enum input (type u32) choosing among these. */
 	variants?: EnumVariant[];
+	/**
+	 * On a group input: its label on group nodes while one of the group's
+	 * enum inputs is on a variant, by that input's handle id then the
+	 * variant's value. The first enum (in handle order) with one wins.
+	 */
+	variantLabels?: Record<string, Record<string, string>>;
 };
 
 /**

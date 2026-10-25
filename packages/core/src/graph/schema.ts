@@ -17,6 +17,7 @@ const HandleSchema = v.object({
 	label: v.string(),
 	type: v.picklist(WGSL_TYPES),
 	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
+	variantLabels: v.optional(v.record(v.string(), v.record(v.string(), v.string()))),
 });
 
 const ScalarValueSchema = v.union([v.number(), v.boolean()]);

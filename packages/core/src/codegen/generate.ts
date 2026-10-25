@@ -1,4 +1,4 @@
-import { type EnumDocument, constantAt, liveEdges } from "../enums";
+import { type EnumDocument, constantAt, groupConstants, liveEdges } from "../enums";
 import { ROOT_ID, type GraphEdge } from "../graph/document";
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
@@ -8,7 +8,6 @@ import type { HandleDef, InputValue, NodeData, WgslType } from "../types";
 import {
 	WGSL_DEFAULTS,
 	convertVar,
-	enumValue,
 	inputControl,
 	inputDefaultType,
 	isUniformControl,
@@ -469,18 +468,12 @@ class BodyEmitter {
 		);
 		const defaults = descriptor.defaultData.values;
 		// Enum values known here are compiled into the call's function.
-		const constants = new Map<string, number>();
-		for (const input of descriptor.inputs) {
-			if (input.control?.kind !== "enum") continue;
-			const linked = this.incoming(node.id).some((e) => e.targetHandle === input.id);
-			const value = linked
-				? this.constantOf(node, input.id)
-				: enumValue(
-						node.data.values?.[input.id] ?? defaults?.[input.id],
-						input.control.variants,
-					);
-			if (value !== undefined) constants.set(input.id, value);
-		}
+		const constants = groupConstants(
+			this.enumDocument,
+			node,
+			this.state.graph.project.definitions,
+			this.constants,
+		);
 		const decl = emitGroupFunction(this.state, definitionRef, absent, constants);
 		if (!decl) return;
 		const args = descriptor.inputs.map((inputDef) =>

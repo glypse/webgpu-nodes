@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { groupConstants, usedGroupInputs } from "../enums";
 import { nodeRegistry } from "../nodes/registry";
 import { type EnumVariant, type HandleDef, type WgslType } from "../types";
 import { wouldCreateCycle } from "../zones";
@@ -25,6 +26,7 @@ import {
 	rewireOutgoingGroup,
 } from "./editing";
 import { indexDocument, normaliseDocument, serialiseEdge, serialiseNode } from "./hydrate";
+import { withEntry } from "./model-base";
 import { ZoneModel } from "./model-zones";
 import { GroupFilesSchema } from "./schema";
 
@@ -808,12 +810,82 @@ export abstract class GroupModel extends ZoneModel {
 			if (def) {
 				const inputNode = def.nodes.find((n) => n.type === "group-input");
 				const outputNode = def.nodes.find((n) => n.type === "group-output");
-				for (const h of handlesOf(inputNode)) inputs[h.id] = h.label;
+				const enums = this.instanceEnumValues(node);
+				for (const h of handlesOf(inputNode)) {
+					inputs[h.id] = variantLabel(h, handlesOf(inputNode), enums) ?? h.label;
+				}
 				for (const h of handlesOf(outputNode)) outputs[h.id] = h.label;
 			}
 		}
 
 		return { inputs, outputs };
+	}
+
+	/** The document holding a node, anywhere in the project. */
+	protected documentOf(nodeId: string): HydratedGraphDocument | undefined {
+		for (const doc of this.project.definitions.values()) {
+			if (doc.nodesById.has(nodeId)) return doc;
+		}
+		return undefined;
+	}
+
+	/** The enum values a group node sets itself (see `groupConstants`), by handle id. */
+	protected instanceEnumValues(node: GraphNode): Map<string, number> {
+		const doc = this.documentOf(node.id);
+		return doc
+			? groupConstants(doc, node, this.project.definitions)
+			: new Map<string, number>();
+	}
+
+	/**
+	 * The inputs a group node doesn't show: unlinked ones whose value can't
+	 * reach its outputs with the enum values it sets (see `usedGroupInputs`).
+	 */
+	hiddenInputs(nodeId: string): Set<string> {
+		const node = this.resolveNode(nodeId);
+		const ref = node?.group?.definitionRef;
+		const doc = this.documentOf(nodeId);
+		if (node?.type !== "node-group" || !ref || !doc) return new Set();
+		const used = usedGroupInputs(this.project.definitions, ref, this.instanceEnumValues(node));
+		const linked = new Set((doc.edgesByTarget.get(nodeId) ?? []).map((e) => e.targetHandle));
+		const inputs = this.resolveDescriptor(node).inputs;
+		return new Set(inputs.filter((i) => !used.has(i.id) && !linked.has(i.id)).map((i) => i.id));
+	}
+
+	/**
+	 * Name a group input after a variant of one of the group's enum inputs
+	 * (`undefined` goes back to its own label for that variant).
+	 */
+	setHandleVariantLabel(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		variant: { enumId: string; value: number },
+		label: string | undefined,
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		const handles = handleNode?.data.handles;
+		if (!def || handleNode?.type !== "group-input" || !handles) return;
+		const trimmed = label?.trim();
+		const data = {
+			...handleNode.data,
+			handles: handles.map((h) => {
+				if (h.id !== handleId) return h;
+				const labels = withEntry(
+					h.variantLabels?.[variant.enumId],
+					String(variant.value),
+					trimmed === "" ? undefined : trimmed,
+				);
+				const byEnum = withEntry(h.variantLabels, variant.enumId, labels);
+				const rest = { ...h };
+				delete rest.variantLabels;
+				return byEnum ? { ...rest, variantLabels: byEnum } : rest;
+			}),
+		};
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		});
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
@@ -974,4 +1046,19 @@ export abstract class GroupModel extends ZoneModel {
 			indexDocument(doc);
 		}
 	}
+}
+
+/** `handle`'s label for the first enum value in `enums` it has one for. */
+function variantLabel(
+	handle: HandleDef,
+	handles: readonly HandleDef[],
+	enums: ReadonlyMap<string, number>,
+): string | undefined {
+	for (const h of handles) {
+		const value = enums.get(h.id);
+		const label =
+			value === undefined ? undefined : handle.variantLabels?.[h.id]?.[String(value)];
+		if (label) return label;
+	}
+	return undefined;
 }

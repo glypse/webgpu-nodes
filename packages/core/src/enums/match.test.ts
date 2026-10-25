@@ -130,4 +130,48 @@ describe("Match node", () => {
 		expect(caseIds(graph)).toEqual(["selector:enum"]);
 		expect(links()).toEqual(["selector"]);
 	});
+
+	it("hides a group node's unlinked inputs only feeding cases it doesn't pick", () => {
+		const hidden = (data: NodeData) => [...new GraphModel(project(data)).hiddenInputs("g")];
+		expect(hidden({ values: { mode: 0 } })).toEqual(["x"]);
+		expect(hidden({ values: { mode: 2 } })).toEqual([]);
+		const linked = new GraphModel(
+			project({}, [node("ft", "time")], [["ft", "time", "g", "mode"]]),
+		);
+		expect([...linked.hiddenInputs("g")]).toEqual([]);
+	});
+
+	it("follows enum values into nested groups", () => {
+		const nested = project({ values: { mode: 0 } });
+		const [input, output] = nested.definitions.def?.nodes ?? [];
+		if (!input || !output) throw new Error("unreachable");
+		// "outer" passes its own mode and x to an instance of "def".
+		nested.definitions.outer = {
+			nodes: [
+				{ ...structuredClone(input), id: "oin" },
+				{ ...structuredClone(output), id: "ogo" },
+				{ ...node("inner", "node-group"), group: { definitionRef: "def", locked: false } },
+			],
+			edges: (
+				[
+					["oin", "mode", "inner", "mode"],
+					["oin", "x", "inner", "x"],
+					["inner", "result", "ogo", "result"],
+				] satisfies TestEdge[]
+			).map(edge),
+		};
+		const root = nested.definitions[ROOT_ID];
+		const instance = root?.nodes.find((n) => n.id === "g");
+		if (!instance?.group) throw new Error("unreachable");
+		instance.group.definitionRef = "outer";
+		expect([...new GraphModel(nested).hiddenInputs("g")]).toEqual(["x"]);
+	});
+
+	it("names inputs after the variant their group node is on", () => {
+		const graph = new GraphModel(project({ values: { mode: 2 } }));
+		graph.setHandleVariantLabel("def", "in", "x", { enumId: "mode", value: 2 }, "Deux");
+		expect(graph.resolveNodeLabels("g").inputs.x).toBe("Deux");
+		graph.setInputValue("g", "mode", 5);
+		expect(graph.resolveNodeLabels("g").inputs.x).toBe("X");
+	});
 });
