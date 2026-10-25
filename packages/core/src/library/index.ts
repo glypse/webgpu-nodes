@@ -40,8 +40,13 @@ export const LibraryFileSchema = v.object({
 		v.object({
 			kind: v.literal("color"),
 			mode: v.string(),
-			modes: v.record(v.string(), v.picklist(COLOR_MODES)),
-			components: v.tuple([v.string(), v.string(), v.string()]),
+			modes: v.record(
+				v.string(),
+				v.object({
+					space: v.picklist(COLOR_MODES),
+					components: v.tuple([v.string(), v.string(), v.string()]),
+				}),
+			),
 		}),
 	),
 });

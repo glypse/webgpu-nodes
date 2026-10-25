@@ -47,20 +47,24 @@
 
 	const EPSILON = 1e-6;
 	const valueOf = (input: string) => data.values?.[input] ?? defaults?.[input];
-	const mode = $derived.by((): ColorMode => {
+	const modeKey = $derived.by(() => {
 		const control = inputs.find((i) => i.id === widget.mode)?.control;
 		const variants = control?.kind === "enum" ? control.variants : [];
-		return widget.modes[String(enumValue(valueOf(widget.mode), variants))] ?? "rgb";
+		return String(enumValue(valueOf(widget.mode), variants));
 	});
+	const binding = $derived(widget.modes[modeKey]);
+	const mode = $derived<ColorMode>(binding?.space ?? "rgb");
+	/** The inputs holding the mode's components. */
+	const componentInputs = $derived(binding?.components ?? ["", "", ""]);
 	const components = $derived(
-		widget.components.map((c) => readComponent(valueOf(c), "_")) as Components,
+		componentInputs.map((c) => readComponent(valueOf(c), "_")) as Components,
 	);
 
 	// Kept apart from the values so a hue survives going through grey or
 	// black in RGB or OKLch, as in Blender.
 	let hsv = $state<Hsv>({ h: 0, s: 0, v: 0 });
 	/** The components last written, to tell our own edits coming back from new ones. */
-	let sent: { mode: ColorMode; components: Components } | undefined;
+	let sent: { mode: string; components: Components } | undefined;
 
 	function hsvOf(of: ColorMode, [x, y, z]: Components, previous: Hsv): Hsv {
 		if (of === "hsv") {
@@ -83,7 +87,7 @@
 		const current = components;
 		const currentMode = mode;
 		const ours =
-			sent?.mode === currentMode &&
+			sent?.mode === modeKey &&
 			sent.components.every((n, i) => Math.abs(n - (current[i] ?? n)) < EPSILON);
 		if (ours) return;
 		untrack(() => {
@@ -95,18 +99,18 @@
 		hsv = { ...hsv, ...patch };
 		const next = componentsOf(hsv);
 		const written = components.map((n, i) =>
-			connected.has(widget.components[i] ?? "") ? n : (next[i] ?? n),
+			connected.has(componentInputs[i] ?? "") ? n : (next[i] ?? n),
 		) as Components;
-		sent = { mode, components: written };
+		sent = { mode: modeKey, components: written };
 		const values = { ...data.values };
-		widget.components.forEach((c, i) => {
+		componentInputs.forEach((c, i) => {
 			values[c] = written[i] ?? 0;
 		});
 		graph.updateNodeData(id, { values }, { retype: false });
 	}
 
 	const linked = (indices: number[]) =>
-		indices.every((i) => connected.has(widget.components[i] ?? ""));
+		indices.every((i) => connected.has(componentInputs[i] ?? ""));
 	// In HSV the wheel is hue and saturation, the ramp value; otherwise both
 	// write all three components.
 	const wheelDisabled = $derived(disabled || linked(mode === "hsv" ? [0, 1] : [0, 1, 2]));

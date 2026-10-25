@@ -111,9 +111,15 @@ export type NodeWidget = {
 	kind: "color";
 	/** The enum input picking what the components are. */
 	mode: string;
-	/** What the components are, by that enum's variant value. */
-	modes: Record<string, ColorMode>;
-	/** The inputs holding the three components. */
+	/**
+	 * By that enum's variant value: what the components are and the inputs
+	 * holding them, each variant having its own.
+	 */
+	modes: Record<string, ColorWidgetMode>;
+};
+
+export type ColorWidgetMode = {
+	space: ColorMode;
 	components: readonly [string, string, string];
 };
 

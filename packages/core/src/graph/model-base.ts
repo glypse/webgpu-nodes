@@ -741,10 +741,10 @@ export abstract class GraphModelBase {
 	}
 
 	/**
-	 * `values` with a colour widget's components converted to its new mode,
-	 * so the colour stays the same (unlike Blender's Combine Color, which
-	 * keeps the numbers). Only possible while none is linked: a linked one's
-	 * value is only known in the shader.
+	 * `values` with a colour widget's new mode's components set from its
+	 * former mode's, so the colour stays the same (unlike Blender's Combine
+	 * Color, which keeps the numbers). Only possible while none is linked: a
+	 * linked one's value is only known in the shader.
 	 */
 	private keepColor(
 		node: GraphNode,
@@ -764,14 +764,13 @@ export abstract class GraphModelBase {
 		const linked = new Set(
 			(this.activeDocument.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle),
 		);
-		if (!from || !to || from === to || widget.components.some((c) => linked.has(c))) {
-			return values;
-		}
+		if (!from || !to || from === to) return values;
+		if ([...from.components, ...to.components].some((c) => linked.has(c))) return values;
 		const read = (c: string) => readComponent(values?.[c] ?? defaults?.[c], "_");
-		const [x, y, z] = widget.components.map(read);
-		const next = convertColorMode(from, to, [x ?? 0, y ?? 0, z ?? 0]);
+		const [x, y, z] = from.components.map(read);
+		const next = convertColorMode(from.space, to.space, [x ?? 0, y ?? 0, z ?? 0]);
 		const converted = { ...values };
-		widget.components.forEach((c, i) => {
+		to.components.forEach((c, i) => {
 			converted[c] = next[i] ?? 0;
 		});
 		return converted;
