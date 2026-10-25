@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import { WGSL_TYPES } from "../types";
+import { COLOR_DISPLAYS, WGSL_TYPES } from "../types";
 
 const PositionSchema = v.object({
 	x: v.number(),
@@ -18,6 +18,7 @@ const HandleSchema = v.object({
 	type: v.picklist(WGSL_TYPES),
 	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
 	variantLabels: v.optional(v.record(v.string(), v.record(v.string(), v.string()))),
+	display: v.optional(v.picklist(COLOR_DISPLAYS)),
 });
 
 const ScalarValueSchema = v.union([v.number(), v.boolean()]);

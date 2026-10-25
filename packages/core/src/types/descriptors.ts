@@ -19,7 +19,16 @@ export type HandleDef = {
 	 * variant's value. The first enum (in handle order) with one wins.
 	 */
 	variantLabels?: Record<string, Record<string, string>>;
+	/**
+	 * On a vec3f / vec4f group input: edited on group nodes as a colour
+	 * (linear RGB, alpha), by a swatch opening a picker or a wheel drawn on
+	 * the node, rather than a number per component.
+	 */
+	display?: ColorDisplay;
 };
+
+export const COLOR_DISPLAYS = ["swatch", "wheel"] as const;
+export type ColorDisplay = (typeof COLOR_DISPLAYS)[number];
 
 /**
  * One case of an enum. `value` is what's stored and compiled: it stays the

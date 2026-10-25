@@ -1,6 +1,9 @@
 <script lang="ts">
 	import {
+		COLOR_DISPLAYS,
+		type ColorDisplay,
 		type EnumVariant,
+		groupInputDef,
 		type HandleDef,
 		handlesOf,
 		inputControl,
@@ -10,7 +13,7 @@
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
-	import { Button, Checkbox, Input, Sheet } from "$theme";
+	import { Button, Checkbox, Input, Select, Sheet } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
@@ -41,6 +44,12 @@
 	const inputHandles = $derived(handlesOf(inputNode));
 	const outputHandles = $derived(handlesOf(outputNode));
 	const enums = $derived(inputHandles.filter((h) => h.variants));
+
+	const DISPLAY_LABELS: Record<ColorDisplay | "numbers", string> = {
+		numbers: "Numbers",
+		swatch: "Colour swatch",
+		wheel: "Colour wheel",
+	};
 
 	/** Input handles whose details are shown. */
 	const expanded = $state<Record<string, boolean>>({});
@@ -91,11 +100,7 @@
 	}
 
 	function defaultControl(handle: HandleDef): InputControl {
-		if (handle.variants) return { kind: "enum", variants: handle.variants };
-		return inputControl(
-			{ id: handle.id, label: handle.label, types: [handle.type] },
-			handle.type,
-		);
+		return inputControl(groupInputDef(handle), handle.type);
 	}
 
 	function setVariants(handle: HandleDef, variants: EnumVariant[] | undefined) {
@@ -191,6 +196,36 @@
 				}}
 			/>
 		</div>
+
+		{#if handle.type === "vec3f" || handle.type === "vec4f"}
+			<div class="flex flex-col gap-1">
+				<span class="text-muted-foreground text-xs">Edit as</span>
+				<Select.Root
+					type="single"
+					value={handle.display ?? "numbers"}
+					disabled={locked}
+					onValueChange={(next: string) => {
+						if (definitionRef && inputNode) {
+							graph.setHandleDisplay(
+								definitionRef,
+								inputNode.id,
+								handle.id,
+								COLOR_DISPLAYS.find((d) => d === next),
+							);
+						}
+					}}
+				>
+					<Select.Trigger class="w-full">
+						{DISPLAY_LABELS[handle.display ?? "numbers"]}
+					</Select.Trigger>
+					<Select.Content>
+						{#each Object.entries(DISPLAY_LABELS) as [key, label] (key)}
+							<Select.Item value={key} {label}>{label}</Select.Item>
+						{/each}
+					</Select.Content>
+				</Select.Root>
+			</div>
+		{/if}
 
 		<label class="flex items-center gap-2 text-xs">
 			<Checkbox

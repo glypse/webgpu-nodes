@@ -4,6 +4,7 @@
 	import NumberControl from "./NumberControl.svelte";
 	import ToggleControl from "./ToggleControl.svelte";
 	import type { ControlProps } from "./types";
+	import WheelControl from "./WheelControl.svelte";
 
 	let props: ControlProps = $props();
 </script>
@@ -16,6 +17,8 @@
 	<ToggleControl {...props} control={props.control} />
 {:else if props.control.kind === "color"}
 	<ColorControl {...props} control={props.control} />
+{:else if props.control.kind === "wheel"}
+	<WheelControl {...props} control={props.control} />
 {:else}
 	<EnumControl {...props} control={props.control} />
 {/if}

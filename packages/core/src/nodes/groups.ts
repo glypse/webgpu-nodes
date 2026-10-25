@@ -1,6 +1,13 @@
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
-import { type HandleDef, type InputValue, type NodeDescriptor, enumValue } from "../types";
+import {
+	type HandleDef,
+	type InputControl,
+	type InputValue,
+	type NodeDescriptor,
+	type NodeInputDef,
+	enumValue,
+} from "../types";
 import { fallbackHandleIds } from "./logic";
 
 // ── Group descriptor builders ─────────────────────────────────────────────────
@@ -33,6 +40,23 @@ export function buildGroupOutputDescriptor(handles: HandleDef[]): NodeDescriptor
 		wgsl: () => {
 			throw new Error("unreachable");
 		},
+	};
+}
+
+/** The input a group input handle gives group nodes. */
+export function groupInputDef(handle: HandleDef): NodeInputDef {
+	const control: InputControl | undefined = handle.variants
+		? { kind: "enum", variants: handle.variants }
+		: handle.display === "swatch"
+			? { kind: "color" }
+			: handle.display === "wheel"
+				? { kind: "wheel" }
+				: undefined;
+	return {
+		id: handle.id,
+		label: handle.label,
+		types: [handle.type],
+		...(control ? { control } : {}),
 	};
 }
 
@@ -82,10 +106,7 @@ export function buildGroupDescriptor(
 		category: "misc",
 		staticOutputTypes: true,
 		inputs: handles.inputs.map((h) => ({
-			id: h.id,
-			label: h.label,
-			types: [h.type],
-			...(h.variants ? { control: { kind: "enum", variants: h.variants } } : {}),
+			...groupInputDef(h),
 			...(fallbacks.has(h.id) ? { fallback: true } : {}),
 		})),
 		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),

@@ -2,7 +2,13 @@ import * as v from "valibot";
 
 import { groupConstants, usedGroupInputs } from "../enums";
 import { nodeRegistry } from "../nodes/registry";
-import { type EnumVariant, type HandleDef, type InputValue, type WgslType } from "../types";
+import {
+	type ColorDisplay,
+	type EnumVariant,
+	type HandleDef,
+	type InputValue,
+	type WgslType,
+} from "../types";
 import { wouldCreateCycle } from "../zones";
 import {
 	type GraphDocument,
@@ -913,6 +919,32 @@ export abstract class GroupModel extends ZoneModel {
 		return handle;
 	}
 
+	/** Edit a vec3f / vec4f group input as a colour, or as numbers with `undefined`. */
+	setHandleDisplay(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		display: ColorDisplay | undefined,
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		const handles = handleNode?.data.handles;
+		if (!def || handleNode?.type !== "group-input" || !handles) return;
+		const data = {
+			...handleNode.data,
+			handles: handles.map((h) => {
+				if (h.id !== handleId) return h;
+				const rest = { ...h };
+				delete rest.display;
+				return display ? { ...rest, display } : rest;
+			}),
+		};
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		});
+		this.rebuildTypeCache();
+	}
+
 	/**
 	 * Set the value a group input has on group nodes until they're edited
 	 * (`undefined` goes back to zero, or an enum's first variant).
@@ -950,6 +982,7 @@ export abstract class GroupModel extends ZoneModel {
 		const retyped = (h: HandleDef): HandleDef => {
 			const next = { ...h, type };
 			if (type !== "u32") delete next.variants;
+			if (type !== "vec3f" && type !== "vec4f") delete next.display;
 			return next;
 		};
 		const data = {

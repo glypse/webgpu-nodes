@@ -13,6 +13,8 @@ export type InputControl =
 	| { kind: "toggle" }
 	/** A colour swatch opening a picker; vec3f / vec4f only (linear RGB, alpha). */
 	| { kind: "color" }
+	/** A colour wheel and value ramp drawn on the node; vec3f / vec4f only (linear RGB, alpha). */
+	| { kind: "wheel" }
 	/** A choice among an enum's variants, stored as the variant's value (a u32); linked, any scalar drives it. */
 	| { kind: "enum"; variants: readonly EnumVariant[] };
 
@@ -28,6 +30,7 @@ export function isUniformControl(control: InputControl): boolean {
 		case "number":
 		case "toggle":
 		case "color":
+		case "wheel":
 			return true;
 		case "enum":
 			return false;
@@ -46,7 +49,8 @@ export function enumValue(
 
 /** The control editing an input of resolved type `type`. */
 export function inputControl(input: NodeInputDef, type: WgslType): InputControl {
-	if (input.control?.kind === "color" && type !== "vec3f" && type !== "vec4f") {
+	const colorKind = input.control?.kind === "color" || input.control?.kind === "wheel";
+	if (colorKind && type !== "vec3f" && type !== "vec4f") {
 		return { kind: "number" };
 	}
 	if (input.control) return input.control;
