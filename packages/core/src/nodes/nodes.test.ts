@@ -4,6 +4,8 @@ import { formatWgslLiteral, generateShader } from "../codegen";
 import { ROOT_ID } from "../graph/document";
 import {
 	libraryEntry,
+	libraryHandle,
+	libraryVar,
 	managerFor,
 	shaderFor,
 	type TestEdge,
@@ -89,6 +91,10 @@ describe("formatWgslLiteral", () => {
 describe("enum inputs and fallbacks", () => {
 	const ASPECT_UV = libraryEntry("std-aspect-uv");
 	const fn = `group_h_${ASPECT_UV.ref.replace(/[^A-Za-z0-9_]/g, "_")}`;
+	const UV = libraryHandle(ASPECT_UV, "group-input", "Coordinates");
+	const MODE = libraryHandle(ASPECT_UV, "group-input", "Mode");
+	const OUT = libraryHandle(ASPECT_UV, "group-output", "Coordinates");
+	const coordinates = libraryVar(ASPECT_UV, "fallback");
 
 	const aspectUv = (data: NodeData = {}): TestNode => ({
 		id: "a",
@@ -99,12 +105,12 @@ describe("enum inputs and fallbacks", () => {
 
 	it("aspect UV falls back to the fragment UV when unlinked", () => {
 		const shader = shaderFor(
-			[aspectUv({ values: { mode: 1 } })],
-			[["a", "uv", "out", "color"]],
+			[aspectUv({ values: { [MODE]: 1 } })],
+			[["a", OUT, "out", "color"]],
 		);
 		// The unlinked variant uses the group's own UV, the default branch only.
 		expect(shader).toContain(`let v_a = ${fn}__d0__e1_1(`);
-		expect(shader).toMatch(/let v_coordinates = v_uv;/);
+		expect(shader).toContain(`let ${coordinates} = ${libraryVar(ASPECT_UV, "uv")};`);
 		expect(shader).not.toContain(`fn ${fn}__e1_1(`);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
@@ -118,23 +124,37 @@ describe("enum inputs and fallbacks", () => {
 				{ id: "sum", type: "add" },
 			],
 			[
-				["u", "uv", "a", "uv"],
-				["a", "uv", "sum", "operands"],
-				["b", "uv", "sum", "operands"],
+				["u", "uv", "a", UV],
+				["a", OUT, "sum", "operands"],
+				["b", OUT, "sum", "operands"],
 				["sum", "result", "out", "color"],
 			],
 		);
 		expect(shader).toContain(`fn ${fn}__e1_0(`);
 		expect(shader).toContain(`fn ${fn}__d0__e1_0(`);
-		expect(shader).toMatch(/let v_coordinates = h_uv;/);
+		expect(shader).toContain(`let ${coordinates} = h_${UV.replace(/-/g, "_")};`);
 		expect(shader.split(`struct GroupOutputs_${fn.slice("group_".length)} `)).toHaveLength(2);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("only computes the scale of the picked mode", () => {
+		const stretch = shaderFor(
+			[aspectUv({ values: { [MODE]: 2 } })],
+			[["a", OUT, "out", "color"]],
+		);
+		expect(stretch).not.toContain("spektralFrame.resolution");
+		if (nagaBin) expect(validateFragment(stretch)).toBeNull();
+		const cover = shaderFor(
+			[aspectUv({ values: { [MODE]: 1 } })],
+			[["a", OUT, "out", "color"]],
+		);
+		expect(cover).toContain("spektralFrame.resolution");
 	});
 
 	it("exposes the mode as an enum and the coordinates as a fallback input", () => {
 		const graph = managerFor([aspectUv()], []);
 		const inputs = graph.resolveNodeInputs("a");
-		expect(inputs.find((i) => i.id === "mode")?.control).toEqual({
+		expect(inputs.find((i) => i.id === MODE)?.control).toEqual({
 			kind: "enum",
 			variants: [
 				{ value: 0, label: "Contain (Fit)" },
@@ -142,16 +162,16 @@ describe("enum inputs and fallbacks", () => {
 				{ value: 2, label: "Stretch" },
 			],
 		});
-		expect(inputs.find((i) => i.id === "uv")?.fallback).toBe(true);
-		expect(inputs.find((i) => i.id === "mode")?.fallback).toBeUndefined();
+		expect(inputs.find((i) => i.id === UV)?.fallback).toBe(true);
+		expect(inputs.find((i) => i.id === MODE)?.fallback).toBeUndefined();
 	});
 
 	it("lets any scalar drive an enum input", () => {
 		const shader = shaderFor(
 			[{ id: "t", type: "time" }, aspectUv()],
 			[
-				["t", "time", "a", "mode"],
-				["a", "uv", "out", "color"],
+				["t", "time", "a", MODE],
+				["a", OUT, "out", "color"],
 			],
 		);
 		expect(shader).toContain("u32(v_t))");

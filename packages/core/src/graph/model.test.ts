@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import { generateShader } from "../codegen";
 import { libraryRef } from "../library";
-import { libraryEntry, managerFor, rootProject, type TestNode } from "../testing/graph";
+import {
+	libraryEntry,
+	libraryHandle,
+	managerFor,
+	rootProject,
+	type TestNode,
+} from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { NEW_ITEM_HANDLE, pairedOutputId } from "../zones";
 import { type GraphProject, ROOT_ID } from "./document";
@@ -306,6 +312,7 @@ describe("node data edits", () => {
 
 describe("standard-library versions", () => {
 	const aspectUv = libraryEntry("std-aspect-uv");
+	const UV = libraryHandle(aspectUv, "group-output", "Coordinates");
 	const oldRef = libraryRef(aspectUv.id, "0000000000old");
 	const instance = (ref: string): TestNode => ({
 		id: "a",
@@ -314,19 +321,19 @@ describe("standard-library versions", () => {
 	});
 
 	it("saves the version a node uses, not the library itself", async () => {
-		const graph = managerFor([instance(aspectUv.ref)], [["a", "uv", "out", "color"]]);
+		const graph = managerFor([instance(aspectUv.ref)], [["a", UV, "out", "color"]]);
 		const saved = JSON.parse(graph.getProjectJson()) as GraphProject;
 		expect(Object.keys(saved.definitions)).toEqual([ROOT_ID]);
 
 		const loaded = managerFor([], []);
 		expect(await loaded.loadProject(saved)).toBe(true);
-		expect(loaded.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv"]);
+		expect(loaded.resolveNodeOutputs("a").map((o) => o.id)).toEqual([UV]);
 		expect(loaded.outdatedLibraryVersion("a")).toBeUndefined();
 	});
 
 	it("stands the latest version in for an older one while archives are off", () => {
-		const graph = managerFor([instance(oldRef)], [["a", "uv", "out", "color"]]);
-		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv"]);
+		const graph = managerFor([instance(oldRef)], [["a", UV, "out", "color"]]);
+		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual([UV]);
 		expect(graph.outdatedLibraryVersion("a")).toEqual({
 			label: aspectUv.label,
 			archived: false,
@@ -351,8 +358,8 @@ describe("standard-library versions", () => {
 		const project = rootProject([instance(oldRef), { ...instance(aspectUv.ref), id: "b" }], []);
 		expect(await graph.loadProject(project)).toBe(true);
 		expect(requested).toEqual([oldRef]);
-		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual(["uv", "extra"]);
-		expect(graph.resolveNodeOutputs("b").map((o) => o.id)).toEqual(["uv"]);
+		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual([UV, "extra"]);
+		expect(graph.resolveNodeOutputs("b").map((o) => o.id)).toEqual([UV]);
 		expect(graph.outdatedLibraryVersion("a")).toEqual({
 			label: aspectUv.label,
 			archived: true,
