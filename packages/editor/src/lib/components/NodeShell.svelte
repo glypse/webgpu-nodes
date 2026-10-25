@@ -293,6 +293,17 @@
 		{/if}
 
 		<div class="node-shell__inputs">
+			<!-- Linked inputs of variants not picked keep their link, undrawn,
+			     for when one is picked again. -->
+			{#each [...hiddenInputs].filter((i) => connectedHandles.has(i)) as inputId (inputId)}
+				<Handle
+					type="target"
+					position={Position.Left}
+					id={inputId}
+					class="invisible"
+					isConnectable={false}
+				/>
+			{/each}
 			{#each inputs as inputDef (inputDef.id)}
 				{@const effectiveType = resolvedInputType(inputDef)}
 				{@const connected = connectedHandles.has(inputDef.id)}

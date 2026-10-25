@@ -146,9 +146,10 @@ describe("Match node", () => {
 		expect(hidden({ values: { mode: 2 } })).toEqual([]);
 		// Unknown while compiling: every variant's inputs.
 		expect(hidden({}, [node("ft", "time")], [["ft", "time", "g", "mode"]])).toEqual([]);
+		// Linked or not: its link stays, unused.
 		expect(
 			hidden({ values: { mode: 0 } }, [node("ft", "time")], [["ft", "time", "g", "x"]]),
-		).toEqual([]);
+		).toEqual(["x"]);
 	});
 
 	it("adds inputs to a variant after its enum's, nested enums included", () => {

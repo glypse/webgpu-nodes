@@ -860,7 +860,8 @@ export abstract class GroupModel extends ZoneModel {
 
 	/**
 	 * The inputs a group node doesn't show: those under a variant of one of
-	 * its enums other than the one it's on, unless linked.
+	 * its enums other than the one it's on. Their links stay, unused, for
+	 * when that variant is picked again.
 	 */
 	hiddenInputs(nodeId: string): Set<string> {
 		const node = this.resolveNode(nodeId);
@@ -868,9 +869,7 @@ export abstract class GroupModel extends ZoneModel {
 		const doc = this.documentOf(nodeId);
 		if (node?.type !== "node-group" || !def || !doc) return new Set();
 		const input = def.nodes.find((n) => n.type === "group-input");
-		const hidden = hiddenByVariant(handlesOf(input), this.instanceEnumValues(node));
-		for (const e of doc.edgesByTarget.get(nodeId) ?? []) hidden.delete(e.targetHandle);
-		return hidden;
+		return hiddenByVariant(handlesOf(input), this.instanceEnumValues(node));
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
