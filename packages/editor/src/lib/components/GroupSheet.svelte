@@ -1,0 +1,384 @@
+<script lang="ts">
+	import {
+		type EnumVariant,
+		type HandleDef,
+		handlesOf,
+		inputControl,
+		type InputControl,
+		type InputValue,
+		nextVariantValue,
+		WGSL_TYPES,
+		type WgslType,
+	} from "$core";
+	import { Button, Checkbox, Input, Sheet } from "$theme";
+	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
+	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
+	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
+	import CaretRightIcon from "phosphor-svelte/lib/CaretRightIcon";
+	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
+
+	import { getGraphManager } from "../graph-manager.svelte";
+	import InputEditor from "./controls/InputEditor.svelte";
+	import TypePicker from "./TypePicker.svelte";
+
+	const graph = getGraphManager();
+
+	const sheetGroupNode = $derived.by(() => {
+		if (!graph.sheetGroupId) return undefined;
+		if (graph.path.length > 0) {
+			const inParent = graph.parentDocument.nodes.find((n) => n.id === graph.sheetGroupId);
+			if (inParent) return inParent;
+		}
+		return graph.activeDocument.nodes.find((n) => n.id === graph.sheetGroupId);
+	});
+	const definitionRef = $derived(sheetGroupNode?.group?.definitionRef);
+	const definition = $derived(
+		definitionRef ? graph.project.definitions.get(definitionRef) : undefined,
+	);
+	const locked = $derived(sheetGroupNode?.group?.locked ?? true);
+	const inputNode = $derived(definition?.nodes.find((n) => n.type === "group-input"));
+	const outputNode = $derived(definition?.nodes.find((n) => n.type === "group-output"));
+	const inputHandles = $derived(handlesOf(inputNode));
+	const outputHandles = $derived(handlesOf(outputNode));
+	const enums = $derived(inputHandles.filter((h) => h.variants));
+
+	/** Input handles whose details are shown. */
+	const expanded = $state<Record<string, boolean>>({});
+
+	// Local buffer for handle label inputs - keeps the input responsive while
+	// the actual graph mutation is committed on blur to avoid triggering shader re-gen.
+	const handleLabelBuffer = $state<Record<string, string>>({});
+
+	// Initialise the buffer when the sheet opens or handles change,
+	// so the template never mutates $state during evaluation.
+	$effect(() => {
+		for (const h of [...inputHandles, ...outputHandles]) {
+			if (!(h.id in handleLabelBuffer)) handleLabelBuffer[h.id] = h.label;
+		}
+	});
+
+	// Local buffer for the group label input - keeps the input responsive while
+	// the actual graph mutation is debounced to avoid triggering shader re-gen.
+	let groupLabelBuffer = $derived(definition?.label ?? "");
+	const groupLabelInvalid = $derived(
+		!locked &&
+			groupLabelBuffer.trim() !== "" &&
+			!graph.isLabelAvailable(groupLabelBuffer, definitionRef),
+	);
+
+	function commitGroupLabel() {
+		if (graph.sheetGroupId && groupLabelBuffer.trim()) {
+			graph.setGroupLabel(graph.sheetGroupId, groupLabelBuffer);
+		}
+	}
+
+	function commitHandleLabel(nodeId: string, handleId: string) {
+		const value = handleLabelBuffer[handleId] ?? "";
+		if (!definitionRef || !value.trim()) return;
+		if (!graph.setHandleLabel(definitionRef, nodeId, handleId, value)) {
+			// Revert buffer to the stored label so the input reflects the actual value
+			const labels = graph.resolveNodeLabels(nodeId);
+			const stored = labels.outputs[handleId] ?? labels.inputs[handleId];
+			if (stored) handleLabelBuffer[handleId] = stored;
+		}
+	}
+
+	function handleEnterBlur(e: KeyboardEvent) {
+		if (e.key === "Enter") {
+			e.preventDefault();
+			(e.target as HTMLInputElement).blur();
+		}
+	}
+
+	function defaultControl(handle: HandleDef): InputControl {
+		if (handle.variants) return { kind: "enum", variants: handle.variants };
+		return inputControl(
+			{ id: handle.id, label: handle.label, types: [handle.type] },
+			handle.type,
+		);
+	}
+
+	function setVariants(handle: HandleDef, variants: EnumVariant[] | undefined) {
+		if (definitionRef && inputNode) {
+			graph.setHandleVariants(definitionRef, inputNode.id, handle.id, variants);
+		}
+	}
+
+	function addVariant(handle: HandleDef) {
+		const variants = handle.variants ?? [];
+		const label = `Option ${String(variants.length + 1)}`;
+		setVariants(handle, [...variants, { value: nextVariantValue(variants), label }]);
+	}
+
+	function moveVariant(handle: HandleDef, index: number, by: number) {
+		const variants = [...(handle.variants ?? [])];
+		const [moved] = variants.splice(index, 1);
+		if (!moved) return;
+		variants.splice(index + by, 0, moved);
+		setVariants(handle, variants);
+	}
+
+	function inputValue(e: Event): string {
+		return (e.currentTarget as HTMLInputElement).value;
+	}
+</script>
+
+{#snippet handleRow(handle: HandleDef, nodeId: string, removable: boolean)}
+	<div class="flex items-center gap-2">
+		<TypePicker
+			types={WGSL_TYPES}
+			value={handle.type}
+			disabled={locked}
+			class="w-20 shrink-0"
+			title="Value type"
+			onpick={(type: WgslType) => {
+				if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
+			}}
+		/>
+		<Input
+			value={handleLabelBuffer[handle.id] ?? handle.label}
+			disabled={locked}
+			oninput={(e: Event) => {
+				handleLabelBuffer[handle.id] = inputValue(e);
+			}}
+			onblur={() => commitHandleLabel(nodeId, handle.id)}
+			onkeydown={handleEnterBlur}
+		/>
+		{#if nodeId === inputNode?.id}
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				class="shrink-0"
+				title={expanded[handle.id] ? "Hide details" : "Show details"}
+				onclick={() => {
+					expanded[handle.id] = !expanded[handle.id];
+				}}
+			>
+				{#if expanded[handle.id]}<CaretDownIcon />{:else}<CaretRightIcon />{/if}
+			</Button>
+		{/if}
+		{#if !locked}
+			<Button
+				variant="ghost"
+				size="icon-sm"
+				class="shrink-0"
+				title="Remove"
+				disabled={!removable}
+				onclick={() => {
+					if (definitionRef) graph.removeHandle(definitionRef, nodeId, handle.id);
+				}}
+			>
+				<TrashIcon />
+			</Button>
+		{/if}
+	</div>
+{/snippet}
+
+{#snippet inputDetails(handle: HandleDef)}
+	<div class="border-border ml-2 flex flex-col gap-3 border-l pb-2 pl-3">
+		<div class="flex flex-col gap-1">
+			<span class="text-muted-foreground text-xs">Default value</span>
+			<InputEditor
+				control={defaultControl(handle)}
+				type={handle.type}
+				value={inputNode?.data.values?.[handle.id]}
+				disabled={locked}
+				name="group-default-{handle.id}"
+				onchange={(value: InputValue) => {
+					if (definitionRef && inputNode) {
+						graph.setHandleDefault(definitionRef, inputNode.id, handle.id, value);
+					}
+				}}
+			/>
+		</div>
+
+		<label class="flex items-center gap-2 text-xs">
+			<Checkbox
+				checked={handle.variants !== undefined}
+				disabled={locked}
+				onCheckedChange={(checked: boolean) => {
+					setVariants(
+						handle,
+						checked
+							? [
+									{ value: 0, label: "Option 1" },
+									{ value: 1, label: "Option 2" },
+								]
+							: undefined,
+					);
+				}}
+			/>
+			<span>Enum: choose among variants</span>
+		</label>
+
+		{#if handle.variants}
+			{@const variants = handle.variants}
+			<div class="flex flex-col gap-1">
+				{#each variants as variant, i (variant.value)}
+					<div class="flex items-center gap-1">
+						<Input
+							value={variant.label}
+							disabled={locked}
+							onchange={(e: Event) => {
+								const label = inputValue(e).trim();
+								if (!label) return;
+								setVariants(
+									handle,
+									variants.map((v) =>
+										v.value === variant.value ? { ...v, label } : v,
+									),
+								);
+							}}
+							onkeydown={handleEnterBlur}
+						/>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							title="Move up"
+							disabled={locked || i === 0}
+							onclick={() => moveVariant(handle, i, -1)}
+						>
+							<ArrowUpIcon />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							title="Move down"
+							disabled={locked || i === variants.length - 1}
+							onclick={() => moveVariant(handle, i, 1)}
+						>
+							<ArrowDownIcon />
+						</Button>
+						<Button
+							variant="ghost"
+							size="icon-sm"
+							title="Remove variant"
+							disabled={locked || variants.length <= 1}
+							onclick={() =>
+								setVariants(
+									handle,
+									variants.filter((v) => v.value !== variant.value),
+								)}
+						>
+							<TrashIcon />
+						</Button>
+					</div>
+				{/each}
+				{#if !locked}
+					<Button variant="outline" size="sm" onclick={() => addVariant(handle)}>
+						Add variant
+					</Button>
+				{/if}
+			</div>
+		{/if}
+
+		{#each enums.filter((e) => e.id !== handle.id) as enumHandle (enumHandle.id)}
+			<div class="flex flex-col gap-1">
+				<span class="text-muted-foreground text-xs">Label by {enumHandle.label}</span>
+				{#each enumHandle.variants ?? [] as variant (variant.value)}
+					<div class="flex items-center gap-2">
+						<span class="w-24 shrink-0 truncate text-xs">{variant.label}</span>
+						<Input
+							value={handle.variantLabels?.[enumHandle.id]?.[String(variant.value)] ??
+								""}
+							placeholder={handle.label}
+							disabled={locked}
+							onchange={(e: Event) => {
+								if (definitionRef && inputNode) {
+									graph.setHandleVariantLabel(
+										definitionRef,
+										inputNode.id,
+										handle.id,
+										{ enumId: enumHandle.id, value: variant.value },
+										inputValue(e),
+									);
+								}
+							}}
+							onkeydown={handleEnterBlur}
+						/>
+					</div>
+				{/each}
+			</div>
+		{/each}
+	</div>
+{/snippet}
+
+<Sheet.Root bind:open={graph.sheetOpen}>
+	<Sheet.Content
+		class="w-[350px] overflow-y-auto sm:w-[400px]"
+		onOpenAutoFocus={(e: Event) => e.preventDefault()}
+		escapeKeydownBehavior="ignore"
+	>
+		<Sheet.Header>
+			<Sheet.Title>Group settings</Sheet.Title>
+		</Sheet.Header>
+		{#if sheetGroupNode && definition}
+			<div class="flex flex-col gap-4 p-4">
+				<Button
+					variant="outline"
+					onclick={() => {
+						if (graph.sheetGroupId) {
+							graph.deepClone(graph.sheetGroupId);
+						}
+					}}
+				>
+					Clone & Edit
+				</Button>
+
+				<div class="flex flex-col gap-1.5">
+					<span class="text-sm font-medium">Group Label</span>
+					<Input
+						value={groupLabelBuffer}
+						placeholder="Group name"
+						disabled={locked}
+						aria-invalid={groupLabelInvalid}
+						oninput={(e: Event) => {
+							groupLabelBuffer = inputValue(e);
+						}}
+						onblur={commitGroupLabel}
+						onkeydown={handleEnterBlur}
+					/>
+				</div>
+
+				{#if inputNode}
+					{@const nodeId = inputNode.id}
+					<div class="flex flex-col gap-1.5">
+						<span class="text-sm font-medium">Inputs</span>
+						{#each inputHandles as handle (handle.id)}
+							{@render handleRow(handle, nodeId, true)}
+							{#if expanded[handle.id]}
+								{@render inputDetails(handle)}
+							{/if}
+						{/each}
+						{#if !locked}
+							<TypePicker
+								types={WGSL_TYPES}
+								label="Add input"
+								title="Add an input"
+								onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
+							/>
+						{/if}
+					</div>
+				{/if}
+
+				{#if outputNode}
+					{@const nodeId = outputNode.id}
+					<div class="flex flex-col gap-1.5">
+						<span class="text-sm font-medium">Outputs</span>
+						{#each outputHandles as handle (handle.id)}
+							{@render handleRow(handle, nodeId, outputHandles.length > 1)}
+						{/each}
+						{#if !locked}
+							<TypePicker
+								types={WGSL_TYPES}
+								label="Add output"
+								title="Add an output"
+								onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
+							/>
+						{/if}
+					</div>
+				{/if}
+			</div>
+		{/if}
+	</Sheet.Content>
+</Sheet.Root>

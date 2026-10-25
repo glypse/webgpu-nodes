@@ -296,7 +296,7 @@ describe("node data edits", () => {
 		graph.enterGroup(groupId ?? "");
 		const input = graph.activeDocument.nodes.find((n) => n.type === "group-input");
 		const handle = graph.addHandle(input?.id ?? "", "vec3f");
-		expect(handle?.label).toBe("Handle 2");
+		expect(handle?.label).toBe("Input 2");
 		expect(graph.resolveNodeOutputs(input?.id ?? "").map((o) => o.type)).toEqual([
 			"f32",
 			"vec3f",

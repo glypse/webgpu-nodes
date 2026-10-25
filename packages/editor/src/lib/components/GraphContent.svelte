@@ -3,7 +3,6 @@
 		addMenuEntries,
 		type AddMenuEntry,
 		generateShader,
-		handlesOf,
 		type HydratedGraphDocument,
 		type HydratedGraphProject,
 		isZoneNodeType,
@@ -11,12 +10,10 @@
 		type PendingConnection,
 		type ShaderSource,
 		reachableShaderHash,
-		WGSL_TYPES,
-		type WgslType,
 	} from "$core";
 
 	import "../styles/xy-theme.css";
-	import { Button, Input, Sheet, cn } from "$theme";
+	import { cn } from "$theme";
 	import {
 		SvelteFlow,
 		useSvelteFlow,
@@ -39,8 +36,8 @@
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import DocumentMeasurer from "./DocumentMeasurer.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
+	import GroupSheet from "./GroupSheet.svelte";
 	import { nodeTypes } from "./node-types";
-	import TypePicker from "./TypePicker.svelte";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
 	import ZoneSheet from "./ZoneSheet.svelte";
 
@@ -399,98 +396,6 @@
 			graph.sheetOpen = false;
 		}
 	});
-
-	const sheetGroupNode = $derived.by(() => {
-		if (!graph.sheetGroupId) return undefined;
-		if (graph.path.length > 0) {
-			const inParent = graph.parentDocument.nodes.find((n) => n.id === graph.sheetGroupId);
-			if (inParent) return inParent;
-		}
-		return graph.activeDocument.nodes.find((n) => n.id === graph.sheetGroupId);
-	});
-	const sheetDefinition = $derived(
-		sheetGroupNode?.group
-			? graph.project.definitions.get(sheetGroupNode.group.definitionRef)
-			: undefined,
-	);
-	const sheetLocked = $derived(sheetGroupNode?.group?.locked ?? true);
-	const sheetInputHandles = $derived.by(() => {
-		if (!sheetDefinition) return [];
-		const inputNode = sheetDefinition.nodes.find((n) => n.type === "group-input");
-		return handlesOf(inputNode);
-	});
-	const sheetOutputHandles = $derived.by(() => {
-		if (!sheetDefinition) return [];
-		const outputNode = sheetDefinition.nodes.find((n) => n.type === "group-output");
-		return handlesOf(outputNode);
-	});
-	const sheetInputNodeId = $derived(
-		sheetDefinition?.nodes.find((n) => n.type === "group-input")?.id,
-	);
-	const sheetOutputNodeId = $derived(
-		sheetDefinition?.nodes.find((n) => n.type === "group-output")?.id,
-	);
-
-	// Local buffer for handle label inputs - keeps the input responsive while
-	// the actual graph mutation is committed on blur to avoid triggering shader re-gen.
-	const handleLabelBuffer = $state<Record<string, string>>({});
-
-	// Initialise the buffer when the sheet opens or handles change,
-	// so the template never mutates $state during evaluation.
-	$effect(() => {
-		const _inputs = sheetInputHandles;
-		const _outputs = sheetOutputHandles;
-		for (const h of _inputs) {
-			if (!(h.id in handleLabelBuffer)) handleLabelBuffer[h.id] = h.label;
-		}
-		for (const h of _outputs) {
-			if (!(h.id in handleLabelBuffer)) handleLabelBuffer[h.id] = h.label;
-		}
-	});
-
-	function handleLabelValue(handleId: string): string {
-		// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- initialised in $effect above
-		return handleLabelBuffer[handleId]!;
-	}
-
-	// Local buffer for the group label input - keeps the input responsive while
-	// the actual graph mutation is debounced to avoid triggering shader re-gen.
-	let groupLabelBuffer = $state("");
-	const groupLabelInvalid = $derived(
-		!sheetLocked &&
-			groupLabelBuffer.trim() !== "" &&
-			!graph.isLabelAvailable(groupLabelBuffer, sheetGroupNode?.group?.definitionRef),
-	);
-
-	$effect(() => {
-		const _def = sheetDefinition;
-		groupLabelBuffer = _def?.label ?? "";
-	});
-
-	function commitGroupLabel() {
-		if (graph.sheetGroupId && groupLabelBuffer.trim()) {
-			graph.setGroupLabel(graph.sheetGroupId, groupLabelBuffer);
-		}
-	}
-
-	function commitHandleLabel(defRef: string, nodeId: string, handleId: string, value: string) {
-		if (value.trim()) {
-			const accepted = graph.setHandleLabel(defRef, nodeId, handleId, value);
-			if (!accepted) {
-				// Revert buffer to the stored label so the input reflects the actual value
-				const labels = graph.resolveNodeLabels(nodeId);
-				const stored = labels.outputs[handleId] ?? labels.inputs[handleId];
-				if (stored) handleLabelBuffer[handleId] = stored;
-			}
-		}
-	}
-
-	function handleEnterBlur(e: KeyboardEvent) {
-		if (e.key === "Enter") {
-			e.preventDefault();
-			(e.target as HTMLInputElement).blur();
-		}
-	}
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -554,171 +459,4 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <ZoneSheet />
-
-<Sheet.Root bind:open={graph.sheetOpen}>
-	<Sheet.Content
-		class="w-[350px] sm:w-[400px]"
-		onOpenAutoFocus={(e: Event) => e.preventDefault()}
-		escapeKeydownBehavior="ignore"
-	>
-		<Sheet.Header>
-			<Sheet.Title>Group settings</Sheet.Title>
-		</Sheet.Header>
-		{#if sheetGroupNode && sheetDefinition}
-			<div class="flex flex-col gap-4 p-4">
-				<Button
-					variant="outline"
-					onclick={() => {
-						if (graph.sheetGroupId) {
-							graph.deepClone(graph.sheetGroupId);
-						}
-					}}
-				>
-					Clone & Edit
-				</Button>
-
-				<div class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Group Label</span>
-					<Input
-						value={groupLabelBuffer}
-						placeholder="Group name"
-						disabled={sheetLocked}
-						aria-invalid={groupLabelInvalid}
-						oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-							groupLabelBuffer = e.currentTarget.value;
-						}}
-						onblur={commitGroupLabel}
-						onkeydown={handleEnterBlur}
-					/>
-				</div>
-
-				{#if sheetInputHandles.length > 0}
-					<div class="flex flex-col gap-1.5">
-						<span class="text-sm font-medium">Inputs</span>
-						{#each sheetInputHandles as handle (handle.id)}
-							<div class="flex items-center gap-2">
-								<TypePicker
-									types={WGSL_TYPES}
-									value={handle.type}
-									disabled={sheetLocked}
-									class="w-20 shrink-0"
-									title="Value type"
-									onpick={(type: WgslType) => {
-										if (sheetGroupNode.group && sheetInputNodeId) {
-											graph.setHandleType(
-												sheetGroupNode.group.definitionRef,
-												sheetInputNodeId,
-												handle.id,
-												type,
-											);
-										}
-									}}
-								/>
-								<Input
-									value={handleLabelValue(handle.id)}
-									disabled={sheetLocked}
-									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-										handleLabelBuffer[handle.id] = e.currentTarget.value;
-									}}
-									onblur={() => {
-										if (sheetGroupNode.group && sheetInputNodeId) {
-											commitHandleLabel(
-												sheetGroupNode.group.definitionRef,
-												sheetInputNodeId,
-												handle.id,
-												handleLabelBuffer[handle.id] ?? "",
-											);
-										}
-									}}
-									onkeydown={handleEnterBlur}
-								/>
-								{#if !sheetLocked}
-									<Button
-										variant="ghost"
-										size="icon"
-										class="size-8 shrink-0"
-										onclick={() => {
-											if (sheetGroupNode.group && sheetInputNodeId) {
-												graph.removeHandle(
-													sheetGroupNode.group.definitionRef,
-													sheetInputNodeId,
-													handle.id,
-												);
-											}
-										}}
-									>
-										-
-									</Button>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-
-				{#if sheetOutputHandles.length > 0}
-					<div class="flex flex-col gap-1.5">
-						<span class="text-sm font-medium">Outputs</span>
-						{#each sheetOutputHandles as handle (handle.id)}
-							<div class="flex items-center gap-2">
-								<TypePicker
-									types={WGSL_TYPES}
-									value={handle.type}
-									disabled={sheetLocked}
-									class="w-20 shrink-0"
-									title="Value type"
-									onpick={(type: WgslType) => {
-										if (sheetGroupNode.group && sheetOutputNodeId) {
-											graph.setHandleType(
-												sheetGroupNode.group.definitionRef,
-												sheetOutputNodeId,
-												handle.id,
-												type,
-											);
-										}
-									}}
-								/>
-								<Input
-									value={handleLabelValue(handle.id)}
-									disabled={sheetLocked}
-									oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-										handleLabelBuffer[handle.id] = e.currentTarget.value;
-									}}
-									onblur={() => {
-										if (sheetGroupNode.group && sheetOutputNodeId) {
-											commitHandleLabel(
-												sheetGroupNode.group.definitionRef,
-												sheetOutputNodeId,
-												handle.id,
-												handleLabelBuffer[handle.id] ?? "",
-											);
-										}
-									}}
-									onkeydown={handleEnterBlur}
-								/>
-								{#if !sheetLocked}
-									<Button
-										variant="ghost"
-										size="icon"
-										class="size-8 shrink-0"
-										disabled={sheetOutputHandles.length <= 1}
-										onclick={() => {
-											if (sheetGroupNode.group && sheetOutputNodeId) {
-												graph.removeHandle(
-													sheetGroupNode.group.definitionRef,
-													sheetOutputNodeId,
-													handle.id,
-												);
-											}
-										}}
-									>
-										-
-									</Button>
-								{/if}
-							</div>
-						{/each}
-					</div>
-				{/if}
-			</div>
-		{/if}
-	</Sheet.Content>
-</Sheet.Root>
+<GroupSheet />

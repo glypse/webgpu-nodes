@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 import { groupConstants, usedGroupInputs } from "../enums";
 import { nodeRegistry } from "../nodes/registry";
-import { type EnumVariant, type HandleDef, type WgslType } from "../types";
+import { type EnumVariant, type HandleDef, type InputValue, type WgslType } from "../types";
 import { wouldCreateCycle } from "../zones";
 import {
 	type GraphDocument,
@@ -890,21 +890,49 @@ export abstract class GroupModel extends ZoneModel {
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
 
-	/** Add a handle to a group-input / group-output node of the active document. */
+	/** Add a handle to a group-input / group-output node, in any document. */
 	addHandle(nodeId: string, type: WgslType): HandleDef | undefined {
-		const node = this.activeDocument.nodesById.get(nodeId);
-		if (!node || !BOUNDARY_TYPES.has(node.type ?? "")) return undefined;
+		const doc = this.documentOf(nodeId);
+		const node = doc?.nodesById.get(nodeId);
+		if (!doc || !node || !BOUNDARY_TYPES.has(node.type ?? "")) return undefined;
 		const handles = handlesOf(node);
+		const prefix = node.type === "group-input" ? "Input" : "Output";
+		const labels = new Set(handles.map((h) => h.label));
+		let n = handles.length + 1;
+		while (labels.has(`${prefix} ${String(n)}`)) n++;
 		const handle: HandleDef = {
 			id: crypto.randomUUID(),
-			label: `Handle ${String(handles.length + 1)}`,
+			label: `${prefix} ${String(n)}`,
 			type,
 		};
-		this.updateNodeData(nodeId, {
-			handles: [...handles, handle],
-			values: { ...node.data.values, [handle.id]: 0 },
+		const data = { ...node.data, handles: [...handles, handle] };
+		this.setContent(doc, {
+			nodes: doc.nodes.map((other) => (other.id === nodeId ? { ...other, data } : other)),
 		});
+		this.rebuildTypeCache();
 		return handle;
+	}
+
+	/**
+	 * Set the value a group input has on group nodes until they're edited
+	 * (`undefined` goes back to zero, or an enum's first variant).
+	 */
+	setHandleDefault(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		value: InputValue | undefined,
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		if (!def || handleNode?.type !== "group-input") return;
+		const data = {
+			...handleNode.data,
+			values: withEntry(handleNode.data.values, handleId, value),
+		};
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		});
 	}
 
 	/**
@@ -918,9 +946,15 @@ export abstract class GroupModel extends ZoneModel {
 		const handles = handleNode?.data.handles;
 		if (!def || !handleNode || !handles?.some((h) => h.id === handleId)) return;
 
+		// Only a u32 can be an enum.
+		const retyped = (h: HandleDef): HandleDef => {
+			const next = { ...h, type };
+			if (type !== "u32") delete next.variants;
+			return next;
+		};
 		const data = {
 			...handleNode.data,
-			handles: handles.map((h) => (h.id === handleId ? { ...h, type } : h)),
+			handles: handles.map((h) => (h.id === handleId ? retyped(h) : h)),
 		};
 		def.nodes = def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n));
 		indexDocument(def);
