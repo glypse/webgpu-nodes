@@ -27,8 +27,9 @@
 	} = $props();
 
 	// Hue around and chroma outwards at the colour's lightness, as the HSV
-	// wheel: hue 0 at the bottom, going clockwise. Only colours sRGB can show
-	// are drawn, so the disc's shape is the gamut's slice at that lightness.
+	// wheel: hue 0 at the bottom, going clockwise. A line traces the sRGB
+	// gamut's slice at that lightness; outside it, colours show what they're
+	// mapped to.
 	const HUE_OFFSET = Math.PI;
 
 	// Repainted only when the lightness changes, not while picking.
@@ -69,7 +70,7 @@
 	aria-valuenow={lch.h}
 	aria-disabled={disabled}
 	class={cn(
-		"border-border relative aspect-square touch-none rounded-full border border-dashed select-none",
+		"relative aspect-square touch-none rounded-full select-none",
 		disabled && "opacity-50",
 		className,
 	)}

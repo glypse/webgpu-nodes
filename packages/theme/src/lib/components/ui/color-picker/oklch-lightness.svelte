@@ -18,7 +18,7 @@
 	} = $props();
 
 	// Lightness from 1 at the top to 0 at the bottom, at the colour's chroma
-	// and hue; only the lightnesses sRGB can show it at are drawn.
+	// and hue; lines mark where it leaves the sRGB gamut.
 	const c = $derived(lch.c);
 	const h = $derived(lch.h);
 	const paint = $derived.by(() => {
@@ -39,7 +39,7 @@
 	aria-valuenow={lch.l}
 	aria-disabled={disabled}
 	class={cn(
-		"border-border relative w-3 shrink-0 touch-none rounded-sm border border-dashed select-none",
+		"relative w-3 shrink-0 touch-none rounded-sm select-none",
 		disabled && "opacity-50",
 		className,
 	)}
