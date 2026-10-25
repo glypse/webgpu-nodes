@@ -87,6 +87,17 @@ const oklchToOklab = (l: number, c: number, h: number): Lab => {
 	return [l, c * Math.cos(rad), c * Math.sin(rad)];
 };
 
+/** Linear RGB of an OKLch colour as is: outside [0, 1] when out of the sRGB gamut. */
+export function oklchToLinearUnmapped({ l, c, h }: Lch): Rgb {
+	return oklabToLinear(oklchToOklab(l, c, h));
+}
+
+/** Whether a linear RGB colour is within sRGB, up to rounding. */
+export function inSrgbGamut({ r, g, b }: Rgb): boolean {
+	const EPSILON = 1e-5;
+	return [r, g, b].every((n) => n >= -EPSILON && n <= 1 + EPSILON);
+}
+
 /** OKLch of a linear RGB colour. */
 export function linearToOklch(rgb: Rgb): Lch {
 	const [L, A, B] = linearToOklab(rgb);

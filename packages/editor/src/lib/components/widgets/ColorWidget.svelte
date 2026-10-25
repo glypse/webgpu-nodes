@@ -15,7 +15,7 @@
 		readComponent,
 		rgbToHsv,
 	} from "$core";
-	import { ColorValueRamp, ColorWheel } from "$theme";
+	import { ColorValueRamp, ColorWheel, OklchLightness, OklchWheel } from "$theme";
 	import { untrack } from "svelte";
 
 	import { getGraphManager } from "../../graph-manager.svelte";
@@ -109,6 +109,18 @@
 		graph.updateNodeData(id, { values }, { retype: false });
 	}
 
+	/** Write some of the mode's components as they are, leaving linked ones. */
+	function write(patch: Partial<Record<0 | 1 | 2, number>>) {
+		const values = { ...data.values };
+		componentInputs.forEach((c, i) => {
+			const next = patch[i as 0 | 1 | 2];
+			if (next !== undefined && !connected.has(c)) values[c] = next;
+		});
+		graph.updateNodeData(id, { values }, { retype: false });
+	}
+
+	const lch = $derived({ l: components[0], c: components[1], h: components[2] });
+
 	const linked = (indices: number[]) =>
 		indices.every((i) => connected.has(componentInputs[i] ?? ""));
 	// In HSV the wheel is hue and saturation, the ramp value; otherwise both
@@ -118,12 +130,32 @@
 </script>
 
 <div class="nodrag nowheel flex gap-2 py-1">
-	<ColorWheel class="min-w-0 flex-1" {hsv} disabled={wheelDisabled} onchange={set} />
-	<ColorValueRamp
-		{hsv}
-		disabled={rampDisabled}
-		onchange={(v: number) => {
-			set({ v });
-		}}
-	/>
+	{#if mode === "oklch"}
+		<!-- OKLch edited as is: its wheel and gauge only draw colours sRGB can
+		     show, while the node maps the others into sRGB. -->
+		<OklchWheel
+			class="min-w-0 flex-1"
+			{lch}
+			disabled={disabled || linked([1, 2])}
+			onchange={({ c, h }: { c: number; h: number }) => {
+				write({ 1: c, 2: h });
+			}}
+		/>
+		<OklchLightness
+			{lch}
+			disabled={disabled || linked([0])}
+			onchange={(l: number) => {
+				write({ 0: l });
+			}}
+		/>
+	{:else}
+		<ColorWheel class="min-w-0 flex-1" {hsv} disabled={wheelDisabled} onchange={set} />
+		<ColorValueRamp
+			{hsv}
+			disabled={rampDisabled}
+			onchange={(v: number) => {
+				set({ v });
+			}}
+		/>
+	{/if}
 </div>
