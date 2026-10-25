@@ -4,6 +4,7 @@ import type { AddMenuEntry } from "../catalog/add-menu";
 import {
 	type LayoutSpacing,
 	type NodeGeometry,
+	type NodeRows,
 	computeLayout,
 	estimateNodeGeometry,
 } from "../layout";
@@ -520,10 +521,7 @@ export class GraphModel extends GroupModel {
 			zones: this.zoneAnalysis(doc),
 			geometry: (node) =>
 				options.measure?.(definitionRef, node) ??
-				estimateNodeGeometry({
-					inputs: this.resolveNodeInputs(node.id).map((i) => i.id),
-					outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
-				}),
+				estimateNodeGeometry(this.nodeRows(doc, node)),
 			spacing: options.spacing,
 		});
 		return this.applyPositions(doc, positions);
@@ -545,6 +543,21 @@ export class GraphModel extends GroupModel {
 		);
 		const moved = await Promise.all(refs.map((ref) => this.layoutDocument(ref, options)));
 		return moved.some(Boolean);
+	}
+
+	private nodeRows(doc: HydratedGraphDocument, node: GraphNode): NodeRows {
+		const descriptor = this.resolveDescriptor(node);
+		const linked = new Set((doc.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle));
+		return {
+			header: (descriptor.settings?.length ?? 0) + (this.typeChoice(node.id) ? 1 : 0),
+			outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
+			// The colour wheel and its value ramp.
+			widget: descriptor.widget ? 6 : 0,
+			inputs: this.resolveNodeInputs(node.id).map((i) => ({
+				id: i.id,
+				editor: !linked.has(i.id) && !i.fallback && !i.variadic,
+			})),
+		};
 	}
 
 	/** Move nodes still in `doc` (it may have changed during the layout). */

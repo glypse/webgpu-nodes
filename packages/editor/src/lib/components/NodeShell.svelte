@@ -18,6 +18,7 @@
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
 	import WarningIcon from "phosphor-svelte/lib/WarningIcon";
 
+	import { getDocumentView } from "../document-view";
 	import { getGraphManager } from "../graph-manager.svelte";
 	import InputEditor from "./controls/InputEditor.svelte";
 	import TypePicker from "./TypePicker.svelte";
@@ -32,10 +33,11 @@
 	} = $props();
 
 	const graph = getGraphManager();
+	const view = getDocumentView();
 
-	const isLocked = $derived(graph.isLocked);
+	const isLocked = $derived(view.locked);
 
-	const fullNode = $derived(graph.activeDocument.nodes.find((n) => n.id === id));
+	const fullNode = $derived(view.document.nodes.find((n) => n.id === id));
 	const data: NodeData = $derived(fullNode?.data ?? {});
 	const descriptor = $derived(fullNode ? graph.resolveDescriptor(fullNode) : undefined);
 
@@ -98,7 +100,9 @@
 
 	const isZoneNode = $derived(isZoneNodeType(nodeType));
 	/** The zone a boundary node belongs to (its Repeat Input id). */
-	const zoneId = $derived(isZoneNode ? graph.activeZones.zoneOfBoundary.get(id) : undefined);
+	const zoneId = $derived(
+		isZoneNode ? graph.zoneAnalysis(view.document).zoneOfBoundary.get(id) : undefined,
+	);
 
 	function addZoneItem(type: WgslType) {
 		if (zoneId) graph.addZoneItem(zoneId, type);

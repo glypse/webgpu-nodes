@@ -22,8 +22,16 @@ export type NodeGeometry = {
 	outputs: ReadonlyMap<string, number>;
 };
 
-/** A node's handle ids, top to bottom. */
-export type NodeHandles = { inputs: readonly string[]; outputs: readonly string[] };
+/** What a node shows, top to bottom, for estimating its geometry. */
+export type NodeRows = {
+	/** Rows above the handles (settings, type picker…), the title excluded. */
+	header: number;
+	outputs: readonly string[];
+	/** Rows taken by a widget between the outputs and the inputs. */
+	widget: number;
+	/** `editor`: the input shows a control under its label. */
+	inputs: readonly { id: string; editor: boolean }[];
+};
 
 export type LayoutSpacing = {
 	/** Horizontal gap between consecutive columns of nodes. */
@@ -48,20 +56,25 @@ export type LayoutInput = {
 	spacing?: Partial<LayoutSpacing>;
 };
 
-// Only used when the front end can't measure a node (e.g. headless, or a
-// document that was never displayed): a rough guess from its handle count.
-const ESTIMATED_WIDTH = 200;
-const ESTIMATED_HEADER = 36;
-const ESTIMATED_ROW = 28;
+// Only used when the front end can't measure a node (e.g. headless): a rough
+// guess from what it shows, erring on the large side.
+const ESTIMATED_WIDTH = 220;
+const ESTIMATED_TITLE = 40;
+const ESTIMATED_ROW = 30;
 
-export function estimateNodeGeometry(handles: NodeHandles): NodeGeometry {
-	const rowY = (index: number) => ESTIMATED_HEADER + ESTIMATED_ROW * (index + 0.5);
-	const outputs = new Map(handles.outputs.map((id, i) => [id, rowY(i)]));
-	const inputs = new Map(handles.inputs.map((id, i) => [id, rowY(handles.outputs.length + i)]));
-	const rows = handles.outputs.length + handles.inputs.length;
+export function estimateNodeGeometry(rows: NodeRows): NodeGeometry {
+	let row = rows.header;
+	const place = (span: number) => {
+		const y = ESTIMATED_TITLE + ESTIMATED_ROW * (row + 0.5);
+		row += span;
+		return y;
+	};
+	const outputs = new Map(rows.outputs.map((id) => [id, place(1)]));
+	row += rows.widget;
+	const inputs = new Map(rows.inputs.map(({ id, editor }) => [id, place(editor ? 2 : 1)]));
 	return {
 		width: ESTIMATED_WIDTH,
-		height: ESTIMATED_HEADER + ESTIMATED_ROW * Math.max(rows, 1),
+		height: ESTIMATED_TITLE + ESTIMATED_ROW * Math.max(row, 1),
 		inputs,
 		outputs,
 	};

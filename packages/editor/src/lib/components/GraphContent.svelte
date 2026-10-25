@@ -2,14 +2,12 @@
 	import {
 		addMenuEntries,
 		type AddMenuEntry,
-		DYNAMIC_NODE_TYPES,
 		generateShader,
 		handlesOf,
 		type HydratedGraphDocument,
 		type HydratedGraphProject,
 		isZoneNodeType,
 		type NodeGeometry,
-		nodeRegistry,
 		type PendingConnection,
 		type ShaderSource,
 		reachableShaderHash,
@@ -26,7 +24,6 @@
 		Background,
 		type Edge,
 		type EdgeTypes,
-		type InternalNode,
 		type Node,
 		type Connection,
 		type OnConnectEnd,
@@ -35,20 +32,17 @@
 	import { tick, untrack } from "svelte";
 
 	import { getDevTools } from "../dev-tools.svelte";
+	import { setDocumentView } from "../document-view";
+	import { measureInternalNode } from "../geometry/measure";
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { openContextMenuAt } from "../utils";
 	import AddNodeMenu from "./AddNodeMenu.svelte";
+	import DocumentMeasurer from "./DocumentMeasurer.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
-	import NodeShell from "./NodeShell.svelte";
+	import { nodeTypes } from "./node-types";
 	import TypePicker from "./TypePicker.svelte";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
 	import ZoneSheet from "./ZoneSheet.svelte";
-
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any -- SvelteFlow node types accept any component
-	const nodeTypes: Record<string, any> = {};
-	for (const type of [...Object.keys(nodeRegistry), ...DYNAMIC_NODE_TYPES]) {
-		nodeTypes[type] = NodeShell;
-	}
 
 	const edgeTypes: EdgeTypes = {
 		gradient: GradientEdge,
@@ -74,25 +68,40 @@
 		useSvelteFlow();
 	const graph = getGraphManager();
 
-	type HandleBounds = NonNullable<InternalNode["internals"]["handleBounds"]>;
+	setDocumentView({
+		get document() {
+			return graph.activeDocument;
+		},
+		get locked() {
+			return graph.isLocked;
+		},
+	});
 
-	/** A node's size and handle offsets as SvelteFlow measured them. */
-	function measureNode(nodeId: string): NodeGeometry | undefined {
-		const internal = getInternalNode(nodeId);
-		const width = internal?.measured.width;
-		const height = internal?.measured.height;
-		if (!internal || width === undefined || height === undefined) return undefined;
-		const offsets = (handles: HandleBounds["source"] | undefined) =>
-			new Map(
-				(handles ?? []).flatMap((h) => (h.id ? [[h.id, h.y + h.height / 2] as const] : [])),
-			);
-		const bounds = internal.internals.handleBounds;
-		return { width, height, inputs: offsets(bounds?.target), outputs: offsets(bounds?.source) };
+	/** Documents drawn out of sight to be measured, with who's waiting for it. */
+	let measuring = $state.raw<
+		{
+			key: number;
+			document: HydratedGraphDocument;
+			resolve: (geometry: Map<string, NodeGeometry>) => void;
+		}[]
+	>([]);
+	let measuringKey = 0;
+
+	function measureDocument(definitionRef: string): Promise<Map<string, NodeGeometry>> {
+		const document = graph.project.definitions.get(definitionRef);
+		if (!document) return Promise.resolve(new Map<string, NodeGeometry>());
+		const key = measuringKey++;
+		return new Promise<Map<string, NodeGeometry>>((resolve) => {
+			measuring = [...measuring, { key, document, resolve }];
+		}).finally(() => {
+			measuring = measuring.filter((m) => m.key !== key);
+		});
 	}
 
 	$effect(() => {
 		graph.canvas = {
-			measure: (node) => measureNode(node.id),
+			measure: (node) => measureInternalNode(getInternalNode(node.id)),
+			measureDocument,
 			fitView: async () => {
 				await tick();
 				await fitView({ duration: 300 });
@@ -537,6 +546,10 @@
 		</SvelteFlow>
 	</AddNodeMenu>
 </div>
+
+{#each measuring as { key, document, resolve } (key)}
+	<DocumentMeasurer {document} onmeasured={resolve} />
+{/each}
 
 <svelte:window onkeydown={handleKeydown} />
 

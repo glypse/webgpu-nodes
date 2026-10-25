@@ -79,17 +79,20 @@ export class GraphManager extends GraphModel {
 
 	/**
 	 * The canvas showing the document in view, while one is mounted: it
-	 * measures that document's nodes as drawn, for layouts to use.
+	 * measures nodes as drawn, for layouts to use.
 	 */
 	canvas: GraphCanvas | null = null;
 
-	override layoutDocument(
+	override async layoutDocument(
 		definitionRef: string = this.activeDefinitionRef,
 		options: LayoutOptions = {},
 	): Promise<boolean> {
+		const canvas = this.canvas;
+		if (!canvas) return super.layoutDocument(definitionRef, options);
+		const inView = definitionRef === this.activeDefinitionRef;
+		const measured = inView ? undefined : await canvas.measureDocument(definitionRef);
 		return super.layoutDocument(definitionRef, {
-			measure: (ref, node) =>
-				ref === this.activeDefinitionRef ? this.canvas?.measure(node) : undefined,
+			measure: (_ref, node) => (measured ? measured.get(node.id) : canvas.measure(node)),
 			...options,
 		});
 	}
@@ -121,7 +124,10 @@ export class GraphManager extends GraphModel {
 }
 
 export type GraphCanvas = {
+	/** A node of the document in view. */
 	measure(node: GraphNode): NodeGeometry | undefined;
+	/** Every node of a document, drawn out of sight for the purpose. */
+	measureDocument(definitionRef: string): Promise<Map<string, NodeGeometry>>;
 	/** Frame every node of the document in view. */
 	fitView(): Promise<void>;
 };
