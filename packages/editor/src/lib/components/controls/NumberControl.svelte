@@ -4,7 +4,17 @@
 
 	import type { ControlProps } from "./types";
 
-	let { type, value, disabled, onchange }: ControlProps<{ kind: "number" }> = $props();
+	let {
+		control,
+		type,
+		value,
+		disabled,
+		onchange,
+	}: ControlProps<{
+		kind: "number";
+		min?: number;
+		max?: number;
+	}> = $props();
 
 	const kind = $derived(typeKind(type));
 </script>
@@ -15,7 +25,8 @@
 			class={"node-shell__input" + (i > 0 ? "border-border border-t" : "")}
 			readonly={disabled}
 			integer={kind !== "f32"}
-			min={kind === "u32" ? 0 : undefined}
+			min={kind === "u32" ? Math.max(0, control.min ?? 0) : control.min}
+			max={control.max}
 			value={readComponent(value, comp)}
 			oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
 				const next = parseFloat(e.currentTarget.value) || 0;

@@ -21,6 +21,12 @@ export type HandleDef = {
 	 */
 	owner?: InputOwner;
 	/**
+	 * On a numeric group input: the range its value is kept within while
+	 * edited on group nodes. Linked values pass as they are.
+	 */
+	min?: number;
+	max?: number;
+	/**
 	 * On a vec3f / vec4f group input: edited on group nodes as a colour
 	 * (linear RGB, alpha), by a swatch opening a picker or a wheel drawn on
 	 * the node, rather than a number per component.

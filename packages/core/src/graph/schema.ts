@@ -18,6 +18,8 @@ const HandleSchema = v.object({
 	type: v.picklist(WGSL_TYPES),
 	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
 	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
+	min: v.optional(v.number()),
+	max: v.optional(v.number()),
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),
 });
 

@@ -73,7 +73,9 @@
 							"owner": {
 								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
 								"value": 1
-							}
+							},
+							"min": 0,
+							"max": 1
 						},
 						{
 							"id": "e549edf1-560a-4aed-939f-ec279a010e4d",
@@ -82,7 +84,9 @@
 							"owner": {
 								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
 								"value": 1
-							}
+							},
+							"min": 0,
+							"max": 1
 						},
 						{
 							"id": "0e2c98ec-2535-408a-a90d-c3d4dbb6bf48",
@@ -91,7 +95,9 @@
 							"owner": {
 								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
 								"value": 1
-							}
+							},
+							"min": 0,
+							"max": 1
 						},
 						{
 							"id": "164d7dbd-4ec7-420f-b782-ffb99248907d",
@@ -100,7 +106,9 @@
 							"owner": {
 								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
 								"value": 2
-							}
+							},
+							"min": 0,
+							"max": 1
 						},
 						{
 							"id": "813a05fd-509d-4640-93f4-7f6fd18a8e1a",
@@ -109,7 +117,9 @@
 							"owner": {
 								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
 								"value": 2
-							}
+							},
+							"min": 0,
+							"max": 1
 						},
 						{
 							"id": "affe4d63-5b86-45d9-b4e4-bfef01c4daae",
@@ -118,12 +128,16 @@
 							"owner": {
 								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
 								"value": 2
-							}
+							},
+							"min": 0,
+							"max": 360
 						},
 						{
 							"id": "17aa4483-4f30-4e87-952c-168f15afaf44",
 							"label": "Alpha",
-							"type": "f32"
+							"type": "f32",
+							"min": 0,
+							"max": 1
 						}
 					],
 					"values": {

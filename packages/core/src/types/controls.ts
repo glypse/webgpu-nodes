@@ -7,8 +7,8 @@ import { type WgslType, typeKind } from "./values";
  * in a front end; a kind only needs to be added here and given an editor.
  */
 export type InputControl =
-	/** A number per component. */
-	| { kind: "number" }
+	/** A number per component, kept within `min` and `max` while edited (not when linked). */
+	| { kind: "number"; min?: number; max?: number }
 	/** An on/off switch per component. */
 	| { kind: "toggle" }
 	/** A colour swatch opening a picker; vec3f / vec4f only (linear RGB, alpha). */
@@ -53,6 +53,7 @@ export function inputControl(input: NodeInputDef, type: WgslType): InputControl 
 	if (colorKind && type !== "vec3f" && type !== "vec4f") {
 		return { kind: "number" };
 	}
-	if (input.control) return input.control;
-	return typeKind(type) === "bool" ? { kind: "toggle" } : { kind: "number" };
+	const bool = typeKind(type) === "bool";
+	if (input.control && !(bool && input.control.kind === "number")) return input.control;
+	return bool ? { kind: "toggle" } : { kind: "number" };
 }

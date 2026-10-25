@@ -51,7 +51,13 @@ export function groupInputDef(handle: HandleDef): NodeInputDef {
 			? { kind: "color" }
 			: handle.display === "wheel"
 				? { kind: "wheel" }
-				: undefined;
+				: handle.min !== undefined || handle.max !== undefined
+					? {
+							kind: "number",
+							...(handle.min === undefined ? {} : { min: handle.min }),
+							...(handle.max === undefined ? {} : { max: handle.max }),
+						}
+					: undefined;
 	return {
 		id: handle.id,
 		label: handle.label,

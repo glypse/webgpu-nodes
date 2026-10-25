@@ -16,6 +16,8 @@
 			integer?: boolean;
 			/** Lowest accepted value. */
 			min?: number;
+			/** Highest accepted value. */
+			max?: number;
 		}
 	>;
 
@@ -28,6 +30,7 @@
 		readonly = false,
 		integer = false,
 		min,
+		max,
 		...restProps
 	}: Props = $props();
 
@@ -53,10 +56,11 @@
 		return integer ? String(Math.round(n)) : n.toFixed(3);
 	}
 
-	/** Apply the integer / min constraints to a candidate value. */
+	/** Apply the integer / range constraints to a candidate value. */
 	function constrain(n: number): number {
 		const stepped = integer ? Math.round(n) : n;
-		return min === undefined ? stepped : Math.max(min, stepped);
+		const above = min === undefined ? stepped : Math.max(min, stepped);
+		return max === undefined ? above : Math.min(max, above);
 	}
 
 	function setValue(n: number): void {

@@ -943,6 +943,40 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
+	 * Keep a group input's value within `min` and `max` while edited on group
+	 * nodes (`undefined` for no bound).
+	 */
+	setHandleRange(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		{ min, max }: { min?: number | undefined; max?: number | undefined },
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		const handles = handleNode?.data.handles;
+		if (!def || handleNode?.type !== "group-input" || !handles) return;
+		const data = {
+			...handleNode.data,
+			handles: handles.map((h) => {
+				if (h.id !== handleId) return h;
+				const rest = { ...h };
+				delete rest.min;
+				delete rest.max;
+				return {
+					...rest,
+					...(min === undefined ? {} : { min }),
+					...(max === undefined ? {} : { max }),
+				};
+			}),
+		};
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		});
+		this.rebuildTypeCache();
+	}
+
+	/**
 	 * Set the value a group input has on group nodes until they're edited
 	 * (`undefined` goes back to zero, or an enum's first variant).
 	 */

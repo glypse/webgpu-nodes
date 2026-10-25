@@ -51,6 +51,26 @@ describe("Color group", () => {
 		expect(shown()).toEqual(["Mode", "Red", "Green", "Blue", "Alpha"]);
 	});
 
+	it("keeps its components in range while edited", () => {
+		const graph = managerFor([color()], []);
+		const node = graph.root.nodesById.get("c");
+		if (!node) throw new Error("unreachable");
+		const ranges = Object.fromEntries(
+			graph
+				.resolveDescriptor(node)
+				.inputs.map((i) => [
+					i.id,
+					i.control?.kind === "number" ? [i.control.min, i.control.max] : undefined,
+				]),
+		);
+		expect(inputsOf("oklch").map((id) => ranges[id])).toEqual([
+			[0, 1],
+			[0, 1],
+			[0, 360],
+		]);
+		expect(inputsOf("rgb").map((id) => ranges[id])).toEqual([undefined, undefined, undefined]);
+	});
+
 	it("draws the colour wheel, but not once cloned", () => {
 		const graph = managerFor([color()], []);
 		const widget = () => {

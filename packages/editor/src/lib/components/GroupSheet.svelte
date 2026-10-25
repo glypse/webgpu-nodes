@@ -12,6 +12,7 @@
 		type InputValue,
 		nextVariantValue,
 		ownerExists,
+		typeKind,
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
@@ -227,6 +228,35 @@
 				}}
 			/>
 		</div>
+
+		{#if !handle.variants && !handle.display && typeKind(handle.type) !== "bool"}
+			<div class="flex flex-col gap-1">
+				<span class="text-muted-foreground text-xs">Range while edited</span>
+				<div class="flex items-center gap-2">
+					{#each ["min", "max"] as const as bound (bound)}
+						<Input
+							type="number"
+							value={handle[bound] ?? ""}
+							placeholder={bound === "min" ? "No minimum" : "No maximum"}
+							disabled={locked}
+							title={bound === "min" ? "Minimum" : "Maximum"}
+							onchange={(e: Event) => {
+								const raw = inputValue(e).trim();
+								const parsed = raw === "" ? undefined : Number(raw);
+								if (!definitionRef || !inputNode) return;
+								if (parsed !== undefined && !Number.isFinite(parsed)) return;
+								graph.setHandleRange(definitionRef, inputNode.id, handle.id, {
+									min: handle.min,
+									max: handle.max,
+									[bound]: parsed,
+								});
+							}}
+							onkeydown={handleEnterBlur}
+						/>
+					{/each}
+				</div>
+			</div>
+		{/if}
 
 		{#if handle.type === "vec3f" || handle.type === "vec4f"}
 			<div class="flex flex-col gap-1">
