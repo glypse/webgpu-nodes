@@ -19,18 +19,20 @@ import { type GraphEdge, type GraphNode, type HydratedGraphDocument, type Viewpo
  *
  * **Indexed Maps** (`nodesById`, `edgesBySource`, `edgesByTarget`) are plain
  * Maps rebuilt by the model (`indexDocument`) after every array reassignment,
- * giving O(1) lookups for node/edge queries.
+ * giving O(1) lookups for node/edge queries. They're `$state.raw` too, so a
+ * query reading a node's data or links through them (rather than through
+ * the arrays) still reruns when it changes.
  */
 export class ReactiveGraphDocument implements HydratedGraphDocument {
 	nodes = $state.raw<GraphNode[]>([]);
 	edges = $state.raw<GraphEdge[]>([]);
 
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain Map, rebuilt on mutation
-	nodesById = new Map<string, GraphNode>();
+	nodesById = $state.raw(new Map<string, GraphNode>());
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain Map, rebuilt on mutation
-	edgesBySource = new Map<string, GraphEdge[]>();
+	edgesBySource = $state.raw(new Map<string, GraphEdge[]>());
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- plain Map, rebuilt on mutation
-	edgesByTarget = new Map<string, GraphEdge[]>();
+	edgesByTarget = $state.raw(new Map<string, GraphEdge[]>());
 
 	label = $state<string | undefined>(undefined);
 	locked = $state<boolean>(false);
