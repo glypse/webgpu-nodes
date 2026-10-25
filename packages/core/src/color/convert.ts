@@ -56,31 +56,84 @@ export function hsvToRgb({ h, s, v }: Hsv): Rgb {
 	return { r: channel(5), g: channel(3), b: channel(1) };
 }
 
-/** OKLch of a linear RGB colour (Björn Ottosson's OKLab). */
-export function linearToOklch({ r, g, b }: Rgb): Lch {
+type Lab = [number, number, number];
+
+/** Björn Ottosson's OKLab of a linear RGB colour. */
+function linearToOklab({ r, g, b }: Rgb): Lab {
 	const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
 	const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
 	const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-	const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
-	const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
-	const B = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
-	const hue = (Math.atan2(B, A) * 180) / Math.PI;
-	return { l: L, c: Math.hypot(A, B), h: (hue + 360) % 360 };
+	return [
+		0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
+		1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
+		0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
+	];
 }
 
-/** Linear RGB of an OKLch colour; components outside the sRGB gamut are clipped at 0. */
-export function oklchToLinear({ l: L, c, h }: Lch): Rgb {
-	const rad = (h * Math.PI) / 180;
-	const A = c * Math.cos(rad);
-	const B = c * Math.sin(rad);
+/** Linear RGB of an OKLab colour, outside [0, 1] when out of the sRGB gamut. */
+function oklabToLinear([L, A, B]: Lab): Rgb {
 	const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
 	const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
 	const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
 	return {
-		r: Math.max(0, 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-		g: Math.max(0, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-		b: Math.max(0, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s),
+		r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
+		g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
+		b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
 	};
+}
+
+const oklchToOklab = (l: number, c: number, h: number): Lab => {
+	const rad = (h * Math.PI) / 180;
+	return [l, c * Math.cos(rad), c * Math.sin(rad)];
+};
+
+/** OKLch of a linear RGB colour. */
+export function linearToOklch(rgb: Rgb): Lch {
+	const [L, A, B] = linearToOklab(rgb);
+	const hue = (Math.atan2(B, A) * 180) / Math.PI;
+	return { l: L, c: Math.hypot(A, B), h: (hue + 360) % 360 };
+}
+
+/**
+ * Linear RGB of an OKLch colour, mapped into the sRGB gamut as CSS Color 4
+ * does (and the standard library's OKLch Gamut Map group): lightness and hue
+ * kept, chroma lowered until the colour fits or its clip is less than a just
+ * noticeable difference away. Clipping each channel instead shifts hue and
+ * lightness.
+ */
+export function oklchToLinear({ l, c, h }: Lch): Rgb {
+	const JND = 0.02;
+	if (l >= 1) return { r: 1, g: 1, b: 1 };
+	if (l <= 0) return { r: 0, g: 0, b: 0 };
+	const clip = ({ r, g, b }: Rgb): Rgb => ({ r: clamp01(r), g: clamp01(g), b: clamp01(b) });
+	const offBy = (lab: Lab, clipped: Rgb) => {
+		const [L, A, B] = linearToOklab(clipped);
+		return Math.hypot(L - lab[0], A - lab[1], B - lab[2]);
+	};
+	const inGamut = (rgb: Rgb) => {
+		const clipped = clip(rgb);
+		return Math.hypot(rgb.r - clipped.r, rgb.g - clipped.g, rgb.b - clipped.b) <= 1e-5;
+	};
+	const origin = oklchToOklab(l, c, h);
+	const originClip = clip(oklabToLinear(origin));
+	if (offBy(origin, originClip) < JND) return originClip;
+	let low = 0;
+	let high = c;
+	let lowInGamut = true;
+	for (let i = 0; i < 16; i++) {
+		const mid = (low + high) / 2;
+		const lab = oklchToOklab(l, mid, h);
+		const rgb = oklabToLinear(lab);
+		const fits = inGamut(rgb);
+		const near = offBy(lab, clip(rgb)) < JND;
+		if ((lowInGamut && fits) || near) {
+			lowInGamut &&= fits || !near;
+			low = mid;
+		} else {
+			high = mid;
+		}
+	}
+	return clip(oklabToLinear(oklchToOklab(l, low, h)));
 }
 
 const hexByte = (n: number) =>

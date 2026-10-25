@@ -121,7 +121,7 @@ describe("Color group", () => {
 			if (nagaBin) expect(validateFragment(shader)).toBeNull();
 			return shader;
 		};
-		const oklch = libraryEntry("std-oklch-to-linear-rgb").ref.replace(/[^A-Za-z0-9_]/g, "_");
+		const oklch = libraryEntry("std-oklch-gamut-map").ref.replace(/[^A-Za-z0-9_]/g, "_");
 		expect(shaderOf("rgb")).not.toContain("pow(");
 		expect(shaderOf("hsv")).not.toContain(oklch);
 		expect(shaderOf("oklch")).toContain(oklch);

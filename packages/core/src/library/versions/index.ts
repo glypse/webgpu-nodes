@@ -2,6 +2,8 @@
 
 /** Every archived standard-library version, by ref, loaded on demand. */
 export const archivedVersions: Record<string, () => Promise<unknown>> = {
+	"std-oklch-gamut-map@1c8056b29c0545": () =>
+		import("./std-oklch-gamut-map/1c8056b29c0545.json").then((m) => m.default),
 	"std-linear-rgb-to-oklch@10f2ea11f3a738": () =>
 		import("./std-linear-rgb-to-oklch/10f2ea11f3a738.json").then((m) => m.default),
 	"std-xyz-to-oklab@1940863ded6084": () =>
@@ -12,10 +14,12 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklch-to-oklab/115633a275b19b.json").then((m) => m.default),
 	"std-oklab-to-xyz@117f037c7c62ff": () =>
 		import("./std-oklab-to-xyz/117f037c7c62ff.json").then((m) => m.default),
+	"std-in-srgb-gamut@020ef109fa3e11": () =>
+		import("./std-in-srgb-gamut/020ef109fa3e11.json").then((m) => m.default),
 	"std-aspect-uv@0f422283523c7e": () =>
 		import("./std-aspect-uv/0f422283523c7e.json").then((m) => m.default),
-	"std-color@121ad4b675c636": () =>
-		import("./std-color/121ad4b675c636.json").then((m) => m.default),
+	"std-color@0f96c3f61ebd09": () =>
+		import("./std-color/0f96c3f61ebd09.json").then((m) => m.default),
 	"std-oklab-to-oklch@02cc69e98e06f4": () =>
 		import("./std-oklab-to-oklch/02cc69e98e06f4.json").then((m) => m.default),
 	"std-linear-rgb-to-xyz@043783529be992": () =>
