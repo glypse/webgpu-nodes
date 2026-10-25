@@ -3,6 +3,12 @@ import * as v from "valibot";
 import type { StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
+import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
+import oklabToOklch from "./std-oklab-to-oklch.json";
+import oklabToXyz from "./std-oklab-to-xyz.json";
+import oklchToOklab from "./std-oklch-to-oklab.json";
+import xyzToLinearRgb from "./std-xyz-to-linear-rgb.json";
+import xyzToOklab from "./std-xyz-to-oklab.json";
 import { libraryRef, libraryVersion } from "./version";
 import { archivedVersions } from "./versions";
 
@@ -26,7 +32,15 @@ export const LibraryFileSchema = v.object({
 	definition: GraphDocumentSchema,
 });
 
-const files: unknown[] = [aspectUv];
+const files: unknown[] = [
+	aspectUv,
+	linearRgbToXyz,
+	xyzToLinearRgb,
+	xyzToOklab,
+	oklabToXyz,
+	oklabToOklch,
+	oklchToOklab,
+];
 
 function toEntry(json: unknown): StandardLibraryEntry {
 	const file = v.parse(LibraryFileSchema, json);
