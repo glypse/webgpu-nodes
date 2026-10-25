@@ -14,8 +14,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-xyz/117f037c7c62ff.json").then((m) => m.default),
 	"std-aspect-uv@0f422283523c7e": () =>
 		import("./std-aspect-uv/0f422283523c7e.json").then((m) => m.default),
-	"std-color@0fecebd9559462": () =>
-		import("./std-color/0fecebd9559462.json").then((m) => m.default),
+	"std-color@121ad4b675c636": () =>
+		import("./std-color/121ad4b675c636.json").then((m) => m.default),
 	"std-oklab-to-oklch@02cc69e98e06f4": () =>
 		import("./std-oklab-to-oklch/02cc69e98e06f4.json").then((m) => m.default),
 	"std-linear-rgb-to-xyz@043783529be992": () =>
