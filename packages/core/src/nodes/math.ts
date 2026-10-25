@@ -140,30 +140,3 @@ export const mixNode: NodeDescriptor = {
 	),
 	aliases: ["Lerp", "Linear Interpolate", "Interpolate", "Blend", "Mix Color", "Cross Fade"],
 };
-
-export const remapNode: NodeDescriptor = {
-	type: "remap",
-	label: "Remap",
-	aliases: ["Map Range", "Fit", "Range", "Rescale", "Remap Value Range", "Linear"],
-	category: "math",
-	inputs: [
-		{ id: "e", label: "e", types: FLOAT_TYPES },
-		{ id: "in_min", label: "in_min", types: FLOAT_TYPES },
-		{ id: "in_max", label: "in_max", types: FLOAT_TYPES },
-		{ id: "out_min", label: "out_min", types: FLOAT_TYPES },
-		{ id: "out_max", label: "out_max", types: FLOAT_TYPES },
-	],
-	outputs: [{ id: "result", label: "result", type: "f32" }],
-	defaultData: { values: { e: 0, in_min: 0, in_max: 1, out_min: 0, out_max: 1 } },
-	wgsl: (ctx) => {
-		const e = ctx.promoteInput("e");
-		const inMin = ctx.promoteInput("in_min");
-		const inMax = ctx.promoteInput("in_max");
-		const outMin = ctx.promoteInput("out_min");
-		const outMax = ctx.promoteInput("out_max");
-		const safeDiv = ctx.helper("safeDiv", ctx.outputType);
-		return [
-			`let ${ctx.varName} = ${outMin} + (${e} - ${inMin}) * ${safeDiv}((${outMax} - ${outMin}), (${inMax} - ${inMin}));`,
-		];
-	},
-};

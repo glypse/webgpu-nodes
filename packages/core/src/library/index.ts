@@ -15,6 +15,7 @@ import oklabToXyz from "./std-oklab-to-xyz.json";
 import oklchGamutMap from "./std-oklch-gamut-map.json";
 import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
+import remap from "./std-remap.json";
 import xyzToLinearRgb from "./std-xyz-to-linear-rgb.json";
 import xyzToOklab from "./std-xyz-to-oklab.json";
 import { libraryRef, libraryVersion } from "./version";
@@ -55,6 +56,7 @@ export const LibraryFileSchema = v.object({
 
 const files: unknown[] = [
 	aspectUv,
+	remap,
 	color,
 	linearRgbToXyz,
 	xyzToLinearRgb,

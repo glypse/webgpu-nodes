@@ -26,6 +26,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-linear-rgb-to-xyz/043783529be992.json").then((m) => m.default),
 	"std-xyz-to-linear-rgb@0b93091a67ba29": () =>
 		import("./std-xyz-to-linear-rgb/0b93091a67ba29.json").then((m) => m.default),
+	"std-remap@137bbf5d74be24": () =>
+		import("./std-remap/137bbf5d74be24.json").then((m) => m.default),
 	"std-oklch-to-linear-rgb@15169209b2bb3d": () =>
 		import("./std-oklch-to-linear-rgb/15169209b2bb3d.json").then((m) => m.default),
 	"std-oklab-to-linear-rgb@15fc7634215b1f": () =>

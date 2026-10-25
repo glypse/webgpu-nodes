@@ -1,0 +1,239 @@
+{
+	"id": "std-remap",
+	"name": "Remap",
+	"aliases": ["Map Range", "Fit", "Range", "Rescale", "Remap Value Range", "Linear"],
+	"category": "math",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "1ad48e74-7a30-4fc2-ab2d-97442de12892",
+							"label": "Value",
+							"type": "f32"
+						},
+						{
+							"id": "5431255f-843b-4a67-8be7-799b2070d3c7",
+							"label": "From Min",
+							"type": "f32"
+						},
+						{
+							"id": "5728d072-e18e-4527-a2ca-a48683ccc23c",
+							"label": "From Max",
+							"type": "f32"
+						},
+						{
+							"id": "085ccdb7-85a5-41e4-a06f-646d9304a4aa",
+							"label": "To Min",
+							"type": "f32"
+						},
+						{
+							"id": "da186b31-8463-4a48-9cc8-67b5c7db2c93",
+							"label": "To Max",
+							"type": "f32"
+						}
+					],
+					"values": {
+						"1ad48e74-7a30-4fc2-ab2d-97442de12892": 0,
+						"5431255f-843b-4a67-8be7-799b2070d3c7": 0,
+						"5728d072-e18e-4527-a2ca-a48683ccc23c": 1,
+						"085ccdb7-85a5-41e4-a06f-646d9304a4aa": 0,
+						"da186b31-8463-4a48-9cc8-67b5c7db2c93": 1
+					}
+				},
+				"position": {
+					"x": 0,
+					"y": 259
+				}
+			},
+			{
+				"id": "73da3cda-4f04-4f10-a7e2-4afb86108e1b",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "77114f8b-0cb9-4878-ae4a-82dc1ecc3de9",
+							"label": "Result",
+							"type": "f32"
+						}
+					]
+				},
+				"position": {
+					"x": 1336,
+					"y": 311
+				}
+			},
+			{
+				"id": "d219e928-c0e5-46e4-8496-1be92fef2e95",
+				"type": "sub",
+				"data": {
+					"values": {
+						"a": 0,
+						"b": 0
+					}
+				},
+				"position": {
+					"x": 270,
+					"y": 0
+				}
+			},
+			{
+				"id": "b1a22fc4-a4bb-4b03-b9c1-fb3f281972fd",
+				"type": "sub",
+				"data": {
+					"values": {
+						"a": 0,
+						"b": 0
+					}
+				},
+				"position": {
+					"x": 270,
+					"y": 217
+				}
+			},
+			{
+				"id": "8d5eba81-dd4b-4025-a1e1-b047b0bfd9af",
+				"type": "sub",
+				"data": {
+					"values": {
+						"a": 0,
+						"b": 0
+					}
+				},
+				"position": {
+					"x": 270,
+					"y": 423
+				}
+			},
+			{
+				"id": "2c4db4c8-2e74-406f-a977-70194b0395e3",
+				"type": "div",
+				"data": {
+					"values": {
+						"a": 0,
+						"b": 0
+					}
+				},
+				"position": {
+					"x": 541,
+					"y": 161
+				}
+			},
+			{
+				"id": "5c11f684-65e3-4b22-b30b-0f39e0db4759",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 807,
+					"y": 133
+				}
+			},
+			{
+				"id": "b6107536-86be-4eba-99be-67fd37904b76",
+				"type": "add",
+				"data": {},
+				"position": {
+					"x": 1076,
+					"y": 279
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "e220cf0b-e685-4c2a-a117-9e6c3ce29ede",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "1ad48e74-7a30-4fc2-ab2d-97442de12892",
+				"target": "d219e928-c0e5-46e4-8496-1be92fef2e95",
+				"targetHandle": "a"
+			},
+			{
+				"id": "7d7f756b-d458-4936-88ad-cb77301f9ce0",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "5431255f-843b-4a67-8be7-799b2070d3c7",
+				"target": "d219e928-c0e5-46e4-8496-1be92fef2e95",
+				"targetHandle": "b"
+			},
+			{
+				"id": "86781e7b-2b0a-4069-82e8-fa3f80c9c7b2",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "5728d072-e18e-4527-a2ca-a48683ccc23c",
+				"target": "b1a22fc4-a4bb-4b03-b9c1-fb3f281972fd",
+				"targetHandle": "a"
+			},
+			{
+				"id": "d6c6e4c1-3df6-499c-a647-49d4fcdc5708",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "5431255f-843b-4a67-8be7-799b2070d3c7",
+				"target": "b1a22fc4-a4bb-4b03-b9c1-fb3f281972fd",
+				"targetHandle": "b"
+			},
+			{
+				"id": "8d93d2ac-7b49-4e63-8e02-3001bab2ae84",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "da186b31-8463-4a48-9cc8-67b5c7db2c93",
+				"target": "8d5eba81-dd4b-4025-a1e1-b047b0bfd9af",
+				"targetHandle": "a"
+			},
+			{
+				"id": "d1a9891a-d0fc-4cb4-b62c-91179a010722",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "085ccdb7-85a5-41e4-a06f-646d9304a4aa",
+				"target": "8d5eba81-dd4b-4025-a1e1-b047b0bfd9af",
+				"targetHandle": "b"
+			},
+			{
+				"id": "01caa1ca-c86e-427a-847f-08ccadbab86a",
+				"source": "8d5eba81-dd4b-4025-a1e1-b047b0bfd9af",
+				"sourceHandle": "result",
+				"target": "2c4db4c8-2e74-406f-a977-70194b0395e3",
+				"targetHandle": "a"
+			},
+			{
+				"id": "751610a1-d717-4fa3-90b7-7b3966659ec2",
+				"source": "b1a22fc4-a4bb-4b03-b9c1-fb3f281972fd",
+				"sourceHandle": "result",
+				"target": "2c4db4c8-2e74-406f-a977-70194b0395e3",
+				"targetHandle": "b"
+			},
+			{
+				"id": "b8841811-86c3-4bf0-9ca5-19456cf11bbc",
+				"source": "d219e928-c0e5-46e4-8496-1be92fef2e95",
+				"sourceHandle": "result",
+				"target": "5c11f684-65e3-4b22-b30b-0f39e0db4759",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "6951e080-b41f-4675-b5c9-97cce2bb4225",
+				"source": "2c4db4c8-2e74-406f-a977-70194b0395e3",
+				"sourceHandle": "result",
+				"target": "5c11f684-65e3-4b22-b30b-0f39e0db4759",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "9efe998f-7c50-4766-a3ae-9e46e43b3965",
+				"source": "42c1ff0f-39e7-40a8-8696-4f58b8996423",
+				"sourceHandle": "085ccdb7-85a5-41e4-a06f-646d9304a4aa",
+				"target": "b6107536-86be-4eba-99be-67fd37904b76",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "1e288621-a0ff-402e-87ae-0075d3478db1",
+				"source": "5c11f684-65e3-4b22-b30b-0f39e0db4759",
+				"sourceHandle": "result",
+				"target": "b6107536-86be-4eba-99be-67fd37904b76",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "a8154a76-340c-4aad-96e2-3bc5b8a262a8",
+				"source": "b6107536-86be-4eba-99be-67fd37904b76",
+				"sourceHandle": "result",
+				"target": "73da3cda-4f04-4f10-a7e2-4afb86108e1b",
+				"targetHandle": "77114f8b-0cb9-4878-ae4a-82dc1ecc3de9"
+			}
+		]
+	}
+}
