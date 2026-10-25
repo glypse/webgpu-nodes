@@ -1,3 +1,4 @@
+import type { ColorMode } from "../color/modes";
 import type { InputControl } from "./controls";
 import type { NodeData } from "./node-data";
 import { type WgslType } from "./values";
@@ -111,9 +112,16 @@ export function settingValue(data: NodeData, setting: NodeSetting): string {
  * A larger editor drawn in a node's body, editing the values of its unlinked
  * inputs. Each kind has its own component in a front end.
  */
-export type NodeWidget =
-	/** A hue / saturation wheel and a value ramp, for a Color node's components. */
-	{ kind: "color" };
+export type NodeWidget = {
+	/** A hue / saturation wheel and a value ramp, editing a colour's components. */
+	kind: "color";
+	/** The enum input picking what the components are. */
+	mode: string;
+	/** What the components are, by that enum's variant value. */
+	modes: Record<string, ColorMode>;
+	/** The inputs holding the three components. */
+	components: readonly [string, string, string];
+};
 
 export type NodeCategory =
 	| "input"
@@ -234,18 +242,6 @@ export type NodeDescriptor = {
 	typeFamily?: { key: string; types: readonly WgslType[] };
 	/** An editor drawn in the node's body, for the values of its inputs. */
 	widget?: NodeWidget;
-	/**
-	 * The node's data once setting `key` is set to `value`, for a setting
-	 * changing what stored values mean (e.g. converting them so they keep
-	 * their meaning). `linked` holds the ids of linked inputs, whose stored
-	 * values aren't used. When omitted, only the setting changes.
-	 */
-	withSetting?: (
-		data: NodeData,
-		key: string,
-		value: string,
-		linked: ReadonlySet<string>,
-	) => NodeData;
 	/** Emit WGSL line(s) that define `varName`.
 	 *  Each returned string becomes one statement in the current scope.
 	 *  The `let ` / `var ` prefix is the node's own choice. */

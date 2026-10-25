@@ -1,8 +1,10 @@
 import * as v from "valibot";
 
+import { COLOR_MODES } from "../color/modes";
 import type { StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
+import color from "./std-color.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
 import oklabToOklch from "./std-oklab-to-oklch.json";
 import oklabToXyz from "./std-oklab-to-xyz.json";
@@ -30,10 +32,19 @@ export const LibraryFileSchema = v.object({
 	category: v.string(),
 	dependencies: v.array(v.string()),
 	definition: GraphDocumentSchema,
+	widget: v.optional(
+		v.object({
+			kind: v.literal("color"),
+			mode: v.string(),
+			modes: v.record(v.string(), v.picklist(COLOR_MODES)),
+			components: v.tuple([v.string(), v.string(), v.string()]),
+		}),
+	),
 });
 
 const files: unknown[] = [
 	aspectUv,
+	color,
 	linearRgbToXyz,
 	xyzToLinearRgb,
 	xyzToOklab,
@@ -54,6 +65,7 @@ function toEntry(json: unknown): StandardLibraryEntry {
 		category: file.category,
 		dependencies: file.dependencies,
 		definition: file.definition,
+		...(file.widget ? { widget: file.widget } : {}),
 	};
 }
 

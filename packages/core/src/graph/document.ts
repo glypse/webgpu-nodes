@@ -1,4 +1,4 @@
-import type { NodeData } from "../types";
+import type { NodeData, NodeWidget } from "../types";
 
 /** A document's camera: pan offset and zoom. */
 export type Viewport = { x: number; y: number; zoom: number };
@@ -97,6 +97,8 @@ export type HydratedGraphDocument = {
 	label: string | undefined;
 	locked: boolean;
 	viewport: Viewport | undefined;
+	/** A widget a standard-library group's nodes draw (see `StandardLibraryEntry.widget`). */
+	widget?: NodeWidget;
 };
 
 /** A plain, non-reactive document. */
@@ -128,6 +130,11 @@ export type StandardLibraryEntry = {
 	category: string;
 	dependencies: string[];
 	definition: GraphDocument;
+	/**
+	 * A widget its group nodes draw. Only the standard library has them: the
+	 * front end's code behind a widget relies on what the group computes.
+	 */
+	widget?: NodeWidget;
 };
 
 export function isGraphDocument(obj: unknown): obj is GraphDocument {

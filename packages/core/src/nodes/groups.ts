@@ -111,6 +111,7 @@ export function buildGroupDescriptor(
 		})),
 		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
 		defaultData: { values },
+		...(definition.widget ? { widget: definition.widget } : {}),
 		wgsl: () => [],
 	};
 }

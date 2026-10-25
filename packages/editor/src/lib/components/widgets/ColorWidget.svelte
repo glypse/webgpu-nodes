@@ -1,15 +1,17 @@
 <script lang="ts">
 	import {
-		COLOR_COMPONENTS,
 		type ColorMode,
-		colorMode,
 		colorToLinear,
 		decodeRgb,
 		encodeRgb,
+		enumValue,
 		type Hsv,
 		hsvToRgb,
+		type InputValue,
 		linearToColor,
 		type NodeData,
+		type NodeInputDef,
+		type NodeWidget,
 		readComponent,
 		rgbToHsv,
 	} from "$core";
@@ -22,12 +24,20 @@
 
 	let {
 		id,
+		widget,
 		data,
+		inputs,
+		defaults,
 		connected,
 		disabled,
 	}: {
 		id: string;
+		widget: NodeWidget;
 		data: NodeData;
+		/** The node's inputs, for the variants of the mode's enum. */
+		inputs: readonly NodeInputDef[];
+		/** Values the node's inputs have until edited. */
+		defaults: Readonly<Record<string, InputValue>> | undefined;
 		/** Ids of the node's linked inputs, which the wheel leaves alone. */
 		connected: ReadonlySet<string | null>;
 		disabled: boolean;
@@ -36,9 +46,14 @@
 	const graph = getGraphManager();
 
 	const EPSILON = 1e-6;
-	const mode = $derived(colorMode(data));
+	const valueOf = (input: string) => data.values?.[input] ?? defaults?.[input];
+	const mode = $derived.by((): ColorMode => {
+		const control = inputs.find((i) => i.id === widget.mode)?.control;
+		const variants = control?.kind === "enum" ? control.variants : [];
+		return widget.modes[String(enumValue(valueOf(widget.mode), variants))] ?? "rgb";
+	});
 	const components = $derived(
-		COLOR_COMPONENTS.map((c) => readComponent(data.values?.[c], "_")) as Components,
+		widget.components.map((c) => readComponent(valueOf(c), "_")) as Components,
 	);
 
 	// Kept apart from the values so a hue survives going through grey or
@@ -80,18 +95,18 @@
 		hsv = { ...hsv, ...patch };
 		const next = componentsOf(hsv);
 		const written = components.map((n, i) =>
-			connected.has(COLOR_COMPONENTS[i] ?? "") ? n : (next[i] ?? n),
+			connected.has(widget.components[i] ?? "") ? n : (next[i] ?? n),
 		) as Components;
 		sent = { mode, components: written };
 		const values = { ...data.values };
-		COLOR_COMPONENTS.forEach((c, i) => {
+		widget.components.forEach((c, i) => {
 			values[c] = written[i] ?? 0;
 		});
 		graph.updateNodeData(id, { values }, { retype: false });
 	}
 
 	const linked = (indices: number[]) =>
-		indices.every((i) => connected.has(COLOR_COMPONENTS[i] ?? ""));
+		indices.every((i) => connected.has(widget.components[i] ?? ""));
 	// In HSV the wheel is hue and saturation, the ramp value; otherwise both
 	// write all three components.
 	const wheelDisabled = $derived(disabled || linked(mode === "hsv" ? [0, 1] : [0, 1, 2]));

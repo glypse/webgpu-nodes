@@ -1,3 +1,4 @@
+import { convertColorMode } from "../color";
 import { MATCH, isCaseHandle } from "../enums";
 import {
 	ARCHIVED_VERSIONS_ENABLED,
@@ -12,7 +13,9 @@ import {
 	type NodeDescriptor,
 	type NodeInputDef,
 	type NodeOutputDef,
+	type NodeWidget,
 	type WgslType,
+	enumValue,
 	familyKey,
 	isConnectionCompatible,
 } from "../types";
@@ -38,6 +41,7 @@ import {
 	normaliseDocument,
 	resolveDescriptor,
 } from "./hydrate";
+import { readComponent } from "./values";
 
 export type ResolvedTypes = {
 	inputTypes: Record<string, WgslType>;
@@ -425,10 +429,11 @@ export abstract class GraphModelBase {
 		const def = normaliseDocument(entry.definition);
 		def.label = entry.label;
 		def.locked = true;
-		this.project.definitions.set(
-			ref,
-			hydrateDocument(def, () => this.createDocument()),
-		);
+		const doc = hydrateDocument(def, () => this.createDocument());
+		// Only the library's own definition gets it: a clone computes
+		// whatever its user makes it compute, which the widget can't know.
+		if (entry.widget) doc.widget = entry.widget;
+		this.project.definitions.set(ref, doc);
 	}
 
 	/** Standard-library refs the group nodes of `documents` point at. */
@@ -730,22 +735,53 @@ export abstract class GraphModelBase {
 		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return;
 		const values = withEntry(node.data.values, inputId, value);
-		this.updateNodeData(nodeId, { values }, { retype: false });
+		const widget = this.resolveDescriptor(node).widget;
+		const converted = widget?.mode === inputId ? this.keepColor(node, widget, values) : values;
+		this.updateNodeData(nodeId, { values: converted }, { retype: false });
 	}
 
-	/** Pick an option of one of the node's settings (see `NodeDescriptor.withSetting`). */
+	/**
+	 * `values` with a colour widget's components converted to its new mode,
+	 * so the colour stays the same (unlike Blender's Combine Color, which
+	 * keeps the numbers). Only possible while none is linked: a linked one's
+	 * value is only known in the shader.
+	 */
+	private keepColor(
+		node: GraphNode,
+		widget: NodeWidget,
+		values: Record<string, InputValue> | undefined,
+	): Record<string, InputValue> | undefined {
+		const descriptor = this.resolveDescriptor(node);
+		const defaults = descriptor.defaultData.values;
+		const control = descriptor.inputs.find((i) => i.id === widget.mode)?.control;
+		const variants = control?.kind === "enum" ? control.variants : [];
+		const modeOf = (stored: Record<string, InputValue> | undefined) =>
+			widget.modes[
+				String(enumValue(stored?.[widget.mode] ?? defaults?.[widget.mode], variants))
+			];
+		const from = modeOf(node.data.values);
+		const to = modeOf(values);
+		const linked = new Set(
+			(this.activeDocument.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle),
+		);
+		if (!from || !to || from === to || widget.components.some((c) => linked.has(c))) {
+			return values;
+		}
+		const read = (c: string) => readComponent(values?.[c] ?? defaults?.[c], "_");
+		const [x, y, z] = widget.components.map(read);
+		const next = convertColorMode(from, to, [x ?? 0, y ?? 0, z ?? 0]);
+		const converted = { ...values };
+		widget.components.forEach((c, i) => {
+			converted[c] = next[i] ?? 0;
+		});
+		return converted;
+	}
+
+	/** Pick an option of one of the node's settings. */
 	setSetting(nodeId: string, key: string, value: string) {
 		const node = this.activeDocument.nodesById.get(nodeId);
 		if (!node) return;
-		const settings = withEntry(node.data.settings, key, value);
-		const withSetting = this.resolveDescriptor(node).withSetting;
-		if (!withSetting) {
-			this.updateNodeData(nodeId, { settings });
-			return;
-		}
-		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const linked = new Set(incoming.map((e) => e.targetHandle));
-		this.updateNodeData(nodeId, { ...withSetting(node.data, key, value, linked), settings });
+		this.updateNodeData(nodeId, { settings: withEntry(node.data.settings, key, value) });
 	}
 }
 

@@ -281,7 +281,15 @@
 		</div>
 
 		{#if descriptor.widget?.kind === "color"}
-			<ColorWidget {id} {data} connected={connectedHandles} disabled={isLocked} />
+			<ColorWidget
+				{id}
+				widget={descriptor.widget}
+				{data}
+				inputs={descriptor.inputs}
+				defaults={descriptor.defaultData.values}
+				connected={connectedHandles}
+				disabled={isLocked}
+			/>
 		{/if}
 
 		<div class="node-shell__inputs">

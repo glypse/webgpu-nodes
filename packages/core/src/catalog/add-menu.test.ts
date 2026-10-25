@@ -135,10 +135,8 @@ describe("adding from a dropped link", () => {
 		const [first] = searchEntries(entries, "combine vector");
 		expect(first?.entry.label).toBe("Declare vec4f");
 		expect(first?.alias).toBe("Combine Vector");
-		expect(searchEntries(entries, "vec4").map((r) => r.entry.label)).toEqual([
-			"Color vec4f",
-			"Declare vec4f",
-		]);
+		expect(searchEntries(entries, "vec4").map((r) => r.entry.label)).toEqual(["Declare vec4f"]);
+		expect(searchEntries(entries, "rgba").map((r) => r.entry.label)).toContain("Color");
 	});
 
 	it("prefers handles of the same scalar kind", () => {
