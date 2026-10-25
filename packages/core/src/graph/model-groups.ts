@@ -798,7 +798,13 @@ export abstract class GroupModel extends ZoneModel {
 		const clash = (h: HandleDef) => h.id !== handleId && h.label === trimmed;
 		if (handles.some((h) => clash(h) && !shownApart(h.id))) return false;
 
-		handle.label = trimmed;
+		const data = {
+			...handleNode.data,
+			handles: handles.map((h) => (h.id === handleId ? { ...h, label: trimmed } : h)),
+		};
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		});
 		return true;
 	}
 
@@ -1069,19 +1075,24 @@ export abstract class GroupModel extends ZoneModel {
 		if (!handleNode) return;
 		const handles = handleNode.data.handles;
 		if (!handles) return;
-		const idx = handles.findIndex((h) => h.id === handleId);
-		if (idx === -1) return;
-		handles.splice(idx, 1);
+		if (!handles.some((h) => h.id === handleId)) return;
+		const data = {
+			...handleNode.data,
+			handles: handles.filter((h) => h.id !== handleId),
+			values: withEntry<InputValue>(handleNode.data.values, handleId, undefined),
+		};
 
 		// Remove all internal edges connected to this handle on this node
-		def.edges = def.edges.filter(
-			(e) =>
-				!(
-					(e.source === handleNodeId && e.sourceHandle === handleId) ||
-					(e.target === handleNodeId && e.targetHandle === handleId)
-				),
-		);
-		indexDocument(def);
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+			edges: def.edges.filter(
+				(e) =>
+					!(
+						(e.source === handleNodeId && e.sourceHandle === handleId) ||
+						(e.target === handleNodeId && e.targetHandle === handleId)
+					),
+			),
+		});
 
 		// Remove all *outer* edges in any document that holds an instance of this
 		// definition: the now-deleted handle no longer exists on the group node,

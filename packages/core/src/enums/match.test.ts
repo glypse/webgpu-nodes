@@ -148,6 +148,17 @@ describe("Match node", () => {
 		expect([...graph.hiddenInputs("g")]).toEqual(["x"]);
 	});
 
+	it("replaces the group input node when removing or renaming a handle", () => {
+		const graph = new GraphModel(project());
+		const inputNode = () => graph.project.definitions.get("def")?.nodesById.get("in");
+		const before = inputNode();
+		graph.setHandleLabel("def", "in", "x", "Renamed");
+		graph.removeHandle("def", "in", "x");
+		expect(inputNode()).not.toBe(before);
+		expect(before?.data.handles?.map((h) => h.label)).toEqual(["Mode", "X"]);
+		expect(inputNode()?.data.handles?.map((h) => h.id)).toEqual(["mode"]);
+	});
+
 	it("has a type picker, with or without an enum linked", () => {
 		const graph = new GraphModel(project());
 		expect(graph.typeChoice("m")?.inferable).toBe(true);
