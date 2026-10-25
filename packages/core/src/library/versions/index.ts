@@ -2,20 +2,28 @@
 
 /** Every archived standard-library version, by ref, loaded on demand. */
 export const archivedVersions: Record<string, () => Promise<unknown>> = {
-	"std-xyz-to-oklab@13cb6598aceb46": () =>
-		import("./std-xyz-to-oklab/13cb6598aceb46.json").then((m) => m.default),
-	"std-oklch-to-oklab@19ab86dac9c866": () =>
-		import("./std-oklch-to-oklab/19ab86dac9c866.json").then((m) => m.default),
-	"std-oklab-to-xyz@12e36d9c68920e": () =>
-		import("./std-oklab-to-xyz/12e36d9c68920e.json").then((m) => m.default),
+	"std-linear-rgb-to-oklch@10f2ea11f3a738": () =>
+		import("./std-linear-rgb-to-oklch/10f2ea11f3a738.json").then((m) => m.default),
+	"std-xyz-to-oklab@1940863ded6084": () =>
+		import("./std-xyz-to-oklab/1940863ded6084.json").then((m) => m.default),
+	"std-linear-rgb-to-oklab@0315ad15e24cb7": () =>
+		import("./std-linear-rgb-to-oklab/0315ad15e24cb7.json").then((m) => m.default),
+	"std-oklch-to-oklab@115633a275b19b": () =>
+		import("./std-oklch-to-oklab/115633a275b19b.json").then((m) => m.default),
+	"std-oklab-to-xyz@117f037c7c62ff": () =>
+		import("./std-oklab-to-xyz/117f037c7c62ff.json").then((m) => m.default),
 	"std-aspect-uv@0f422283523c7e": () =>
 		import("./std-aspect-uv/0f422283523c7e.json").then((m) => m.default),
-	"std-color@0c91234e6612a6": () =>
-		import("./std-color/0c91234e6612a6.json").then((m) => m.default),
-	"std-oklab-to-oklch@1b97915954f2da": () =>
-		import("./std-oklab-to-oklch/1b97915954f2da.json").then((m) => m.default),
-	"std-linear-rgb-to-xyz@07c070dd259228": () =>
-		import("./std-linear-rgb-to-xyz/07c070dd259228.json").then((m) => m.default),
-	"std-xyz-to-linear-rgb@19951e0a8dab4f": () =>
-		import("./std-xyz-to-linear-rgb/19951e0a8dab4f.json").then((m) => m.default),
+	"std-color@0fecebd9559462": () =>
+		import("./std-color/0fecebd9559462.json").then((m) => m.default),
+	"std-oklab-to-oklch@02cc69e98e06f4": () =>
+		import("./std-oklab-to-oklch/02cc69e98e06f4.json").then((m) => m.default),
+	"std-linear-rgb-to-xyz@043783529be992": () =>
+		import("./std-linear-rgb-to-xyz/043783529be992.json").then((m) => m.default),
+	"std-xyz-to-linear-rgb@0b93091a67ba29": () =>
+		import("./std-xyz-to-linear-rgb/0b93091a67ba29.json").then((m) => m.default),
+	"std-oklch-to-linear-rgb@15169209b2bb3d": () =>
+		import("./std-oklch-to-linear-rgb/15169209b2bb3d.json").then((m) => m.default),
+	"std-oklab-to-linear-rgb@15fc7634215b1f": () =>
+		import("./std-oklab-to-linear-rgb/15fc7634215b1f.json").then((m) => m.default),
 };
