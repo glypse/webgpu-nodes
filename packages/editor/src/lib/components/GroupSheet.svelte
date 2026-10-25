@@ -8,12 +8,14 @@
 		handlesOf,
 		inputControl,
 		type InputControl,
+		type InputOwner,
 		type InputValue,
 		nextVariantValue,
+		ownerExists,
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
-	import { Button, Checkbox, Input, Select, Sheet } from "$theme";
+	import { Button, Input, Select, Sheet } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
@@ -43,19 +45,26 @@
 	const outputNode = $derived(definition?.nodes.find((n) => n.type === "group-output"));
 	const inputHandles = $derived(handlesOf(inputNode));
 	const outputHandles = $derived(handlesOf(outputNode));
-	const enums = $derived(inputHandles.filter((h) => h.variants));
-	const inputVariants = $derived(
-		definitionRef ? graph.inputVariants(definitionRef) : new Map<string, never[]>(),
-	);
 
-	/** Which variants an input is shown for, as "Mode: RGB, HSV". */
-	function shownFor(handle: HandleDef): string[] {
-		return (inputVariants.get(handle.id) ?? []).map(({ enumId, values }) => {
-			const enumHandle = enums.find((e) => e.id === enumId);
-			const labels = (enumHandle?.variants ?? [])
-				.filter((v) => values.includes(v.value))
-				.map((v) => v.label);
-			return `${enumHandle?.label ?? ""}: ${labels.join(", ") || "none"}`;
+	/** The inputs directly under a variant, or under none. */
+	function inputsUnder(owner: InputOwner | undefined): HandleDef[] {
+		return inputHandles.filter((h) =>
+			owner
+				? h.owner?.enumId === owner.enumId && h.owner.value === owner.value
+				: !ownerExists(inputHandles, h.owner),
+		);
+	}
+
+	const NEW_ENUM: EnumVariant[] = [
+		{ value: 0, label: "Option 1" },
+		{ value: 1, label: "Option 2" },
+	];
+
+	function addInput(type: WgslType, owner: InputOwner | undefined, enumInput = false) {
+		if (!inputNode) return;
+		graph.addHandle(inputNode.id, type, {
+			...(owner ? { owner } : {}),
+			...(enumInput ? { variants: NEW_ENUM } : {}),
 		});
 	}
 
@@ -144,16 +153,24 @@
 
 {#snippet handleRow(handle: HandleDef, nodeId: string, removable: boolean)}
 	<div class="flex items-center gap-2">
-		<TypePicker
-			types={WGSL_TYPES}
-			value={handle.type}
-			disabled={locked}
-			class="w-20 shrink-0"
-			title="Value type"
-			onpick={(type: WgslType) => {
-				if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
-			}}
-		/>
+		{#if handle.variants}
+			<span
+				class="border-border text-muted-foreground flex h-8 w-20 shrink-0 items-center justify-center rounded-md border text-xs"
+			>
+				Enum
+			</span>
+		{:else}
+			<TypePicker
+				types={WGSL_TYPES}
+				value={handle.type}
+				disabled={locked}
+				class="w-20 shrink-0"
+				title="Value type"
+				onpick={(type: WgslType) => {
+					if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
+				}}
+			/>
+		{/if}
 		<Input
 			value={handleLabelBuffer[handle.id] ?? handle.label}
 			disabled={locked}
@@ -240,51 +257,62 @@
 				</Select.Root>
 			</div>
 		{/if}
+	</div>
+{/snippet}
 
-		<label class="flex items-center gap-2 text-xs">
-			<Checkbox
-				checked={handle.variants !== undefined}
-				disabled={locked}
-				onCheckedChange={(checked: boolean) => {
-					setVariants(
-						handle,
-						checked
-							? [
-									{ value: 0, label: "Option 1" },
-									{ value: 1, label: "Option 2" },
-								]
-							: undefined,
-					);
-				}}
-			/>
-			<span>Enum: choose among variants</span>
-		</label>
+{#snippet addInputPicker(owner: InputOwner | undefined)}
+	<TypePicker
+		types={WGSL_TYPES}
+		label="Add input"
+		title="Add an input"
+		variant={owner ? "ghost" : "outline"}
+		onpick={(type: WgslType) => addInput(type, owner)}
+		onpickenum={() => addInput("u32", owner, true)}
+	/>
+{/snippet}
 
+{#snippet inputList(nodeId: string, owner: InputOwner | undefined)}
+	{#each inputsUnder(owner) as handle (handle.id)}
+		{@render handleRow(handle, nodeId, true)}
+		{#if expanded[handle.id]}
+			{@render inputDetails(handle)}
+		{/if}
 		{#if handle.variants}
-			{@const variants = handle.variants}
-			<div class="flex flex-col gap-1">
-				{#each variants as variant, i (variant.value)}
-					<div class="flex items-center gap-1">
-						<Input
-							value={variant.label}
-							disabled={locked}
-							onchange={(e: Event) => {
-								const label = inputValue(e).trim();
-								if (!label) return;
-								setVariants(
-									handle,
-									variants.map((v) =>
-										v.value === variant.value ? { ...v, label } : v,
-									),
-								);
-							}}
-							onkeydown={handleEnterBlur}
-						/>
+			{@render variantTree(handle, nodeId)}
+		{/if}
+	{/each}
+{/snippet}
+
+<!-- Each variant with the inputs group nodes show while it's picked. -->
+{#snippet variantTree(handle: HandleDef, nodeId: string)}
+	{@const variants = handle.variants ?? []}
+	<div class="border-border ml-2 flex flex-col gap-2 border-l pl-3">
+		{#each variants as variant, i (variant.value)}
+			<div class="flex flex-col gap-1.5">
+				<div class="flex items-center gap-1">
+					<Input
+						value={variant.label}
+						disabled={locked}
+						class="h-7 font-medium"
+						title="Variant name"
+						onchange={(e: Event) => {
+							const label = inputValue(e).trim();
+							if (!label) return;
+							setVariants(
+								handle,
+								variants.map((v) =>
+									v.value === variant.value ? { ...v, label } : v,
+								),
+							);
+						}}
+						onkeydown={handleEnterBlur}
+					/>
+					{#if !locked}
 						<Button
 							variant="ghost"
 							size="icon-sm"
 							title="Move up"
-							disabled={locked || i === 0}
+							disabled={i === 0}
 							onclick={() => moveVariant(handle, i, -1)}
 						>
 							<ArrowUpIcon />
@@ -293,7 +321,7 @@
 							variant="ghost"
 							size="icon-sm"
 							title="Move down"
-							disabled={locked || i === variants.length - 1}
+							disabled={i === variants.length - 1}
 							onclick={() => moveVariant(handle, i, 1)}
 						>
 							<ArrowDownIcon />
@@ -301,8 +329,8 @@
 						<Button
 							variant="ghost"
 							size="icon-sm"
-							title="Remove variant"
-							disabled={locked || variants.length <= 1}
+							title="Remove variant and its inputs"
+							disabled={variants.length <= 1}
 							onclick={() =>
 								setVariants(
 									handle,
@@ -311,14 +339,20 @@
 						>
 							<TrashIcon />
 						</Button>
-					</div>
-				{/each}
-				{#if !locked}
-					<Button variant="outline" size="sm" onclick={() => addVariant(handle)}>
-						Add variant
-					</Button>
-				{/if}
+					{/if}
+				</div>
+				<div class="flex flex-col gap-1.5 pl-3">
+					{@render inputList(nodeId, { enumId: handle.id, value: variant.value })}
+					{#if !locked}
+						{@render addInputPicker({ enumId: handle.id, value: variant.value })}
+					{/if}
+				</div>
 			</div>
+		{/each}
+		{#if !locked}
+			<Button variant="outline" size="sm" onclick={() => addVariant(handle)}>
+				Add variant
+			</Button>
 		{/if}
 	</div>
 {/snippet}
@@ -364,24 +398,9 @@
 					{@const nodeId = inputNode.id}
 					<div class="flex flex-col gap-1.5">
 						<span class="text-sm font-medium">Inputs</span>
-						{#each inputHandles as handle (handle.id)}
-							{@render handleRow(handle, nodeId, true)}
-							{#each shownFor(handle) as line (line)}
-								<span class="text-muted-foreground -mt-1 pl-22 text-xs">
-									Only for {line}
-								</span>
-							{/each}
-							{#if expanded[handle.id]}
-								{@render inputDetails(handle)}
-							{/if}
-						{/each}
+						{@render inputList(nodeId, undefined)}
 						{#if !locked}
-							<TypePicker
-								types={WGSL_TYPES}
-								label="Add input"
-								title="Add an input"
-								onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
-							/>
+							{@render addInputPicker(undefined)}
 						{/if}
 					</div>
 				{/if}

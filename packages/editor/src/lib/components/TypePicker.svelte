@@ -14,6 +14,7 @@
 		onpick,
 		inferred,
 		onreset,
+		onpickenum,
 		label,
 		title,
 		disabled = false,
@@ -32,6 +33,8 @@
 		 */
 		inferred?: WgslType;
 		onreset?: () => void;
+		/** When given, the menu offers an enum first, picking it calls this. */
+		onpickenum?: () => void;
 		/** Button text; defaults to the current type. */
 		label?: string;
 		title?: string;
@@ -84,6 +87,13 @@
 		{/snippet}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content class="w-auto min-w-40">
+		{#if onpickenum}
+			<DropdownMenu.Item onSelect={() => onpickenum()}>
+				Enum
+				<span class="text-muted-foreground ml-auto text-xs">Variants</span>
+			</DropdownMenu.Item>
+			<DropdownMenu.Separator />
+		{/if}
 		{#if inferred}
 			<DropdownMenu.Item onSelect={() => onreset?.()}>
 				<span class="font-mono text-xs">{inferred}</span>
