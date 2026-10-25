@@ -55,10 +55,16 @@ export type NodeInputDef = {
 	 * The concrete WGSL types this input accepts. The first element is the
 	 * default type used when nothing is connected and no user override is set.
 	 *
-	 * Inputs sharing the same `types` array are in the same "family" — they
-	 * resolve to one concrete type across the whole node (node-wide resolution).
+	 * Inputs of the same "family" resolve to one concrete type across the
+	 * whole node (node-wide resolution). Inputs are in the same family when
+	 * their `family` keys are equal, or by default when their `types` are.
 	 */
 	types: readonly WgslType[];
+	/**
+	 * Puts the input in a family of its own choosing (see `types`), e.g. to
+	 * keep apart inputs accepting the same types that resolve independently.
+	 */
+	family?: string;
 	/**
 	 * If true, every edge connected to this handle is collected.
 	 * The descriptor's wgsl receives `inputs[id]` as an array of upstream vars.
@@ -82,12 +88,9 @@ export function inputDefaultType(input: NodeInputDef): WgslType {
 	return input.types[0] ?? "f32";
 }
 
-/**
- * Stable string key for grouping inputs into families.
- * Two inputs are in the same family when their `types` arrays are equal.
- */
+/** Stable string key for grouping inputs into families (see `NodeInputDef.types`). */
 export function inputFamilyKey(input: NodeInputDef): string {
-	return familyKey(input.types);
+	return input.family ?? familyKey(input.types);
 }
 
 /** The family key of inputs accepting `types` (see `inputFamilyKey`). */
