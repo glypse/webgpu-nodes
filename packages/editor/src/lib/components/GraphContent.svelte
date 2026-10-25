@@ -8,6 +8,7 @@
 		type HydratedGraphDocument,
 		type HydratedGraphProject,
 		isZoneNodeType,
+		type NodeGeometry,
 		nodeRegistry,
 		type PendingConnection,
 		type ShaderSource,
@@ -25,6 +26,7 @@
 		Background,
 		type Edge,
 		type EdgeTypes,
+		type InternalNode,
 		type Node,
 		type Connection,
 		type OnConnectEnd,
@@ -68,8 +70,38 @@
 		shader?: ShaderSource;
 	} = $props();
 
-	const { screenToFlowPosition, getNodes, getViewport, setViewport, fitView } = useSvelteFlow();
+	const { screenToFlowPosition, getNodes, getViewport, setViewport, fitView, getInternalNode } =
+		useSvelteFlow();
 	const graph = getGraphManager();
+
+	type HandleBounds = NonNullable<InternalNode["internals"]["handleBounds"]>;
+
+	/** A node's size and handle offsets as SvelteFlow measured them. */
+	function measureNode(nodeId: string): NodeGeometry | undefined {
+		const internal = getInternalNode(nodeId);
+		const width = internal?.measured.width;
+		const height = internal?.measured.height;
+		if (!internal || width === undefined || height === undefined) return undefined;
+		const offsets = (handles: HandleBounds["source"] | undefined) =>
+			new Map(
+				(handles ?? []).flatMap((h) => (h.id ? [[h.id, h.y + h.height / 2] as const] : [])),
+			);
+		const bounds = internal.internals.handleBounds;
+		return { width, height, inputs: offsets(bounds?.target), outputs: offsets(bounds?.source) };
+	}
+
+	$effect(() => {
+		graph.canvas = {
+			measure: (node) => measureNode(node.id),
+			fitView: async () => {
+				await tick();
+				await fitView({ duration: 300 });
+			},
+		};
+		return () => {
+			graph.canvas = null;
+		};
+	});
 
 	// ── Per-document viewport (pan/zoom) persistence ──────────────────────────
 	// Each graph document (root + every group definition) stores its own camera so

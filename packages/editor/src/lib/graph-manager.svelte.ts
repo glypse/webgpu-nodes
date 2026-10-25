@@ -4,7 +4,10 @@ import {
 	type GraphModelState,
 	type GraphProject,
 	type HistoryCounts,
+	type GraphNode,
 	type HydratedGraphDocument,
+	type LayoutOptions,
+	type NodeGeometry,
 } from "$core";
 import { getContext, setContext } from "svelte";
 
@@ -72,6 +75,25 @@ export class GraphManager extends GraphModel {
 		}
 	}
 
+	// ── Layout ──────────────────────────────────────────────────────────────
+
+	/**
+	 * The canvas showing the document in view, while one is mounted: it
+	 * measures that document's nodes as drawn, for layouts to use.
+	 */
+	canvas: GraphCanvas | null = null;
+
+	override layoutDocument(
+		definitionRef: string = this.activeDefinitionRef,
+		options: LayoutOptions = {},
+	): Promise<boolean> {
+		return super.layoutDocument(definitionRef, {
+			measure: (ref, node) =>
+				ref === this.activeDefinitionRef ? this.canvas?.measure(node) : undefined,
+			...options,
+		});
+	}
+
 	// ── Files ───────────────────────────────────────────────────────────────
 
 	/** Download the project as JSON and remember it as saved. */
@@ -97,6 +119,12 @@ export class GraphManager extends GraphModel {
 		}
 	}
 }
+
+export type GraphCanvas = {
+	measure(node: GraphNode): NodeGeometry | undefined;
+	/** Frame every node of the document in view. */
+	fitView(): Promise<void>;
+};
 
 /** Trigger a browser download of a JSON file. */
 function downloadFile(filename: string, contents: string) {

@@ -54,6 +54,18 @@
 		graph.ungroupSelection(ids);
 	}
 
+	async function handleLayoutSelected() {
+		await graph.layoutSelection();
+	}
+
+	async function handleLayoutDocument() {
+		if (await graph.layoutDocument()) await graph.canvas?.fitView();
+	}
+
+	async function handleLayoutGraph() {
+		if (await graph.layoutProject()) await graph.canvas?.fitView();
+	}
+
 	let pruneDialogOpen = $state(false);
 
 	function openPruneDialog() {
@@ -177,6 +189,17 @@
 				>
 					Ungroup selected
 					<Menubar.Shortcut>⇧G</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item
+					onSelect={handleLayoutSelected}
+					disabled={!(hasSelection && !graph.isLocked)}
+				>
+					Layout selected nodes
+				</Menubar.Item>
+				<Menubar.Item onSelect={handleLayoutGraph}>Layout graph</Menubar.Item>
+				<Menubar.Item onSelect={handleLayoutDocument} disabled={graph.isLocked}>
+					Layout document
 				</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item onSelect={openPruneDialog} disabled={!hasPrunable}>

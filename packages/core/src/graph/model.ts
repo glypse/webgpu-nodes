@@ -1,6 +1,12 @@
 import * as v from "valibot";
 
 import type { AddMenuEntry } from "../catalog/add-menu";
+import {
+	type LayoutSpacing,
+	type NodeGeometry,
+	computeLayout,
+	estimateNodeGeometry,
+} from "../layout";
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
 import {
 	type NodeData,
@@ -10,7 +16,13 @@ import {
 	typeKind,
 } from "../types";
 import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
-import { type GraphEdge, type GraphNode, type GraphProject } from "./document";
+import {
+	type GraphEdge,
+	type GraphNode,
+	type GraphProject,
+	type HydratedGraphDocument,
+	ROOT_ID,
+} from "./document";
 import { stableStringify } from "./editing";
 import { History } from "./history";
 import { indexDocument, serialiseDocument } from "./hydrate";
@@ -487,7 +499,82 @@ export class GraphModel extends GroupModel {
 		const key = this.resolveDescriptor(node).typeFamily?.key ?? familyKey(choice.types);
 		this.updateNodeData(nodeId, { types: withEntry(node.data.types, key, type) });
 	}
+
+	// ── Layout ──────────────────────────────────────────────────────────────────
+
+	/**
+	 * Arrange the nodes of a document (all of them, or `nodeIds` only) into
+	 * columns following their links. Resolves to whether anything moved.
+	 */
+	async layoutDocument(
+		definitionRef: string = this.activeDefinitionRef,
+		options: LayoutOptions = {},
+	): Promise<boolean> {
+		const doc = this.project.definitions.get(definitionRef);
+		if (!doc || this.isStandardLibrary(definitionRef)) return false;
+		const only = options.nodeIds && new Set(options.nodeIds);
+		const nodes = only ? doc.nodes.filter((n) => only.has(n.id)) : doc.nodes;
+		const positions = await computeLayout({
+			nodes,
+			edges: doc.edges,
+			zones: this.zoneAnalysis(doc),
+			geometry: (node) =>
+				options.measure?.(definitionRef, node) ??
+				estimateNodeGeometry({
+					inputs: this.resolveNodeInputs(node.id).map((i) => i.id),
+					outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
+				}),
+			spacing: options.spacing,
+		});
+		return this.applyPositions(doc, positions);
+	}
+
+	/** Lay out the selected nodes of the document in view, among themselves. */
+	async layoutSelection(options: Omit<LayoutOptions, "nodeIds"> = {}): Promise<boolean> {
+		if (this.isLocked || this.selectedNodeIds.length === 0) return false;
+		return this.layoutDocument(this.activeDefinitionRef, {
+			...options,
+			nodeIds: this.selectedNodeIds,
+		});
+	}
+
+	/** Lay out every document of the project (standard library excluded). */
+	async layoutProject(options: Omit<LayoutOptions, "nodeIds"> = {}): Promise<boolean> {
+		const refs = [...this.project.definitions.keys()].filter(
+			(ref) => ref === ROOT_ID || !this.isStandardLibrary(ref),
+		);
+		const moved = await Promise.all(refs.map((ref) => this.layoutDocument(ref, options)));
+		return moved.some(Boolean);
+	}
+
+	/** Move nodes still in `doc` (it may have changed during the layout). */
+	private applyPositions(
+		doc: HydratedGraphDocument,
+		positions: ReadonlyMap<string, { x: number; y: number }>,
+	): boolean {
+		const nodes = doc.nodes.map((n) => {
+			const position = positions.get(n.id);
+			if (!position || (position.x === n.position.x && position.y === n.position.y)) {
+				return n;
+			}
+			return { ...n, position };
+		});
+		const moved = nodes.some((n, i) => n !== doc.nodes[i]);
+		if (moved) this.setContent(doc, { nodes });
+		return moved;
+	}
 }
+
+export type LayoutOptions = {
+	/** Lay out these nodes only, keeping the others in place. */
+	nodeIds?: Iterable<string>;
+	/**
+	 * The node as the front end draws it; undefined when it can't tell (an
+	 * estimate is used instead).
+	 */
+	measure?: (definitionRef: string, node: GraphNode) => NodeGeometry | undefined;
+	spacing?: Partial<LayoutSpacing>;
+};
 
 /** A link being dragged from a handle, not dropped on another handle yet. */
 export type PendingConnection = {

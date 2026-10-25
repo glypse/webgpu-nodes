@@ -32,5 +32,10 @@
 			node group.
 		</li>
 		<li>Select a node group and press <Kbd.Root>Enter</Kbd.Root> to enter it.</li>
+		<li>
+			The <i>Edit</i> menu can lay nodes out in columns following their links: the selected nodes,
+			the document (the graph or node group you're viewing), or the whole graph (the main graph
+			and every node group you made).
+		</li>
 	</ul>
 </main>
