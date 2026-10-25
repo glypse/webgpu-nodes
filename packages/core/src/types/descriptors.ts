@@ -15,6 +15,12 @@ export type HandleDef = {
 	/** On a group input: makes it an enum input (type u32) choosing among these. */
 	variants?: EnumVariant[];
 	/**
+	 * On a group input: the variant of one of the group's enum inputs it
+	 * belongs to. Group nodes show it only while that variant is picked, so
+	 * each variant has its own inputs.
+	 */
+	owner?: InputOwner;
+	/**
 	 * On a vec3f / vec4f group input: edited on group nodes as a colour
 	 * (linear RGB, alpha), by a swatch opening a picker or a wheel drawn on
 	 * the node, rather than a number per component.
@@ -31,6 +37,9 @@ export type ColorDisplay = (typeof COLOR_DISPLAYS)[number];
  * Match node's cases keep pointing at the same case.
  */
 export type EnumVariant = { value: number; label: string };
+
+/** A variant of a group's enum input, by the input's handle id and the variant's value. */
+export type InputOwner = { enumId: string; value: number };
 
 export type NodeInputDef = {
 	/** Stable port identifier. Doubles as the UI handle id and the key edges reference. */

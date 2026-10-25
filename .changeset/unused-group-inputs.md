@@ -2,4 +2,4 @@
 "$editor": minor
 ---
 
-Group nodes hide the inputs their enum choices leave unused: an unlinked input only feeding cases a Match node doesn't pick (in the group or groups inside it) disappears until a variant using it is picked. Inputs no variant uses, like one just added, stay shown. This way each variant has its own inputs: the group settings sheet tells which variants use each input, and inputs never shown together may share a label.
+Give each variant of a group's enum input its own inputs: in the group settings sheet, every variant lists its inputs and has its own Add input button, and group nodes show only the inputs of the variants they're on (all of them while the enum is linked to a value computed in the shader). Enums can nest under a variant. Removing a variant or an enum removes its inputs, and inputs never shown together may share a label.

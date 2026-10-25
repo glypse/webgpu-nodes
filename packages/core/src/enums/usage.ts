@@ -1,7 +1,6 @@
-import type { GraphDocumentEdge, GraphNode, HydratedGraphDocument } from "../graph/document";
+import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import { enumValue } from "../types";
-import { REPEAT_INPUT, pairedOutputId } from "../zones";
-import { type EnumDocument, constantAt, liveEdges } from "./analysis";
+import { type EnumDocument, constantAt } from "./analysis";
 
 type Definitions = ReadonlyMap<string, HydratedGraphDocument>;
 
@@ -31,62 +30,4 @@ export function groupConstants(
 		if (value !== undefined) values.set(handle.id, value);
 	}
 	return values;
-}
-
-/**
- * The handles of a definition's group input whose value can reach its
- * outputs when its enums have the values in `constants`: those only feeding
- * cases a Match node doesn't pick (here or in nested groups) are left out.
- */
-export function usedGroupInputs(
-	definitions: Definitions,
-	definitionRef: string,
-	constants: ReadonlyMap<string, number>,
-	visiting: ReadonlySet<string> = new Set(),
-): Set<string> {
-	const used = new Set<string>();
-	const doc = definitions.get(definitionRef);
-	if (!doc || visiting.has(definitionRef)) return used;
-	const inner = new Set([...visiting, definitionRef]);
-
-	const live = new Set(liveEdges(doc, doc.edges, constants));
-	const nestedUsed = new Map<string, Set<string>>();
-	const usesInput = (target: GraphNode, edge: GraphDocumentEdge): boolean => {
-		if (target.type !== "node-group" || !target.group) return true;
-		let found = nestedUsed.get(target.id);
-		if (!found) {
-			const nested = groupConstants(doc, target, definitions, constants);
-			found = usedGroupInputs(definitions, target.group.definitionRef, nested, inner);
-			nestedUsed.set(target.id, found);
-		}
-		return found.has(edge.targetHandle);
-	};
-
-	// A Repeat Output depends on its Repeat Input, though no link says so.
-	const zoneInputOf = new Map<string, string>();
-	for (const node of doc.nodes) {
-		const output = node.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
-		if (output) zoneInputOf.set(output, node.id);
-	}
-
-	const queue = doc.nodes.filter((n) => n.type === "group-output").map((n) => n.id);
-	const reached = new Set(queue);
-	const visit = (id: string) => {
-		if (reached.has(id)) return;
-		reached.add(id);
-		queue.push(id);
-	};
-	for (let id = queue.pop(); id !== undefined; id = queue.pop()) {
-		const target = doc.nodesById.get(id);
-		if (!target) continue;
-		const zoneInput = zoneInputOf.get(id);
-		if (zoneInput) visit(zoneInput);
-		for (const edge of doc.edgesByTarget.get(id) ?? []) {
-			if (!live.has(edge) || !usesInput(target, edge)) continue;
-			const source = doc.nodesById.get(edge.source);
-			if (source?.type === "group-input") used.add(edge.sourceHandle);
-			else visit(edge.source);
-		}
-	}
-	return used;
 }

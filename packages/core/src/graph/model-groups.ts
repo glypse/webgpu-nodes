@@ -1,10 +1,18 @@
 import * as v from "valibot";
 
-import { groupConstants, usedGroupInputs } from "../enums";
+import {
+	groupConstants,
+	hiddenByVariant,
+	isUnder,
+	ownerChain,
+	ownerExists,
+	shownApart,
+} from "../enums";
 import { nodeRegistry } from "../nodes/registry";
 import {
 	type ColorDisplay,
 	type EnumVariant,
+	type InputOwner,
 	type HandleDef,
 	type InputValue,
 	type WgslType,
@@ -787,16 +795,11 @@ export abstract class GroupModel extends ZoneModel {
 		if (!trimmed) return false;
 
 		// Two inputs shown on the same group node can't share a label.
-		const apart = handleNode.type === "group-input" && this.inputVariants(definitionRef);
-		const shownApart = (other: string) => {
-			const of = (id: string) => (apart ? (apart.get(id) ?? []) : []);
-			return of(handleId).some(({ enumId, values }) => {
-				const others = of(other).find((o) => o.enumId === enumId)?.values;
-				return others?.every((v) => !values.includes(v)) ?? false;
-			});
-		};
-		const clash = (h: HandleDef) => h.id !== handleId && h.label === trimmed;
-		if (handles.some((h) => clash(h) && !shownApart(h.id))) return false;
+		const apart = (h: HandleDef) =>
+			handleNode.type === "group-input" && shownApart(handles, handle, h);
+		if (handles.some((h) => h.id !== handleId && h.label === trimmed && !apart(h))) {
+			return false;
+		}
 
 		const data = {
 			...handleNode.data,
@@ -856,70 +859,57 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * The inputs a group node doesn't show: unlinked ones only the variants
-	 * it doesn't pick use, so each variant has its own inputs (see
-	 * `usedGroupInputs`). Inputs no variant uses stay, as one just added.
+	 * The inputs a group node doesn't show: those under a variant of one of
+	 * its enums other than the one it's on, unless linked.
 	 */
 	hiddenInputs(nodeId: string): Set<string> {
 		const node = this.resolveNode(nodeId);
-		const ref = node?.group?.definitionRef;
+		const def = node?.group && this.project.definitions.get(node.group.definitionRef);
 		const doc = this.documentOf(nodeId);
-		if (node?.type !== "node-group" || !ref || !doc) return new Set();
-		const definitions = this.project.definitions;
-		const used = usedGroupInputs(definitions, ref, this.instanceEnumValues(node));
-		const usable = usedGroupInputs(definitions, ref, new Map());
-		const linked = new Set((doc.edgesByTarget.get(nodeId) ?? []).map((e) => e.targetHandle));
-		const hidden = (id: string) => usable.has(id) && !used.has(id) && !linked.has(id);
-		return new Set(
-			this.resolveDescriptor(node)
-				.inputs.map((i) => i.id)
-				.filter(hidden),
-		);
-	}
-
-	/**
-	 * The variants using each input of a group, for the enum inputs some of
-	 * whose variants don't: what its group nodes show the input for.
-	 */
-	inputVariants(definitionRef: string): Map<string, { enumId: string; values: number[] }[]> {
-		const definitions = this.project.definitions;
-		const input = definitions.get(definitionRef)?.nodes.find((n) => n.type === "group-input");
-		const handles = handlesOf(input);
-		const result = new Map<string, { enumId: string; values: number[] }[]>();
-		const usable = usedGroupInputs(definitions, definitionRef, new Map());
-		for (const e of handles) {
-			const used = (e.variants ?? []).map((v) => ({
-				value: v.value,
-				inputs: usedGroupInputs(definitions, definitionRef, new Map([[e.id, v.value]])),
-			}));
-			for (const h of handles) {
-				if (!usable.has(h.id)) continue;
-				const values = used.filter((u) => u.inputs.has(h.id)).map((u) => u.value);
-				if (values.length === used.length) continue;
-				result.set(h.id, [...(result.get(h.id) ?? []), { enumId: e.id, values }]);
-			}
-		}
-		return result;
+		if (node?.type !== "node-group" || !def || !doc) return new Set();
+		const input = def.nodes.find((n) => n.type === "group-input");
+		const hidden = hiddenByVariant(handlesOf(input), this.instanceEnumValues(node));
+		for (const e of doc.edgesByTarget.get(nodeId) ?? []) hidden.delete(e.targetHandle);
+		return hidden;
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
 
-	/** Add a handle to a group-input / group-output node, in any document. */
-	addHandle(nodeId: string, type: WgslType): HandleDef | undefined {
+	/**
+	 * Add a handle to a group-input / group-output node, in any document. A
+	 * group input can be an enum (`variants`), or belong to a variant
+	 * (`owner`): it then comes after the inputs already under that enum.
+	 */
+	addHandle(
+		nodeId: string,
+		type: WgslType,
+		{ variants, owner }: { variants?: EnumVariant[]; owner?: InputOwner } = {},
+	): HandleDef | undefined {
 		const doc = this.documentOf(nodeId);
 		const node = doc?.nodesById.get(nodeId);
 		if (!doc || !node || !BOUNDARY_TYPES.has(node.type ?? "")) return undefined;
 		const handles = handlesOf(node);
-		const prefix = node.type === "group-input" ? "Input" : "Output";
+		const isInput = node.type === "group-input";
+		const prefix = variants ? "Enum" : isInput ? "Input" : "Output";
 		const labels = new Set(handles.map((h) => h.label));
-		let n = handles.length + 1;
+		let n = 1;
 		while (labels.has(`${prefix} ${String(n)}`)) n++;
 		const handle: HandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(n)}`,
-			type,
+			type: variants ? "u32" : type,
+			...(isInput && variants ? { variants } : {}),
+			...(isInput && ownerExists(handles, owner) && owner ? { owner } : {}),
 		};
-		const data = { ...node.data, handles: [...handles, handle] };
+		let at = handles.length;
+		if (handle.owner) {
+			const enumId = handle.owner.enumId;
+			const last = handles.findLastIndex(
+				(h) => h.id === enumId || isUnder(handles, h, { enumId }),
+			);
+			at = last + 1;
+		}
+		const data = { ...node.data, handles: handles.toSpliced(at, 0, handle) };
 		this.setContent(doc, {
 			nodes: doc.nodes.map((other) => (other.id === nodeId ? { ...other, data } : other)),
 		});
@@ -986,16 +976,24 @@ export abstract class GroupModel extends ZoneModel {
 		const handles = handleNode?.data.handles;
 		if (!def || !handleNode || !handles?.some((h) => h.id === handleId)) return;
 
-		// Only a u32 can be an enum.
+		// Only a u32 can be an enum; the inputs of a former enum's variants
+		// take its place.
 		const retyped = (h: HandleDef): HandleDef => {
 			const next = { ...h, type };
 			if (type !== "u32") delete next.variants;
 			if (type !== "vec3f" && type !== "vec4f") delete next.display;
 			return next;
 		};
+		const enumOwner = handles.find((h) => h.id === handleId)?.owner;
+		const promoted = (h: HandleDef): HandleDef => {
+			if (type === "u32" || h.owner?.enumId !== handleId) return h;
+			const next = { ...h };
+			delete next.owner;
+			return enumOwner ? { ...next, owner: enumOwner } : next;
+		};
 		const data = {
 			...handleNode.data,
-			handles: handles.map((h) => (h.id === handleId ? retyped(h) : h)),
+			handles: handles.map((h) => (h.id === handleId ? retyped(h) : promoted(h))),
 		};
 		def.nodes = def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n));
 		indexDocument(def);
@@ -1063,41 +1061,61 @@ export abstract class GroupModel extends ZoneModel {
 			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
 		});
 		this.rebuildTypeCache();
+
+		// The inputs of removed variants go with them.
+		const kept = new Set((variants ?? []).map((v) => v.value));
+		const orphans = handles.filter((h) =>
+			ownerChain(handles, h).some((o) => o.enumId === handleId && !kept.has(o.value)),
+		);
+		this.removeHandles(
+			definitionRef,
+			handleNodeId,
+			orphans.map((h) => h.id),
+		);
 	}
 
-	/** Remove a handle from a group-input/group-output node and delete all connected edges. */
+	/**
+	 * Remove a handle from a group-input/group-output node and delete all
+	 * connected edges. Removing an enum removes its variants' inputs too.
+	 */
 	removeHandle(definitionRef: string, handleNodeId: string, handleId: string) {
-		const def = this.project.definitions.get(definitionRef);
-		if (!def) return;
+		const handles = this.project.definitions.get(definitionRef)?.nodesById.get(handleNodeId)
+			?.data.handles;
+		if (!handles?.some((h) => h.id === handleId)) return;
+		const under = handles.filter((h) => isUnder(handles, h, { enumId: handleId }));
+		this.removeHandles(definitionRef, handleNodeId, [handleId, ...under.map((h) => h.id)]);
+	}
 
-		// Remove the handle from the node's data
-		const handleNode = def.nodesById.get(handleNodeId);
-		if (!handleNode) return;
-		const handles = handleNode.data.handles;
-		if (!handles) return;
-		if (!handles.some((h) => h.id === handleId)) return;
+	private removeHandles(definitionRef: string, handleNodeId: string, ids: readonly string[]) {
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		if (!def || !handleNode || ids.length === 0) return;
+		const removed = new Set(ids);
+		const values = Object.entries(handleNode.data.values ?? {}).filter(
+			([id]) => !removed.has(id),
+		);
 		const data = {
 			...handleNode.data,
-			handles: handles.filter((h) => h.id !== handleId),
-			values: withEntry<InputValue>(handleNode.data.values, handleId, undefined),
+			handles: handlesOf(handleNode).filter((h) => !removed.has(h.id)),
+			values: values.length > 0 ? Object.fromEntries(values) : undefined,
 		};
 
-		// Remove all internal edges connected to this handle on this node
+		// Remove all internal edges connected to these handles on this node
 		this.setContent(def, {
 			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
 			edges: def.edges.filter(
 				(e) =>
 					!(
-						(e.source === handleNodeId && e.sourceHandle === handleId) ||
-						(e.target === handleNodeId && e.targetHandle === handleId)
+						(e.source === handleNodeId && removed.has(e.sourceHandle)) ||
+						(e.target === handleNodeId && removed.has(e.targetHandle))
 					),
 			),
 		});
 
 		// Remove all *outer* edges in any document that holds an instance of this
-		// definition: the now-deleted handle no longer exists on the group node,
-		// so any edge referencing it would be dangling and crash the renderer.
-		this.removeOuterEdgesForHandle(definitionRef, handleId);
+		// definition: the now-deleted handles no longer exist on the group node,
+		// so any edge referencing them would be dangling and crash the renderer.
+		for (const id of ids) this.removeOuterEdgesForHandle(definitionRef, id);
 
 		// Rebuild types since handles and cross-document edges changed
 		this.rebuildTypeCache();

@@ -17,6 +17,7 @@ const HandleSchema = v.object({
 	label: v.string(),
 	type: v.picklist(WGSL_TYPES),
 	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
+	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),
 });
 

@@ -48,7 +48,12 @@ function project(
 					node("in", "group-input", {
 						handles: [
 							{ id: "mode", label: "Mode", type: "u32", variants: VARIANTS },
-							{ id: "x", label: "X", type: "f32" },
+							{
+								id: "x",
+								label: "X",
+								type: "f32",
+								owner: { enumId: "mode", value: 2 },
+							},
 						],
 					}),
 					node("go", "group-output", {
@@ -131,21 +136,55 @@ describe("Match node", () => {
 		expect(links()).toEqual(["selector"]);
 	});
 
-	it("hides a group node's unlinked inputs only feeding cases it doesn't pick", () => {
-		const hidden = (data: NodeData) => [...new GraphModel(project(data)).hiddenInputs("g")];
+	it("hides a group node's inputs under variants it isn't on", () => {
+		const hidden = (
+			data: NodeData,
+			nodes: GraphDocumentNode[] = [],
+			edges: TestEdge[] = [],
+		) => [...new GraphModel(project(data, nodes, edges)).hiddenInputs("g")];
 		expect(hidden({ values: { mode: 0 } })).toEqual(["x"]);
 		expect(hidden({ values: { mode: 2 } })).toEqual([]);
-		const linked = new GraphModel(
-			project({}, [node("ft", "time")], [["ft", "time", "g", "mode"]]),
-		);
-		expect([...linked.hiddenInputs("g")]).toEqual([]);
+		// Unknown while compiling: every variant's inputs.
+		expect(hidden({}, [node("ft", "time")], [["ft", "time", "g", "mode"]])).toEqual([]);
+		expect(
+			hidden({ values: { mode: 0 } }, [node("ft", "time")], [["ft", "time", "g", "x"]]),
+		).toEqual([]);
 	});
 
-	it("shows the inputs no variant uses, as one just added", () => {
-		const graph = new GraphModel(project({ values: { mode: 0 } }));
-		const added = graph.addHandle("in", "f32");
-		expect(graph.resolveNodeInputs("g").map((i) => i.id)).toContain(added?.id);
-		expect([...graph.hiddenInputs("g")]).toEqual(["x"]);
+	it("adds inputs to a variant after its enum's, nested enums included", () => {
+		const graph = new GraphModel(project({ values: { mode: 2 } }));
+		const top = graph.addHandle("in", "f32");
+		const sub = graph.addHandle("in", "u32", {
+			variants: [
+				{ value: 0, label: "A" },
+				{ value: 1, label: "B" },
+			],
+			owner: { enumId: "mode", value: 2 },
+		});
+		const z = sub && graph.addHandle("in", "f32", { owner: { enumId: sub.id, value: 1 } });
+		const ids = () =>
+			graph.project.definitions
+				.get("def")
+				?.nodesById.get("in")
+				?.data.handles?.map((h) => h.id);
+		expect(ids()).toEqual(["mode", "x", sub?.id, z?.id, top?.id]);
+		expect([...graph.hiddenInputs("g")]).toEqual([z?.id]);
+		graph.setInputValue("g", "mode", 0);
+		expect([...graph.hiddenInputs("g")]).toEqual(["x", sub?.id, z?.id]);
+
+		// Removing a variant, or an enum, removes the inputs under it.
+		if (!sub?.variants) throw new Error("unreachable");
+		graph.setHandleVariants("def", "in", sub.id, sub.variants.slice(0, 1));
+		expect(ids()).toEqual(["mode", "x", sub.id, top?.id]);
+		graph.removeHandle("def", "in", "mode");
+		expect(ids()).toEqual([top?.id]);
+	});
+
+	it("lets inputs never shown together share a label", () => {
+		const graph = new GraphModel(project());
+		const y = graph.addHandle("in", "f32", { owner: { enumId: "mode", value: 5 } });
+		expect(y && graph.setHandleLabel("def", "in", y.id, "X")).toBe(true);
+		expect(graph.setHandleLabel("def", "in", "mode", "X")).toBe(false);
 	});
 
 	it("replaces the group input node when removing or renaming a handle", () => {
@@ -166,49 +205,5 @@ describe("Match node", () => {
 			definitions: { [ROOT_ID]: { nodes: [node("m", "match")], edges: [] } },
 		});
 		expect(lone.typeChoice("m")?.types.length).toBeGreaterThan(1);
-	});
-
-	it("follows enum values into nested groups", () => {
-		const nested = project({ values: { mode: 0 } });
-		const [input, output] = nested.definitions.def?.nodes ?? [];
-		if (!input || !output) throw new Error("unreachable");
-		// "outer" passes its own mode and x to an instance of "def".
-		nested.definitions.outer = {
-			nodes: [
-				{ ...structuredClone(input), id: "oin" },
-				{ ...structuredClone(output), id: "ogo" },
-				{ ...node("inner", "node-group"), group: { definitionRef: "def", locked: false } },
-			],
-			edges: (
-				[
-					["oin", "mode", "inner", "mode"],
-					["oin", "x", "inner", "x"],
-					["inner", "result", "ogo", "result"],
-				] satisfies TestEdge[]
-			).map(edge),
-		};
-		const root = nested.definitions[ROOT_ID];
-		const instance = root?.nodes.find((n) => n.id === "g");
-		if (!instance?.group) throw new Error("unreachable");
-		instance.group.definitionRef = "outer";
-		expect([...new GraphModel(nested).hiddenInputs("g")]).toEqual(["x"]);
-	});
-
-	it("tells which variants use each input, which may then share a label", () => {
-		const withY = project();
-		const def = withY.definitions.def;
-		const input = def?.nodes.find((n) => n.id === "in");
-		if (!def || !input?.data.handles) throw new Error("unreachable");
-		input.data.handles.push({ id: "y", label: "Y", type: "f32" });
-		def.edges = def.edges.map((e) =>
-			e.source === "t" ? { ...e, source: "in", sourceHandle: "y" } : e,
-		);
-		const graph = new GraphModel(withY);
-		expect(Object.fromEntries(graph.inputVariants("def"))).toEqual({
-			x: [{ enumId: "mode", values: [2] }],
-			y: [{ enumId: "mode", values: [5] }],
-		});
-		expect(graph.setHandleLabel("def", "in", "y", "X")).toBe(true);
-		expect(graph.setHandleLabel("def", "in", "mode", "X")).toBe(false);
 	});
 });
