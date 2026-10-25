@@ -786,8 +786,17 @@ export abstract class GroupModel extends ZoneModel {
 		const trimmed = label.trim();
 		if (!trimmed) return false;
 
-		// Reject duplicate labels within the same boundary node
-		if (handles.some((h) => h.id !== handleId && h.label === trimmed)) return false;
+		// Two inputs shown on the same group node can't share a label.
+		const apart = handleNode.type === "group-input" && this.inputVariants(definitionRef);
+		const shownApart = (other: string) => {
+			const of = (id: string) => (apart ? (apart.get(id) ?? []) : []);
+			return of(handleId).some(({ enumId, values }) => {
+				const others = of(other).find((o) => o.enumId === enumId)?.values;
+				return others?.every((v) => !values.includes(v)) ?? false;
+			});
+		};
+		const clash = (h: HandleDef) => h.id !== handleId && h.label === trimmed;
+		if (handles.some((h) => clash(h) && !shownApart(h.id))) return false;
 
 		handle.label = trimmed;
 		return true;
@@ -816,10 +825,7 @@ export abstract class GroupModel extends ZoneModel {
 			if (def) {
 				const inputNode = def.nodes.find((n) => n.type === "group-input");
 				const outputNode = def.nodes.find((n) => n.type === "group-output");
-				const enums = this.instanceEnumValues(node);
-				for (const h of handlesOf(inputNode)) {
-					inputs[h.id] = variantLabel(h, handlesOf(inputNode), enums) ?? h.label;
-				}
+				for (const h of handlesOf(inputNode)) inputs[h.id] = h.label;
 				for (const h of handlesOf(outputNode)) outputs[h.id] = h.label;
 			}
 		}
@@ -866,39 +872,28 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * Name a group input after a variant of one of the group's enum inputs
-	 * (`undefined` goes back to its own label for that variant).
+	 * The variants using each input of a group, for the enum inputs some of
+	 * whose variants don't: what its group nodes show the input for.
 	 */
-	setHandleVariantLabel(
-		definitionRef: string,
-		handleNodeId: string,
-		handleId: string,
-		variant: { enumId: string; value: number },
-		label: string | undefined,
-	) {
-		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		const handles = handleNode?.data.handles;
-		if (!def || handleNode?.type !== "group-input" || !handles) return;
-		const trimmed = label?.trim();
-		const data = {
-			...handleNode.data,
-			handles: handles.map((h) => {
-				if (h.id !== handleId) return h;
-				const labels = withEntry(
-					h.variantLabels?.[variant.enumId],
-					String(variant.value),
-					trimmed === "" ? undefined : trimmed,
-				);
-				const byEnum = withEntry(h.variantLabels, variant.enumId, labels);
-				const rest = { ...h };
-				delete rest.variantLabels;
-				return byEnum ? { ...rest, variantLabels: byEnum } : rest;
-			}),
-		};
-		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
-		});
+	inputVariants(definitionRef: string): Map<string, { enumId: string; values: number[] }[]> {
+		const definitions = this.project.definitions;
+		const input = definitions.get(definitionRef)?.nodes.find((n) => n.type === "group-input");
+		const handles = handlesOf(input);
+		const result = new Map<string, { enumId: string; values: number[] }[]>();
+		const usable = usedGroupInputs(definitions, definitionRef, new Map());
+		for (const e of handles) {
+			const used = (e.variants ?? []).map((v) => ({
+				value: v.value,
+				inputs: usedGroupInputs(definitions, definitionRef, new Map([[e.id, v.value]])),
+			}));
+			for (const h of handles) {
+				if (!usable.has(h.id)) continue;
+				const values = used.filter((u) => u.inputs.has(h.id)).map((u) => u.value);
+				if (values.length === used.length) continue;
+				result.set(h.id, [...(result.get(h.id) ?? []), { enumId: e.id, values }]);
+			}
+		}
+		return result;
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
@@ -1120,19 +1115,4 @@ export abstract class GroupModel extends ZoneModel {
 			indexDocument(doc);
 		}
 	}
-}
-
-/** `handle`'s label for the first enum value in `enums` it has one for. */
-function variantLabel(
-	handle: HandleDef,
-	handles: readonly HandleDef[],
-	enums: ReadonlyMap<string, number>,
-): string | undefined {
-	for (const h of handles) {
-		const value = enums.get(h.id);
-		const label =
-			value === undefined ? undefined : handle.variantLabels?.[h.id]?.[String(value)];
-		if (label) return label;
-	}
-	return undefined;
 }

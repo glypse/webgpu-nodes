@@ -44,6 +44,20 @@
 	const inputHandles = $derived(handlesOf(inputNode));
 	const outputHandles = $derived(handlesOf(outputNode));
 	const enums = $derived(inputHandles.filter((h) => h.variants));
+	const inputVariants = $derived(
+		definitionRef ? graph.inputVariants(definitionRef) : new Map<string, never[]>(),
+	);
+
+	/** Which variants an input is shown for, as "Mode: RGB, HSV". */
+	function shownFor(handle: HandleDef): string[] {
+		return (inputVariants.get(handle.id) ?? []).map(({ enumId, values }) => {
+			const enumHandle = enums.find((e) => e.id === enumId);
+			const labels = (enumHandle?.variants ?? [])
+				.filter((v) => values.includes(v.value))
+				.map((v) => v.label);
+			return `${enumHandle?.label ?? ""}: ${labels.join(", ") || "none"}`;
+		});
+	}
 
 	const DISPLAY_LABELS: Record<ColorDisplay | "numbers", string> = {
 		numbers: "Numbers",
@@ -306,35 +320,6 @@
 				{/if}
 			</div>
 		{/if}
-
-		{#each enums.filter((e) => e.id !== handle.id) as enumHandle (enumHandle.id)}
-			<div class="flex flex-col gap-1">
-				<span class="text-muted-foreground text-xs">Label by {enumHandle.label}</span>
-				{#each enumHandle.variants ?? [] as variant (variant.value)}
-					<div class="flex items-center gap-2">
-						<span class="w-24 shrink-0 truncate text-xs">{variant.label}</span>
-						<Input
-							value={handle.variantLabels?.[enumHandle.id]?.[String(variant.value)] ??
-								""}
-							placeholder={handle.label}
-							disabled={locked}
-							onchange={(e: Event) => {
-								if (definitionRef && inputNode) {
-									graph.setHandleVariantLabel(
-										definitionRef,
-										inputNode.id,
-										handle.id,
-										{ enumId: enumHandle.id, value: variant.value },
-										inputValue(e),
-									);
-								}
-							}}
-							onkeydown={handleEnterBlur}
-						/>
-					</div>
-				{/each}
-			</div>
-		{/each}
 	</div>
 {/snippet}
 
@@ -381,6 +366,11 @@
 						<span class="text-sm font-medium">Inputs</span>
 						{#each inputHandles as handle (handle.id)}
 							{@render handleRow(handle, nodeId, true)}
+							{#each shownFor(handle) as line (line)}
+								<span class="text-muted-foreground -mt-1 pl-22 text-xs">
+									Only for {line}
+								</span>
+							{/each}
 							{#if expanded[handle.id]}
 								{@render inputDetails(handle)}
 							{/if}

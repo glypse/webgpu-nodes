@@ -183,11 +183,21 @@ describe("Match node", () => {
 		expect([...new GraphModel(nested).hiddenInputs("g")]).toEqual(["x"]);
 	});
 
-	it("names inputs after the variant their group node is on", () => {
-		const graph = new GraphModel(project({ values: { mode: 2 } }));
-		graph.setHandleVariantLabel("def", "in", "x", { enumId: "mode", value: 2 }, "Deux");
-		expect(graph.resolveNodeLabels("g").inputs.x).toBe("Deux");
-		graph.setInputValue("g", "mode", 5);
-		expect(graph.resolveNodeLabels("g").inputs.x).toBe("X");
+	it("tells which variants use each input, which may then share a label", () => {
+		const withY = project();
+		const def = withY.definitions.def;
+		const input = def?.nodes.find((n) => n.id === "in");
+		if (!def || !input?.data.handles) throw new Error("unreachable");
+		input.data.handles.push({ id: "y", label: "Y", type: "f32" });
+		def.edges = def.edges.map((e) =>
+			e.source === "t" ? { ...e, source: "in", sourceHandle: "y" } : e,
+		);
+		const graph = new GraphModel(withY);
+		expect(Object.fromEntries(graph.inputVariants("def"))).toEqual({
+			x: [{ enumId: "mode", values: [2] }],
+			y: [{ enumId: "mode", values: [5] }],
+		});
+		expect(graph.setHandleLabel("def", "in", "y", "X")).toBe(true);
+		expect(graph.setHandleLabel("def", "in", "mode", "X")).toBe(false);
 	});
 });
