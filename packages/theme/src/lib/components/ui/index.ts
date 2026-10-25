@@ -5,6 +5,7 @@ export {
 	ColorPicker,
 	ColorValueRamp,
 	ColorWheel,
+	ColorWheels,
 	OKLCH_MAX_CHROMA,
 	OklchLightness,
 	OklchWheel,

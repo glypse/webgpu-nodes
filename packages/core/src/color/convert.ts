@@ -176,3 +176,22 @@ export function hexToLinear(hex: string): Rgba | undefined {
 		a: digits.length === 8 ? byte(6) : 1,
 	};
 }
+
+const GREY = 1e-6;
+
+/**
+ * HSV (of the sRGB-encoded colour) of a linear one, keeping `previous`'s
+ * hue for a grey and its hue and saturation for black, which have none: so
+ * a hue survives going through them, as in Blender.
+ */
+export function hsvKeepingHue(color: Rgb, previous: Hsv): Hsv {
+	const next = rgbToHsv(encodeRgb(color));
+	if (next.v < GREY) return { ...previous, v: 0 };
+	return next.s < GREY ? { ...next, h: previous.h } : next;
+}
+
+/** OKLch of a linear colour, keeping `previous`'s hue for a grey, which has none. */
+export function lchKeepingHue(color: Rgb, previous: Lch): Lch {
+	const next = linearToOklch(color);
+	return next.c < 1e-4 ? { ...next, c: 0, h: previous.h } : next;
+}

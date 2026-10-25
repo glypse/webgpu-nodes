@@ -7,17 +7,17 @@
 
 <script lang="ts">
 	import {
+		type ColorComponents,
 		decodeRgb,
-		encodeRgb,
 		type Hsv,
 		hexToLinear,
+		hsvKeepingHue,
 		hsvToRgb,
 		type Lch,
+		lchKeepingHue,
 		linearToHex,
-		linearToOklch,
 		oklchToLinear,
 		type Rgba,
-		rgbToHsv,
 	} from "$core";
 	import EyedropperIcon from "phosphor-svelte/lib/EyedropperIcon";
 	import { untrack } from "svelte";
@@ -25,10 +25,7 @@
 	import { linearToCss } from "../../../color-css.js";
 	import { cn } from "../../../utils.js";
 	import { Root as Scrubbable } from "../scrubbable/index.js";
-	import ColorWheel from "./color-wheel.svelte";
-	import OklchLightness from "./oklch-lightness.svelte";
-	import OklchWheel from "./oklch-wheel.svelte";
-	import ValueRamp from "./value-ramp.svelte";
+	import ColorWheels from "./color-wheels.svelte";
 
 	let {
 		value,
@@ -70,29 +67,18 @@
 	const sameColor = (a: Rgba, b: Rgba) =>
 		(["r", "g", "b", "a"] as const).every((k) => Math.abs(a[k] - b[k]) < EPSILON);
 
-	function hsvOf(color: Rgba, previous: Hsv): Hsv {
-		const next = rgbToHsv(encodeRgb(color));
-		if (next.v < EPSILON) return { ...previous, v: 0 };
-		return next.s < EPSILON ? { ...next, h: previous.h } : next;
-	}
-
-	function lchOf(color: Rgba, previous: Lch): Lch {
-		const next = linearToOklch(color);
-		return next.c < 1e-4 ? { ...next, c: 0, h: previous.h } : next;
-	}
-
 	$effect.pre(() => {
 		const current = value;
 		if (sent && sameColor(sent, current)) return;
 		untrack(() => {
-			hsv = hsvOf(current, hsv);
-			lch = lchOf(current, lch);
+			hsv = hsvKeepingHue(current, hsv);
+			lch = lchKeepingHue(current, lch);
 		});
 	});
 
 	function commit(next: Rgba, keep: { hsv?: Hsv; lch?: Lch } = {}) {
-		hsv = keep.hsv ?? hsvOf(next, hsv);
-		lch = keep.lch ?? lchOf(next, lch);
+		hsv = keep.hsv ?? hsvKeepingHue(next, hsv);
+		lch = keep.lch ?? lchKeepingHue(next, lch);
 		sent = next;
 		onchange(next);
 	}
@@ -105,6 +91,20 @@
 	function setLch(patch: Partial<Lch>) {
 		const next = { ...lch, ...patch };
 		commit({ ...oklchToLinear(next), a: value.a }, { lch: next });
+	}
+
+	const components = $derived<ColorComponents>(
+		mode === "rgb"
+			? [value.r, value.g, value.b]
+			: mode === "hsv"
+				? [hsv.h, hsv.s, hsv.v]
+				: [lch.l, lch.c, lch.h],
+	);
+
+	function setComponents([x, y, z]: ColorComponents) {
+		if (mode === "rgb") commit({ r: x, g: y, b: z, a: value.a });
+		else if (mode === "hsv") setHsv({ h: x, s: y, v: z });
+		else setLch({ l: x, c: y, h: z });
 	}
 
 	function setMode(next: Mode) {
@@ -148,27 +148,13 @@
 {/snippet}
 
 <div class={cn("flex w-44 flex-col gap-2", className)}>
-	<div class="flex justify-center gap-2">
-		{#if mode === "oklch"}
-			<!-- Only colours sRGB can show are drawn; others picked are mapped
-			     into it. -->
-			<OklchWheel class="size-32" {lch} onchange={setLch} />
-			<OklchLightness
-				{lch}
-				onchange={(l: number) => {
-					setLch({ l });
-				}}
-			/>
-		{:else}
-			<ColorWheel class="size-32" {hsv} onchange={setHsv} />
-			<ValueRamp
-				{hsv}
-				onchange={(v: number) => {
-					setHsv({ v });
-				}}
-			/>
-		{/if}
-	</div>
+	<ColorWheels
+		class="justify-center"
+		wheelClass="size-32"
+		{mode}
+		{components}
+		onchange={setComponents}
+	/>
 
 	<div class="bg-muted flex rounded-md p-0.5" role="tablist">
 		{#each MODES as option (option.mode)}
