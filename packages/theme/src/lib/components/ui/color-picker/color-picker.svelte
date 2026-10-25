@@ -26,6 +26,8 @@
 	import { cn } from "../../../utils.js";
 	import { Root as Scrubbable } from "../scrubbable/index.js";
 	import ColorWheel from "./color-wheel.svelte";
+	import OklchLightness from "./oklch-lightness.svelte";
+	import OklchWheel from "./oklch-wheel.svelte";
 	import ValueRamp from "./value-ramp.svelte";
 
 	let {
@@ -147,13 +149,25 @@
 
 <div class={cn("flex w-44 flex-col gap-2", className)}>
 	<div class="flex justify-center gap-2">
-		<ColorWheel class="size-32" {hsv} onchange={setHsv} />
-		<ValueRamp
-			{hsv}
-			onchange={(v: number) => {
-				setHsv({ v });
-			}}
-		/>
+		{#if mode === "oklch"}
+			<!-- Only colours sRGB can show are drawn; others picked are mapped
+			     into it. -->
+			<OklchWheel class="size-32" {lch} onchange={setLch} />
+			<OklchLightness
+				{lch}
+				onchange={(l: number) => {
+					setLch({ l });
+				}}
+			/>
+		{:else}
+			<ColorWheel class="size-32" {hsv} onchange={setHsv} />
+			<ValueRamp
+				{hsv}
+				onchange={(v: number) => {
+					setHsv({ v });
+				}}
+			/>
+		{/if}
 	</div>
 
 	<div class="bg-muted flex rounded-md p-0.5" role="tablist">

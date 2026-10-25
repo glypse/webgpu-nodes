@@ -48,7 +48,7 @@
 
 	const cursor = $derived.by(() => {
 		const angle = (lch.h * Math.PI) / 180 + HUE_OFFSET;
-		const radius = Math.min(1, lch.c / maxChroma);
+		const radius = Math.min(1, Math.max(0, lch.c / maxChroma));
 		return { x: Math.sin(angle) * radius, y: -Math.cos(angle) * radius };
 	});
 
