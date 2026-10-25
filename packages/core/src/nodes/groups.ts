@@ -1,6 +1,6 @@
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
-import type { HandleDef, NodeDescriptor } from "../types";
+import { type HandleDef, type InputValue, type NodeDescriptor, enumValue } from "../types";
 import { fallbackHandleIds } from "./logic";
 
 // ── Group descriptor builders ─────────────────────────────────────────────────
@@ -68,6 +68,14 @@ export function buildGroupDescriptor(
 		outputs: outputNode?.data.handles ?? [],
 	};
 
+	// The group input's values are what instances hold until they're edited.
+	const values: Record<string, InputValue> = {};
+	for (const h of handles.inputs) {
+		const stored = inputNode?.data.values?.[h.id];
+		const value = h.variants ? enumValue(stored, h.variants) : stored;
+		if (value !== undefined) values[h.id] = value;
+	}
+
 	return {
 		type: "node-group",
 		label: definition.label ?? definitionRef,
@@ -77,11 +85,11 @@ export function buildGroupDescriptor(
 			id: h.id,
 			label: h.label,
 			types: [h.type],
-			...(h.options ? { control: { kind: "enum", options: h.options } } : {}),
+			...(h.variants ? { control: { kind: "enum", variants: h.variants } } : {}),
 			...(fallbacks.has(h.id) ? { fallback: true } : {}),
 		})),
 		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
-		defaultData: {},
+		defaultData: { values },
 		wgsl: () => [],
 	};
 }

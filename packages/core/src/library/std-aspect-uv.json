@@ -20,7 +20,11 @@
 							"id": "mode",
 							"label": "Mode",
 							"type": "u32",
-							"options": ["Contain (Fit)", "Cover (Fill)", "Stretch"]
+							"variants": [
+								{ "value": 0, "label": "Contain (Fit)" },
+								{ "value": 1, "label": "Cover (Fill)" },
+								{ "value": 2, "label": "Stretch" }
+							]
 						}
 					]
 				},

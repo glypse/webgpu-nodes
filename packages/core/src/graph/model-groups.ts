@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { nodeRegistry } from "../nodes/registry";
-import { type HandleDef, type WgslType } from "../types";
+import { type EnumVariant, type HandleDef, type WgslType } from "../types";
 import { wouldCreateCycle } from "../zones";
 import {
 	type GraphDocument,
@@ -884,6 +884,37 @@ export abstract class GroupModel extends ZoneModel {
 				indexDocument(doc);
 			}
 		}
+		this.rebuildTypeCache();
+	}
+
+	/**
+	 * Make a group input an enum choosing among `variants` (it becomes a u32),
+	 * or a plain value again with `undefined`. Match nodes linked to it follow:
+	 * links into cases it no longer has are removed.
+	 */
+	setHandleVariants(
+		definitionRef: string,
+		handleNodeId: string,
+		handleId: string,
+		variants: EnumVariant[] | undefined,
+	) {
+		if (variants) this.setHandleType(definitionRef, handleNodeId, handleId, "u32");
+		const def = this.project.definitions.get(definitionRef);
+		const handleNode = def?.nodesById.get(handleNodeId);
+		const handles = handleNode?.data.handles;
+		if (!def || handleNode?.type !== "group-input" || !handles) return;
+		const data = {
+			...handleNode.data,
+			handles: handles.map((h) => {
+				if (h.id !== handleId) return h;
+				const rest = { ...h };
+				delete rest.variants;
+				return variants ? { ...rest, variants } : rest;
+			}),
+		};
+		this.setContent(def, {
+			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		});
 		this.rebuildTypeCache();
 	}
 

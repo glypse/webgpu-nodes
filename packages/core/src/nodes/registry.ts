@@ -73,6 +73,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	not: nodes.notNode,
 	"reduce-boolean": nodes.reduceBooleanNode,
 	fallback: nodes.fallbackNode,
+	match: nodes.matchNode,
 
 	// Integer
 	bitwise: nodes.bitwiseNode,

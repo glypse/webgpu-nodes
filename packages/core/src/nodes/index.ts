@@ -8,4 +8,5 @@ export * from "./convert";
 export * from "./misc";
 export * from "./color";
 export * from "./groups";
+export * from "./match";
 export * from "./dev";

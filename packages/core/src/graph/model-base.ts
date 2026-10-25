@@ -1,3 +1,4 @@
+import { MATCH, isCaseHandle } from "../enums";
 import {
 	ARCHIVED_VERSIONS_ENABLED,
 	loadArchivedVersion,
@@ -672,6 +673,8 @@ export abstract class GraphModelBase {
 	 * and when the document structure changes fundamentally.
 	 */
 	rebuildTypeCache(): void {
+		this.dropStaleCaseLinks();
+
 		// Clear the TypeResolver's memoisation cache so every node is recomputed
 		this.typeResolver.clearCache();
 
@@ -689,6 +692,21 @@ export abstract class GraphModelBase {
 
 		// Trigger reactivity
 		this.typeCache = new Map(this.typeCache);
+	}
+
+	/**
+	 * Remove links into Match cases their enum no longer has: a variant was
+	 * removed, or another enum (or none) was linked to the node.
+	 */
+	private dropStaleCaseLinks() {
+		for (const doc of this.project.definitions.values()) {
+			const kept = doc.edges.filter((e) => {
+				const node = doc.nodesById.get(e.target);
+				if (node?.type !== MATCH || !isCaseHandle(e.targetHandle)) return true;
+				return this.resolveDescriptor(node).inputs.some((i) => i.id === e.targetHandle);
+			});
+			if (kept.length !== doc.edges.length) this.setContent(doc, { edges: kept });
+		}
 	}
 
 	// ── Node data edits ─────────────────────────────────────────────────────────

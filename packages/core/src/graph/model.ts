@@ -1,6 +1,7 @@
 import * as v from "valibot";
 
 import type { AddMenuEntry } from "../catalog/add-menu";
+import { MATCH, MATCH_SELECTOR, enumOfOutput } from "../enums";
 import {
 	type LayoutSpacing,
 	type NodeGeometry,
@@ -147,7 +148,8 @@ export class GraphModel extends GroupModel {
 	 * Whether a link may be made (e.g. a UI's connection validator). Rejects:
 	 * - connections that would close a cycle (zones included),
 	 * - type mismatches (a higher-N value into a lower-N input),
-	 * - connections breaking zone rules, or invalidating existing links.
+	 * - connections breaking zone rules, or invalidating existing links,
+	 * - anything but an enum picking a Match node's case.
 	 * Dropping on a zone's virtual "new item" handle accepts any type.
 	 */
 	isValidConnection(connection: {
@@ -173,6 +175,14 @@ export class GraphModel extends GroupModel {
 			if (!this.isTypeCompatible(sourceNode, sourceHandle, targetNode, targetHandle)) {
 				return false;
 			}
+		}
+		// A Match node's cases come from its enum: nothing else can pick one.
+		if (
+			targetNode.type === MATCH &&
+			targetHandle === MATCH_SELECTOR &&
+			!enumOfOutput(doc, connection.source, sourceHandle)
+		) {
+			return false;
 		}
 
 		return this.respectsZones(doc, targetNode, {

@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { readComponent } from "$core";
+	import { type EnumVariant, enumValue } from "$core";
 	import { Select } from "$theme";
 
 	import type { ControlProps } from "./types";
@@ -10,24 +10,28 @@
 		disabled,
 		name,
 		onchange,
-	}: ControlProps<{ kind: "enum"; options: readonly string[] }> = $props();
+	}: ControlProps<{ kind: "enum"; variants: readonly EnumVariant[] }> = $props();
 
-	const index = $derived(Math.trunc(readComponent(value, "_")));
+	const selected = $derived(enumValue(value, control.variants));
 </script>
 
 <Select.Root
 	type="single"
 	{name}
-	value={String(index)}
+	value={String(selected)}
 	{disabled}
 	onValueChange={(next: string) => {
 		onchange(Number(next));
 	}}
 >
-	<Select.Trigger class="w-full">{control.options[index] ?? `#${String(index)}`}</Select.Trigger>
+	<Select.Trigger class="w-full">
+		{control.variants.find((v) => v.value === selected)?.label ?? ""}
+	</Select.Trigger>
 	<Select.Content>
-		{#each control.options as option, i (option)}
-			<Select.Item value={String(i)} label={option}>{option}</Select.Item>
+		{#each control.variants as variant (variant.value)}
+			<Select.Item value={String(variant.value)} label={variant.label}>
+				{variant.label}
+			</Select.Item>
 		{/each}
 	</Select.Content>
 </Select.Root>

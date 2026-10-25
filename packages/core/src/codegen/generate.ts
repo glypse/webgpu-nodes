@@ -1,3 +1,4 @@
+import { type EnumDocument, constantAt, liveEdges } from "../enums";
 import { ROOT_ID, type GraphEdge } from "../graph/document";
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
@@ -7,6 +8,7 @@ import type { HandleDef, InputValue, NodeData, WgslType } from "../types";
 import {
 	WGSL_DEFAULTS,
 	convertVar,
+	enumValue,
 	inputControl,
 	inputDefaultType,
 	isUniformControl,
@@ -210,8 +212,9 @@ type ShaderState = {
 	helpers: HelperRegistry;
 	/**
 	 * Every group's generated function (and, for the first one, its output
-	 * struct), keyed by definitionRef plus the absent fallback inputs, so each
-	 * variant is emitted once no matter how many instances use it.
+	 * struct), keyed by definitionRef plus the absent fallback inputs and the
+	 * known enum values, so each variant is emitted once no matter how many
+	 * instances use it.
 	 */
 	groupDecls: Map<string, { decl: string; fnName: string }>;
 	/** Definitions whose output struct has already been declared. */
@@ -264,6 +267,8 @@ class BodyEmitter {
 		readonly zones: ZoneAnalysis,
 		/** Group-input handles the calling group node left unlinked (absent values). */
 		private absentInputs: ReadonlySet<string> = new Set(),
+		/** Enum values the calling group node set, by group-input handle. */
+		private constants: ReadonlyMap<string, number> = new Map(),
 		/** Whether unlinked input values are read from uniforms. */
 		private uniforms = false,
 	) {
@@ -284,6 +289,14 @@ class BodyEmitter {
 
 	node(id: string): GraphNode | undefined {
 		return this.nodeMap.get(id);
+	}
+
+	private get enumDocument(): EnumDocument {
+		return { nodesById: this.nodeMap, edgesByTarget: this.incomingByTarget };
+	}
+
+	constantOf(node: GraphNode, inputId: string): number | undefined {
+		return constantAt(this.enumDocument, node.id, inputId, this.constants);
 	}
 
 	zoneItems(zone: Zone): HandleDef[] {
@@ -309,7 +322,12 @@ class BodyEmitter {
 
 	sourceExpr(edge: GraphEdge): string {
 		const sourceNode = this.nodeMap.get(edge.source);
-		if (sourceNode?.type === "group-input") return sanitizeIdent(edge.sourceHandle);
+		if (sourceNode?.type === "group-input") {
+			const constant = this.constants.get(edge.sourceHandle);
+			return constant === undefined
+				? sanitizeIdent(edge.sourceHandle)
+				: formatWgslLiteral("u32", constant);
+		}
 		const zoneVar = this.zoneVars.get(edge.source)?.get(edge.sourceHandle);
 		if (zoneVar) return zoneVar;
 		const base = getVarName(edge.source);
@@ -434,6 +452,7 @@ class BodyEmitter {
 			isPresent: (id) => this.isPresent(node, id),
 			convert: convertVar,
 			helper: (name, type) => this.state.helpers.use(name, type),
+			constant: (id) => this.constantOf(node, id),
 		});
 		this.push(node.id, statements, indent);
 	}
@@ -448,10 +467,24 @@ class BodyEmitter {
 				.filter((i) => i.fallback && !this.isPresent(node, i.id))
 				.map((i) => i.id),
 		);
-		const decl = emitGroupFunction(this.state, definitionRef, absent);
+		const defaults = descriptor.defaultData.values;
+		// Enum values known here are compiled into the call's function.
+		const constants = new Map<string, number>();
+		for (const input of descriptor.inputs) {
+			if (input.control?.kind !== "enum") continue;
+			const linked = this.incoming(node.id).some((e) => e.targetHandle === input.id);
+			const value = linked
+				? this.constantOf(node, input.id)
+				: enumValue(
+						node.data.values?.[input.id] ?? defaults?.[input.id],
+						input.control.variants,
+					);
+			if (value !== undefined) constants.set(input.id, value);
+		}
+		const decl = emitGroupFunction(this.state, definitionRef, absent, constants);
 		if (!decl) return;
 		const args = descriptor.inputs.map((inputDef) =>
-			this.inputExpr(node, inputDef.id, inputDefaultType(inputDef)),
+			this.inputExpr(node, inputDef.id, inputDefaultType(inputDef), defaults?.[inputDef.id]),
 		);
 		this.push(
 			node.id,
@@ -486,6 +519,7 @@ function emitDocumentBody(
 	doc: { nodes: GraphNode[]; edges: GraphEdge[] },
 	seedType: string,
 	absentInputs: ReadonlySet<string> = new Set(),
+	constants: ReadonlyMap<string, number> = new Map(),
 	uniforms = false,
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
@@ -493,9 +527,13 @@ function emitDocumentBody(
 
 	const zones = analyzeZones(doc.nodes, doc.edges);
 	const validEdges = doc.edges.filter((e) => !zones.invalidEdges.has(e.id));
-	const reachable = findReachableNodeIds(nodeMap, validEdges, seedType);
-	const edges = validEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
-	const emitter = new BodyEmitter(state, doc, edges, zones, absentInputs, uniforms);
+	const edgesByTarget = new Map<string, GraphEdge[]>();
+	for (const e of validEdges)
+		edgesByTarget.set(e.target, [...(edgesByTarget.get(e.target) ?? []), e]);
+	const usedEdges = liveEdges({ nodesById: nodeMap, edgesByTarget }, validEdges, constants);
+	const reachable = findReachableNodeIds(nodeMap, usedEdges, seedType);
+	const edges = usedEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
+	const emitter = new BodyEmitter(state, doc, edges, zones, absentInputs, constants, uniforms);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
 	const unitIn = (scope: string | null, nodeId: string): string | undefined => {
@@ -578,6 +616,7 @@ function emitGroupFunction(
 	state: ShaderState,
 	definitionRef: string,
 	absentInputs: ReadonlySet<string> = new Set(),
+	constants: ReadonlyMap<string, number> = new Map(),
 ): { decl: string; fnName: string } | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
@@ -586,16 +625,23 @@ function emitGroupFunction(
 	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
 	const inputHandles = groupInputNode?.data.handles ?? [];
 
-	// One function per combination of absent fallback inputs, so each only
-	// contains the branches it uses.
+	// One function per combination of absent fallback inputs and enum
+	// values, so each only contains the branches it uses.
 	const absentIndices = inputHandles.flatMap((h, i) => (absentInputs.has(h.id) ? [i] : []));
-	const key = [definitionRef, ...absentIndices].join("|");
+	const enumValues = inputHandles.flatMap((h, i) => {
+		const value = constants.get(h.id);
+		return value === undefined ? [] : [`${String(i)}_${String(value)}`];
+	});
+	const key = [definitionRef, ...absentIndices, "e", ...enumValues].join("|");
 	const existing = state.groupDecls.get(key);
 	if (existing) return existing;
 
 	const ident = sanitizeIdent(definitionRef);
-	const fnName =
-		absentIndices.length > 0 ? `group_${ident}__d${absentIndices.join("_")}` : `group_${ident}`;
+	const suffix = [
+		...(absentIndices.length > 0 ? [`d${absentIndices.join("_")}`] : []),
+		...enumValues.map((v) => `e${v}`),
+	];
+	const fnName = [`group_${ident}`, ...suffix].join("__");
 	const structName = `GroupOutputs_${ident}`;
 
 	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
@@ -606,6 +652,7 @@ function emitGroupFunction(
 		definition,
 		"group-output",
 		absentInputs,
+		constants,
 		state.uniformScope === definitionRef,
 	);
 
@@ -658,6 +705,7 @@ export function generateShader(
 		graph.root,
 		"frag-output",
 		new Set(),
+		new Map(),
 		uniformScope === ROOT_ID,
 	);
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");

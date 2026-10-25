@@ -1,8 +1,10 @@
+import { MATCH, MATCH_SELECTOR, enumAt } from "../enums";
 import {
 	buildGroupDescriptor,
 	buildGroupInputDescriptor,
 	buildGroupOutputDescriptor,
 } from "../nodes/groups";
+import { buildMatchDescriptor } from "../nodes/match";
 import { nodeRegistry } from "../nodes/registry";
 import { type NodeDescriptor, withDefaults } from "../types";
 import {
@@ -43,6 +45,10 @@ export function resolveDescriptor(
 	}
 	if (node.type === REPEAT_OUTPUT) {
 		return buildRepeatOutputDescriptor(node);
+	}
+	if (node.type === MATCH) {
+		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
+		return buildMatchDescriptor(doc && enumAt(doc, node.id, MATCH_SELECTOR));
 	}
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- fallback is safe
 	return (nodeRegistry[node.type ?? ""] ?? nodeRegistry.float)!;

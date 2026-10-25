@@ -3,6 +3,7 @@ export * from "./color";
 export * from "./nodes";
 export * from "./nodes/registry";
 export * from "./zones";
+export * from "./enums";
 export * from "./codegen";
 export * from "./layout";
 export * from "./catalog/add-menu";

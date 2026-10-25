@@ -11,9 +11,16 @@ export type HandleDef = {
 	label: string;
 	/** The WGSL type this handle carries. */
 	type: WgslType;
-	/** On a group input: makes it an enum input, of these options (type u32). */
-	options?: string[];
+	/** On a group input: makes it an enum input (type u32) choosing among these. */
+	variants?: EnumVariant[];
 };
+
+/**
+ * One case of an enum. `value` is what's stored and compiled: it stays the
+ * same when cases are renamed or reordered, so saved choices and links to a
+ * Match node's cases keep pointing at the same case.
+ */
+export type EnumVariant = { value: number; label: string };
 
 export type NodeInputDef = {
 	/** Stable port identifier. Doubles as the UI handle id and the key edges reference. */
@@ -152,6 +159,11 @@ export type WgslCtx = {
 	convert: (expr: string, source: WgslType, target: WgslType) => string;
 	/** Request a shared helper function overload; returns its name. */
 	helper: (name: HelperName, type: WgslType) => string;
+	/**
+	 * The value an input has while compiling, when known: it comes from an
+	 * enum the calling group node set (see the Match node).
+	 */
+	constant: (id: string) => number | undefined;
 };
 
 export type NodeDescriptor = {

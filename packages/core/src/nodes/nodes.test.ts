@@ -103,9 +103,9 @@ describe("enum inputs and fallbacks", () => {
 			[["a", "uv", "out", "color"]],
 		);
 		// The unlinked variant uses the group's own UV, the default branch only.
-		expect(shader).toContain(`let v_a = ${fn}__d0(`);
+		expect(shader).toContain(`let v_a = ${fn}__d0__e1_1(`);
 		expect(shader).toMatch(/let v_coordinates = v_uv;/);
-		expect(shader).not.toContain(`fn ${fn}(`);
+		expect(shader).not.toContain(`fn ${fn}__e1_1(`);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 
@@ -124,8 +124,8 @@ describe("enum inputs and fallbacks", () => {
 				["sum", "result", "out", "color"],
 			],
 		);
-		expect(shader).toContain(`fn ${fn}(`);
-		expect(shader).toContain(`fn ${fn}__d0(`);
+		expect(shader).toContain(`fn ${fn}__e1_0(`);
+		expect(shader).toContain(`fn ${fn}__d0__e1_0(`);
 		expect(shader).toMatch(/let v_coordinates = h_uv;/);
 		expect(shader.split(`struct GroupOutputs_${fn.slice("group_".length)} `)).toHaveLength(2);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
@@ -136,7 +136,11 @@ describe("enum inputs and fallbacks", () => {
 		const inputs = graph.resolveNodeInputs("a");
 		expect(inputs.find((i) => i.id === "mode")?.control).toEqual({
 			kind: "enum",
-			options: ["Contain (Fit)", "Cover (Fill)", "Stretch"],
+			variants: [
+				{ value: 0, label: "Contain (Fit)" },
+				{ value: 1, label: "Cover (Fill)" },
+				{ value: 2, label: "Stretch" },
+			],
 		});
 		expect(inputs.find((i) => i.id === "uv")?.fallback).toBe(true);
 		expect(inputs.find((i) => i.id === "mode")?.fallback).toBeUndefined();
