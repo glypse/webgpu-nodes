@@ -16,12 +16,13 @@
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
-	import { Button, Input, Select, Sheet } from "$theme";
+	import { Button, Input, Scrubbable, Select, Sheet } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
 	import CaretRightIcon from "phosphor-svelte/lib/CaretRightIcon";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
+	import XIcon from "phosphor-svelte/lib/XIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
 	import InputEditor from "./controls/InputEditor.svelte";
@@ -232,29 +233,59 @@
 		{#if !handle.variants && !handle.display && typeKind(handle.type) !== "bool"}
 			<div class="flex flex-col gap-1">
 				<span class="text-muted-foreground text-xs">Range while edited</span>
-				<div class="flex items-center gap-2">
-					{#each ["min", "max"] as const as bound (bound)}
-						<Input
-							type="number"
-							value={handle[bound] ?? ""}
-							placeholder={bound === "min" ? "No minimum" : "No maximum"}
-							disabled={locked}
-							title={bound === "min" ? "Minimum" : "Maximum"}
-							onchange={(e: Event) => {
-								const raw = inputValue(e).trim();
-								const parsed = raw === "" ? undefined : Number(raw);
-								if (!definitionRef || !inputNode) return;
-								if (parsed !== undefined && !Number.isFinite(parsed)) return;
-								graph.setHandleRange(definitionRef, inputNode.id, handle.id, {
-									min: handle.min,
-									max: handle.max,
-									[bound]: parsed,
-								});
-							}}
-							onkeydown={handleEnterBlur}
-						/>
-					{/each}
-				</div>
+				{#each ["min", "max"] as const as bound (bound)}
+					{@const current = handle[bound]}
+					{@const setBound = (value: number | undefined) => {
+						if (!definitionRef || !inputNode) return;
+						graph.setHandleRange(definitionRef, inputNode.id, handle.id, {
+							min: handle.min,
+							max: handle.max,
+							[bound]: value,
+						});
+					}}
+					<div class="flex items-center gap-1">
+						<span class="text-muted-foreground w-8 shrink-0 text-xs">
+							{bound === "min" ? "Min" : "Max"}
+						</span>
+						{#if current === undefined}
+							<Button
+								variant="outline"
+								size="sm"
+								class="flex-1 border-dashed"
+								disabled={locked}
+								title={bound === "min" ? "Set a minimum" : "Set a maximum"}
+								onclick={() => {
+									setBound(bound === "min" ? 0 : 1);
+								}}
+							>
+								None
+							</Button>
+						{:else}
+							<Scrubbable
+								value={current}
+								readonly={locked}
+								integer={typeKind(handle.type) !== "f32"}
+								oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+									const next = parseFloat(e.currentTarget.value);
+									if (Number.isFinite(next)) setBound(next);
+								}}
+							/>
+							{#if !locked}
+								<Button
+									variant="ghost"
+									size="icon-sm"
+									class="shrink-0"
+									title={bound === "min" ? "No minimum" : "No maximum"}
+									onclick={() => {
+										setBound(undefined);
+									}}
+								>
+									<XIcon />
+								</Button>
+							{/if}
+						{/if}
+					</div>
+				{/each}
 			</div>
 		{/if}
 
