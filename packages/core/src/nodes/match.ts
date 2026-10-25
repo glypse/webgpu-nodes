@@ -1,5 +1,5 @@
 import { MATCH, MATCH_SELECTOR, caseHandle } from "../enums";
-import { type EnumVariant, type NodeDescriptor, WGSL_TYPES } from "../types";
+import { type EnumVariant, type NodeDescriptor, WGSL_TYPES, familyKey } from "../types";
 
 /**
  * Pick a value by an enum's variant, one input per variant: the cases follow
@@ -25,7 +25,11 @@ export function buildMatchDescriptor(variants: readonly EnumVariant[] = []): Nod
 		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: {},
-		...(cases.length === 0 ? { resolveOutputType: () => "f32" as const } : {}),
+		// Without cases nothing infers its type: it's picked, under the key
+		// the cases' type is forced with once an enum is linked.
+		...(cases.length === 0
+			? { typeFamily: { key: familyKey(WGSL_TYPES), types: WGSL_TYPES } }
+			: {}),
 		wgsl: (ctx) => {
 			const [first, ...rest] = cases;
 			if (!first)
@@ -47,4 +51,8 @@ export function buildMatchDescriptor(variants: readonly EnumVariant[] = []): Nod
 	};
 }
 
-export const matchNode = buildMatchDescriptor();
+const unlinked = buildMatchDescriptor();
+// Registered without a type family, so the add menu doesn't offer a Match
+// per type: one is of no use before an enum is linked to it.
+delete unlinked.typeFamily;
+export const matchNode = unlinked;

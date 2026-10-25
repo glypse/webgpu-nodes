@@ -844,18 +844,25 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * The inputs a group node doesn't show: unlinked ones whose value can't
-	 * reach its outputs with the enum values it sets (see `usedGroupInputs`).
+	 * The inputs a group node doesn't show: unlinked ones only the variants
+	 * it doesn't pick use, so each variant has its own inputs (see
+	 * `usedGroupInputs`). Inputs no variant uses stay, as one just added.
 	 */
 	hiddenInputs(nodeId: string): Set<string> {
 		const node = this.resolveNode(nodeId);
 		const ref = node?.group?.definitionRef;
 		const doc = this.documentOf(nodeId);
 		if (node?.type !== "node-group" || !ref || !doc) return new Set();
-		const used = usedGroupInputs(this.project.definitions, ref, this.instanceEnumValues(node));
+		const definitions = this.project.definitions;
+		const used = usedGroupInputs(definitions, ref, this.instanceEnumValues(node));
+		const usable = usedGroupInputs(definitions, ref, new Map());
 		const linked = new Set((doc.edgesByTarget.get(nodeId) ?? []).map((e) => e.targetHandle));
-		const inputs = this.resolveDescriptor(node).inputs;
-		return new Set(inputs.filter((i) => !used.has(i.id) && !linked.has(i.id)).map((i) => i.id));
+		const hidden = (id: string) => usable.has(id) && !used.has(id) && !linked.has(id);
+		return new Set(
+			this.resolveDescriptor(node)
+				.inputs.map((i) => i.id)
+				.filter(hidden),
+		);
 	}
 
 	/**

@@ -141,6 +141,22 @@ describe("Match node", () => {
 		expect([...linked.hiddenInputs("g")]).toEqual([]);
 	});
 
+	it("shows the inputs no variant uses, as one just added", () => {
+		const graph = new GraphModel(project({ values: { mode: 0 } }));
+		const added = graph.addHandle("in", "f32");
+		expect(graph.resolveNodeInputs("g").map((i) => i.id)).toContain(added?.id);
+		expect([...graph.hiddenInputs("g")]).toEqual(["x"]);
+	});
+
+	it("has a type picker, with or without an enum linked", () => {
+		const graph = new GraphModel(project());
+		expect(graph.typeChoice("m")?.inferable).toBe(true);
+		const lone = new GraphModel({
+			definitions: { [ROOT_ID]: { nodes: [node("m", "match")], edges: [] } },
+		});
+		expect(lone.typeChoice("m")?.types.length).toBeGreaterThan(1);
+	});
+
 	it("follows enum values into nested groups", () => {
 		const nested = project({ values: { mode: 0 } });
 		const [input, output] = nested.definitions.def?.nodes ?? [];
