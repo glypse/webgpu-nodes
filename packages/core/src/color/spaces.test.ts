@@ -67,26 +67,31 @@ describe("colour space groups", () => {
 		expectClose(convert(["std-linear-rgb-to-xyz"], [1, 1, 1]), [0.9505, 1, 1.0891]);
 	});
 
-	it("goes to OKLch and back as the colour picker does", () => {
-		for (const [r, g, b] of SAMPLES) {
-			const lch = convert(
+	it("goes to OKLch and back as the colour picker does, by any route", () => {
+		const routes: Record<string, [string[], string[]]> = {
+			direct: [["std-linear-rgb-to-oklch"], ["std-oklch-to-linear-rgb"]],
+			oklab: [
+				["std-linear-rgb-to-oklab", "std-oklab-to-oklch"],
+				["std-oklch-to-oklab", "std-oklab-to-linear-rgb"],
+			],
+			xyz: [
 				["std-linear-rgb-to-xyz", "std-xyz-to-oklab", "std-oklab-to-oklch"],
-				[r, g, b],
-			);
-			const expected = linearToOklch({ r, g, b });
-			expectClose(lch.slice(0, 2), [expected.l, expected.c], 3);
-			if (expected.c > 1e-3) expect(lch[2]).toBeCloseTo(expected.h, 1);
-
-			const [l = 0, c = 0, h = 0] = lch;
-			const back = convert(
 				["std-oklch-to-oklab", "std-oklab-to-xyz", "std-xyz-to-linear-rgb"],
-				[l, c, h],
-			);
-			// The picker uses Ottosson's matrices straight from linear sRGB,
-			// slightly off going through XYZ.
-			const linear = oklchToLinear({ l, c, h });
-			expectClose(back, [linear.r, linear.g, linear.b], 2);
-			expectClose(back, [r, g, b], 4);
+			],
+		};
+		for (const [to, from] of Object.values(routes)) {
+			for (const [r, g, b] of SAMPLES) {
+				const lch = convert(to, [r, g, b]);
+				const expected = linearToOklch({ r, g, b });
+				expectClose(lch.slice(0, 2), [expected.l, expected.c]);
+				if (expected.c > 1e-3) expect(lch[2]).toBeCloseTo(expected.h, 2);
+
+				const [l = 0, c = 0, h = 0] = lch;
+				const back = convert(from, [l, c, h]);
+				const linear = oklchToLinear({ l, c, h });
+				expectClose(back, [linear.r, linear.g, linear.b]);
+				expectClose(back, [r, g, b]);
+			}
 		}
 	});
 
@@ -97,8 +102,12 @@ describe("colour space groups", () => {
 			"std-xyz-to-linear-rgb",
 			"std-xyz-to-oklab",
 			"std-oklab-to-xyz",
+			"std-linear-rgb-to-oklab",
+			"std-oklab-to-linear-rgb",
 			"std-oklab-to-oklch",
 			"std-oklch-to-oklab",
+			"std-linear-rgb-to-oklch",
+			"std-oklch-to-linear-rgb",
 		]) {
 			const entry = libraryEntry(id);
 			const out =

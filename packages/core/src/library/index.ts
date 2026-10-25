@@ -5,9 +5,13 @@ import type { StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
+import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
+import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
+import oklabToLinearRgb from "./std-oklab-to-linear-rgb.json";
 import oklabToOklch from "./std-oklab-to-oklch.json";
 import oklabToXyz from "./std-oklab-to-xyz.json";
+import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
 import xyzToLinearRgb from "./std-xyz-to-linear-rgb.json";
 import xyzToOklab from "./std-xyz-to-oklab.json";
@@ -49,8 +53,12 @@ const files: unknown[] = [
 	xyzToLinearRgb,
 	xyzToOklab,
 	oklabToXyz,
+	linearRgbToOklab,
+	oklabToLinearRgb,
 	oklabToOklch,
 	oklchToOklab,
+	linearRgbToOklch,
+	oklchToLinearRgb,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

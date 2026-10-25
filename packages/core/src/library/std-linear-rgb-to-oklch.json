@@ -1,0 +1,94 @@
+{
+	"id": "std-linear-rgb-to-oklch",
+	"name": "Linear RGB to OKLch",
+	"aliases": ["sRGB to OKLch", "RGB to OKLch", "Color Space Conversion", "Perceptual Color"],
+	"category": "color",
+	"dependencies": ["std-linear-rgb-to-oklab@0315ad15e24cb7", "std-oklab-to-oklch@02cc69e98e06f4"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "d43013a7-f373-496a-8a0e-a5958bfc1104",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "35293765-80e5-428e-970e-0908448784c5",
+							"label": "Linear RGB",
+							"type": "vec3f"
+						}
+					]
+				},
+				"position": {
+					"x": 0,
+					"y": 92
+				}
+			},
+			{
+				"id": "f2e5685c-ecfa-4424-b66a-e617385f5f09",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "729b6352-8b15-4156-998f-03a661f49ae2",
+							"label": "OKLch",
+							"type": "vec3f"
+						}
+					]
+				},
+				"position": {
+					"x": 780,
+					"y": 32
+				}
+			},
+			{
+				"id": "5a8cc670-0073-405f-a2ce-3b807129b37c",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 28
+				},
+				"group": {
+					"definitionRef": "std-linear-rgb-to-oklab@0315ad15e24cb7",
+					"locked": true
+				}
+			},
+			{
+				"id": "f453372a-a52b-4d30-80b3-1e222fcff26b",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 520,
+					"y": 0
+				},
+				"group": {
+					"definitionRef": "std-oklab-to-oklch@02cc69e98e06f4",
+					"locked": true
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "1b9519ff-7b49-42c4-8cd1-ccb9938fffab",
+				"source": "d43013a7-f373-496a-8a0e-a5958bfc1104",
+				"sourceHandle": "35293765-80e5-428e-970e-0908448784c5",
+				"target": "5a8cc670-0073-405f-a2ce-3b807129b37c",
+				"targetHandle": "6fdeb842-bca1-4588-9436-9b5253034637"
+			},
+			{
+				"id": "6b4d53de-066d-4232-8f9b-7d510f5604cc",
+				"source": "5a8cc670-0073-405f-a2ce-3b807129b37c",
+				"sourceHandle": "3c3117f4-df34-4107-adbc-0aa51055a8cf",
+				"target": "f453372a-a52b-4d30-80b3-1e222fcff26b",
+				"targetHandle": "009425ed-af4e-405a-b848-486747562536"
+			},
+			{
+				"id": "cebd39a2-7e2e-4f12-9fbd-5dd8d8d76370",
+				"source": "f453372a-a52b-4d30-80b3-1e222fcff26b",
+				"sourceHandle": "4e4ff9f1-f41a-4202-8299-8001b5a809bb",
+				"target": "f2e5685c-ecfa-4424-b66a-e617385f5f09",
+				"targetHandle": "729b6352-8b15-4156-998f-03a661f49ae2"
+			}
+		]
+	}
+}
