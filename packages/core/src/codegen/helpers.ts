@@ -32,9 +32,10 @@ export function emitHelper(op: HelperName, type: WgslType): string {
 	return `fn ${cwFnName(op, type)}(a: ${t}, b: ${t}) -> ${t} {\n  return ${HELPER_BODIES[op](t)};\n}`;
 }
 
-/** Collects the helper overloads requested while generating one shader. */
+/** Collects the helper overloads and functions requested while generating one shader. */
 export class HelperRegistry {
 	private used = new Map<string, { op: HelperName; type: WgslType }>();
+	private functions = new Map<string, string>();
 
 	use(op: HelperName, type: WgslType): string {
 		const name = cwFnName(op, type);
@@ -42,10 +43,19 @@ export class HelperRegistry {
 		return name;
 	}
 
-	/** Every requested overload, in a stable (sorted) order. */
+	/** Declare a function by name (see `WgslCtx.fn`). */
+	define(name: string, source: string): string {
+		if (!this.functions.has(name)) this.functions.set(name, source);
+		return name;
+	}
+
+	/** Every requested overload and function, in a stable (sorted) order. */
 	emit(): string[] {
-		return [...this.used.entries()]
+		const overloads = [...this.used.entries()].map(
+			([name, { op, type }]) => [name, emitHelper(op, type)] as const,
+		);
+		return [...overloads, ...this.functions.entries()]
 			.toSorted(([a], [b]) => a.localeCompare(b))
-			.map(([, { op, type }]) => emitHelper(op, type));
+			.map(([, source]) => source);
 	}
 }

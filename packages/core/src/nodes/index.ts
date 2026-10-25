@@ -9,3 +9,4 @@ export * from "./misc";
 export * from "./groups";
 export * from "./match";
 export * from "./dev";
+export * from "./curve";

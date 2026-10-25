@@ -18,6 +18,12 @@
 			min?: number;
 			/** Highest accepted value. */
 			max?: number;
+			/**
+			 * Range scrubbing, arrow keys and the side buttons stay within,
+			 * widened to include a value typed past it. Typing isn't held by it.
+			 */
+			softMin?: number;
+			softMax?: number;
 		}
 	>;
 
@@ -31,6 +37,8 @@
 		integer = false,
 		min,
 		max,
+		softMin,
+		softMax,
 		...restProps
 	}: Props = $props();
 
@@ -65,6 +73,13 @@
 
 	function setValue(n: number): void {
 		value = constrain(n);
+	}
+
+	/** Set `from` moved to `n`, kept within the soft range widened to include `from`. */
+	function nudgeValue(n: number, from: number): void {
+		const low = softMin === undefined ? n : Math.min(softMin, from);
+		const high = softMax === undefined ? n : Math.max(softMax, from);
+		setValue(Math.min(high, Math.max(low, n)));
 	}
 
 	function commitValue(raw: string): void {
@@ -115,12 +130,12 @@
 			const step = getStep(event);
 			const increment =
 				Math.sign(lockedMovementX) * step * Math.ceil(Math.abs(lockedMovementX) / 2);
-			setValue(scrubStartValue + increment);
+			nudgeValue(scrubStartValue + increment, scrubStartValue);
 		} else {
 			const dx = event.clientX - scrubStartX;
 			const step = getStep(event);
 			const increment = Math.sign(dx) * step * Math.ceil(Math.abs(dx) / 2);
-			setValue(scrubStartValue + increment);
+			nudgeValue(scrubStartValue + increment, scrubStartValue);
 		}
 		void emitInput();
 	}
@@ -149,11 +164,11 @@
 		const step = getStep(event);
 		if (event.key === "ArrowRight" || event.key === "ArrowUp") {
 			event.preventDefault();
-			setValue(value + step);
+			nudgeValue(value + step, value);
 			void emitInput();
 		} else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
 			event.preventDefault();
-			setValue(value - step);
+			nudgeValue(value - step, value);
 			void emitInput();
 		}
 	}
@@ -161,14 +176,14 @@
 	function handleDecrement(event: MouseEvent): void {
 		event.stopPropagation();
 		const step = getStep(event);
-		setValue(value - step);
+		nudgeValue(value - step, value);
 		void emitInput();
 	}
 
 	function handleIncrement(event: MouseEvent): void {
 		event.stopPropagation();
 		const step = getStep(event);
-		setValue(value + step);
+		nudgeValue(value + step, value);
 		void emitInput();
 	}
 

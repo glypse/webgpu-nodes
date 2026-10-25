@@ -368,6 +368,18 @@ class BodyEmitter {
 		return formatWgslLiteral(target, value);
 	}
 
+	/** A number (or numbers) of a node's own data, as an f32 / vecNf expression. */
+	paramExpr(node: GraphNode, key: string, value: number | readonly number[]): string {
+		const components = typeof value === "number" ? [value] : value;
+		const type = makeType("f32", components.length);
+		const [x = 0, y = 0, z = 0, w = 0] = components;
+		const stored: InputValue = components.length === 1 ? x : { x, y, z, w };
+		if (this.uniforms) {
+			return this.uniformExpr(`u_${identSuffix(node.id)}_${identSuffix(key)}`, type, stored);
+		}
+		return formatWgslLiteral(type, stored);
+	}
+
 	/** Declare a uniform holding `value`, and read it as `target`. */
 	private uniformExpr(name: string, target: WgslType, value: InputValue | undefined): string {
 		const kind = typeKind(target);
@@ -452,6 +464,8 @@ class BodyEmitter {
 			convert: convertVar,
 			helper: (name, type) => this.state.helpers.use(name, type),
 			constant: (id) => this.constantOf(node, id),
+			param: (key, value) => this.paramExpr(node, key, value),
+			fn: (name, source) => this.state.helpers.define(name, source),
 		});
 		this.push(node.id, statements, indent);
 	}

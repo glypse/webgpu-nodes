@@ -14,6 +14,8 @@
 		kind: "number";
 		min?: number;
 		max?: number;
+		softMin?: number;
+		softMax?: number;
 	}> = $props();
 
 	const kind = $derived(typeKind(type));
@@ -27,6 +29,8 @@
 			integer={kind !== "f32"}
 			min={kind === "u32" ? Math.max(0, control.min ?? 0) : control.min}
 			max={control.max}
+			softMin={control.softMin}
+			softMax={control.softMax}
 			value={readComponent(value, comp)}
 			oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
 				const next = parseFloat(e.currentTarget.value) || 0;

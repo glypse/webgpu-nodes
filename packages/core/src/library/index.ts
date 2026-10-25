@@ -1,8 +1,7 @@
 import * as v from "valibot";
 
-import { COLOR_MODES } from "../color/modes";
 import type { StandardLibraryEntry } from "../graph/document";
-import { GraphDocumentSchema } from "../graph/schema";
+import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
 import inSrgbGamut from "./std-in-srgb-gamut.json";
@@ -39,19 +38,7 @@ export const LibraryFileSchema = v.object({
 	category: v.string(),
 	dependencies: v.array(v.string()),
 	definition: GraphDocumentSchema,
-	widget: v.optional(
-		v.object({
-			kind: v.literal("color"),
-			mode: v.string(),
-			modes: v.record(
-				v.string(),
-				v.object({
-					space: v.picklist(COLOR_MODES),
-					components: v.tuple([v.string(), v.string(), v.string()]),
-				}),
-			),
-		}),
-	),
+	widget: v.optional(NodeWidgetSchema),
 });
 
 const files: unknown[] = [

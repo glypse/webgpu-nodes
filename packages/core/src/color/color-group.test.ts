@@ -14,7 +14,10 @@ const RGB_OUT = libraryHandle(COLOR, "group-output", "Color");
 const RGBA_OUT = libraryHandle(COLOR, "group-output", "RGBA");
 const MODES: Record<ColorMode, number> = { rgb: 0, hsv: 1, oklch: 2 };
 /** The inputs holding a mode's components. */
-const inputsOf = (mode: ColorMode) => COLOR.widget?.modes[String(MODES[mode])]?.components ?? [];
+const inputsOf = (mode: ColorMode) =>
+	(COLOR.widget?.kind === "color"
+		? COLOR.widget.modes[String(MODES[mode])]?.components
+		: undefined) ?? [];
 
 const color = (data: NodeData = {}) => ({
 	id: "c",

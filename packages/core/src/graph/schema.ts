@@ -1,6 +1,8 @@
 import * as v from "valibot";
 
-import { COLOR_DISPLAYS, WGSL_TYPES } from "../types";
+import { COLOR_MODES } from "../color/modes";
+import { CURVE_POINT_KINDS } from "../curve";
+import { COLOR_DISPLAYS, type NodeWidget, WGSL_TYPES } from "../types";
 
 const PositionSchema = v.object({
 	x: v.number(),
@@ -23,6 +25,16 @@ const HandleSchema = v.object({
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),
 });
 
+const Vec2Schema = v.object({ x: v.number(), y: v.number() });
+
+const CurvePointSchema = v.object({
+	x: v.number(),
+	y: v.number(),
+	kind: v.picklist(CURVE_POINT_KINDS),
+	left: Vec2Schema,
+	right: Vec2Schema,
+});
+
 const ScalarValueSchema = v.union([v.number(), v.boolean()]);
 
 const InputValueSchema = v.union([
@@ -43,6 +55,7 @@ const NodeDataSchema = v.strictObject({
 	items: v.optional(v.array(HandleSchema)),
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
+	curve: v.optional(v.array(CurvePointSchema)),
 });
 
 const GraphDocumentNodeSchema = v.object({
@@ -89,3 +102,19 @@ const GroupFileSchema = v.object({
 });
 
 export const GroupFilesSchema = v.array(GroupFileSchema);
+
+/** Every kind of `NodeWidget`, by its `kind`. */
+export const NodeWidgetSchema = v.variant("kind", [
+	v.object({
+		kind: v.literal("color"),
+		mode: v.string(),
+		modes: v.record(
+			v.string(),
+			v.object({
+				space: v.picklist(COLOR_MODES),
+				components: v.tuple([v.string(), v.string(), v.string()]),
+			}),
+		),
+	}),
+	v.object({ kind: v.literal("curve") }),
+]) satisfies v.GenericSchema<unknown, NodeWidget>;

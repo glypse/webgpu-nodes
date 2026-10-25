@@ -118,11 +118,13 @@ export function settingValue(data: NodeData, setting: NodeSetting): string {
 }
 
 /**
- * A larger editor drawn in a node's body, editing the values of its unlinked
- * inputs. Each kind has its own component in a front end.
+ * A larger editor drawn in a node's body, editing the node's data. Each kind
+ * has its own component in a front end.
  */
-export type NodeWidget = {
-	/** A hue / saturation wheel and a value ramp, editing a colour's components. */
+export type NodeWidget = NodeColorWidget | NodeCurveWidget;
+
+/** A hue / saturation wheel and a value ramp, editing the values of a colour's inputs. */
+export type NodeColorWidget = {
 	kind: "color";
 	/** The enum input picking what the components are. */
 	mode: string;
@@ -132,6 +134,9 @@ export type NodeWidget = {
 	 */
 	modes: Record<string, ColorWidgetMode>;
 };
+
+/** A graph editing the node's curve (`NodeData.curve`). */
+export type NodeCurveWidget = { kind: "curve" };
 
 export type ColorWidgetMode = {
 	space: ColorMode;
@@ -202,6 +207,17 @@ export type WgslCtx = {
 	 * enum the calling group node set (see the Match node).
 	 */
 	constant: (id: string) => number | undefined;
+	/**
+	 * An f32 / vecNf expression for a number of the node's own data, named
+	 * `key` among the node's: a uniform where input values are, so editing it
+	 * doesn't recompile the shader, a literal elsewhere.
+	 */
+	param: (key: string, value: number | readonly number[]) => string;
+	/**
+	 * Declare a function at the shader's top level, once however many nodes
+	 * ask for it by `name`; returns `name`. Same name, same `source`.
+	 */
+	fn: (name: string, source: string) => string;
 };
 
 export type NodeDescriptor = {

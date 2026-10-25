@@ -6,7 +6,7 @@
 		type InputValue,
 		type NodeData,
 		type NodeInputDef,
-		type NodeWidget,
+		type NodeColorWidget,
 		readComponent,
 	} from "$core";
 	import { ColorWheels } from "$theme";
@@ -23,7 +23,7 @@
 		disabled,
 	}: {
 		id: string;
-		widget: NodeWidget;
+		widget: NodeColorWidget;
 		data: NodeData;
 		/** The node's inputs, for the variants of the mode's enum. */
 		inputs: readonly NodeInputDef[];

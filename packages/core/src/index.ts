@@ -1,5 +1,6 @@
 export * from "./types";
 export * from "./color";
+export * from "./curve";
 export * from "./nodes";
 export * from "./nodes/registry";
 export * from "./zones";

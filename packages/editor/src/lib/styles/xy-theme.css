@@ -7,6 +7,11 @@
 	box-shadow: 0 0 10px var(--background);
 }
 
+/* Room for the curve's graph beside its presets. */
+.svelte-flow__node-curve {
+	@apply w-60;
+}
+
 /* Reroute nodes are a bare handle: no card around it. */
 .svelte-flow__node-reroute {
 	width: auto;

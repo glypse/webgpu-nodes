@@ -7,8 +7,12 @@ import { type WgslType, typeKind } from "./values";
  * in a front end; a kind only needs to be added here and given an editor.
  */
 export type InputControl =
-	/** A number per component, kept within `min` and `max` while edited (not when linked). */
-	| { kind: "number"; min?: number; max?: number }
+	/**
+	 * A number per component, kept within `min` and `max` while edited (not
+	 * when linked). Scrubbing stays within `softMin` and `softMax` too, while
+	 * typed values may go past them.
+	 */
+	| { kind: "number"; min?: number; max?: number; softMin?: number; softMax?: number }
 	/** An on/off switch per component. */
 	| { kind: "toggle" }
 	/** A colour swatch opening a picker; vec3f / vec4f only (linear RGB, alpha). */

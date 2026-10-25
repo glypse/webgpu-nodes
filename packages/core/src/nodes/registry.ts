@@ -44,6 +44,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	step: nodes.stepNode,
 	clamp: nodes.clampNode,
 	pow: nodes.powNode,
+	curve: nodes.curveNode,
 	sin: nodes.sinNode,
 	cos: nodes.cosNode,
 	tan: nodes.tanNode,

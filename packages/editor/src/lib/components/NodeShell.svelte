@@ -23,6 +23,7 @@
 	import InputEditor from "./controls/InputEditor.svelte";
 	import TypePicker from "./TypePicker.svelte";
 	import ColorWidget from "./widgets/ColorWidget.svelte";
+	import CurveWidget from "./widgets/CurveWidget.svelte";
 
 	let {
 		id,
@@ -290,6 +291,8 @@
 				connected={connectedHandles}
 				disabled={isLocked}
 			/>
+		{:else if descriptor.widget?.kind === "curve"}
+			<CurveWidget {id} curve={data.curve} disabled={isLocked} />
 		{/if}
 
 		<div class="node-shell__inputs">

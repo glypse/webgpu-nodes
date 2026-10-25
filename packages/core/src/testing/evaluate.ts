@@ -1,3 +1,4 @@
+import { LINEAR_CURVE, evaluateCurve } from "../curve";
 import { MATCH_SELECTOR, caseHandle } from "../enums";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
@@ -193,6 +194,14 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			);
 		case "mix":
 			return zip([get("e1"), get("e2"), get("e3")], (a, b, t) => a * (1 - t) + b * t);
+		case "curve": {
+			const points = node.data.curve ?? LINEAR_CURVE;
+			const factor = get("factor")[0] ?? 0;
+			return map(fit(get("value"), width), (x) => {
+				const y = evaluateCurve(points, x);
+				return x * (1 - factor) + y * factor;
+			});
+		}
 		case "compare": {
 			const op = COMPARE[node.data.settings?.op ?? "<"];
 			return zip([get("a"), get("b")], (a, b) => Number(op?.(a, b)));

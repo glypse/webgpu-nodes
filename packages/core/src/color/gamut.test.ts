@@ -89,7 +89,10 @@ describe("OKLch gamut mapping", () => {
 	});
 
 	it("is what the Color node gives in OKLch", () => {
-		const inputs = COLOR.widget?.modes[String(OKLCH)]?.components ?? [];
+		const inputs =
+			(COLOR.widget?.kind === "color"
+				? COLOR.widget.modes[String(OKLCH)]?.components
+				: undefined) ?? [];
 		for (const lch of SAMPLES.filter((_, i) => i % 7 === 0)) {
 			const values = Object.fromEntries(inputs.map((id, i) => [id, lch[i] ?? 0]));
 			const graph = managerFor(

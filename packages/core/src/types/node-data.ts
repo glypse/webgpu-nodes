@@ -1,3 +1,4 @@
+import type { CurvePoint } from "../curve/curve";
 import type { HandleDef } from "./descriptors";
 import type { WgslType } from "./values";
 
@@ -29,6 +30,8 @@ export type NodeData = {
 	pairedOutput?: string;
 	/** A Repeat Input's iteration safety cap. */
 	maxIterations?: number;
+	/** A Curve's control points, sorted by x. */
+	curve?: CurvePoint[];
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

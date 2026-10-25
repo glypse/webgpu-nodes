@@ -12,6 +12,7 @@ import {
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
 import {
 	type NodeData,
+	type NodeWidget,
 	type WgslType,
 	familyKey,
 	isConnectionCompatible,
@@ -32,6 +33,14 @@ import { emptyProject, withEntry } from "./model-base";
 import { GroupModel } from "./model-groups";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
+
+/** Rows a widget takes, for estimating node sizes. */
+const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
+	// The colour wheel and its value ramp.
+	color: 6,
+	// The graph, the selected point's tools and its coordinates.
+	curve: 10,
+};
 
 export type TypeChoice = {
 	types: readonly WgslType[];
@@ -562,8 +571,7 @@ export class GraphModel extends GroupModel {
 		return {
 			header: (descriptor.settings?.length ?? 0) + (this.typeChoice(node.id) ? 1 : 0),
 			outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
-			// The colour wheel and its value ramp.
-			widget: descriptor.widget ? 6 : 0,
+			widget: descriptor.widget ? WIDGET_ROWS[descriptor.widget.kind] : 0,
 			inputs: this.resolveNodeInputs(node.id)
 				.filter((i) => !hidden.has(i.id))
 				.map((i) => ({

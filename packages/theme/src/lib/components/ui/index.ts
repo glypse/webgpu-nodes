@@ -10,6 +10,7 @@ export {
 	OklchLightness,
 	OklchWheel,
 } from "./color-picker/index";
+export { CurveEditor } from "./curve-editor/index";
 export { Root as Input } from "./input/index";
 export { Root as Label } from "./label/index";
 export { Root as Separator } from "./separator/index";

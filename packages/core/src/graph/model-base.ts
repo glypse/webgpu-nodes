@@ -1,4 +1,5 @@
 import { convertColorMode } from "../color";
+import type { CurvePoint } from "../curve";
 import { MATCH, isCaseHandle } from "../enums";
 import {
 	ARCHIVED_VERSIONS_ENABLED,
@@ -13,7 +14,7 @@ import {
 	type NodeDescriptor,
 	type NodeInputDef,
 	type NodeOutputDef,
-	type NodeWidget,
+	type NodeColorWidget,
 	type WgslType,
 	enumValue,
 	familyKey,
@@ -736,7 +737,10 @@ export abstract class GraphModelBase {
 		if (!node) return;
 		const values = withEntry(node.data.values, inputId, value);
 		const widget = this.resolveDescriptor(node).widget;
-		const converted = widget?.mode === inputId ? this.keepColor(node, widget, values) : values;
+		const converted =
+			widget?.kind === "color" && widget.mode === inputId
+				? this.keepColor(node, widget, values)
+				: values;
 		this.updateNodeData(nodeId, { values: converted }, { retype: false });
 	}
 
@@ -748,7 +752,7 @@ export abstract class GraphModelBase {
 	 */
 	private keepColor(
 		node: GraphNode,
-		widget: NodeWidget,
+		widget: NodeColorWidget,
 		values: Record<string, InputValue> | undefined,
 	): Record<string, InputValue> | undefined {
 		const descriptor = this.resolveDescriptor(node);
@@ -774,6 +778,11 @@ export abstract class GraphModelBase {
 			converted[c] = next[i] ?? 0;
 		});
 		return converted;
+	}
+
+	/** Replace a node's curve (see `NodeData.curve`). */
+	setCurve(nodeId: string, curve: CurvePoint[]) {
+		this.updateNodeData(nodeId, { curve }, { retype: false });
 	}
 
 	/** Pick an option of one of the node's settings. */
