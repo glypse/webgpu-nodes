@@ -123,10 +123,17 @@
 
 	const linked = (indices: number[]) =>
 		indices.every((i) => connected.has(componentInputs[i] ?? ""));
-	// In HSV the wheel is hue and saturation, the ramp value; otherwise both
-	// write all three components.
-	const wheelDisabled = $derived(disabled || linked(mode === "hsv" ? [0, 1] : [0, 1, 2]));
-	const rampDisabled = $derived(disabled || linked(mode === "hsv" ? [2] : [0, 1, 2]));
+	const anyLinked = (indices: number[]) =>
+		indices.some((i) => connected.has(componentInputs[i] ?? ""));
+	// In HSV the wheel is hue and saturation, the ramp value. In RGB both
+	// rewrite all three components, which only means something while none
+	// is linked.
+	const wheelDisabled = $derived(
+		disabled || (mode === "hsv" ? linked([0, 1]) : anyLinked([0, 1, 2])),
+	);
+	const rampDisabled = $derived(
+		disabled || (mode === "hsv" ? linked([2]) : anyLinked([0, 1, 2])),
+	);
 </script>
 
 <div class="nodrag nowheel flex gap-2 py-1">
