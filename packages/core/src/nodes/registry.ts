@@ -89,6 +89,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 
 	// Misc
 	reroute: nodes.rerouteNode,
+	[nodes.CUSTOM_WGSL]: nodes.buildCustomWgslDescriptor({}),
 
 	// Output
 	"frag-output": nodes.outputNode,

@@ -32,6 +32,10 @@ export type NodeData = {
 	maxIterations?: number;
 	/** A Curve's control points, sorted by x. */
 	curve?: CurvePoint[];
+	/** A Custom WGSL node's function body. */
+	code?: string;
+	/** A Custom WGSL node's sockets; their labels name them in `code`. */
+	sockets?: { inputs: HandleDef[]; outputs: HandleDef[] };
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

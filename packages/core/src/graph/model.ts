@@ -30,7 +30,7 @@ import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
 import { indexDocument, serialiseDocument } from "./hydrate";
 import { emptyProject, withEntry } from "./model-base";
-import { GroupModel } from "./model-groups";
+import { CustomWgslModel } from "./model-custom";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
 
@@ -40,6 +40,8 @@ const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
 	color: 6,
 	// The graph, the selected point's tools and its coordinates.
 	curve: 10,
+	// The signature line and the code editor's default height.
+	code: 5,
 };
 
 export type TypeChoice = {
@@ -60,7 +62,7 @@ export type TypeChoice = {
  * Front ends subclass it to plug in their own reactivity, by overriding the
  * `create*` factories (state, documents, history counts).
  */
-export class GraphModel extends GroupModel {
+export class GraphModel extends CustomWgslModel {
 	/** Content snapshots of past states (see `contentSnapshot`). */
 	readonly history = new History(this.createHistoryCounts());
 

@@ -1,4 +1,5 @@
 import { MATCH, MATCH_SELECTOR, enumAt } from "../enums";
+import { CUSTOM_WGSL, buildCustomWgslDescriptor } from "../nodes/custom";
 import {
 	buildGroupDescriptor,
 	buildGroupInputDescriptor,
@@ -46,6 +47,9 @@ export function resolveDescriptor(
 	}
 	if (node.type === REPEAT_OUTPUT) {
 		return buildRepeatOutputDescriptor(node);
+	}
+	if (node.type === CUSTOM_WGSL) {
+		return buildCustomWgslDescriptor(node.data);
 	}
 	if (node.type === MATCH) {
 		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));

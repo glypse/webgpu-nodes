@@ -7,6 +7,11 @@
 	box-shadow: 0 0 10px var(--background);
 }
 
+/* Room for code lines. */
+.svelte-flow__node-custom-wgsl {
+	@apply w-80;
+}
+
 /* Room for the curve's graph beside its presets. */
 .svelte-flow__node-curve {
 	@apply w-60;

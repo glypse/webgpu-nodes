@@ -73,6 +73,10 @@ const NodeDataSchema = v.strictObject({
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
 	curve: v.optional(v.array(CurvePointSchema)),
+	code: v.optional(v.string()),
+	sockets: v.optional(
+		v.strictObject({ inputs: v.array(HandleSchema), outputs: v.array(HandleSchema) }),
+	),
 });
 
 const GraphDocumentNodeSchema = v.object({
@@ -136,4 +140,5 @@ export const NodeWidgetSchema = v.variant("kind", [
 		),
 	}),
 	v.object({ kind: v.literal("curve") }),
+	v.object({ kind: v.literal("code") }),
 ]) satisfies v.GenericSchema<unknown, NodeWidget>;
