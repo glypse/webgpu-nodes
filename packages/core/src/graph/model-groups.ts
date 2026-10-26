@@ -1140,7 +1140,10 @@ export abstract class GroupModel extends ZoneModel {
 		const incoming = doc?.edgesByTarget.get(nodeId) ?? [];
 		const bindings = this.viewBindings(nodeId);
 		const lookup = (id: string) => this.resolveNode(id);
-		const resolved = this.typeResolver.resolveNodeTypes(node, incoming, lookup, bindings);
+		// The type cache keeps front ends following types decided upstream.
+		const resolved =
+			this.typeCache.get(nodeId) ??
+			this.typeResolver.resolveNodeTypes(node, incoming, lookup, bindings);
 		const unforced = this.typeResolver.resolveNodeTypesUncached(
 			node,
 			incoming,

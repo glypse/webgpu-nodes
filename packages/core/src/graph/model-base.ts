@@ -21,7 +21,7 @@ import {
 	inputFamilyKey,
 	isConnectionCompatible,
 } from "../types";
-import { TypeResolver, bindingsKey } from "../types/resolver";
+import { type ResolvedNodeTypes, TypeResolver, bindingsKey } from "../types/resolver";
 import { type ZoneAnalysis, analyzeZones } from "../zones";
 import {
 	type GraphDocument,
@@ -45,12 +45,7 @@ import {
 } from "./hydrate";
 import { readComponent } from "./values";
 
-export type ResolvedTypes = {
-	inputTypes: Record<string, WgslType>;
-	outputType: WgslType;
-	resolvedInputs: NodeInputDef[];
-	resolvedOutputs: NodeOutputDef[];
-};
+export type ResolvedTypes = ResolvedNodeTypes;
 
 export type GraphModelState = {
 	project: HydratedGraphProject;

@@ -26,7 +26,7 @@ import {
 	type HydratedGraphDocument,
 	ROOT_ID,
 } from "./document";
-import { stableStringify } from "./editing";
+import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
 import { indexDocument, serialiseDocument } from "./hydrate";
 import { emptyProject, withEntry } from "./model-base";
@@ -490,7 +490,10 @@ export class GraphModel extends GroupModel {
 	 */
 	typeChoice(nodeId: string): TypeChoice | undefined {
 		const node = this.resolveNode(nodeId);
-		if (!node || node.type === "node-group") return undefined;
+		// Group nodes and their boundaries take their types from the group's variables.
+		if (!node || node.type === "node-group" || BOUNDARY_TYPES.has(node.type ?? "")) {
+			return undefined;
+		}
 		const descriptor = this.resolveDescriptor(node);
 		const primary =
 			descriptor.inputs.find((i) => i.id === descriptor.primaryInput) ?? descriptor.inputs[0];
@@ -567,7 +570,10 @@ export class GraphModel extends GroupModel {
 		const linked = new Set((doc.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle));
 		const hidden = this.hiddenInputs(node.id);
 		return {
-			header: (descriptor.settings?.length ?? 0) + (this.typeChoice(node.id) ? 1 : 0),
+			header:
+				(descriptor.settings?.length ?? 0) +
+				(this.typeChoice(node.id) ? 1 : 0) +
+				this.variableChoices(node.id).filter((c) => c.variable.types.length > 1).length,
 			outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
 			widget: descriptor.widget ? WIDGET_ROWS[descriptor.widget.kind] : 0,
 			inputs: this.resolveNodeInputs(node.id)

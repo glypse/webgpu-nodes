@@ -13,15 +13,20 @@
 		type InputValue,
 		nextVariantValue,
 		ownerExists,
+		FLOAT_TYPES,
+		type SocketType,
+		TYPE_SETS,
 		typeKind,
+		type TypeVariable,
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
-	import { Button, Input, Scrubbable, Select, Sheet } from "$theme";
+	import { Button, DropdownMenu, Input, Scrubbable, Select, Sheet } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
 	import CaretRightIcon from "phosphor-svelte/lib/CaretRightIcon";
+	import CheckIcon from "phosphor-svelte/lib/CheckIcon";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 	import XIcon from "phosphor-svelte/lib/XIcon";
 
@@ -52,6 +57,39 @@
 	/** The type a handle has where nothing decides it (see `boundType`). */
 	function typeOf(handle: GroupHandleDef): WgslType {
 		return boundType(handle.type, variables, {}) ?? "f32";
+	}
+
+	function variableOf(handle: GroupHandleDef): TypeVariable | undefined {
+		const type = handle.type;
+		if (typeof type === "string" || !("variable" in type)) return undefined;
+		return variables.find((v) => v.id === type.variable);
+	}
+
+	/** The named set of types a variable takes, if it's one. */
+	function setOf(variable: TypeVariable) {
+		return TYPE_SETS.find(
+			(set) =>
+				set.types.length === variable.types.length &&
+				set.types.every((t) => variable.types.includes(t)),
+		);
+	}
+
+	/** How many sockets share a variable. */
+	function socketCount(variable: TypeVariable): number {
+		return [...inputHandles, ...outputHandles].filter((h) => variableOf(h)?.id === variable.id)
+			.length;
+	}
+
+	function setSocketType(nodeId: string, handle: GroupHandleDef, type: SocketType) {
+		if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
+	}
+
+	/** Share a new variable from the socket, allowing the types of its kind. */
+	function shareNew(nodeId: string, handle: GroupHandleDef) {
+		if (!definitionRef) return;
+		const kind = TYPE_SETS.slice(0, 4).find((set) => set.types.includes(typeOf(handle)));
+		const variable = graph.addTypeVariable(definitionRef, kind?.types ?? FLOAT_TYPES);
+		if (variable) setSocketType(nodeId, handle, { variable: variable.id });
 	}
 	const outputHandles = $derived(handlesOf(outputNode));
 
@@ -169,16 +207,35 @@
 				Enum
 			</span>
 		{:else}
+			{@const shared = variableOf(handle)}
 			<TypePicker
 				types={WGSL_TYPES}
 				value={typeof handle.type === "string" ? handle.type : undefined}
+				label={shared?.name}
 				disabled={locked}
-				class="w-20 shrink-0"
-				title="Value type"
-				onpick={(type: WgslType) => {
-					if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
-				}}
-			/>
+				class="w-20 shrink-0 {shared ? 'font-mono' : ''}"
+				title={shared ? `Shares the type ${shared.name}` : "Value type"}
+				onpick={(type: WgslType) => setSocketType(nodeId, handle, type)}
+			>
+				{#snippet extra()}
+					<DropdownMenu.Label>Shared types</DropdownMenu.Label>
+					{#each variables as variable (variable.id)}
+						<DropdownMenu.Item
+							onSelect={() =>
+								setSocketType(nodeId, handle, { variable: variable.id })}
+						>
+							<span class="font-mono text-xs">{variable.name}</span>
+							<span class="text-muted-foreground ml-auto text-xs">
+								{setOf(variable)?.label ?? "Custom"}
+							</span>
+							<CheckIcon class={shared?.id === variable.id ? "" : "invisible"} />
+						</DropdownMenu.Item>
+					{/each}
+					<DropdownMenu.Item onSelect={() => shareNew(nodeId, handle)}>
+						New shared type
+					</DropdownMenu.Item>
+				{/snippet}
+			</TypePicker>
 		{/if}
 		<Input
 			value={handleLabelBuffer[handle.id] ?? handle.label}
@@ -461,6 +518,98 @@
 						onkeydown={handleEnterBlur}
 					/>
 				</div>
+
+				{#if variables.length > 0 || !locked}
+					<div class="flex flex-col gap-1.5">
+						<span class="text-sm font-medium">Shared types</span>
+						<span class="text-muted-foreground text-xs">
+							Sockets sharing a type take the same one on each group node, inferred
+							from what's linked to them or picked on the node.
+						</span>
+						{#each variables as variable (variable.id)}
+							{@const set = setOf(variable)}
+							<div class="flex items-center gap-2">
+								<Input
+									value={variable.name}
+									disabled={locked}
+									class="w-16 shrink-0 font-mono"
+									title="Name"
+									onchange={(e: Event) => {
+										const name = inputValue(e).trim();
+										if (name && definitionRef) {
+											graph.setTypeVariable(definitionRef, variable.id, {
+												name,
+											});
+										}
+									}}
+									onkeydown={handleEnterBlur}
+								/>
+								<Select.Root
+									type="single"
+									value={set?.id ?? ""}
+									disabled={locked}
+									onValueChange={(id: string) => {
+										const picked = TYPE_SETS.find((s) => s.id === id);
+										if (picked && definitionRef) {
+											graph.setTypeVariable(definitionRef, variable.id, {
+												types: picked.types,
+											});
+										}
+									}}
+								>
+									<Select.Trigger
+										class="min-w-0 flex-1"
+										title="Types it may take"
+									>
+										{set?.label ?? "Custom"}
+									</Select.Trigger>
+									<Select.Content>
+										{#each TYPE_SETS as option (option.id)}
+											<Select.Item value={option.id} label={option.label}>
+												{option.label}
+											</Select.Item>
+										{/each}
+									</Select.Content>
+								</Select.Root>
+								<span
+									class="text-muted-foreground w-14 shrink-0 text-right text-xs"
+								>
+									{socketCount(variable)}
+									{socketCount(variable) === 1 ? "socket" : "sockets"}
+								</span>
+								{#if !locked}
+									<Button
+										variant="ghost"
+										size="icon-sm"
+										class="shrink-0"
+										title="Remove: its sockets keep its first type"
+										onclick={() => {
+											if (definitionRef)
+												graph.removeTypeVariable(
+													definitionRef,
+													variable.id,
+												);
+										}}
+									>
+										<TrashIcon />
+									</Button>
+								{/if}
+							</div>
+						{/each}
+						{#if !locked}
+							<Button
+								variant="outline"
+								size="sm"
+								onclick={() => {
+									if (definitionRef)
+										graph.addTypeVariable(definitionRef, FLOAT_TYPES);
+								}}
+							>
+								Add shared type
+							</Button>
+						{/if}
+					</div>
+				{/if}
 
 				{#if inputNode}
 					{@const nodeId = inputNode.id}

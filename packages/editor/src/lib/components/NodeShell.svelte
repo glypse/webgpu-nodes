@@ -70,6 +70,25 @@
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
 	const typeChoice = $derived(graph.typeChoice(id));
+	const variableChoices = $derived(
+		nodeType === "node-group"
+			? graph.variableChoices(id).filter((c) => c.variable.types.length > 1)
+			: [],
+	);
+
+	/** On a group's boundary node: the shared type of each socket typed by one, by handle id. */
+	const sharedTypes: Record<string, string> = $derived.by(() => {
+		if (nodeType !== "group-input" && nodeType !== "group-output") return {};
+		const variables = view.document.typeVariables;
+		return Object.fromEntries(
+			(data.handles ?? []).flatMap((handle) => {
+				const type = handle.type;
+				if (typeof type === "string" || !("variable" in type)) return [];
+				const variable = variables.find((v) => v.id === type.variable);
+				return variable ? [[handle.id, variable.name]] : [];
+			}),
+		);
+	});
 
 	function pickType(type: WgslType) {
 		graph.setNodeType(id, type);
@@ -221,6 +240,23 @@
 				/>
 			</div>
 		{/if}
+		{#each variableChoices as choice (choice.variable.id)}
+			<div class="flex items-center gap-1 pb-1">
+				<span class="text-muted-foreground w-5 shrink-0 font-mono text-xs">
+					{choice.variable.name}
+				</span>
+				<TypePicker
+					types={choice.variable.types}
+					value={choice.inferable ? choice.forced : (choice.forced ?? choice.type)}
+					inferred={choice.inferable ? choice.inferred : undefined}
+					disabled={isLocked}
+					class="flex-1"
+					title="The type of {choice.variable.name}"
+					onpick={(type: WgslType) => graph.setVariableType(id, choice.variable.id, type)}
+					onreset={() => graph.setVariableType(id, choice.variable.id, undefined)}
+				/>
+			</div>
+		{/each}
 		{#each descriptor.settings ?? [] as setting (setting.key)}
 			<Select.Root
 				type="single"
@@ -251,7 +287,10 @@
 			{#each outputs as outputDef (outputDef.id)}
 				<div class="node-shell__row node-shell__row--right">
 					<span class="node-shell__handle-label"
-						>{nodeLabels.outputs[outputDef.id] ?? outputDef.label}: {outputDef.type}</span
+						>{nodeLabels.outputs[outputDef.id] ?? outputDef.label}: {outputDef.type}{#if sharedTypes[outputDef.id]}
+							<span class="font-mono opacity-60">
+								({sharedTypes[outputDef.id]})</span
+							>{/if}</span
 					>
 					<Handle
 						type="source"
@@ -332,6 +371,11 @@
 							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
 						>
 							{inputLabel}: {effectiveType}
+							{#if sharedTypes[inputDef.id]}
+								<span class="font-mono opacity-60"
+									>({sharedTypes[inputDef.id]})</span
+								>
+							{/if}
 						</span>
 					{:else if inputDef.fallback}
 						<span class="node-shell__handle-label">

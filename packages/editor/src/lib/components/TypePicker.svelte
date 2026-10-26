@@ -2,6 +2,7 @@
 	import { SCALAR_KINDS, type ScalarKind, typeComponents, typeKind, type WgslType } from "$core";
 	import { Button, DropdownMenu } from "$theme";
 	import CheckIcon from "phosphor-svelte/lib/CheckIcon";
+	import type { Snippet } from "svelte";
 
 	/**
 	 * Pick a value type from a menu organised like the add menu: one submenu
@@ -15,6 +16,7 @@
 		inferred,
 		onreset,
 		onpickenum,
+		extra,
 		label,
 		title,
 		disabled = false,
@@ -35,6 +37,8 @@
 		onreset?: () => void;
 		/** When given, the menu offers an enum first, picking it calls this. */
 		onpickenum?: () => void;
+		/** Items listed first in the menu, before the types. */
+		extra?: Snippet;
 		/** Button text; defaults to the current type. */
 		label?: string;
 		title?: string;
@@ -87,6 +91,10 @@
 		{/snippet}
 	</DropdownMenu.Trigger>
 	<DropdownMenu.Content class="w-auto min-w-40">
+		{#if extra}
+			{@render extra()}
+			<DropdownMenu.Separator />
+		{/if}
 		{#if onpickenum}
 			<DropdownMenu.Item onSelect={() => onpickenum()}>
 				Enum

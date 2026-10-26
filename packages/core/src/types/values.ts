@@ -30,6 +30,17 @@ export const INTEGER_TYPES: readonly WgslType[] = [...INT_TYPES, ...UINT_TYPES];
 export const SCALAR_TYPES: readonly WgslType[] = ["f32", "i32", "u32", "bool"];
 export const FLOAT_VEC_TYPES: readonly WgslType[] = ["vec2f", "vec3f", "vec4f"];
 
+/** Named sets of types, e.g. for what a group's type variable may take. */
+export const TYPE_SETS: readonly { id: string; label: string; types: readonly WgslType[] }[] = [
+	{ id: "float", label: "Float", types: FLOAT_TYPES },
+	{ id: "int", label: "Integer", types: INT_TYPES },
+	{ id: "uint", label: "Unsigned", types: UINT_TYPES },
+	{ id: "bool", label: "Boolean", types: BOOL_TYPES },
+	{ id: "signed", label: "Signed number", types: SIGNED_TYPES },
+	{ id: "number", label: "Any number", types: NUMERIC_TYPES },
+	{ id: "any", label: "Any", types: WGSL_TYPES },
+];
+
 const TYPE_INFO: Record<WgslType, { kind: ScalarKind; components: 1 | 2 | 3 | 4 }> = {
 	f32: { kind: "f32", components: 1 },
 	vec2f: { kind: "f32", components: 2 },
