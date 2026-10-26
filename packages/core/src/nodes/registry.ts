@@ -28,6 +28,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	uv: nodes.uvNode,
 	time: nodes.timeNode,
 	delta: nodes.deltaNode,
+	frame: nodes.frameNode,
 	resolution: nodes.resolutionNode,
 
 	// Math

@@ -271,6 +271,11 @@
 					Toggle mode <Menubar.Shortcut>⌘M</Menubar.Shortcut>
 				</Menubar.Item>
 				<Menubar.Separator />
+				<Menubar.Item onSelect={() => preview.toggle()}>
+					{preview.playing ? "Pause" : "Play"}
+					<Menubar.Shortcut>Space</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
 				<Menubar.Item onSelect={() => preview.view.zoomIn()}>
 					Zoom preview in <Menubar.Shortcut>+</Menubar.Shortcut>
 				</Menubar.Item>

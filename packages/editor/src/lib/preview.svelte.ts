@@ -156,6 +156,18 @@ export class Preview {
 		this.syncPlayback();
 	}
 
+	/** Jump to `time` seconds (on the frame grid at a fixed frame rate). */
+	seek(time: number) {
+		this.player.seek(time);
+		this.syncPlayback();
+	}
+
+	/** Pause and move by whole frames. */
+	step(frames: number) {
+		this.player.step(frames);
+		this.syncPlayback();
+	}
+
 	destroy() {
 		this.destroyed = true;
 		this.player.destroy();

@@ -6,6 +6,7 @@
 	import NodeGraph from "./NodeGraph.svelte";
 	import Preview from "./Preview.svelte";
 	import SettingsDialog from "./settings/SettingsDialog.svelte";
+	import Timeline from "./Timeline.svelte";
 
 	let { class: className }: { class?: string } = $props();
 
@@ -20,13 +21,21 @@
 	});
 </script>
 
-<Resizable.PaneGroup direction="horizontal" class={className}>
-	<Resizable.Pane defaultSize={30}>
-		<Preview />
+<Resizable.PaneGroup direction="vertical" class={className}>
+	<Resizable.Pane defaultSize={92}>
+		<Resizable.PaneGroup direction="horizontal">
+			<Resizable.Pane defaultSize={30}>
+				<Preview />
+			</Resizable.Pane>
+			<Resizable.Handle />
+			<Resizable.Pane defaultSize={70}>
+				<NodeGraph bind:shader />
+			</Resizable.Pane>
+		</Resizable.PaneGroup>
 	</Resizable.Pane>
 	<Resizable.Handle />
-	<Resizable.Pane defaultSize={70}>
-		<NodeGraph bind:shader />
+	<Resizable.Pane defaultSize={8} minSize={5}>
+		<Timeline />
 	</Resizable.Pane>
 </Resizable.PaneGroup>
 

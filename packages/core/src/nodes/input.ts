@@ -48,6 +48,10 @@ export const deltaNode: NodeDescriptor = {
 	...uniformReader("delta", "Delta", "delta", "f32", `${FRAME_VAR}.delta`),
 	aliases: ["Delta Time", "Frame Time", "iTimeDelta"],
 };
+export const frameNode: NodeDescriptor = {
+	...uniformReader("frame", "Frame", "frame", "u32", `${FRAME_VAR}.frame`),
+	aliases: ["Frame Index", "Frame Number", "iFrame"],
+};
 export const resolutionNode: NodeDescriptor = {
 	...uniformReader("resolution", "Resolution", "resolution", "vec2f", `${FRAME_VAR}.resolution`),
 	aliases: ["Screen Size", "View Size", "Canvas Size", "iResolution"],
