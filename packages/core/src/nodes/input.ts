@@ -1,3 +1,4 @@
+import { FRAGMENT_VAR, FRAME_VAR } from "../codegen/program";
 import type { NodeDescriptor } from "../types";
 import { WGSL_TYPES, makeType, typeComponents, typeKind, wgslTypeName } from "../types";
 import { uniformReader } from "./builders";
@@ -40,21 +41,21 @@ export const declareNode: NodeDescriptor = {
 
 // Input — uniforms
 export const timeNode: NodeDescriptor = {
-	...uniformReader("time", "Time", "time", "f32", "spektralFrame.time"),
+	...uniformReader("time", "Time", "time", "f32", `${FRAME_VAR}.time`),
 	aliases: ["Scene Time", "Absolute Time", "Seconds", "iTime"],
 };
 export const deltaNode: NodeDescriptor = {
-	...uniformReader("delta", "Delta", "delta", "f32", "spektralFrame.delta"),
+	...uniformReader("delta", "Delta", "delta", "f32", `${FRAME_VAR}.delta`),
 	aliases: ["Delta Time", "Frame Time", "iTimeDelta"],
 };
 export const resolutionNode: NodeDescriptor = {
-	...uniformReader("resolution", "Resolution", "resolution", "vec2f", "spektralFrame.resolution"),
+	...uniformReader("resolution", "Resolution", "resolution", "vec2f", `${FRAME_VAR}.resolution`),
 	aliases: ["Screen Size", "View Size", "Canvas Size", "iResolution"],
 };
-// Spektral's per-fragment context, readable from any function (unlike frag()'s
+// The per-fragment context, readable from any function (unlike frag()'s
 // own `uv` parameter), so UV nodes also work inside groups.
 export const uvNode: NodeDescriptor = {
-	...uniformReader("uv", "UV", "uv", "vec2f", "spektralFragment.uv"),
+	...uniformReader("uv", "UV", "uv", "vec2f", `${FRAGMENT_VAR}.uv`),
 	aliases: [
 		"Texture Coordinate",
 		"TexCoord",

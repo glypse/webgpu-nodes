@@ -1,7 +1,15 @@
 <script lang="ts">
 	import { dev } from "$app/env";
 	import { type GraphDocument } from "$core";
-	import { DevTools, Editor, GraphManager, setDevTools, setGraphManager } from "$editor";
+	import {
+		DevTools,
+		Editor,
+		GraphManager,
+		Preview,
+		setDevTools,
+		setGraphManager,
+		setPreview,
+	} from "$editor";
 	import { Menubar, AlertDialog } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
@@ -10,6 +18,13 @@
 
 	const devTools = new DevTools(dev);
 	setDevTools(devTools);
+
+	const preview = new Preview();
+	setPreview(preview);
+	preview.play();
+	$effect(() => () => {
+		preview.destroy();
+	});
 
 	function pickFiles(opts: { accept: string; multiple?: boolean }): Promise<File[]> {
 		return new Promise((resolve) => {

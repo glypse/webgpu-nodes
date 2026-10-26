@@ -65,10 +65,10 @@
       "version": "0.6.0",
       "dependencies": {
         "$core": "workspace:*",
+        "$runtime": "workspace:*",
         "$theme": "workspace:*",
         "@xyflow/svelte": "^1.7.0",
         "phosphor-svelte": "catalog:",
-        "spektral": "^0.17.2",
       },
       "devDependencies": {
         "@sveltejs/package": "catalog:",
@@ -87,6 +87,23 @@
       "peerDependencies": {
         "svelte": "catalog:",
         "tailwindcss": "catalog:",
+      },
+    },
+    "packages/runtime": {
+      "name": "$runtime",
+      "version": "0.0.0",
+      "dependencies": {
+        "$core": "workspace:*",
+        "@webgpu/types": "^0.1.74",
+      },
+      "devDependencies": {
+        "@types/bun": "catalog:",
+        "eslint": "catalog:",
+        "globals": "catalog:",
+        "typescript": "catalog:",
+        "typescript-eslint": "catalog:",
+        "vite": "catalog:",
+        "vitest": "catalog:",
       },
     },
     "packages/theme": {
@@ -145,6 +162,8 @@
     "$core": ["$core@workspace:packages/core"],
 
     "$editor": ["$editor@workspace:packages/editor"],
+
+    "$runtime": ["$runtime@workspace:packages/runtime"],
 
     "$theme": ["$theme@workspace:packages/theme"],
 
@@ -1173,8 +1192,6 @@
     "source-map-js": ["source-map-js@1.2.2", "", {}, "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw=="],
 
     "source-map-support": ["source-map-support@0.5.19", "", { "dependencies": { "buffer-from": "^1.0.0", "source-map": "^0.6.0" } }, "sha512-Wonm7zOCIJzBGQdB+thsPar0kYuCIzYvxZwlBa87yi/Mdjv7Tip2cyVbLj5o0cFPN4EVkuTwb3GDDyUx2DGnGw=="],
-
-    "spektral": ["spektral@0.17.2", "", { "dependencies": { "@webgpu/types": "^0.1.71" }, "peerDependencies": { "react": "^19.0.0", "react-dom": "^19.0.0", "svelte": "^5.29.0", "vue": "^3.5.2" }, "optionalPeers": ["react", "react-dom", "svelte", "vue"] }, "sha512-CkCJ5VLsLg/Iwy+ziMbrMteazyESXOoVWpofX90B43qCpQLXPr2GwD94elBSdf5Li2o9JcXGUgrU6ITKqhd/og=="],
 
     "std-env": ["std-env@4.3.0", "", {}, "sha512-OtU/EgQ1kIm5KwqQpBC6ZEMXrZRui11w8zgfTWp8cdO9B8OaPsbA8bTHO2P+HNo1VlUTGMVBwPhydu6poeXiag=="],
 

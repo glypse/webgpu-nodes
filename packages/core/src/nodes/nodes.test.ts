@@ -142,13 +142,13 @@ describe("enum inputs and fallbacks", () => {
 			[aspectUv({ values: { [MODE]: 2 } })],
 			[["a", OUT, "out", "color"]],
 		);
-		expect(stretch).not.toContain("spektralFrame.resolution");
+		expect(stretch).not.toContain("runtime_frame.resolution");
 		if (nagaBin) expect(validateFragment(stretch)).toBeNull();
 		const cover = shaderFor(
 			[aspectUv({ values: { [MODE]: 1 } })],
 			[["a", OUT, "out", "color"]],
 		);
-		expect(cover).toContain("spektralFrame.resolution");
+		expect(cover).toContain("runtime_frame.resolution");
 	});
 
 	it("exposes the mode as an enum and the coordinates as a fallback input", () => {

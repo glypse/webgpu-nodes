@@ -27,10 +27,10 @@
 	},
 	"dependencies": {
 		"$core": "workspace:*",
+		"$runtime": "workspace:*",
 		"$theme": "workspace:*",
 		"@xyflow/svelte": "^1.7.0",
-		"phosphor-svelte": "catalog:",
-		"spektral": "^0.17.2"
+		"phosphor-svelte": "catalog:"
 	},
 	"devDependencies": {
 		"@sveltejs/package": "catalog:",

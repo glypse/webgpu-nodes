@@ -94,7 +94,7 @@ describe("Match node", () => {
 	it("computes only the case picked by an enum value known while compiling", () => {
 		const { shader } = generateShader(new GraphModel(project({ values: { mode: 2 } })));
 		expect(shader).toContain("let v_m = h_x;");
-		expect(shader).not.toContain("spektralFrame.time");
+		expect(shader).not.toContain("runtime_frame.time");
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 

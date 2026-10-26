@@ -38,6 +38,7 @@ import {
 } from "../zones";
 import { HelperRegistry } from "./helpers";
 import { formatWgslLiteral, scalarNumber } from "./literals";
+import { UNIFORMS_VAR } from "./program";
 
 // ── Graph walking ────────────────────────────────────────────────────────────
 
@@ -256,9 +257,6 @@ export type ShaderOptions = {
 	 */
 	uniformScope?: string;
 };
-
-/** Reads uniforms from the struct Spektral declares. */
-const UNIFORMS_VAR = "spektralUniforms";
 
 /**
  * Emits the body of one document (the root fragment or a group function).

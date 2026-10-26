@@ -13,7 +13,7 @@ describe("uniforms", () => {
 		const { shader, uniforms } = generateShader(managerFor(sine, toOutput), {
 			uniformScope: ROOT_ID,
 		});
-		expect(shader).toContain("sin(spektralUniforms.u_s_e)");
+		expect(shader).toContain("sin(runtime_uniforms.u_s_e)");
 		expect(uniforms).toMatchObject({ u_s_e: 2 });
 		if (nagaBin) expect(validateFragment(shader, uniforms)).toBeNull();
 	});
@@ -54,8 +54,8 @@ describe("uniforms", () => {
 			uniformScope: ROOT_ID,
 		});
 		expect(uniforms).toMatchObject({ u_i_x: 1, u_i_y: -2, u_u_x: 0, u_b_e: 1 });
-		expect(shader).toContain("i32(spektralUniforms.u_i_y)");
-		expect(shader).toContain("bool(spektralUniforms.u_b_e)");
+		expect(shader).toContain("i32(runtime_uniforms.u_i_y)");
+		expect(shader).toContain("bool(runtime_uniforms.u_b_e)");
 		if (nagaBin) expect(validateFragment(shader, uniforms)).toBeNull();
 	});
 
@@ -67,7 +67,7 @@ describe("uniforms", () => {
 		const ref = group?.group?.definitionRef ?? "";
 		const { shader, uniforms } = generateShader(graph, { uniformScope: ref });
 		expect(Object.keys(uniforms)).toEqual(["u_s_e"]);
-		expect(shader).toMatch(/fn group_[^]*spektralUniforms\.u_s_e[^]*fn frag/);
+		expect(shader).toMatch(/fn group_[^]*runtime_uniforms\.u_s_e[^]*fn frag/);
 		if (nagaBin) expect(validateFragment(shader, uniforms)).toBeNull();
 
 		if (group) graph.enterGroup(group.id);

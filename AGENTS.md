@@ -5,7 +5,7 @@ A web-based node-based fragment shader editor for WGSL
 ### Roadmap
 
 - A WGSL string builder handling all major value types and operations
-- A proper handling of Spektral native & custom uniforms (ie: time, canvas resolution, texture, texture dimensions and texture sampling, etc)
+- A proper handling of native & custom uniforms (ie: time, canvas resolution, texture, texture dimensions and texture sampling, etc)
 - A user-friendly UI for handling the node editor
 - A JSON load/save system for user-created scenes
 - A Tauri desktop app bundling a WebGPU runtime, allowing for local, offline shader creation
@@ -21,7 +21,7 @@ This project is in pre-alpha: every change can afford to be breaking, no backwar
 - Nx as the monorepo orchestrator tool
 - Svelte as framework, SvelteKit as meta-framework
 - (Not yet implemented) Tauri as the desktop app framework
-- Spektral as the WGSL runtime
+- Our own WebGPU runtime (`packages/runtime`)
 
 ## Instructions
 
@@ -34,6 +34,7 @@ Given the nature of this project, it's easy for the UI to not reflect the same s
 ## Packages
 
 - `packages/core` (`$core`): the headless graph model (`GraphModel`: documents, groups, repeat zones, type inference, connection rules, undo history), the node library, the standard library and WGSL code generation. Plain TypeScript: **no Svelte, no SvelteFlow, no DOM**. Any graph edit or rule belongs here, so another front end (or none, e.g. tests) behaves the same. `GraphModel` is one class layered across files, each extending the previous: `model-base.ts` (state, documents, navigation, types), `model-zones.ts`, `model-groups.ts`, then `model.ts` (history, load/save, connections).
+- `packages/runtime` (`$runtime`): draws the `ShaderProgram`s core generates with WebGPU (`Renderer`, `CanvasTarget`, pixel readback for exports) and keeps project time (`Clock`, `Player`). No Svelte. Core owns the program's WGSL and uniform layout (`codegen/program.ts`); the runtime only follows that layout, so keep the two from duplicating each other.
 - `packages/editor` (`$editor`): the Svelte / SvelteFlow front end. `GraphManager` extends `GraphModel`, making its state reactive and adding UI-only state (sheets) and browser file I/O. Components call model methods (e.g. `graph.updateNodeData`, `graph.setNodeType`) rather than editing node data themselves.
 - `packages/theme` (`$theme`): shared UI components and tokens.
 

@@ -12,7 +12,7 @@ export default defineConfig({
 	ssr: {
 		// A workspace package: built from source like $editor and $theme, so its
 		// exports never come from a stale dist build.
-		noExternal: ["$core"],
+		noExternal: ["$core", "$runtime"],
 	},
 	server: {
 		fs: {
