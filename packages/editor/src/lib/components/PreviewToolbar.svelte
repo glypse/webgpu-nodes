@@ -2,14 +2,17 @@
 	import type { Size } from "$runtime";
 	import { Button, DropdownMenu } from "$theme";
 	import CaretUpDownIcon from "phosphor-svelte/lib/CaretUpDownIcon";
+	import DownloadSimpleIcon from "phosphor-svelte/lib/DownloadSimpleIcon";
 
+	import { exportFrame } from "../exports";
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { getPreview } from "../preview.svelte";
 
 	let { resolution }: { resolution: Size } = $props();
 
 	const graph = getGraphManager();
-	const view = getPreview().view;
+	const preview = getPreview();
+	const view = preview.view;
 
 	const PERCENTAGES = [50, 100, 200, 400];
 </script>
@@ -71,6 +74,34 @@
 					{percentage}%
 				</DropdownMenu.Item>
 			{/each}
+		</DropdownMenu.Content>
+	</DropdownMenu.Root>
+
+	<DropdownMenu.Root>
+		<DropdownMenu.Trigger>
+			{#snippet child({ props })}
+				<Button {...props} variant="ghost" size="icon-xs" title="Export">
+					<DownloadSimpleIcon />
+				</Button>
+			{/snippet}
+		</DropdownMenu.Trigger>
+		<DropdownMenu.Content align="end" class="w-48">
+			<DropdownMenu.Item
+				onSelect={() => {
+					exportFrame(preview).catch((error: unknown) => {
+						console.error("[export] frame export failed", error);
+					});
+				}}
+			>
+				Export frame as PNG
+			</DropdownMenu.Item>
+			<DropdownMenu.Item
+				onSelect={() => {
+					preview.exportDialogOpen = true;
+				}}
+			>
+				Export video…
+			</DropdownMenu.Item>
 		</DropdownMenu.Content>
 	</DropdownMenu.Root>
 </div>

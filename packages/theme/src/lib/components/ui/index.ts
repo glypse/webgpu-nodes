@@ -13,6 +13,7 @@ export {
 export { CurveEditor } from "./curve-editor/index";
 export { Root as Input } from "./input/index";
 export { Root as Label } from "./label/index";
+export { Root as Progress } from "./progress/index";
 export { Root as Separator } from "./separator/index";
 export { Root as Textarea } from "./textarea/index";
 export { Root as Toggle, toggleVariants } from "./toggle/index";

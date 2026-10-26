@@ -52,6 +52,7 @@ function describeError(error: unknown): PreviewError {
  */
 export class Preview {
 	error = $state<PreviewError | null>(null);
+	exportDialogOpen = $state(false);
 	playing = $state(false);
 	time = $state(0);
 	frame = $state(0);
@@ -63,8 +64,8 @@ export class Preview {
 	private rendererRequest: Promise<Renderer> | undefined;
 	private target: CanvasTarget | undefined;
 	private canvas: HTMLCanvasElement | undefined;
-	private size: Size = { width: 0, height: 0 };
-	private colorSpace: ColorSpace = "srgb";
+	private size = $state<Size>({ width: 0, height: 0 });
+	private colorSpace = $state<ColorSpace>("srgb");
 
 	private source: ShaderSource | undefined;
 	private program: CompiledProgram | undefined;
@@ -166,6 +167,37 @@ export class Preview {
 	step(frames: number) {
 		this.player.step(frames);
 		this.syncPlayback();
+	}
+
+	/** The canvas resolution and colour space, which exports use. */
+	get output(): { size: Size; colorSpace: ColorSpace } {
+		return { size: this.size, colorSpace: this.colorSpace };
+	}
+
+	/**
+	 * Draw `frame` and read it back as straight-alpha RGBA, 8 bits per channel,
+	 * by default at the canvas resolution and in its colour space.
+	 */
+	async readFrame(
+		frame: FrameInputs,
+		size: Size = this.size,
+		colorSpace: ColorSpace = this.colorSpace,
+	): Promise<Uint8ClampedArray<ArrayBuffer>> {
+		const renderer = await this.ensureRenderer();
+		if (!this.program) throw new Error("The shader hasn't compiled yet.");
+		return renderer.readPixels(this.program, frame, size, colorSpace);
+	}
+
+	/** The frame shown, as a PNG at the canvas resolution. */
+	async captureFrame(): Promise<Blob> {
+		const { size, colorSpace } = this.output;
+		const { time, delta, frame } = this.player.clock;
+		const pixels = await this.readFrame({ time, delta, frame });
+		const canvas = new OffscreenCanvas(size.width, size.height);
+		const context = canvas.getContext("2d", { colorSpace });
+		if (!context) throw new Error("Couldn't create a 2D canvas to encode the image.");
+		context.putImageData(new ImageData(pixels, size.width, size.height, { colorSpace }), 0, 0);
+		return canvas.convertToBlob({ type: "image/png" });
 	}
 
 	destroy() {

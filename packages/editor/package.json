@@ -30,6 +30,7 @@
 		"$runtime": "workspace:*",
 		"$theme": "workspace:*",
 		"@xyflow/svelte": "^1.7.0",
+		"mediabunny": "^1.62.1",
 		"mode-watcher": "catalog:",
 		"phosphor-svelte": "catalog:"
 	},

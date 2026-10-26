@@ -10,3 +10,4 @@ export { Preview, getPreview, setPreview } from "./preview.svelte";
 export { Preferences, getPreferences, setPreferences } from "./preferences.svelte";
 export { type SettingsPage } from "./components/settings/pages";
 export * from "./utils";
+export { exportFrame } from "./exports";

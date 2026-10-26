@@ -7,6 +7,7 @@
 	import Preview from "./Preview.svelte";
 	import SettingsDialog from "./settings/SettingsDialog.svelte";
 	import Timeline from "./Timeline.svelte";
+	import VideoExportDialog from "./VideoExportDialog.svelte";
 
 	let { class: className }: { class?: string } = $props();
 
@@ -40,3 +41,4 @@
 </Resizable.PaneGroup>
 
 <SettingsDialog />
+<VideoExportDialog />

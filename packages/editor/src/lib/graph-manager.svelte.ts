@@ -14,6 +14,11 @@ import { getContext, setContext } from "svelte";
 
 import type { SettingsPage } from "./components/settings/pages";
 import { ReactiveGraphDocument } from "./reactive-document.svelte";
+import { downloadFile } from "./utils";
+
+function jsonBlob(contents: string): Blob {
+	return new Blob([contents], { type: "application/json" });
+}
 
 /**
  * The editor's graph: `$core`'s `GraphModel` made reactive (its state,
@@ -107,7 +112,7 @@ export class GraphManager extends GraphModel {
 
 	/** Download the project as JSON and remember it as saved. */
 	save() {
-		downloadFile("webGpuNodesProject.json", this.getProjectJson());
+		downloadFile("webGpuNodesProject.json", jsonBlob(this.getProjectJson()));
 		this.markSaved();
 	}
 
@@ -124,7 +129,7 @@ export class GraphManager extends GraphModel {
 	/** Download a group and the user groups it nests, one JSON file each. */
 	exportGroup(definitionRef: string) {
 		for (const { filename, contents } of this.exportGroupFiles(definitionRef)) {
-			downloadFile(filename, contents);
+			downloadFile(filename, jsonBlob(contents));
 		}
 	}
 }
@@ -137,16 +142,6 @@ export type GraphCanvas = {
 	/** Frame every node of the document in view. */
 	fitView(): Promise<void>;
 };
-
-/** Trigger a browser download of a JSON file. */
-function downloadFile(filename: string, contents: string) {
-	const url = URL.createObjectURL(new Blob([contents], { type: "application/json" }));
-	const a = document.createElement("a");
-	a.href = url;
-	a.download = filename;
-	a.click();
-	URL.revokeObjectURL(url);
-}
 
 // ── Context helpers ──────────────────────────────────────────────────────────
 

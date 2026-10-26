@@ -7,6 +7,7 @@
 		GraphManager,
 		Preferences,
 		Preview,
+		exportFrame,
 		setDevTools,
 		setGraphManager,
 		setPreferences,
@@ -176,6 +177,23 @@
 					Export selected group
 				</Menubar.Item>
 				<Menubar.Item onSelect={handleImportGroups}>Import groups</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item
+					onSelect={() => {
+						exportFrame(preview).catch((error: unknown) => {
+							console.error("[export] frame export failed", error);
+						});
+					}}
+				>
+					Export frame as PNG
+				</Menubar.Item>
+				<Menubar.Item
+					onSelect={() => {
+						preview.exportDialogOpen = true;
+					}}
+				>
+					Export video…
+				</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item
 					onSelect={() => {

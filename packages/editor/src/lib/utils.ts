@@ -7,3 +7,13 @@ export function openContextMenuAt(trigger: HTMLElement, x: number, y: number) {
 		new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: x, clientY: y }),
 	);
 }
+
+/** Trigger a browser download of `blob`. */
+export function downloadFile(filename: string, blob: Blob) {
+	const url = URL.createObjectURL(blob);
+	const a = document.createElement("a");
+	a.href = url;
+	a.download = filename;
+	a.click();
+	URL.revokeObjectURL(url);
+}
