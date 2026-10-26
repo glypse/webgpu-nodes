@@ -1,5 +1,4 @@
-/** The colour space the presented pixels are encoded in (with the sRGB transfer curve either way). */
-export type ColorSpace = "srgb" | "display-p3";
+import type { ColorSpace } from "$core";
 
 /**
  * Turns the linear-sRGB colour a program drew into a display encoding:

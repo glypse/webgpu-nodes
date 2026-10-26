@@ -1,5 +1,6 @@
 import {
 	defaultScene,
+	defaultSettings,
 	GraphModel,
 	type GraphModelState,
 	type GraphProject,
@@ -11,6 +12,7 @@ import {
 } from "$core";
 import { getContext, setContext } from "svelte";
 
+import type { SettingsPage } from "./components/settings/pages";
 import { ReactiveGraphDocument } from "./reactive-document.svelte";
 
 /**
@@ -27,6 +29,7 @@ export class GraphManager extends GraphModel {
 		const state = $state<GraphModelState>({
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- Map is reassigned, not mutated
 			project: { definitions: new Map() },
+			settings: defaultSettings(),
 			path: [],
 			selectedNodeIds: [],
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
@@ -58,6 +61,9 @@ export class GraphManager extends GraphModel {
 	 * Repeat zone settings sheet: the zone (Repeat Input node id) being edited.
 	 */
 	zoneSheetId = $state<string | null>(null);
+
+	/** The page of the settings dialog shown, or null while it's closed. */
+	settingsPage = $state<SettingsPage | null>(null);
 
 	/** Open (or toggle closed) the settings sheet of the zone a boundary node belongs to. */
 	openZoneSheet(boundaryNodeId: string) {

@@ -68,6 +68,7 @@
         "$runtime": "workspace:*",
         "$theme": "workspace:*",
         "@xyflow/svelte": "^1.7.0",
+        "mode-watcher": "catalog:",
         "phosphor-svelte": "catalog:",
       },
       "devDependencies": {
@@ -76,7 +77,6 @@
         "@tailwindcss/vite": "catalog:",
         "eslint": "catalog:",
         "globals": "catalog:",
-        "mode-watcher": "catalog:",
         "svelte": "catalog:",
         "svelte-check": "catalog:",
         "typescript": "catalog:",
@@ -112,7 +112,7 @@
       "dependencies": {
         "$core": "workspace:*",
         "@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
-        "bits-ui": "^2.19.5",
+        "bits-ui": "^2.20.0",
         "clsx": "^2.1.1",
         "paneforge": "^1.0.2",
         "phosphor-svelte": "catalog:",
@@ -731,7 +731,7 @@
 
     "baseline-browser-mapping": ["baseline-browser-mapping@2.11.29", "", { "bin": { "baseline-browser-mapping": "dist/cli.cjs" } }, "sha512-YeesxhUmR4h5y5V8KF8iBCqJb8YFrBJ++XBTeGcWIaQOYXGN19JM0FoiOjAhwuDoln8owMgXcWBmgHtYSkky2w=="],
 
-    "bits-ui": ["bits-ui@2.19.5", "", { "dependencies": { "@floating-ui/core": "^1.7.1", "@floating-ui/dom": "^1.7.1", "esm-env": "^1.1.2", "runed": "^0.35.1", "svelte-toolbelt": "^0.10.6", "tabbable": "^6.2.0" }, "peerDependencies": { "@internationalized/date": "^3.8.1", "svelte": "^5.33.0" } }, "sha512-TEwkLSYElE5SE0fIdcItiFPfyg9vrR67N1Mt6VvZCqZo24dwTA1MpGVV3WeyIg7rfVAaZ0So8a0/dcnPngCoew=="],
+    "bits-ui": ["bits-ui@2.20.2", "", { "dependencies": { "@floating-ui/core": "^1.8.0", "@floating-ui/dom": "^1.8.0", "esm-env": "^1.2.2", "runed": "^0.35.1", "svelte-toolbelt": "^0.10.6", "tabbable": "^6.5.0" }, "peerDependencies": { "@internationalized/date": "^3.8.1", "svelte": "^5.33.0" } }, "sha512-cb1eQD1wZEhJWb1dTLiAdYWqeUI5v7f+7EAHmetxBuELI9lo4cpAIfGEjald/PR4wTR80Fu5DFH+IaY1OKn+tg=="],
 
     "bl": ["bl@4.1.0", "", { "dependencies": { "buffer": "^5.5.0", "inherits": "^2.0.4", "readable-stream": "^3.4.0" } }, "sha512-1W07cM9gS6DcLperZfFSj+bWLtaPGSOHWhPiGzXmvVJbRLdG82sH/Kn8EtW1VqWVA54AKf2h5k5BbnIbwF3h6w=="],
 

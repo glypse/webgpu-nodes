@@ -7,4 +7,6 @@ export { GraphManager, setGraphManager, getGraphManager } from "./graph-manager.
 export { ReactiveGraphDocument } from "./reactive-document.svelte";
 export { DevTools, getDevTools, setDevTools } from "./dev-tools.svelte";
 export { Preview, getPreview, setPreview } from "./preview.svelte";
+export { Preferences, getPreferences, setPreferences } from "./preferences.svelte";
+export { type SettingsPage } from "./components/settings/pages";
 export * from "./utils";

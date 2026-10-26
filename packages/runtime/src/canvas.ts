@@ -1,4 +1,5 @@
-import type { ColorSpace } from "./present";
+import type { ColorSpace } from "$core";
+
 import type { CompiledProgram, FrameInputs, Renderer, Size } from "./renderer";
 
 let nextSlot = 0;

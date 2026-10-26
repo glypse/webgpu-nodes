@@ -5,6 +5,7 @@
 	import { getPreview } from "../preview.svelte";
 	import NodeGraph from "./NodeGraph.svelte";
 	import Preview from "./Preview.svelte";
+	import SettingsDialog from "./settings/SettingsDialog.svelte";
 
 	let { class: className }: { class?: string } = $props();
 
@@ -28,3 +29,5 @@
 		<NodeGraph bind:shader />
 	</Resizable.Pane>
 </Resizable.PaneGroup>
+
+<SettingsDialog />

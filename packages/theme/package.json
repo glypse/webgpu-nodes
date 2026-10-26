@@ -43,7 +43,7 @@
 	"dependencies": {
 		"$core": "workspace:*",
 		"@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
-		"bits-ui": "^2.19.5",
+		"bits-ui": "^2.20.0",
 		"clsx": "^2.1.1",
 		"paneforge": "^1.0.2",
 		"phosphor-svelte": "catalog:",

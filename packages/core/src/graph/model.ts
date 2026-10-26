@@ -142,7 +142,7 @@ export class GraphModel extends GroupModel {
 				.filter(([key]) => !this.isStandardLibrary(key))
 				.map(([key, doc]) => [key, serialiseDocument(doc)]),
 		);
-		return stableStringify({ definitions });
+		return stableStringify({ definitions, settings: this.settings });
 	}
 
 	markSaved() {
@@ -426,7 +426,7 @@ export class GraphModel extends GroupModel {
 					serialiseDocument(definition, { viewport: true }),
 				]),
 		);
-		const project = { definitions };
+		const project: GraphProject = { definitions, settings: this.settings };
 		return JSON.stringify(project, null, "\t");
 	}
 

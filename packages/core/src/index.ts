@@ -12,6 +12,7 @@ export * from "./library";
 export * from "./graph/document";
 export * from "./graph/hydrate";
 export * from "./graph/schema";
+export * from "./graph/settings";
 export * from "./graph/history";
 export { handlesOf } from "./graph/editing";
 export * from "./graph/values";

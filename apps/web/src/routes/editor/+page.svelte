@@ -5,9 +5,11 @@
 		DevTools,
 		Editor,
 		GraphManager,
+		Preferences,
 		Preview,
 		setDevTools,
 		setGraphManager,
+		setPreferences,
 		setPreview,
 	} from "$editor";
 	import { Menubar, AlertDialog } from "$theme";
@@ -18,6 +20,8 @@
 
 	const devTools = new DevTools(dev);
 	setDevTools(devTools);
+
+	setPreferences(new Preferences());
 
 	const preview = new Preview();
 	setPreview(preview);
@@ -173,6 +177,14 @@
 				</Menubar.Item>
 				<Menubar.Item onSelect={handleImportGroups}>Import groups</Menubar.Item>
 				<Menubar.Separator />
+				<Menubar.Item
+					onSelect={() => {
+						graph.settingsPage = "canvas";
+					}}
+				>
+					Project settings…
+				</Menubar.Item>
+				<Menubar.Separator />
 				<Menubar.CheckboxItem bind:checked={devTools.enabled}>
 					Developer tools
 				</Menubar.CheckboxItem>
@@ -236,6 +248,14 @@
 				>
 					Toggle node group sheet
 					<Menubar.Shortcut>N</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item
+					onSelect={() => {
+						graph.settingsPage = "appearance";
+					}}
+				>
+					Preferences…
 				</Menubar.Item>
 			</Menubar.Content>
 		</Menubar.Menu>

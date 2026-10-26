@@ -1,4 +1,5 @@
 import type { NodeData, NodeWidget, TypeVariable } from "../types";
+import type { ProjectSettings } from "./settings";
 
 /** A document's camera: pan offset and zoom. */
 export type Viewport = { x: number; y: number; zoom: number };
@@ -54,6 +55,8 @@ export type GraphDocumentEdge = {
 /** The whole project. Exactly one per file/save. Root lives in `definitions[ROOT_ID]`. */
 export type GraphProject = {
 	definitions: Record<string, GraphDocument>;
+	/** Defaults when absent (see `defaultSettings`). */
+	settings?: ProjectSettings;
 };
 
 // ── In-memory (hydrated) types ───────────────────────────────────────────────

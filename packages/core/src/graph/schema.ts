@@ -3,6 +3,7 @@ import * as v from "valibot";
 import { COLOR_MODES } from "../color/modes";
 import { CURVE_POINT_KINDS } from "../curve";
 import { COLOR_DISPLAYS, type NodeWidget, WGSL_TYPES } from "../types";
+import { ProjectSettingsSchema, defaultSettings } from "./settings";
 
 const PositionSchema = v.object({
 	x: v.number(),
@@ -107,6 +108,7 @@ export const GraphDocumentSchema = v.object({
 
 export const GraphProjectSchema = v.object({
 	definitions: v.record(v.string(), GraphDocumentSchema),
+	settings: v.optional(ProjectSettingsSchema, defaultSettings),
 });
 
 /** A group exported on its own (see `GraphModel.exportGroupFiles`). */

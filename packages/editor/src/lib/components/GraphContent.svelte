@@ -329,17 +329,18 @@
 	}
 
 	// Undo history: record a step once the documents stop changing for a
-	// moment, so a drag or a scrub becomes one step. Node/edge arrays are
-	// reassigned on every change, which is what this effect tracks.
+	// moment, so a drag or a scrub becomes one step. Node/edge arrays and the
+	// settings are reassigned on every change, which is what this effect tracks.
 	const HISTORY_DEBOUNCE_MS = 300;
 	$effect(() => {
-		const tracked = [...graph.project.definitions.values()].map((doc) => [
+		const tracked: unknown[] = [...graph.project.definitions.values()].map((doc) => [
 			doc.nodes,
 			doc.edges,
 			doc.label,
 			doc.locked,
 		]);
 		if (tracked.length === 0) return;
+		tracked.push(graph.settings);
 		const timer = setTimeout(() => {
 			graph.recordHistory();
 		}, HISTORY_DEBOUNCE_MS);

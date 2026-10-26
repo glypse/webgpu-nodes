@@ -30,6 +30,7 @@
 		"$runtime": "workspace:*",
 		"$theme": "workspace:*",
 		"@xyflow/svelte": "^1.7.0",
+		"mode-watcher": "catalog:",
 		"phosphor-svelte": "catalog:"
 	},
 	"devDependencies": {
@@ -38,7 +39,6 @@
 		"@tailwindcss/vite": "catalog:",
 		"eslint": "catalog:",
 		"globals": "catalog:",
-		"mode-watcher": "catalog:",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
 		"typescript": "catalog:",

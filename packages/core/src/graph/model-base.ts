@@ -1,3 +1,5 @@
+import * as v from "valibot";
+
 import { convertColorMode } from "../color";
 import type { CurvePoint } from "../curve";
 import { MATCH, isCaseHandle } from "../enums";
@@ -43,12 +45,14 @@ import {
 	normaliseDocument,
 	resolveDescriptor,
 } from "./hydrate";
+import { ProjectSettingsSchema, type ProjectSettings, defaultSettings } from "./settings";
 import { readComponent } from "./values";
 
 export type ResolvedTypes = ResolvedNodeTypes;
 
 export type GraphModelState = {
 	project: HydratedGraphProject;
+	settings: ProjectSettings;
 	path: string[];
 	selectedNodeIds: string[];
 	typeCache: Map<string, ResolvedTypes>;
@@ -77,6 +81,7 @@ export abstract class GraphModelBase {
 	protected createState(): GraphModelState {
 		return {
 			project: { definitions: new Map() },
+			settings: defaultSettings(),
 			path: [],
 			selectedNodeIds: [],
 			typeCache: new Map(),
@@ -102,6 +107,19 @@ export abstract class GraphModelBase {
 
 	set project(value: HydratedGraphProject) {
 		this.state.project = value;
+	}
+
+	/** How the project renders. Replaced, never mutated (see `updateSettings`). */
+	get settings(): ProjectSettings {
+		return this.state.settings;
+	}
+
+	/** Change the settings; invalid ones (e.g. a size out of range) are ignored. */
+	updateSettings(settings: ProjectSettings): boolean {
+		const parsed = v.safeParse(ProjectSettingsSchema, settings);
+		if (!parsed.success) return false;
+		this.state.settings = parsed.output;
+		return true;
 	}
 
 	/**
@@ -154,6 +172,7 @@ export abstract class GraphModelBase {
 	 */
 	protected setProject(project: GraphProject) {
 		this.project = hydrateProject(project, () => this.createDocument());
+		this.state.settings = project.settings ?? defaultSettings();
 		for (const entry of this.library) this.registerLibraryEntry(entry.ref, entry);
 		this.registerLibraryRefs();
 		this.typeResolver = new TypeResolver(

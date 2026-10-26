@@ -1,33 +1,70 @@
 <script lang="ts">
+	import { getGraphManager } from "../graph-manager.svelte";
 	import { getPreview } from "../preview.svelte";
 
+	const graph = getGraphManager();
 	const preview = getPreview();
 
 	let canvas = $state<HTMLCanvasElement>();
 	let container = $state<HTMLDivElement>();
+	/** The pane's size in CSS pixels and in device pixels. */
+	let pane = $state({ width: 0, height: 0, deviceWidth: 0, deviceHeight: 0 });
 
 	$effect(() => {
 		if (!canvas) return;
 		return preview.attach(canvas);
 	});
 
-	// The canvas renders at the pane's size in device pixels.
 	$effect(() => {
 		if (!container) return;
 		const observer = new ResizeObserver(([entry]) => {
-			const box = entry?.devicePixelContentBoxSize[0];
-			if (!box) return;
-			preview.configure({ width: box.inlineSize, height: box.blockSize }, "srgb");
+			const css = entry?.contentBoxSize[0];
+			const device = entry?.devicePixelContentBoxSize[0];
+			if (!css || !device) return;
+			pane = {
+				width: css.inlineSize,
+				height: css.blockSize,
+				deviceWidth: device.inlineSize,
+				deviceHeight: device.blockSize,
+			};
 		});
 		observer.observe(container, { box: "device-pixel-content-box" });
 		return () => {
 			observer.disconnect();
 		};
 	});
+
+	const resolution = $derived(
+		graph.settings.canvas.followPreview
+			? { width: pane.deviceWidth, height: pane.deviceHeight }
+			: { width: graph.settings.canvas.width, height: graph.settings.canvas.height },
+	);
+
+	$effect(() => {
+		preview.configure(resolution, graph.settings.colorSpace);
+	});
+
+	const fps = $derived(graph.settings.timing.fps);
+	const realtime = $derived(graph.settings.timing.realtime);
+	$effect(() => {
+		preview.setTiming({ fps, realtime });
+	});
+
+	/** The canvas fitted into the pane, in CSS pixels. */
+	const fitted = $derived.by(() => {
+		if (resolution.width === 0 || resolution.height === 0) return { width: 0, height: 0 };
+		const scale = Math.min(pane.width / resolution.width, pane.height / resolution.height);
+		return { width: resolution.width * scale, height: resolution.height * scale };
+	});
 </script>
 
-<div bind:this={container} class="notexture relative size-full">
-	<canvas bind:this={canvas} class="block size-full"></canvas>
+<div bind:this={container} class="bg-muted/30 relative flex size-full items-center justify-center">
+	<canvas
+		bind:this={canvas}
+		class="notexture block shrink-0"
+		style:width="{fitted.width}px"
+		style:height="{fitted.height}px"
+	></canvas>
 	{#if preview.error}
 		{@const error = preview.error}
 		<div

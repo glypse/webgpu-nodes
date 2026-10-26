@@ -1,6 +1,7 @@
 import type { ShaderProgram, UniformValue } from "$core";
+import type { ColorSpace } from "$core";
 
-import { type ColorSpace, Presenter } from "./present";
+import { Presenter } from "./present";
 import { packBlock } from "./uniforms";
 
 /** The values a program reads per frame. */
