@@ -15,12 +15,13 @@ import {
 	type NodeInputDef,
 	type NodeOutputDef,
 	type NodeColorWidget,
+	type TypeBindings,
 	type WgslType,
 	enumValue,
 	inputFamilyKey,
 	isConnectionCompatible,
 } from "../types";
-import { TypeResolver } from "../types/resolver";
+import { TypeResolver, bindingsKey } from "../types/resolver";
 import { type ZoneAnalysis, analyzeZones } from "../zones";
 import {
 	type GraphDocument,
@@ -119,6 +120,7 @@ export abstract class GraphModelBase {
 
 	set path(value: string[]) {
 		this.state.path = value;
+		this.refreshViewTypes();
 	}
 
 	/** Currently selected node IDs (grouping acts on them, ungrouping selects its result). */
@@ -534,8 +536,11 @@ export abstract class GraphModelBase {
 
 		// Fallback: compute on the fly (shouldn't happen after initial cache build)
 		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
-			this.resolveNode(id),
+		const result = this.typeResolver.resolveNodeTypes(
+			node,
+			incoming,
+			this.lookup,
+			this.viewBindings(node.id),
 		);
 		return result.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
 	}
@@ -552,8 +557,11 @@ export abstract class GraphModelBase {
 		const node = this.resolveNode(nodeId);
 		if (!node) return "f32";
 		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
-			this.resolveNode(id),
+		const result = this.typeResolver.resolveNodeTypes(
+			node,
+			incoming,
+			this.lookup,
+			this.viewBindings(node.id),
 		);
 		return result.outputType;
 	}
@@ -568,8 +576,12 @@ export abstract class GraphModelBase {
 		if (!node?.data.types) return forced;
 		const data = { ...node.data, types: undefined };
 		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypesUncached(node, incoming, data, (id) =>
-			this.resolveNode(id),
+		const result = this.typeResolver.resolveNodeTypesUncached(
+			node,
+			incoming,
+			data,
+			this.lookup,
+			this.viewBindings(node.id),
 		);
 		return result.inputTypes[inputId] ?? forced;
 	}
@@ -595,8 +607,11 @@ export abstract class GraphModelBase {
 		const node = this.resolveNode(nodeId);
 		if (!node) return [];
 		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
-			this.resolveNode(id),
+		const result = this.typeResolver.resolveNodeTypes(
+			node,
+			incoming,
+			this.lookup,
+			this.viewBindings(node.id),
 		);
 		return result.resolvedInputs;
 	}
@@ -613,8 +628,11 @@ export abstract class GraphModelBase {
 		const node = this.resolveNode(nodeId);
 		if (!node) return [];
 		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
-			this.resolveNode(id),
+		const result = this.typeResolver.resolveNodeTypes(
+			node,
+			incoming,
+			this.lookup,
+			this.viewBindings(node.id),
 		);
 		return result.resolvedOutputs;
 	}
@@ -638,8 +656,11 @@ export abstract class GraphModelBase {
 			const node = this.resolveNode(nodeId);
 			if (!node) continue;
 			const incoming = allEdges.filter((e) => e.target === nodeId);
-			const result = this.typeResolver.resolveNodeTypes(node, incoming, (id) =>
-				this.resolveNode(id),
+			const result = this.typeResolver.resolveNodeTypes(
+				node,
+				incoming,
+				this.lookup,
+				this.viewBindings(node.id),
 			);
 			this.typeCache.set(nodeId, result);
 		}
@@ -674,6 +695,62 @@ export abstract class GraphModelBase {
 		this.typeCache = new Map(this.typeCache);
 	}
 
+	private lookup = (id: string) => this.resolveNode(id);
+
+	/** The `bindingsKey` each document's nodes are in `typeCache` with. */
+	private viewKeys = new Map<string, string>();
+
+	/**
+	 * The variables' types of the groups on the breadcrumb path, by
+	 * definitionRef: those of the group node each was entered through.
+	 */
+	protected pathBindings(): Map<string, TypeBindings> {
+		const bound = new Map<string, TypeBindings>();
+		let bindings: TypeBindings = {};
+		let doc = this.root;
+		for (const { node, group, definition } of this.walkPath()) {
+			const incoming = doc.edgesByTarget.get(node.id) ?? [];
+			bindings =
+				this.typeResolver.resolveNodeTypes(node, incoming, this.lookup, bindings)
+					.bindings ?? {};
+			bound.set(group.definitionRef, bindings);
+			doc = definition;
+		}
+		return bound;
+	}
+
+	/** The variables' types a node's document is viewed with (see `pathBindings`). */
+	viewBindings(nodeId: string): TypeBindings {
+		const viewed = this.pathBindings();
+		for (const [ref, bindings] of viewed) {
+			if (this.project.definitions.get(ref)?.nodesById.has(nodeId)) return bindings;
+		}
+		return {};
+	}
+
+	/** Re-resolve the documents viewed with other variables' types than before. */
+	private refreshViewTypes() {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a project being set may reset the path before its resolver exists
+		if (!this.typeResolver) return;
+		const viewed = this.pathBindings();
+		let changed = false;
+		for (const [ref, doc] of this.project.definitions) {
+			const bindings = viewed.get(ref) ?? {};
+			const key = bindingsKey(bindings);
+			if (this.viewKeys.get(ref) === key) continue;
+			this.viewKeys.set(ref, key);
+			const resolved = this.typeResolver.computeAll(
+				doc.nodes,
+				doc.edges,
+				this.lookup,
+				bindings,
+			);
+			for (const [nodeId, result] of resolved) this.typeCache.set(nodeId, result);
+			changed = true;
+		}
+		if (changed) this.typeCache = new Map(this.typeCache);
+	}
+
 	/**
 	 * Rebuild the entire type cache from scratch. Called on project load
 	 * and when the document structure changes fundamentally.
@@ -686,14 +763,19 @@ export abstract class GraphModelBase {
 
 		this.typeCache = new Map();
 
-		// Compute types for all nodes across all documents
-		for (const doc of this.project.definitions.values()) {
-			this.typeResolver.computeAll(doc.nodes, doc.edges, (id) => this.resolveNode(id));
-		}
-
-		// Copy resolved types into the reactive cache
-		for (const [nodeId, result] of this.typeResolver.cache) {
-			this.typeCache.set(nodeId, result);
+		// Compute types for all nodes across all documents, as viewed.
+		const viewed = this.pathBindings();
+		this.viewKeys = new Map();
+		for (const [ref, doc] of this.project.definitions) {
+			const bindings = viewed.get(ref) ?? {};
+			this.viewKeys.set(ref, bindingsKey(bindings));
+			const resolved = this.typeResolver.computeAll(
+				doc.nodes,
+				doc.edges,
+				this.lookup,
+				bindings,
+			);
+			for (const [nodeId, result] of resolved) this.typeCache.set(nodeId, result);
 		}
 
 		// Trigger reactivity

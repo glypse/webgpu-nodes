@@ -3,7 +3,7 @@ import { MATCH_SELECTOR, caseHandle } from "../enums";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { componentKeys, readComponent } from "../graph/values";
-import { enumValue, typeComponents } from "../types";
+import { type ResolvedNodeTypes, type TypeBindings, enumValue, typeComponents } from "../types";
 import {
 	ITERATIONS_HANDLE,
 	ITERATION_HANDLE,
@@ -18,6 +18,8 @@ export type Value = number[];
 
 type Frame = {
 	doc: HydratedGraphDocument;
+	/** The types the document's variables take (see `TypeBindings`). */
+	bindings: TypeBindings;
 	groupInputs: ReadonlyMap<string, Value>;
 	/** The current state of the repeat zones being run, by Repeat Input id. */
 	zones: ReadonlyMap<string, { iteration: number; state: ReadonlyMap<string, Value> }>;
@@ -95,17 +97,29 @@ export function evaluate(model: GraphModel, nodeId: string, handleId: string): V
 		zones: new Map(),
 		finals: new Map(),
 		computed: new Map(),
+		bindings: {},
 	};
 	return output(model, frame, nodeId, handleId);
 }
 
+/** A node's types in `frame`. */
+function typesIn(model: GraphModel, frame: Frame, node: GraphNode): ResolvedNodeTypes {
+	return model.typeResolver.resolveNodeTypes(
+		node,
+		frame.doc.edgesByTarget.get(node.id) ?? [],
+		(id) => model.resolveNode(id),
+		frame.bindings,
+	);
+}
+
 function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value {
-	const width = typeComponents(model.resolveInputType(node.id, inputId));
+	const type = typesIn(model, frame, node).inputTypes[inputId] ?? "f32";
+	const width = typeComponents(type);
 	const edge = frame.doc.edgesByTarget.get(node.id)?.find((e) => e.targetHandle === inputId);
 	if (edge) return fit(output(model, frame, edge.source, edge.sourceHandle), width);
 	const stored =
 		node.data.values?.[inputId] ?? model.resolveDescriptor(node).defaultData.values?.[inputId];
-	const keys = componentKeys(model.resolveInputType(node.id, inputId));
+	const keys = componentKeys(type);
 	return keys.map((k) => readComponent(stored, k));
 }
 
@@ -128,7 +142,10 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 	if (!node?.type) throw new Error(`no node "${nodeId}"`);
 	const type = node.type;
 	const get = (id: string) => input(model, frame, node, id);
-	const width = typeComponents(model.resolveOutputHandleType(nodeId, handleId));
+	const resolved = typesIn(model, frame, node);
+	const width = typeComponents(
+		resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType,
+	);
 
 	if (type === "group-input") {
 		const value = frame.groupInputs.get(handleId);
@@ -146,6 +163,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			zones: new Map(),
 			finals: new Map(),
 			computed: new Map(),
+			bindings: resolved.bindings ?? {},
 		};
 		const out = doc.nodes.find((n) => n.type === "group-output");
 		if (!out) throw new Error("no group output");
@@ -173,7 +191,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 
 	switch (type) {
 		case "declare":
-			return model.resolveNodeInputs(nodeId).map((i) => get(i.id)[0] ?? 0);
+			return resolved.resolvedInputs.map((i) => get(i.id)[0] ?? 0);
 		case "separate-vector":
 			return [get("v")["xyzw".indexOf(handleId)] ?? 0];
 		case "distance":

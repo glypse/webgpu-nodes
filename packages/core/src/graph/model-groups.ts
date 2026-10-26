@@ -13,8 +13,10 @@ import {
 	type ColorDisplay,
 	type EnumVariant,
 	type InputOwner,
-	type HandleDef,
+	type GroupHandleDef,
 	type InputValue,
+	type SocketType,
+	type TypeVariable,
 	type WgslType,
 } from "../types";
 import { wouldCreateCycle } from "../zones";
@@ -43,6 +45,9 @@ import { indexDocument, normaliseDocument, serialiseEdge, serialiseNode } from "
 import { withEntry } from "./model-base";
 import { ZoneModel } from "./model-zones";
 import { GroupFilesSchema } from "./schema";
+
+/** Names given to new type variables, in turn. */
+const VARIABLE_NAMES = ["T", "U", "V", "W", "X", "Y", "Z", "A", "B", "C", "D", "E"];
 
 // ── Definitions and references ──────────────────────────────────────────────
 
@@ -606,12 +611,12 @@ export abstract class GroupModel extends ZoneModel {
 		const inputNodeId = crypto.randomUUID();
 		const outputNodeId = crypto.randomUUID();
 
-		const inputHandle: HandleDef = {
+		const inputHandle: GroupHandleDef = {
 			id: crypto.randomUUID(),
 			label: "Input 1",
 			type: "f32",
 		};
-		const outputHandle: HandleDef = {
+		const outputHandle: GroupHandleDef = {
 			id: crypto.randomUUID(),
 			label: "Output 1",
 			type: "f32",
@@ -795,7 +800,7 @@ export abstract class GroupModel extends ZoneModel {
 		if (!trimmed) return false;
 
 		// Two inputs shown on the same group node can't share a label.
-		const apart = (h: HandleDef) =>
+		const apart = (h: GroupHandleDef) =>
 			handleNode.type === "group-input" && shownApart(handles, handle, h);
 		if (handles.some((h) => h.id !== handleId && h.label === trimmed && !apart(h))) {
 			return false;
@@ -881,9 +886,9 @@ export abstract class GroupModel extends ZoneModel {
 	 */
 	addHandle(
 		nodeId: string,
-		type: WgslType,
+		type: SocketType,
 		{ variants, owner }: { variants?: EnumVariant[]; owner?: InputOwner } = {},
-	): HandleDef | undefined {
+	): GroupHandleDef | undefined {
 		const doc = this.documentOf(nodeId);
 		const node = doc?.nodesById.get(nodeId);
 		if (!doc || !node || !BOUNDARY_TYPES.has(node.type ?? "")) return undefined;
@@ -893,10 +898,12 @@ export abstract class GroupModel extends ZoneModel {
 		const labels = new Set(handles.map((h) => h.label));
 		let n = 1;
 		while (labels.has(`${prefix} ${String(n)}`)) n++;
-		const handle: HandleDef = {
+		// Only an output's type can be whatever reaches it.
+		const inferred = typeof type === "object" && "inferred" in type;
+		const handle: GroupHandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(n)}`,
-			type: variants ? "u32" : type,
+			type: variants ? "u32" : isInput && inferred ? "f32" : type,
 			...(isInput && variants ? { variants } : {}),
 			...(isInput && ownerExists(handles, owner) && owner ? { owner } : {}),
 		};
@@ -1003,22 +1010,25 @@ export abstract class GroupModel extends ZoneModel {
 	 * that no longer fit (inside the definition, and on every instance of the
 	 * group) are removed.
 	 */
-	setHandleType(definitionRef: string, handleNodeId: string, handleId: string, type: WgslType) {
+	setHandleType(definitionRef: string, handleNodeId: string, handleId: string, type: SocketType) {
 		const def = this.project.definitions.get(definitionRef);
 		const handleNode = def?.nodesById.get(handleNodeId);
 		const handles = handleNode?.data.handles;
 		if (!def || !handleNode || !handles?.some((h) => h.id === handleId)) return;
+		if (handleNode.type === "group-input" && typeof type === "object" && "inferred" in type) {
+			return;
+		}
 
 		// Only a u32 can be an enum; the inputs of a former enum's variants
 		// take its place.
-		const retyped = (h: HandleDef): HandleDef => {
+		const retyped = (h: GroupHandleDef): GroupHandleDef => {
 			const next = { ...h, type };
 			if (type !== "u32") delete next.variants;
 			if (type !== "vec3f" && type !== "vec4f") delete next.display;
 			return next;
 		};
 		const enumOwner = handles.find((h) => h.id === handleId)?.owner;
-		const promoted = (h: HandleDef): HandleDef => {
+		const promoted = (h: GroupHandleDef): GroupHandleDef => {
 			if (type === "u32" || h.owner?.enumId !== handleId) return h;
 			const next = { ...h };
 			delete next.owner;
@@ -1031,21 +1041,188 @@ export abstract class GroupModel extends ZoneModel {
 		def.nodes = def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n));
 		indexDocument(def);
 		this.rebuildTypeCache();
+		this.dropUnfitLinks(definitionRef, new Set([handleId]));
+	}
 
+	// ── Type variables ──────────────────────────────────────────────────────────
+
+	/** Add a type variable to a group, named after the next free letter from T. */
+	addTypeVariable(definitionRef: string, types: readonly WgslType[]): TypeVariable | undefined {
+		const def = this.project.definitions.get(definitionRef);
+		if (!def || types.length === 0) return undefined;
+		const taken = new Set(def.typeVariables.map((v) => v.name));
+		const name =
+			VARIABLE_NAMES.find((l) => !taken.has(l)) ?? `T${String(def.typeVariables.length + 1)}`;
+		const variable: TypeVariable = { id: crypto.randomUUID(), name, types: [...types] };
+		def.typeVariables = [...def.typeVariables, variable];
+		this.rebuildTypeCache();
+		return variable;
+	}
+
+	/** Rename a type variable, or change the types it may take. */
+	setTypeVariable(
+		definitionRef: string,
+		variableId: string,
+		patch: { name?: string; types?: readonly WgslType[] },
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		if (!def || patch.types?.length === 0) return;
+		def.typeVariables = def.typeVariables.map((v) =>
+			v.id === variableId
+				? { ...v, ...patch, ...(patch.types ? { types: [...patch.types] } : {}) }
+				: v,
+		);
+		if (patch.types) {
+			const allowed = new Set(patch.types);
+			this.forEachInstance(definitionRef, (node) => {
+				const forced = node.data.types?.[variableId];
+				if (!forced || allowed.has(forced)) return node;
+				return {
+					...node,
+					data: {
+						...node.data,
+						types: withEntry<WgslType>(node.data.types, variableId, undefined),
+					},
+				};
+			});
+		}
+		this.rebuildTypeCache();
+		if (patch.types)
+			this.dropUnfitLinks(definitionRef, this.handlesOfVariable(def, variableId));
+	}
+
+	/**
+	 * Remove a type variable: its sockets take the first type it could take,
+	 * and group nodes forget the type they forced on it.
+	 */
+	removeTypeVariable(definitionRef: string, variableId: string) {
+		const def = this.project.definitions.get(definitionRef);
+		const variable = def?.typeVariables.find((v) => v.id === variableId);
+		if (!def || !variable) return;
+		const fixed = variable.types[0] ?? "f32";
+		const ids = this.handlesOfVariable(def, variableId);
+		def.nodes = def.nodes.map((n) => {
+			if (!BOUNDARY_TYPES.has(n.type ?? "")) return n;
+			const handles = handlesOf(n).map((h) => (ids.has(h.id) ? { ...h, type: fixed } : h));
+			return { ...n, data: { ...n.data, handles } };
+		});
+		indexDocument(def);
+		def.typeVariables = def.typeVariables.filter((v) => v.id !== variableId);
+		this.forEachInstance(definitionRef, (node) =>
+			node.data.types?.[variableId]
+				? {
+						...node,
+						data: {
+							...node.data,
+							types: withEntry<WgslType>(node.data.types, variableId, undefined),
+						},
+					}
+				: node,
+		);
+		this.rebuildTypeCache();
+	}
+
+	/**
+	 * A group node's type variables: the type each takes, the one forced on
+	 * the node if any, and whether links can decide it (it has input sockets).
+	 */
+	variableChoices(nodeId: string): {
+		variable: TypeVariable;
+		type: WgslType;
+		inferred: WgslType;
+		forced: WgslType | undefined;
+		inferable: boolean;
+	}[] {
+		const node = this.resolveNode(nodeId);
+		const def = node?.group && this.project.definitions.get(node.group.definitionRef);
+		if (!node || !def) return [];
+		const doc = this.documentOf(nodeId);
+		const incoming = doc?.edgesByTarget.get(nodeId) ?? [];
+		const bindings = this.viewBindings(nodeId);
+		const lookup = (id: string) => this.resolveNode(id);
+		const resolved = this.typeResolver.resolveNodeTypes(node, incoming, lookup, bindings);
+		const unforced = this.typeResolver.resolveNodeTypesUncached(
+			node,
+			incoming,
+			{ ...node.data, types: undefined },
+			lookup,
+			bindings,
+		);
+		const inputs = def.nodes.find((n) => n.type === "group-input");
+		return def.typeVariables.map((variable) => {
+			const inferable = handlesOf(inputs).some(
+				(h) =>
+					typeof h.type === "object" &&
+					"variable" in h.type &&
+					h.type.variable === variable.id,
+			);
+			const fallback = variable.types[0] ?? "f32";
+			return {
+				variable,
+				type: resolved.bindings?.[variable.id] ?? fallback,
+				inferred: inferable ? (unforced.bindings?.[variable.id] ?? fallback) : fallback,
+				forced: node.data.types?.[variable.id],
+				inferable,
+			};
+		});
+	}
+
+	/** Force a group node's type variable to `type`, or back to inference with `undefined`. */
+	setVariableType(nodeId: string, variableId: string, type: WgslType | undefined) {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (node?.type !== "node-group") return;
+		this.updateNodeData(nodeId, { types: withEntry(node.data.types, variableId, type) });
+	}
+
+	/** The handles of a definition's boundary nodes typed by a variable. */
+	private handlesOfVariable(def: HydratedGraphDocument, variableId: string): Set<string> {
+		return new Set(
+			def.nodes
+				.filter((n) => BOUNDARY_TYPES.has(n.type ?? ""))
+				.flatMap(handlesOf)
+				.filter(
+					(h) =>
+						typeof h.type === "object" &&
+						"variable" in h.type &&
+						h.type.variable === variableId,
+				)
+				.map((h) => h.id),
+		);
+	}
+
+	/** Replace the group nodes of a definition, in every document, through `update`. */
+	private forEachInstance(definitionRef: string, update: (node: GraphNode) => GraphNode) {
+		for (const doc of this.project.definitions.values()) {
+			const nodes = doc.nodes.map((n) =>
+				n.group?.definitionRef === definitionRef ? update(n) : n,
+			);
+			if (nodes.some((n, i) => n !== doc.nodes[i])) this.setContent(doc, { nodes });
+		}
+	}
+
+	/**
+	 * Remove the links of a group's handles that no longer fit their types,
+	 * inside the definition and on every group node of it.
+	 */
+	private dropUnfitLinks(definitionRef: string, handleIds: ReadonlySet<string>) {
+		const def = this.project.definitions.get(definitionRef);
+		if (!def || handleIds.size === 0) return;
+		const boundary = (id: string) => BOUNDARY_TYPES.has(def.nodesById.get(id)?.type ?? "");
 		const touches = (doc: HydratedGraphDocument, e: GraphEdge) => {
 			if (doc === def) {
 				return (
-					(e.source === handleNodeId && e.sourceHandle === handleId) ||
-					(e.target === handleNodeId && e.targetHandle === handleId)
+					(boundary(e.source) && handleIds.has(e.sourceHandle)) ||
+					(boundary(e.target) && handleIds.has(e.targetHandle))
 				);
 			}
 			const isInstance = (id: string) =>
 				doc.nodesById.get(id)?.group?.definitionRef === definitionRef;
 			return (
-				(isInstance(e.source) && e.sourceHandle === handleId) ||
-				(isInstance(e.target) && e.targetHandle === handleId)
+				(isInstance(e.source) && handleIds.has(e.sourceHandle)) ||
+				(isInstance(e.target) && handleIds.has(e.targetHandle))
 			);
 		};
+		let changed = false;
 		for (const doc of this.project.definitions.values()) {
 			const kept = doc.edges.filter((e) => {
 				if (!touches(doc, e)) return true;
@@ -1060,9 +1237,10 @@ export abstract class GroupModel extends ZoneModel {
 			if (kept.length !== doc.edges.length) {
 				doc.edges = kept;
 				indexDocument(doc);
+				changed = true;
 			}
 		}
-		this.rebuildTypeCache();
+		if (changed) this.rebuildTypeCache();
 	}
 
 	/**

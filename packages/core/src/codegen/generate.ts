@@ -4,9 +4,18 @@ import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { componentKeys, readComponent } from "../graph/values";
-import type { HandleDef, InputValue, NodeData, WgslType } from "../types";
+import type {
+	GroupHandleDef,
+	HandleDef,
+	InputValue,
+	NodeData,
+	TypeBindings,
+	WgslType,
+} from "../types";
 import {
 	WGSL_DEFAULTS,
+	boundType,
+	completeBindings,
 	convertVar,
 	inputControl,
 	inputDefaultType,
@@ -216,7 +225,7 @@ type ShaderState = {
 	 * instances use it.
 	 */
 	groupDecls: Map<string, { decl: string; fnName: string }>;
-	/** Definitions whose output struct has already been declared. */
+	/** Group output structs already declared, by name. */
 	groupStructs: Set<string>;
 	/** The definition whose input values are uniforms (see `ShaderOptions`). */
 	uniformScope: string | undefined;
@@ -270,6 +279,8 @@ class BodyEmitter {
 		private constants: ReadonlyMap<string, number> = new Map(),
 		/** Whether unlinked input values are read from uniforms. */
 		private uniforms = false,
+		/** The types the document's variables take (see `TypeBindings`). */
+		readonly bindings: TypeBindings = {},
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		for (const edge of edges) {
@@ -338,7 +349,7 @@ class BodyEmitter {
 	}
 
 	sourceType(edge: GraphEdge): WgslType {
-		return this.typeResolver.inferHandleType(edge, this.resolveNode);
+		return this.typeResolver.inferHandleType(edge, this.resolveNode, this.bindings);
 	}
 
 	convertedSource(edge: GraphEdge, target: WgslType): string {
@@ -417,7 +428,7 @@ class BodyEmitter {
 		const varName = getVarName(node.id);
 		const incoming = this.incoming(node.id);
 		const { inputTypes, outputType, resolvedInputs, resolvedOutputs } =
-			this.typeResolver.resolveNodeTypes(node, incoming, this.resolveNode);
+			this.typeResolver.resolveNodeTypes(node, incoming, this.resolveNode, this.bindings);
 
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of resolvedOutputs) {
@@ -488,10 +499,27 @@ class BodyEmitter {
 			this.state.graph.project.definitions,
 			this.constants,
 		);
-		const decl = emitGroupFunction(this.state, definitionRef, absent, constants);
+		const resolved = this.typeResolver.resolveNodeTypes(
+			node,
+			this.incoming(node.id),
+			this.resolveNode,
+			this.bindings,
+		);
+		const decl = emitGroupFunction(
+			this.state,
+			definitionRef,
+			absent,
+			constants,
+			resolved.bindings,
+		);
 		if (!decl) return;
 		const args = descriptor.inputs.map((inputDef) =>
-			this.inputExpr(node, inputDef.id, inputDefaultType(inputDef), defaults?.[inputDef.id]),
+			this.inputExpr(
+				node,
+				inputDef.id,
+				resolved.inputTypes[inputDef.id] ?? inputDefaultType(inputDef),
+				defaults?.[inputDef.id],
+			),
 		);
 		this.push(
 			node.id,
@@ -528,6 +556,7 @@ function emitDocumentBody(
 	absentInputs: ReadonlySet<string> = new Set(),
 	constants: ReadonlyMap<string, number> = new Map(),
 	uniforms = false,
+	bindings: TypeBindings = {},
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -540,7 +569,16 @@ function emitDocumentBody(
 	const usedEdges = liveEdges({ nodesById: nodeMap, edgesByTarget }, validEdges, constants);
 	const reachable = findReachableNodeIds(nodeMap, usedEdges, seedType);
 	const edges = usedEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
-	const emitter = new BodyEmitter(state, doc, edges, zones, absentInputs, constants, uniforms);
+	const emitter = new BodyEmitter(
+		state,
+		doc,
+		edges,
+		zones,
+		absentInputs,
+		constants,
+		uniforms,
+		bindings,
+	);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
 	const unitIn = (scope: string | null, nodeId: string): string | undefined => {
@@ -624,22 +662,26 @@ function emitGroupFunction(
 	definitionRef: string,
 	absentInputs: ReadonlySet<string> = new Set(),
 	constants: ReadonlyMap<string, number> = new Map(),
+	given: TypeBindings = {},
 ): { decl: string; fnName: string } | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
 	if (!definition) return undefined;
+	const variables = definition.typeVariables;
+	const bindings = completeBindings(variables, given);
 
 	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
 	const inputHandles = groupInputNode?.data.handles ?? [];
 
-	// One function per combination of absent fallback inputs and enum
-	// values, so each only contains the branches it uses.
+	// One function per combination of absent fallback inputs, enum values
+	// and variables' types, so each only contains the branches it uses.
 	const absentIndices = inputHandles.flatMap((h, i) => (absentInputs.has(h.id) ? [i] : []));
 	const enumValues = inputHandles.flatMap((h, i) => {
 		const value = constants.get(h.id);
 		return value === undefined ? [] : [`${String(i)}_${String(value)}`];
 	});
-	const key = [definitionRef, ...absentIndices, "e", ...enumValues].join("|");
+	const typeSuffix = variables.map((v) => bindings[v.id] ?? "f32").join("_");
+	const key = [definitionRef, ...absentIndices, "e", ...enumValues, "t", typeSuffix].join("|");
 	const existing = state.groupDecls.get(key);
 	if (existing) return existing;
 
@@ -648,8 +690,10 @@ function emitGroupFunction(
 		...(absentIndices.length > 0 ? [`d${absentIndices.join("_")}`] : []),
 		...enumValues.map((v) => `e${v}`),
 	];
-	const fnName = [`group_${ident}`, ...suffix].join("__");
-	const structName = `GroupOutputs_${ident}`;
+	const fnName = [`group_${ident}`, ...suffix, ...(typeSuffix ? [`t_${typeSuffix}`] : [])].join(
+		"__",
+	);
+	const structName = [`GroupOutputs_${ident}`, ...(typeSuffix ? [typeSuffix] : [])].join("__");
 
 	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
 	const outputHandles = groupOutputNode?.data.handles ?? [];
@@ -661,23 +705,38 @@ function emitGroupFunction(
 		absentInputs,
 		constants,
 		state.uniformScope === definitionRef,
+		bindings,
 	);
 
-	// Struct fields follow the declared handle types; whatever feeds them is
-	// converted on the way in, exactly like any other typed input.
+	// Struct fields follow the handle types; whatever feeds them is converted
+	// on the way in, exactly like any other typed input.
+	const outputTypes = groupOutputNode
+		? state.graph.typeResolver.resolveNodeTypes(
+				groupOutputNode,
+				definition.edgesByTarget.get(groupOutputNode.id) ?? [],
+				(id) => state.graph.resolveNode(id),
+				bindings,
+			).inputTypes
+		: {};
+	const outputType = (h: GroupHandleDef): WgslType =>
+		boundType(h.type, variables, bindings) ?? outputTypes[h.id] ?? "f32";
+	const inputType = (h: GroupHandleDef): WgslType =>
+		boundType(h.type, variables, bindings) ?? "f32";
 	const fieldValues = outputHandles.map((h) =>
-		groupOutputNode ? body.inputExpr(groupOutputNode, h.id, h.type) : WGSL_DEFAULTS[h.type],
+		groupOutputNode
+			? body.inputExpr(groupOutputNode, h.id, outputType(h))
+			: WGSL_DEFAULTS[outputType(h)],
 	);
 	const structFields = outputHandles
-		.map((h) => `  ${sanitizeIdent(h.id)}: ${wgslTypeName(h.type)},`)
+		.map((h) => `  ${sanitizeIdent(h.id)}: ${wgslTypeName(outputType(h))},`)
 		.join("\n");
 	const params = inputHandles
-		.map((h) => `${sanitizeIdent(h.id)}: ${wgslTypeName(h.type)}`)
+		.map((h) => `${sanitizeIdent(h.id)}: ${wgslTypeName(inputType(h))}`)
 		.join(", ");
 
-	// Every specialisation of a definition shares one output struct.
-	const firstOfDefinition = !state.groupStructs.has(definitionRef);
-	state.groupStructs.add(definitionRef);
+	// The specialisations of a definition with the same types share one output struct.
+	const firstOfDefinition = !state.groupStructs.has(structName);
+	state.groupStructs.add(structName);
 	const decl = [
 		...(firstOfDefinition ? [`struct ${structName} {\n${structFields}\n}`, ""] : []),
 		`fn ${fnName}(${params}) -> ${structName} {`,

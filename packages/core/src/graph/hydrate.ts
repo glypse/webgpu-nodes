@@ -31,11 +31,12 @@ export function resolveDescriptor(
 	node: GraphNode,
 	definitions: Map<string, HydratedGraphDocument>,
 ): NodeDescriptor {
-	if (node.type === "group-input") {
-		return buildGroupInputDescriptor(node.data.handles ?? []);
-	}
-	if (node.type === "group-output") {
-		return buildGroupOutputDescriptor(node.data.handles ?? []);
+	if (node.type === "group-input" || node.type === "group-output") {
+		const variables =
+			[...definitions.values()].find((d) => d.nodesById.has(node.id))?.typeVariables ?? [];
+		const build =
+			node.type === "group-input" ? buildGroupInputDescriptor : buildGroupOutputDescriptor;
+		return build(node.data.handles ?? [], variables);
 	}
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
@@ -67,6 +68,7 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 	}
 	const result: GraphDocument = { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
 	if (doc.viewport) result.viewport = doc.viewport;
+	if (doc.typeVariables?.length) result.typeVariables = doc.typeVariables;
 	return result;
 }
 
@@ -132,6 +134,7 @@ export function hydrateDocument(
 	doc.label = normalised.label;
 	doc.locked = normalised.locked ?? false;
 	doc.viewport = normalised.viewport;
+	doc.typeVariables = normalised.typeVariables ?? [];
 	return doc;
 }
 
@@ -160,7 +163,10 @@ export function serialiseEdge(edge: GraphDocumentEdge): GraphDocumentEdge {
 
 /** Serialise one hydrated subgraph back to a GraphDocument, camera optional. */
 export function serialiseDocument(
-	doc: Pick<HydratedGraphDocument, "nodes" | "edges" | "label" | "locked" | "viewport">,
+	doc: Pick<
+		HydratedGraphDocument,
+		"nodes" | "edges" | "label" | "locked" | "viewport" | "typeVariables"
+	>,
 	{ viewport = false }: { viewport?: boolean } = {},
 ): GraphDocument {
 	return {
@@ -169,5 +175,6 @@ export function serialiseDocument(
 		...(doc.label !== undefined ? { label: doc.label } : {}),
 		locked: doc.locked,
 		...(viewport && doc.viewport ? { viewport: doc.viewport } : {}),
+		...(doc.typeVariables.length > 0 ? { typeVariables: doc.typeVariables } : {}),
 	};
 }

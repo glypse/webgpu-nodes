@@ -1,8 +1,15 @@
-import type { NodeDescriptor, NodeInputDef, NodeOutputDef, WgslType } from ".";
-import type { NodeData } from ".";
-import { highestType, inputDefaultType, inputFamilyKey } from ".";
+import type {
+	NodeData,
+	NodeDescriptor,
+	NodeInputDef,
+	NodeOutputDef,
+	TypeBindings,
+	TypeVariable,
+	WgslType,
+} from ".";
+import { boundType, highestType, inputDefaultType, inputFamilyKey } from ".";
 import type { GraphDocumentEdge, HydratedGraphProject } from "../graph/document";
-import type { GraphNode } from "../graph/document";
+import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -11,97 +18,143 @@ export type ResolvedNodeTypes = {
 	outputType: WgslType;
 	resolvedInputs: NodeInputDef[];
 	resolvedOutputs: NodeOutputDef[];
+	/** On a group node: the types its definition's variables take for it. */
+	bindings?: TypeBindings;
 };
 
 type ResolveDescriptor = (node: GraphNode) => NodeDescriptor;
 type GetIncomingEdges = (nodeId: string) => GraphDocumentEdge[];
+type ResolveNode = (id: string) => GraphNode | undefined;
+
+/** What resolution reads besides the node at hand, the same for every node. */
+type Env = {
+	resolveDescriptor: ResolveDescriptor;
+	getIncomingEdges: GetIncomingEdges;
+	definitions: HydratedGraphProject["definitions"];
+};
+
+const NO_BINDINGS: TypeBindings = {};
+
+/** A stable key for `bindings` (the empty string for none). */
+export function bindingsKey(bindings: TypeBindings): string {
+	return Object.entries(bindings)
+		.toSorted(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+		.map(([id, type]) => `${id}=${type}`)
+		.join(",");
+}
+
+/** Every variable's type: the bound one, or its first. */
+export function completeBindings(
+	variables: readonly TypeVariable[],
+	bindings: TypeBindings,
+): TypeBindings {
+	return Object.fromEntries(variables.map((v) => [v.id, bindings[v.id] ?? v.types[0] ?? "f32"]));
+}
+
+function definitionOf(
+	nodeId: string,
+	definitions: HydratedGraphProject["definitions"],
+): HydratedGraphDocument | undefined {
+	for (const def of definitions.values()) if (def.nodesById.has(nodeId)) return def;
+	return undefined;
+}
 
 // ── Pure resolution logic ─────────────────────────────────────────────────────
 
 /**
- * Resolve the full type information for a single node instance.
+ * Resolve the full type information for a single node instance, inside a
+ * document whose type variables take `bindings` (see `TypeBindings`).
  *
  * - **Regular nodes**: 4-phase resolution (raw inference → family grouping →
  *   family assignment → output type via `resolveOutputType` or identity).
- * - **Group-output nodes**: output type is the resolved type of the
- *   group-output node *inside* the definition (cross-document resolution).
- *   Propagation stops here — ancestors within the definition are not touched.
+ * - **Group boundaries**: sockets sharing a type variable take its bound type.
+ * - **Group nodes**: their sockets' families decide their variables' types,
+ *   which then decide their outputs' (see `resolveGroupNodeTypes`).
  */
 function resolveNodeTypesForNode(
 	node: GraphNode,
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
 	nodeData: NodeData,
-	resolveNode: (id: string) => GraphNode | undefined,
-	resolveDescriptor: ResolveDescriptor,
-	getIncomingEdges: GetIncomingEdges,
-	definitions: HydratedGraphProject["definitions"],
+	resolveNode: ResolveNode,
+	env: Env,
+	bindings: TypeBindings,
 ): ResolvedNodeTypes {
-	// Group-output boundary: resolve the internal group-output node's type.
-	if (node.type === "group-output") {
-		return resolveGroupOutputNodeTypes(
-			node,
+	if (node.type === "group-input" || node.type === "group-output") {
+		const def = definitionOf(node.id, env.definitions);
+		const bound = completeBindings(def?.typeVariables ?? [], bindings);
+		if (node.type === "group-output") {
+			// The variables' families are forced to their bound types.
+			const data = { ...nodeData, types: { ...nodeData.types, ...bound } };
+			const lookup: ResolveNode = (id) => def?.nodesById.get(id) ?? resolveNode(id);
+			return resolveRegularNodeTypes(descriptor, incoming, data, lookup, env, bound);
+		}
+		const resolved = resolveRegularNodeTypes(
+			descriptor,
+			incoming,
+			nodeData,
 			resolveNode,
-			resolveDescriptor,
-			getIncomingEdges,
-			definitions,
+			env,
+			bound,
 		);
+		const variables = def?.typeVariables ?? [];
+		const resolvedOutputs = (nodeData.handles ?? []).map((h) => ({
+			id: h.id,
+			label: h.label,
+			type: boundType(h.type, variables, bound) ?? "f32",
+		}));
+		return { ...resolved, resolvedOutputs };
 	}
-
-	// Regular 4-phase resolution
-	return resolveRegularNodeTypes(
+	const resolved = resolveRegularNodeTypes(
 		descriptor,
 		incoming,
 		nodeData,
 		resolveNode,
-		resolveDescriptor,
-		getIncomingEdges,
-		definitions,
+		env,
+		bindings,
 	);
+	return node.type === "node-group" ? resolveGroupNodeTypes(node, resolved, env) : resolved;
 }
 
 /**
- * Resolve types for a group-output node by looking into its definition and
- * computing the type of the *internal* group-output node. This is the
- * cross-document resolution path.
+ * A group node's variables and outputs, from its resolved inputs: a variable
+ * takes the type of its sockets' family (forced on the node or inferred from
+ * links), or the one picked on the node when it has no input socket.
  */
-function resolveGroupOutputNodeTypes(
+function resolveGroupNodeTypes(
 	node: GraphNode,
-	resolveNode: (id: string) => GraphNode | undefined,
-	resolveDescriptor: ResolveDescriptor,
-	getIncomingEdges: GetIncomingEdges,
-	definitions: HydratedGraphProject["definitions"],
+	resolved: ResolvedNodeTypes,
+	env: Env,
 ): ResolvedNodeTypes {
-	for (const def of definitions.values()) {
-		const goNode = def.nodesById.get(node.id);
-		if (goNode?.type === "group-output") {
-			const incoming = def.edgesByTarget.get(node.id) ?? [];
-			// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion -- GraphDocumentNode lacks Node properties required by GraphNode
-			const goDescriptor = resolveDescriptor(goNode as GraphNode);
-			return resolveRegularNodeTypes(
-				goDescriptor,
-				incoming,
-				goNode.data,
-				(id) => def.nodesById.get(id),
-				resolveDescriptor,
-				getIncomingEdges,
-				definitions,
-			);
-		}
+	const def = node.group && env.definitions.get(node.group.definitionRef);
+	if (!def) return resolved;
+	const bindings: Record<string, WgslType> = {};
+	for (const variable of def.typeVariables) {
+		const socket = resolved.resolvedInputs.find((i) => i.family === variable.id);
+		const type = socket ? resolved.inputTypes[socket.id] : node.data.types?.[variable.id];
+		bindings[variable.id] =
+			type && variable.types.includes(type) ? type : (variable.types[0] ?? "f32");
 	}
-
-	// Fallback: no definition found — resolve from the node's own descriptor
-	const inputTypes: Record<string, WgslType> = {};
-	const fallbackDescriptor = resolveDescriptor(node);
-	for (const inputDef of fallbackDescriptor.inputs) {
-		inputTypes[inputDef.id] = inputDefaultType(inputDef);
-	}
-	return {
-		inputTypes,
-		outputType: "f32",
-		resolvedInputs: fallbackDescriptor.inputs,
-		resolvedOutputs: fallbackDescriptor.outputs,
-	};
+	const output = def.nodes.find((n) => n.type === "group-output");
+	const handles = output?.data.handles ?? [];
+	const inner =
+		output && handles.some((h) => typeof h.type === "object" && "inferred" in h.type)
+			? resolveNodeTypesForNode(
+					output,
+					env.resolveDescriptor(output),
+					def.edgesByTarget.get(output.id) ?? [],
+					output.data,
+					(id) => def.nodesById.get(id),
+					env,
+					bindings,
+				)
+			: undefined;
+	const resolvedOutputs = handles.map((h) => ({
+		id: h.id,
+		label: h.label,
+		type: boundType(h.type, def.typeVariables, bindings) ?? inner?.inputTypes[h.id] ?? "f32",
+	}));
+	return { ...resolved, resolvedOutputs, bindings };
 }
 
 /**
@@ -111,10 +164,9 @@ function resolveRegularNodeTypes(
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
 	nodeData: NodeData,
-	resolveNode: (id: string) => GraphNode | undefined,
-	resolveDescriptor: ResolveDescriptor,
-	getIncomingEdges: GetIncomingEdges,
-	definitions: HydratedGraphProject["definitions"],
+	resolveNode: ResolveNode,
+	env: Env,
+	bindings: TypeBindings,
 ): ResolvedNodeTypes {
 	const nodeOverrides = nodeData.types;
 
@@ -144,7 +196,7 @@ function resolveRegularNodeTypes(
 			continue;
 		}
 		const sourceTypes = edgesForInput.map((e) =>
-			inferHandleType(e, resolveNode, resolveDescriptor, getIncomingEdges, definitions),
+			inferHandleType(e, resolveNode, env, bindings),
 		);
 		rawInferred[inputDef.id] = highestType(sourceTypes, inputDef.types);
 	}
@@ -208,29 +260,26 @@ function outputHandleType(resolved: ResolvedNodeTypes, handleId: string): WgslTy
 }
 
 /**
- * Recursively resolve the WGSL type produced by an edge's source handle.
+ * Recursively resolve the WGSL type produced by an edge's source handle,
+ * in a document whose variables take `bindings`.
  */
 function inferHandleType(
 	edge: GraphDocumentEdge,
-	resolveNode: (id: string) => GraphNode | undefined,
-	resolveDescriptor: ResolveDescriptor,
-	getIncomingEdges: GetIncomingEdges,
-	definitions: HydratedGraphProject["definitions"],
+	resolveNode: ResolveNode,
+	env: Env,
+	bindings: TypeBindings,
 ): WgslType {
 	const sourceNode = resolveNode(edge.source);
 	if (!sourceNode) return "f32";
 
-	const descriptor = resolveDescriptor(sourceNode);
-	const incoming = getIncomingEdges(edge.source);
 	const resolved = resolveNodeTypesForNode(
 		sourceNode,
-		descriptor,
-		incoming,
+		env.resolveDescriptor(sourceNode),
+		env.getIncomingEdges(edge.source),
 		sourceNode.data,
 		resolveNode,
-		resolveDescriptor,
-		getIncomingEdges,
-		definitions,
+		env,
+		bindings,
 	);
 	return outputHandleType(resolved, edge.sourceHandle);
 }
@@ -251,23 +300,29 @@ function inferHandleType(
  * The resolver is document-agnostic: it receives a `resolveNode` callback and
  * a `definitions` map, so it can resolve types across the entire project
  * without depending on any mutable state.
+ *
+ * Nodes inside a group with type variables resolve differently for each
+ * group node: every call takes the variables' `bindings` (none by default,
+ * each variable then taking its first type).
  */
 export class TypeResolver {
-	/** Per-node memoized type resolution. Keyed by node ID. */
-	cache = new Map<string, ResolvedNodeTypes>();
+	/** Memoized type resolution, by node ID then `bindingsKey`. */
+	private cache = new Map<string, Map<string, ResolvedNodeTypes>>();
 
-	private resolveDescriptor: ResolveDescriptor;
+	private env: Env;
 	private definitions: HydratedGraphProject["definitions"];
-	private getIncomingEdges: GetIncomingEdges;
 
 	constructor(
 		resolveDescriptor: ResolveDescriptor,
 		definitions: HydratedGraphProject["definitions"],
 		getIncomingEdges: GetIncomingEdges,
 	) {
-		this.resolveDescriptor = resolveDescriptor;
 		this.definitions = definitions;
-		this.getIncomingEdges = getIncomingEdges;
+		this.env = { resolveDescriptor, definitions, getIncomingEdges };
+	}
+
+	private cached(nodeId: string, bindings: TypeBindings): ResolvedNodeTypes | undefined {
+		return this.cache.get(nodeId)?.get(bindingsKey(bindings));
 	}
 
 	// ── Public API ──────────────────────────────────────────────────────────
@@ -283,12 +338,21 @@ export class TypeResolver {
 		node: GraphNode,
 		incoming: GraphDocumentEdge[],
 		resolveNode: (id: string) => GraphNode | undefined,
+		bindings: TypeBindings = NO_BINDINGS,
 	): ResolvedNodeTypes {
-		const cached = this.cache.get(node.id);
+		const cached = this.cached(node.id, bindings);
 		if (cached) return cached;
 
-		const result = this.resolveNodeTypesUncached(node, incoming, node.data, resolveNode);
-		this.cache.set(node.id, result);
+		const result = this.resolveNodeTypesUncached(
+			node,
+			incoming,
+			node.data,
+			resolveNode,
+			bindings,
+		);
+		const byBindings = this.cache.get(node.id) ?? new Map<string, ResolvedNodeTypes>();
+		byBindings.set(bindingsKey(bindings), result);
+		this.cache.set(node.id, byBindings);
 		return result;
 	}
 
@@ -301,16 +365,16 @@ export class TypeResolver {
 		incoming: GraphDocumentEdge[],
 		data: NodeData,
 		resolveNode: (id: string) => GraphNode | undefined,
+		bindings: TypeBindings = NO_BINDINGS,
 	): ResolvedNodeTypes {
 		return resolveNodeTypesForNode(
 			node,
-			this.resolveDescriptor(node),
+			this.env.resolveDescriptor(node),
 			incoming,
 			data,
 			resolveNode,
-			this.resolveDescriptor,
-			this.getIncomingEdges,
-			this.definitions,
+			this.env,
+			bindings,
 		);
 	}
 
@@ -324,7 +388,7 @@ export class TypeResolver {
 		resolveNode: (id: string) => GraphNode | undefined,
 		incoming: GraphDocumentEdge[],
 	): WgslType {
-		let cached = this.cache.get(nodeId);
+		let cached = this.cached(nodeId, NO_BINDINGS);
 		if (!cached) {
 			const node = resolveNode(nodeId);
 			if (!node) return "f32";
@@ -343,7 +407,7 @@ export class TypeResolver {
 		resolveNode: (id: string) => GraphNode | undefined,
 		incoming: GraphDocumentEdge[],
 	): WgslType {
-		let cached = this.cache.get(nodeId);
+		let cached = this.cached(nodeId, NO_BINDINGS);
 		if (!cached) {
 			const node = resolveNode(nodeId);
 			if (!node) return "f32";
@@ -361,7 +425,7 @@ export class TypeResolver {
 		resolveNode: (id: string) => GraphNode | undefined,
 		incoming: GraphDocumentEdge[],
 	): NodeInputDef[] {
-		let cached = this.cache.get(nodeId);
+		let cached = this.cached(nodeId, NO_BINDINGS);
 		if (!cached) {
 			const node = resolveNode(nodeId);
 			if (!node) return [];
@@ -379,7 +443,7 @@ export class TypeResolver {
 		resolveNode: (id: string) => GraphNode | undefined,
 		incoming: GraphDocumentEdge[],
 	): NodeOutputDef[] {
-		let cached = this.cache.get(nodeId);
+		let cached = this.cached(nodeId, NO_BINDINGS);
 		if (!cached) {
 			const node = resolveNode(nodeId);
 			if (!node) return [];
@@ -395,17 +459,12 @@ export class TypeResolver {
 	inferHandleType(
 		edge: GraphDocumentEdge,
 		resolveNode: (id: string) => GraphNode | undefined,
+		bindings: TypeBindings = NO_BINDINGS,
 	): WgslType {
-		const cached = this.cache.get(edge.source);
+		const cached = this.cached(edge.source, bindings);
 		if (cached) return outputHandleType(cached, edge.sourceHandle);
 
-		return inferHandleType(
-			edge,
-			resolveNode,
-			this.resolveDescriptor,
-			this.getIncomingEdges,
-			this.definitions,
-		);
+		return inferHandleType(edge, resolveNode, this.env, bindings);
 	}
 
 	// ── Cache management ────────────────────────────────────────────────────
@@ -564,6 +623,7 @@ export class TypeResolver {
 		nodes: GraphNode[],
 		allEdges: GraphDocumentEdge[],
 		resolveNode: (id: string) => GraphNode | undefined,
+		bindings: TypeBindings = NO_BINDINGS,
 	): Map<string, ResolvedNodeTypes> {
 		const targetEdgeMap = new Map<string, GraphDocumentEdge[]>();
 		for (const edge of allEdges) {
@@ -572,11 +632,11 @@ export class TypeResolver {
 			targetEdgeMap.set(edge.target, list);
 		}
 
+		const resolved = new Map<string, ResolvedNodeTypes>();
 		for (const node of nodes) {
 			const incoming = targetEdgeMap.get(node.id) ?? [];
-			this.resolveNodeTypes(node, incoming, resolveNode);
+			resolved.set(node.id, this.resolveNodeTypes(node, incoming, resolveNode, bindings));
 		}
-
-		return new Map(this.cache);
+		return resolved;
 	}
 }

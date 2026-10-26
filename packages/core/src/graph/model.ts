@@ -333,11 +333,9 @@ export class GraphModel extends GroupModel {
 						position: { x: 0, y: 0 },
 					};
 		if (node.type !== "node-group" && !nodeRegistry[node.type ?? ""]) return undefined;
-		const resolved = this.typeResolver.resolveNodeTypes(node, [], (id) =>
+		return this.typeResolver.resolveNodeTypesUncached(node, [], node.data, (id) =>
 			id === FRESH_ID ? node : this.resolveNode(id),
 		);
-		this.typeResolver.cache.delete(FRESH_ID);
-		return resolved;
 	}
 
 	/**

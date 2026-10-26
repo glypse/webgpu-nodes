@@ -1,5 +1,5 @@
 import type { CurvePoint } from "../curve/curve";
-import type { HandleDef } from "./descriptors";
+import type { GroupHandleDef, HandleDef } from "./descriptors";
 import type { WgslType } from "./values";
 
 /** One component of an input value. */
@@ -23,7 +23,7 @@ export type NodeData = {
 	/** Types the user forced, by type family key. */
 	types?: Record<string, WgslType>;
 	/** A group boundary node's handles. */
-	handles?: HandleDef[];
+	handles?: GroupHandleDef[];
 	/** A Repeat Output's state items. */
 	items?: HandleDef[];
 	/** A Repeat Input's partner. */

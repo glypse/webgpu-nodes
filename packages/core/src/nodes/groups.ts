@@ -1,18 +1,45 @@
 import type { HydratedGraphDocument } from "../graph/document";
 import type { GraphNode } from "../graph/document";
 import {
-	type HandleDef,
+	type GroupHandleDef,
 	type InputControl,
 	type InputValue,
 	type NodeDescriptor,
 	type NodeInputDef,
+	type TypeVariable,
+	WGSL_TYPES,
+	type WgslType,
+	boundType,
 	enumValue,
 } from "../types";
 import { fallbackHandleIds } from "./logic";
 
 // ── Group descriptor builders ─────────────────────────────────────────────────
 
-export function buildGroupInputDescriptor(handles: HandleDef[]): NodeDescriptor {
+/**
+ * The types a socket accepts and the family it's in: a variable's sockets
+ * share one, an inferred output has its own. Resolving picks the type.
+ */
+function socketTypes(
+	handle: GroupHandleDef,
+	variables: readonly TypeVariable[],
+): Pick<NodeInputDef, "types" | "family"> {
+	const type = handle.type;
+	if (typeof type === "string") return { types: [type] };
+	if ("inferred" in type) return { types: WGSL_TYPES, family: `inferred:${handle.id}` };
+	const variable = variables.find((v) => v.id === type.variable);
+	return { types: variable?.types ?? ["f32"], family: type.variable };
+}
+
+/** The type a socket has where nothing decides it: a variable's first type. */
+function defaultType(handle: GroupHandleDef, variables: readonly TypeVariable[]): WgslType {
+	return boundType(handle.type, variables, {}) ?? "f32";
+}
+
+export function buildGroupInputDescriptor(
+	handles: GroupHandleDef[],
+	variables: readonly TypeVariable[],
+): NodeDescriptor {
 	return {
 		type: "group-input",
 		label: "Group Input",
@@ -20,7 +47,11 @@ export function buildGroupInputDescriptor(handles: HandleDef[]): NodeDescriptor 
 		hidden: true,
 		staticOutputTypes: true,
 		inputs: [],
-		outputs: handles.map((h) => ({ id: h.id, label: h.label, type: h.type })),
+		outputs: handles.map((h) => ({
+			id: h.id,
+			label: h.label,
+			type: defaultType(h, variables),
+		})),
 		defaultData: { handles: [] },
 		wgsl: () => {
 			throw new Error("unreachable");
@@ -28,13 +59,16 @@ export function buildGroupInputDescriptor(handles: HandleDef[]): NodeDescriptor 
 	};
 }
 
-export function buildGroupOutputDescriptor(handles: HandleDef[]): NodeDescriptor {
+export function buildGroupOutputDescriptor(
+	handles: GroupHandleDef[],
+	variables: readonly TypeVariable[],
+): NodeDescriptor {
 	return {
 		type: "group-output",
 		label: "Group Output",
 		category: "misc",
 		hidden: true,
-		inputs: handles.map((h) => ({ id: h.id, label: h.label, types: [h.type] })),
+		inputs: handles.map((h) => ({ id: h.id, label: h.label, ...socketTypes(h, variables) })),
 		outputs: [],
 		defaultData: { handles: [] },
 		wgsl: () => {
@@ -44,7 +78,10 @@ export function buildGroupOutputDescriptor(handles: HandleDef[]): NodeDescriptor
 }
 
 /** The input a group input handle gives group nodes. */
-export function groupInputDef(handle: HandleDef): NodeInputDef {
+export function groupInputDef(
+	handle: GroupHandleDef,
+	variables: readonly TypeVariable[],
+): NodeInputDef {
 	const control: InputControl | undefined = handle.variants
 		? { kind: "enum", variants: handle.variants }
 		: handle.display === "swatch"
@@ -61,7 +98,7 @@ export function groupInputDef(handle: HandleDef): NodeInputDef {
 	return {
 		id: handle.id,
 		label: handle.label,
-		types: [handle.type],
+		...socketTypes(handle, variables),
 		...(control ? { control } : {}),
 	};
 }
@@ -112,10 +149,14 @@ export function buildGroupDescriptor(
 		category: "misc",
 		staticOutputTypes: true,
 		inputs: handles.inputs.map((h) => ({
-			...groupInputDef(h),
+			...groupInputDef(h, definition.typeVariables),
 			...(fallbacks.has(h.id) ? { fallback: true } : {}),
 		})),
-		outputs: handles.outputs.map((h) => ({ id: h.id, label: h.label, type: h.type })),
+		outputs: handles.outputs.map((h) => ({
+			id: h.id,
+			label: h.label,
+			type: defaultType(h, definition.typeVariables),
+		})),
 		defaultData: { values },
 		...(definition.widget ? { widget: definition.widget } : {}),
 		wgsl: () => [],

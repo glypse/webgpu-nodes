@@ -1,4 +1,4 @@
-import type { HandleDef, NodeData } from "../types";
+import type { GroupHandleDef, NodeData } from "../types";
 import type { TypeResolver } from "../types/resolver";
 import type {
 	GraphDocumentEdge,
@@ -11,7 +11,7 @@ import type {
 export const BOUNDARY_TYPES: ReadonlySet<string> = new Set(["group-input", "group-output"]);
 
 /** The handles declared on a group boundary node. */
-export function handlesOf(node: { data: NodeData } | undefined): HandleDef[] {
+export function handlesOf(node: { data: NodeData } | undefined): GroupHandleDef[] {
 	return node?.data.handles ?? [];
 }
 
@@ -137,7 +137,7 @@ export function deduplicateBySource(edgesToGroup: GraphDocumentEdge[]): GraphDoc
 
 export type BoundaryBuildResult = {
 	node: GraphDocumentNode;
-	handleFor: Map<GraphDocumentEdge[], HandleDef>;
+	handleFor: Map<GraphDocumentEdge[], GroupHandleDef>;
 };
 
 export function buildBoundaryNode(
@@ -147,8 +147,8 @@ export function buildBoundaryNode(
 	resolveNode: (id: string) => GraphNode | undefined,
 	position: { x: number; y: number },
 ): BoundaryBuildResult {
-	const handleFor = new Map<GraphDocumentEdge[], HandleDef>();
-	const handles: HandleDef[] = [];
+	const handleFor = new Map<GraphDocumentEdge[], GroupHandleDef>();
+	const handles: GroupHandleDef[] = [];
 	const prefix = direction === "input" ? "Input" : "Output";
 	const nodeType = direction === "input" ? "group-input" : "group-output";
 
@@ -158,7 +158,7 @@ export function buildBoundaryNode(
 			console.warn("[graph] empty edge group - skipping");
 			continue;
 		}
-		const handle: HandleDef = {
+		const handle: GroupHandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(i + 1)}`,
 			type: typeResolver.inferHandleType(representative, resolveNode),
@@ -180,7 +180,7 @@ export function buildBoundaryNode(
 
 export function rewireIncomingGroup(
 	group: GraphDocumentEdge[],
-	handle: HandleDef,
+	handle: GroupHandleDef,
 	groupInputNodeId: string,
 	groupNodeId: string,
 ): { outer: GraphDocumentEdge; inner: GraphDocumentEdge[] } {
@@ -208,7 +208,7 @@ export function rewireIncomingGroup(
 
 export function rewireOutgoingGroup(
 	group: GraphDocumentEdge[],
-	handle: HandleDef,
+	handle: GroupHandleDef,
 	groupOutputNodeId: string,
 	groupNodeId: string,
 ): { outer: GraphDocumentEdge[]; inner: GraphDocumentEdge } {

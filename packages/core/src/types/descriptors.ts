@@ -34,6 +34,43 @@ export type HandleDef = {
 	display?: ColorDisplay;
 };
 
+/**
+ * A type a group's sockets share: each group node gives it one of `types`,
+ * inferred from what's linked to those sockets (or picked on the node).
+ */
+export type TypeVariable = {
+	/** Stable: what sockets reference, and the key a group node forces it under. */
+	id: string;
+	name: string;
+	/** The types it may take; the first one when nothing decides. */
+	types: readonly WgslType[];
+};
+
+/**
+ * What a group socket carries: a fixed type, the type of one of the
+ * group's type variables, or (on an output) whatever reaches it inside.
+ */
+export type SocketType = WgslType | { variable: string } | { inferred: true };
+
+/** A socket of a group's boundary node: a handle whose type may be decided per group node. */
+export type GroupHandleDef = Omit<HandleDef, "type"> & { type: SocketType };
+
+/** The types a group's variables take for one group node, by variable id. */
+export type TypeBindings = Readonly<Record<string, WgslType>>;
+
+/** The type a socket has with `bindings`; an inferred one is undefined (it's resolved). */
+export function boundType(
+	type: SocketType,
+	variables: readonly TypeVariable[],
+	bindings: TypeBindings,
+): WgslType | undefined {
+	if (typeof type === "string") return type;
+	if ("inferred" in type) return undefined;
+	return (
+		bindings[type.variable] ?? variables.find((v) => v.id === type.variable)?.types[0] ?? "f32"
+	);
+}
+
 export const COLOR_DISPLAYS = ["swatch", "wheel"] as const;
 export type ColorDisplay = (typeof COLOR_DISPLAYS)[number];
 

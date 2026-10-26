@@ -14,15 +14,31 @@ const GroupSchema = v.object({
 	locked: v.boolean(),
 });
 
-const HandleSchema = v.object({
+const HandleFields = {
 	id: v.string(),
 	label: v.string(),
-	type: v.picklist(WGSL_TYPES),
 	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
 	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
 	min: v.optional(v.number()),
 	max: v.optional(v.number()),
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),
+};
+
+const HandleSchema = v.object({ ...HandleFields, type: v.picklist(WGSL_TYPES) });
+
+const GroupHandleSchema = v.object({
+	...HandleFields,
+	type: v.union([
+		v.picklist(WGSL_TYPES),
+		v.strictObject({ variable: v.string() }),
+		v.strictObject({ inferred: v.literal(true) }),
+	]),
+});
+
+const TypeVariableSchema = v.object({
+	id: v.string(),
+	name: v.string(),
+	types: v.array(v.picklist(WGSL_TYPES)),
 });
 
 const Vec2Schema = v.object({ x: v.number(), y: v.number() });
@@ -51,7 +67,7 @@ const NodeDataSchema = v.strictObject({
 	values: v.optional(v.record(v.string(), InputValueSchema)),
 	settings: v.optional(v.record(v.string(), v.string())),
 	types: v.optional(v.record(v.string(), v.picklist(WGSL_TYPES))),
-	handles: v.optional(v.array(HandleSchema)),
+	handles: v.optional(v.array(GroupHandleSchema)),
 	items: v.optional(v.array(HandleSchema)),
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
@@ -86,6 +102,7 @@ export const GraphDocumentSchema = v.object({
 	label: v.optional(v.string()),
 	locked: v.optional(v.boolean()),
 	viewport: v.optional(ViewportSchema),
+	typeVariables: v.optional(v.array(TypeVariableSchema)),
 });
 
 export const GraphProjectSchema = v.object({

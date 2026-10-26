@@ -2,9 +2,10 @@
 	import {
 		COLOR_DISPLAYS,
 		type ColorDisplay,
+		boundType,
 		type EnumVariant,
 		groupInputDef,
-		type HandleDef,
+		type GroupHandleDef,
 		handlesOf,
 		inputControl,
 		type InputControl,
@@ -46,10 +47,16 @@
 	const inputNode = $derived(definition?.nodes.find((n) => n.type === "group-input"));
 	const outputNode = $derived(definition?.nodes.find((n) => n.type === "group-output"));
 	const inputHandles = $derived(handlesOf(inputNode));
+	const variables = $derived(definition?.typeVariables ?? []);
+
+	/** The type a handle has where nothing decides it (see `boundType`). */
+	function typeOf(handle: GroupHandleDef): WgslType {
+		return boundType(handle.type, variables, {}) ?? "f32";
+	}
 	const outputHandles = $derived(handlesOf(outputNode));
 
 	/** The inputs directly under a variant, or under none. */
-	function inputsUnder(owner: InputOwner | undefined): HandleDef[] {
+	function inputsUnder(owner: InputOwner | undefined): GroupHandleDef[] {
 		return inputHandles.filter((h) =>
 			owner
 				? h.owner?.enumId === owner.enumId && h.owner.value === owner.value
@@ -124,23 +131,23 @@
 		}
 	}
 
-	function defaultControl(handle: HandleDef): InputControl {
-		return inputControl(groupInputDef(handle), handle.type);
+	function defaultControl(handle: GroupHandleDef): InputControl {
+		return inputControl(groupInputDef(handle, variables), typeOf(handle));
 	}
 
-	function setVariants(handle: HandleDef, variants: EnumVariant[] | undefined) {
+	function setVariants(handle: GroupHandleDef, variants: EnumVariant[] | undefined) {
 		if (definitionRef && inputNode) {
 			graph.setHandleVariants(definitionRef, inputNode.id, handle.id, variants);
 		}
 	}
 
-	function addVariant(handle: HandleDef) {
+	function addVariant(handle: GroupHandleDef) {
 		const variants = handle.variants ?? [];
 		const label = `Option ${String(variants.length + 1)}`;
 		setVariants(handle, [...variants, { value: nextVariantValue(variants), label }]);
 	}
 
-	function moveVariant(handle: HandleDef, index: number, by: number) {
+	function moveVariant(handle: GroupHandleDef, index: number, by: number) {
 		const variants = [...(handle.variants ?? [])];
 		const [moved] = variants.splice(index, 1);
 		if (!moved) return;
@@ -153,7 +160,7 @@
 	}
 </script>
 
-{#snippet handleRow(handle: HandleDef, nodeId: string, removable: boolean)}
+{#snippet handleRow(handle: GroupHandleDef, nodeId: string, removable: boolean)}
 	<div class="flex items-center gap-2">
 		{#if handle.variants}
 			<span
@@ -164,7 +171,7 @@
 		{:else}
 			<TypePicker
 				types={WGSL_TYPES}
-				value={handle.type}
+				value={typeof handle.type === "string" ? handle.type : undefined}
 				disabled={locked}
 				class="w-20 shrink-0"
 				title="Value type"
@@ -212,13 +219,13 @@
 	</div>
 {/snippet}
 
-{#snippet inputDetails(handle: HandleDef)}
+{#snippet inputDetails(handle: GroupHandleDef)}
 	<div class="border-border ml-2 flex flex-col gap-3 border-l pb-2 pl-3">
 		<div class="flex flex-col gap-1">
 			<span class="text-muted-foreground text-xs">Default value</span>
 			<InputEditor
 				control={defaultControl(handle)}
-				type={handle.type}
+				type={typeOf(handle)}
 				value={inputNode?.data.values?.[handle.id]}
 				disabled={locked}
 				name="group-default-{handle.id}"
@@ -230,7 +237,7 @@
 			/>
 		</div>
 
-		{#if !handle.variants && !handle.display && typeKind(handle.type) !== "bool"}
+		{#if !handle.variants && !handle.display && typeKind(typeOf(handle)) !== "bool"}
 			<div class="flex flex-col gap-1">
 				<span class="text-muted-foreground text-xs">Range while edited</span>
 				{#each ["min", "max"] as const as bound (bound)}
@@ -264,7 +271,7 @@
 							<Scrubbable
 								value={current}
 								readonly={locked}
-								integer={typeKind(handle.type) !== "f32"}
+								integer={typeKind(typeOf(handle)) !== "f32"}
 								oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
 									const next = parseFloat(e.currentTarget.value);
 									if (Number.isFinite(next)) setBound(next);
@@ -345,7 +352,7 @@
 {/snippet}
 
 <!-- Each variant with the inputs group nodes show while it's picked. -->
-{#snippet variantTree(handle: HandleDef, nodeId: string)}
+{#snippet variantTree(handle: GroupHandleDef, nodeId: string)}
 	{@const variants = handle.variants ?? []}
 	<div class="border-border ml-2 flex flex-col gap-2 border-l pl-3">
 		{#each variants as variant, i (variant.value)}

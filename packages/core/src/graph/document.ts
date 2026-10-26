@@ -1,4 +1,4 @@
-import type { NodeData, NodeWidget } from "../types";
+import type { NodeData, NodeWidget, TypeVariable } from "../types";
 
 /** A document's camera: pan offset and zoom. */
 export type Viewport = { x: number; y: number; zoom: number };
@@ -19,6 +19,8 @@ export type GraphDocument = {
 	/** Per-document camera (pan + zoom), persisted so navigating between
 	 *  subgraphs restores the previous view instead of sharing one global viewport. */
 	viewport?: Viewport;
+	/** Types the group's sockets share, each group node deciding which (see `SocketType`). */
+	typeVariables?: TypeVariable[];
 };
 
 export type GraphDocumentNode = {
@@ -97,6 +99,7 @@ export type HydratedGraphDocument = {
 	label: string | undefined;
 	locked: boolean;
 	viewport: Viewport | undefined;
+	typeVariables: TypeVariable[];
 	/** A widget a standard-library group's nodes draw (see `StandardLibraryEntry.widget`). */
 	widget?: NodeWidget;
 };
@@ -112,6 +115,7 @@ export function createPlainDocument(): HydratedGraphDocument {
 		label: undefined,
 		locked: false,
 		viewport: undefined,
+		typeVariables: [],
 	};
 }
 
