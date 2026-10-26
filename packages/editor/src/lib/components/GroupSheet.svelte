@@ -80,6 +80,10 @@
 			.length;
 	}
 
+	function isInferred(handle: GroupHandleDef): boolean {
+		return typeof handle.type === "object" && "inferred" in handle.type;
+	}
+
 	function setSocketType(nodeId: string, handle: GroupHandleDef, type: SocketType) {
 		if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
 	}
@@ -208,10 +212,11 @@
 			</span>
 		{:else}
 			{@const shared = variableOf(handle)}
+			{@const inferred = isInferred(handle)}
 			<TypePicker
 				types={WGSL_TYPES}
 				value={typeof handle.type === "string" ? handle.type : undefined}
-				label={shared?.name}
+				label={shared?.name ?? (inferred ? "Inferred" : undefined)}
 				disabled={locked}
 				class="w-20 shrink-0 {shared ? 'font-mono' : ''}"
 				title={shared ? `Shares the type ${shared.name}` : "Value type"}
@@ -234,6 +239,18 @@
 					<DropdownMenu.Item onSelect={() => shareNew(nodeId, handle)}>
 						New shared type
 					</DropdownMenu.Item>
+					{#if nodeId === outputNode?.id}
+						<DropdownMenu.Separator />
+						<DropdownMenu.Item
+							onSelect={() => setSocketType(nodeId, handle, { inferred: true })}
+						>
+							Inferred
+							<span class="text-muted-foreground ml-auto text-xs"
+								>What reaches it</span
+							>
+							<CheckIcon class={inferred ? "" : "invisible"} />
+						</DropdownMenu.Item>
+					{/if}
 				{/snippet}
 			</TypePicker>
 		{/if}
@@ -635,7 +652,18 @@
 								label="Add output"
 								title="Add an output"
 								onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
-							/>
+							>
+								{#snippet extra()}
+									<DropdownMenu.Item
+										onSelect={() => graph.addHandle(nodeId, { inferred: true })}
+									>
+										Inferred
+										<span class="text-muted-foreground ml-auto text-xs">
+											What reaches it
+										</span>
+									</DropdownMenu.Item>
+								{/snippet}
+							</TypePicker>
 						{/if}
 					</div>
 				{/if}

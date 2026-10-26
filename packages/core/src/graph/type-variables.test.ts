@@ -185,3 +185,34 @@ describe("type variables", () => {
 		expect(graph.addTypeVariable(GROUP, FLOAT_TYPES)?.name).toBe("V");
 	});
 });
+
+describe("inferred outputs", () => {
+	const infer = (graph: GraphModel) => {
+		graph.setHandleType(GROUP, "outs", "sum", { inferred: true });
+	};
+
+	it("carry whatever reaches them inside, per group node", () => {
+		const graph = new GraphModel(project({ a: "vec3f" }));
+		infer(graph);
+		expect(graph.resolveOutputHandleType("g", "sum")).toBe("vec3f");
+		const { shader } = generateShader(graph);
+		expect(shader).toContain("struct GroupOutputs_h_pairs__vec3f_f32 {");
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("follow edits inside the group", () => {
+		const graph = new GraphModel(project({ a: "vec2f" }));
+		infer(graph);
+		graph.enterGroup("g");
+		graph.setNodeType("add", "vec4f");
+		graph.exitGroup();
+		expect(graph.resolveOutputHandleType("g", "sum")).toBe("vec4f");
+	});
+
+	it("are only for outputs", () => {
+		const graph = new GraphModel(project());
+		graph.setHandleType(GROUP, "in", "a", { inferred: true });
+		const handles = graph.project.definitions.get(GROUP)?.nodesById.get("in")?.data.handles;
+		expect(handles?.find((h) => h.id === "a")?.type).toEqual({ variable: T });
+	});
+});

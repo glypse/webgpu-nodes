@@ -76,14 +76,18 @@
 			: [],
 	);
 
-	/** On a group's boundary node: the shared type of each socket typed by one, by handle id. */
+	/**
+	 * On a group's boundary node: what decides the type of each socket not of
+	 * a fixed type (its shared type, or "inferred"), by handle id.
+	 */
 	const sharedTypes: Record<string, string> = $derived.by(() => {
 		if (nodeType !== "group-input" && nodeType !== "group-output") return {};
 		const variables = view.document.typeVariables;
 		return Object.fromEntries(
 			(data.handles ?? []).flatMap((handle) => {
 				const type = handle.type;
-				if (typeof type === "string" || !("variable" in type)) return [];
+				if (typeof type === "string") return [];
+				if ("inferred" in type) return [[handle.id, "inferred"]];
 				const variable = variables.find((v) => v.id === type.variable);
 				return variable ? [[handle.id, variable.name]] : [];
 			}),
