@@ -270,6 +270,19 @@
 				>
 					Toggle mode <Menubar.Shortcut>⌘M</Menubar.Shortcut>
 				</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item onSelect={() => preview.view.zoomIn()}>
+					Zoom preview in <Menubar.Shortcut>+</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Item onSelect={() => preview.view.zoomOut()}>
+					Zoom preview out <Menubar.Shortcut>−</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Item onSelect={() => preview.view.fit()}>
+					Fit preview <Menubar.Shortcut>0</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Item onSelect={() => preview.view.actualSize()}>
+					Preview at actual size <Menubar.Shortcut>1</Menubar.Shortcut>
+				</Menubar.Item>
 			</Menubar.Content>
 		</Menubar.Menu>
 	</Menubar.Root>

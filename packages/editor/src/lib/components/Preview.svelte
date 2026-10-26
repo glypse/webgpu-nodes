@@ -1,14 +1,23 @@
 <script lang="ts">
+	import { ControlButton, Panel } from "@xyflow/svelte";
+	import { mode } from "mode-watcher";
+	import { on } from "svelte/events";
+
 	import { getGraphManager } from "../graph-manager.svelte";
+	import type { Point } from "../preview-view.svelte";
 	import { getPreview } from "../preview.svelte";
+	import PreviewToolbar from "./PreviewToolbar.svelte";
 
 	const graph = getGraphManager();
 	const preview = getPreview();
+	const view = preview.view;
 
 	let canvas = $state<HTMLCanvasElement>();
-	let container = $state<HTMLDivElement>();
-	/** The pane's size in CSS pixels and in device pixels. */
-	let pane = $state({ width: 0, height: 0, deviceWidth: 0, deviceHeight: 0 });
+	let pane = $state<HTMLDivElement>();
+	/** The pane's size in device pixels, which a canvas following the preview renders at. */
+	let devicePane = $state({ width: 0, height: 0 });
+	let hovered = $state(false);
+	let panning = $state<{ pointerId: number; last: Point } | null>(null);
 
 	$effect(() => {
 		if (!canvas) return;
@@ -16,32 +25,35 @@
 	});
 
 	$effect(() => {
-		if (!container) return;
+		if (!pane) return;
 		const observer = new ResizeObserver(([entry]) => {
 			const css = entry?.contentBoxSize[0];
 			const device = entry?.devicePixelContentBoxSize[0];
 			if (!css || !device) return;
-			pane = {
-				width: css.inlineSize,
-				height: css.blockSize,
-				deviceWidth: device.inlineSize,
-				deviceHeight: device.blockSize,
-			};
+			view.pane = { width: css.inlineSize, height: css.blockSize };
+			view.dpr = css.inlineSize > 0 ? device.inlineSize / css.inlineSize : 1;
+			devicePane = { width: device.inlineSize, height: device.blockSize };
 		});
-		observer.observe(container, { box: "device-pixel-content-box" });
+		observer.observe(pane, { box: "device-pixel-content-box" });
 		return () => {
 			observer.disconnect();
 		};
 	});
 
+	const followPreview = $derived(graph.settings.canvas.followPreview);
 	const resolution = $derived(
-		graph.settings.canvas.followPreview
-			? { width: pane.deviceWidth, height: pane.deviceHeight }
+		followPreview
+			? devicePane
 			: { width: graph.settings.canvas.width, height: graph.settings.canvas.height },
 	);
 
 	$effect(() => {
 		preview.configure(resolution, graph.settings.colorSpace);
+	});
+
+	// Following the preview, the canvas fills it: start from there.
+	$effect(() => {
+		if (followPreview) view.fit();
 	});
 
 	const fps = $derived(graph.settings.timing.fps);
@@ -50,43 +62,161 @@
 		preview.setTiming({ fps, realtime });
 	});
 
-	/** The canvas fitted into the pane, in CSS pixels. */
-	const fitted = $derived.by(() => {
-		if (resolution.width === 0 || resolution.height === 0) return { width: 0, height: 0 };
-		const scale = Math.min(pane.width / resolution.width, pane.height / resolution.height);
-		return { width: resolution.width * scale, height: resolution.height * scale };
+	function pointIn(event: MouseEvent): Point {
+		const box = pane?.getBoundingClientRect();
+		return { x: event.clientX - (box?.left ?? 0), y: event.clientY - (box?.top ?? 0) };
+	}
+
+	// Gestures follow the graph's (d3-zoom's): the wheel zooms by 2^delta
+	// around the pointer (ten times faster when pinching on macOS), dragging
+	// pans and a double click zooms in (out with Shift) by 2.
+	$effect(() => {
+		if (!pane) return;
+		const isMac = navigator.userAgent.includes("Mac");
+		return on(
+			pane,
+			"wheel",
+			(event: WheelEvent) => {
+				event.preventDefault();
+				const speed = event.deltaMode === 1 ? 0.05 : event.deltaMode ? 1 : 0.002;
+				const delta = -event.deltaY * speed * (event.ctrlKey && isMac ? 10 : 1);
+				view.zoomBy(2 ** delta, pointIn(event));
+			},
+			{ passive: false },
+		);
 	});
+
+	function handlePointerDown(event: PointerEvent) {
+		if (event.button !== 0 && event.button !== 1) return;
+		if ((event.target as HTMLElement).closest(".svelte-flow__panel")) return;
+		pane?.setPointerCapture(event.pointerId);
+		panning = { pointerId: event.pointerId, last: { x: event.clientX, y: event.clientY } };
+	}
+
+	function handlePointerMove(event: PointerEvent) {
+		if (panning?.pointerId !== event.pointerId) return;
+		view.panBy(event.clientX - panning.last.x, event.clientY - panning.last.y);
+		panning = { pointerId: event.pointerId, last: { x: event.clientX, y: event.clientY } };
+	}
+
+	function handlePointerUp(event: PointerEvent) {
+		if (panning?.pointerId === event.pointerId) panning = null;
+	}
+
+	function handleDoubleClick(event: MouseEvent) {
+		if ((event.target as HTMLElement).closest(".svelte-flow__panel")) return;
+		view.zoomBy(event.shiftKey ? 0.5 : 2, pointIn(event));
+	}
+
+	// Shortcuts apply while the pointer is over the preview.
+	function handleKeydown(event: KeyboardEvent) {
+		if (!hovered || event.metaKey || event.ctrlKey || event.altKey) return;
+		const target = event.target as HTMLElement | null;
+		if (target?.closest("input, textarea, [contenteditable]")) return;
+		const actions: Record<string, () => void> = {
+			"+": () => {
+				view.zoomIn();
+			},
+			"=": () => {
+				view.zoomIn();
+			},
+			"-": () => {
+				view.zoomOut();
+			},
+			"0": () => {
+				view.fit();
+			},
+			"1": () => {
+				view.actualSize();
+			},
+		};
+		const action = actions[event.key];
+		if (!action) return;
+		event.preventDefault();
+		action();
+	}
 </script>
 
-<div bind:this={container} class="bg-muted/30 relative flex size-full items-center justify-center">
-	<canvas
-		bind:this={canvas}
-		class="notexture block shrink-0"
-		style:width="{fitted.width}px"
-		style:height="{fitted.height}px"
-	></canvas>
-	{#if preview.error}
-		{@const error = preview.error}
-		<div
-			class="bg-background/70 border-border absolute right-2 bottom-2 left-2 z-10 rounded-lg border p-3 shadow-lg backdrop-blur"
-		>
-			<p class="mb-1 text-sm font-semibold text-red-500">{error.title}</p>
-			<p class="text-xs">{error.message}</p>
-			{#if error.snippet}
-				<pre
-					class="bg-muted/70 mt-2 max-h-32 overflow-auto rounded p-2 text-[11px] leading-tight">{error.snippet
-						.map(
-							(l) =>
-								`${String(l.number).padStart(4)} ${l.highlight ? ">" : " "} ${l.code}`,
-						)
-						.join("\n")}</pre>
-			{/if}
-		</div>
-	{/if}
+<svelte:window onkeydown={handleKeydown} />
+
+<div class="flex size-full flex-col">
+	<!-- Svelte Flow's classes, so the controls look like the graph's. -->
+	<div
+		bind:this={pane}
+		class={[
+			"svelte-flow bg-background relative min-h-0 flex-1 touch-none overflow-hidden",
+			mode.current,
+			panning ? "cursor-grabbing" : "cursor-grab",
+		]}
+		role="application"
+		aria-label="Preview"
+		onpointerenter={() => (hovered = true)}
+		onpointerleave={() => (hovered = false)}
+		onpointerdown={handlePointerDown}
+		onpointermove={handlePointerMove}
+		onpointerup={handlePointerUp}
+		onpointercancel={handlePointerUp}
+		ondblclick={handleDoubleClick}
+	>
+		<canvas
+			bind:this={canvas}
+			class={[
+				"notexture absolute block",
+				!followPreview && "ring-border shadow-lg ring-1",
+				// Past one canvas pixel per device pixel, show pixels as squares.
+				view.zoom > 1 && "pixelated",
+			]}
+			style:left="{view.rect.x}px"
+			style:top="{view.rect.y}px"
+			style:width="{view.rect.width}px"
+			style:height="{view.rect.height}px"
+		></canvas>
+
+		<Panel position="bottom-left" class="svelte-flow__controls vertical">
+			<ControlButton
+				class="svelte-flow__controls-fitview"
+				title="Fit view (0)"
+				aria-label="Fit view"
+				onclick={() => {
+					view.fit();
+				}}
+			>
+				<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 30">
+					<path
+						d="M3.692 4.63c0-.53.4-.938.939-.938h5.215V0H4.708C2.13 0 0 2.054 0 4.63v5.216h3.692V4.631zM27.354 0h-5.2v3.692h5.17c.53 0 .984.4.984.939v5.215H32V4.631A4.624 4.624 0 0027.354 0zm.954 24.83c0 .532-.4.94-.939.94h-5.215v3.768h5.215c2.577 0 4.631-2.13 4.631-4.707v-5.139h-3.692v5.139zm-23.677.94c-.531 0-.939-.4-.939-.94v-5.138H0v5.139c0 2.577 2.13 4.707 4.708 4.707h5.138V25.77H4.631z"
+					/>
+				</svg>
+			</ControlButton>
+		</Panel>
+
+		{#if preview.error}
+			{@const error = preview.error}
+			<div
+				class="bg-background/70 border-border absolute right-2 bottom-2 left-14 z-10 cursor-auto rounded-lg border p-3 shadow-lg backdrop-blur"
+			>
+				<p class="mb-1 text-sm font-semibold text-red-500">{error.title}</p>
+				<p class="text-xs">{error.message}</p>
+				{#if error.snippet}
+					<pre
+						class="bg-muted/70 mt-2 max-h-32 overflow-auto rounded p-2 text-[11px] leading-tight">{error.snippet
+							.map(
+								(l) =>
+									`${String(l.number).padStart(4)} ${l.highlight ? ">" : " "} ${l.code}`,
+							)
+							.join("\n")}</pre>
+				{/if}
+			</div>
+		{/if}
+	</div>
+	<PreviewToolbar {resolution} />
 </div>
 
 <style>
 	.notexture {
 		background: repeating-conic-gradient(fuchsia 0 25%, black 0 50%) 50% / 40px 40px;
+	}
+
+	.pixelated {
+		image-rendering: pixelated;
 	}
 </style>

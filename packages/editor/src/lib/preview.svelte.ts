@@ -11,6 +11,8 @@ import {
 } from "$runtime";
 import { createContext } from "svelte";
 
+import { PreviewView } from "./preview-view.svelte";
+
 export type PreviewError = {
 	title: string;
 	message: string;
@@ -55,6 +57,7 @@ export class Preview {
 	frame = $state(0);
 
 	readonly player: Player;
+	readonly view = new PreviewView();
 
 	private renderer: Renderer | undefined;
 	private rendererRequest: Promise<Renderer> | undefined;
@@ -96,6 +99,7 @@ export class Preview {
 	/** Set the render resolution and colour space of the canvas. */
 	configure(size: Size, colorSpace: ColorSpace) {
 		this.size = size;
+		this.view.resolution = size;
 		this.colorSpace = colorSpace;
 		this.target?.configure(size, colorSpace);
 		this.player.invalidate();
