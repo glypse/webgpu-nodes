@@ -53,9 +53,11 @@
 <Resizable.PaneGroup direction="horizontal" class={className}>
 	<Resizable.Pane defaultSize={30}>
 		<div class="notexture relative size-full">
+			<!-- Not "auto": Spektral's HDR presentation skips the sRGB encoding, while
+			     the float canvas it draws to reads values as already encoded. -->
 			<FragCanvas
 				{material}
-				color={{ outputEncoding: "srgb", dynamicRange: "auto", canvasColorSpace: "srgb" }}
+				color={{ outputEncoding: "srgb", dynamicRange: "sdr", canvasColorSpace: "srgb" }}
 				showErrorOverlay={false}
 				onError={handleError}
 			></FragCanvas>
