@@ -237,6 +237,7 @@
 						? typeChoice.forced
 						: (typeChoice.forced ?? typeChoice.inferred)}
 					inferred={typeChoice.inferable ? typeChoice.inferred : undefined}
+					disabled={isLocked}
 					class="flex-1"
 					title="Value type"
 					onpick={pickType}
