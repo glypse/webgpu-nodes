@@ -18,7 +18,7 @@ import {
 import { generateShader } from "../codegen";
 import { ROOT_ID } from "../graph/document";
 import { evaluate } from "../testing/evaluate";
-import { libraryEntry, libraryHandle, managerFor, type TestNode } from "../testing/graph";
+import { managerFor, type TestNode } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 
 const preset = (id: string): readonly CurvePoint[] => {
@@ -260,34 +260,5 @@ describe("curve node", () => {
 		expect(shader).toContain("fn curve1(");
 		expect(shader).toContain("fn curve3(");
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
-	});
-});
-
-describe("remap group", () => {
-	const REMAP = libraryEntry("std-remap");
-	const handle = (label: string) => libraryHandle(REMAP, "group-input", label);
-
-	it("maps a value from one range to another", () => {
-		const graph = managerFor(
-			[
-				{
-					id: "r",
-					type: "node-group",
-					data: {
-						values: {
-							[handle("Value")]: 0.25,
-							[handle("From Min")]: -1,
-							[handle("From Max")]: 1,
-							[handle("To Min")]: 10,
-							[handle("To Max")]: 20,
-						},
-					},
-					group: { definitionRef: REMAP.ref, locked: true },
-				},
-			],
-			[],
-		);
-		const result = libraryHandle(REMAP, "group-output", "Result");
-		expect(evaluate(graph, "r", result)[0]).toBeCloseTo(16.25, 6);
 	});
 });

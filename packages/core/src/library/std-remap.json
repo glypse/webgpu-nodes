@@ -14,27 +14,37 @@
 						{
 							"id": "1ad48e74-7a30-4fc2-ab2d-97442de12892",
 							"label": "Value",
-							"type": "f32"
+							"type": {
+								"variable": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af"
+							}
 						},
 						{
 							"id": "5431255f-843b-4a67-8be7-799b2070d3c7",
 							"label": "From Min",
-							"type": "f32"
+							"type": {
+								"variable": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af"
+							}
 						},
 						{
 							"id": "5728d072-e18e-4527-a2ca-a48683ccc23c",
 							"label": "From Max",
-							"type": "f32"
+							"type": {
+								"variable": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af"
+							}
 						},
 						{
 							"id": "085ccdb7-85a5-41e4-a06f-646d9304a4aa",
 							"label": "To Min",
-							"type": "f32"
+							"type": {
+								"variable": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af"
+							}
 						},
 						{
 							"id": "da186b31-8463-4a48-9cc8-67b5c7db2c93",
 							"label": "To Max",
-							"type": "f32"
+							"type": {
+								"variable": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af"
+							}
 						}
 					],
 					"values": {
@@ -58,7 +68,9 @@
 						{
 							"id": "77114f8b-0cb9-4878-ae4a-82dc1ecc3de9",
 							"label": "Result",
-							"type": "f32"
+							"type": {
+								"variable": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af"
+							}
 						}
 					]
 				},
@@ -233,6 +245,13 @@
 				"sourceHandle": "result",
 				"target": "73da3cda-4f04-4f10-a7e2-4afb86108e1b",
 				"targetHandle": "77114f8b-0cb9-4878-ae4a-82dc1ecc3de9"
+			}
+		],
+		"typeVariables": [
+			{
+				"id": "2c1fe025-c4d8-4984-9ed6-8c6d0543b3af",
+				"name": "T",
+				"types": ["f32", "vec2f", "vec3f", "vec4f"]
 			}
 		]
 	}
