@@ -31,12 +31,10 @@ jobs:
 
             - name: Create Release Pull Request or Publish
               id: changesets
-              uses: changesets/action@v1
+              uses: changesets/action@v2
               with:
-                  version: bunx changeset version
-                  publish: bun run release
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  version-script: bunx changeset version
+                  publish-script: bun run release
 
             - name: Build web app
               if: steps.changesets.outputs.published == 'true'
