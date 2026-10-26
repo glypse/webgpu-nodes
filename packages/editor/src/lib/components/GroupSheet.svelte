@@ -218,7 +218,7 @@
 				value={typeof handle.type === "string" ? handle.type : undefined}
 				label={shared?.name ?? (inferred ? "Inferred" : undefined)}
 				disabled={locked}
-				class="w-20 shrink-0 {shared ? 'font-mono' : ''}"
+				class="w-20 shrink-0"
 				title={shared ? `Shares the type ${shared.name}` : "Value type"}
 				onpick={(type: WgslType) => setSocketType(nodeId, handle, type)}
 			>
@@ -229,7 +229,7 @@
 							onSelect={() =>
 								setSocketType(nodeId, handle, { variable: variable.id })}
 						>
-							<span class="font-mono text-xs">{variable.name}</span>
+							<span class="text-xs">{variable.name}</span>
 							<span class="text-muted-foreground ml-auto text-xs">
 								{setOf(variable)?.label ?? "Custom"}
 							</span>
@@ -549,7 +549,7 @@
 								<Input
 									value={variable.name}
 									disabled={locked}
-									class="w-16 shrink-0 font-mono"
+									class="w-16 shrink-0"
 									title="Name"
 									onchange={(e: Event) => {
 										const name = inputValue(e).trim();

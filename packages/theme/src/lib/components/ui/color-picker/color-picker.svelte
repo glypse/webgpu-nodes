@@ -226,7 +226,7 @@
 			aria-label="Hex"
 			spellcheck="false"
 			autocomplete="off"
-			class="bg-foreground/5 focus:bg-foreground/10 h-7 min-w-0 flex-1 rounded-sm px-2 font-mono text-xs uppercase outline-none"
+			class="bg-foreground/5 focus:bg-foreground/10 h-7 min-w-0 flex-1 rounded-sm px-2 text-xs uppercase outline-none"
 			value={hexFocused ? hexDraft : hex}
 			onfocus={() => {
 				hexDraft = hex;

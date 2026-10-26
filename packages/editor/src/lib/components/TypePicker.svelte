@@ -74,7 +74,7 @@
 			onpick(type);
 		}}
 	>
-		<span class="font-mono text-xs">{type}</span>
+		<span class="text-xs">{type}</span>
 		<span class="text-muted-foreground ml-auto text-xs">
 			{WIDTH_LABELS[typeComponents(type)]}
 		</span>
@@ -104,7 +104,7 @@
 		{/if}
 		{#if inferred}
 			<DropdownMenu.Item onSelect={() => onreset?.()}>
-				<span class="font-mono text-xs">{inferred}</span>
+				<span class="text-xs">{inferred}</span>
 				<span class="text-muted-foreground ml-auto text-xs">Inferred</span>
 				<CheckIcon class={value === undefined ? "" : "invisible"} />
 			</DropdownMenu.Item>
@@ -123,7 +123,7 @@
 						<DropdownMenu.SubTrigger>
 							{group.label}
 							{#if value && typeKind(value) === group.kind}
-								<span class="text-muted-foreground ml-auto pl-2 font-mono text-xs">
+								<span class="text-muted-foreground ml-auto pl-2 text-xs">
 									{value}
 								</span>
 							{/if}

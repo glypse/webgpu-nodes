@@ -246,7 +246,7 @@
 		{/if}
 		{#each variableChoices as choice (choice.variable.id)}
 			<div class="flex items-center gap-1 pb-1">
-				<span class="text-muted-foreground w-5 shrink-0 font-mono text-xs">
+				<span class="text-muted-foreground w-5 shrink-0 text-xs">
 					{choice.variable.name}
 				</span>
 				<TypePicker
@@ -292,7 +292,7 @@
 				<div class="node-shell__row node-shell__row--right">
 					<span class="node-shell__handle-label"
 						>{nodeLabels.outputs[outputDef.id] ?? outputDef.label}: {outputDef.type}{#if sharedTypes[outputDef.id]}
-							<span class="font-mono opacity-60">
+							<span class="opacity-60">
 								({sharedTypes[outputDef.id]})</span
 							>{/if}</span
 					>
@@ -376,9 +376,7 @@
 						>
 							{inputLabel}: {effectiveType}
 							{#if sharedTypes[inputDef.id]}
-								<span class="font-mono opacity-60"
-									>({sharedTypes[inputDef.id]})</span
-								>
+								<span class="opacity-60">({sharedTypes[inputDef.id]})</span>
 							{/if}
 						</span>
 					{:else if inputDef.fallback}
