@@ -1,6 +1,6 @@
 {
 	"name": "$core",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"private": true,
 	"description": "Headless graph model and WGSL code generation for webgpu-nodes",
 	"files": [
