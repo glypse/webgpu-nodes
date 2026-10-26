@@ -215,6 +215,9 @@ export type CodegenGraph = Pick<
 
 type LineMap = Map<string, { start: number; end: number }>;
 
+/** A group's generated function: its source, name and parameters' types by handle id. */
+type GroupDecl = { decl: string; fnName: string; paramTypes: Record<string, WgslType> };
+
 type ShaderState = {
 	graph: CodegenGraph;
 	helpers: HelperRegistry;
@@ -224,7 +227,7 @@ type ShaderState = {
 	 * known enum values, so each variant is emitted once no matter how many
 	 * instances use it.
 	 */
-	groupDecls: Map<string, { decl: string; fnName: string }>;
+	groupDecls: Map<string, GroupDecl>;
 	/** Group output structs already declared, by name. */
 	groupStructs: Set<string>;
 	/** The definition whose input values are uniforms (see `ShaderOptions`). */
@@ -513,11 +516,12 @@ class BodyEmitter {
 			resolved.bindings,
 		);
 		if (!decl) return;
+		// Converted to the function's parameters, which its body was emitted for.
 		const args = descriptor.inputs.map((inputDef) =>
 			this.inputExpr(
 				node,
 				inputDef.id,
-				resolved.inputTypes[inputDef.id] ?? inputDefaultType(inputDef),
+				decl.paramTypes[inputDef.id] ?? inputDefaultType(inputDef),
 				defaults?.[inputDef.id],
 			),
 		);
@@ -663,7 +667,7 @@ function emitGroupFunction(
 	absentInputs: ReadonlySet<string> = new Set(),
 	constants: ReadonlyMap<string, number> = new Map(),
 	given: TypeBindings = {},
-): { decl: string; fnName: string } | undefined {
+): GroupDecl | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
 	if (!definition) return undefined;
@@ -745,7 +749,8 @@ function emitGroupFunction(
 		`}`,
 	].join("\n");
 
-	const entry = { decl, fnName };
+	const paramTypes = Object.fromEntries(inputHandles.map((h) => [h.id, inputType(h)]));
+	const entry = { decl, fnName, paramTypes };
 	state.groupDecls.set(key, entry);
 	return entry;
 }

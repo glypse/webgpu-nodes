@@ -51,4 +51,27 @@ describe("remap", () => {
 		expect(shader).toContain("t_vec3f(");
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
+
+	it("keeps its shared type when cloned to edit", () => {
+		const ASPECT = libraryEntry("std-aspect-uv");
+		const graph = managerFor(
+			[
+				remap,
+				{ id: "a", type: "node-group", group: { definitionRef: ASPECT.ref, locked: true } },
+			],
+			[
+				["a", libraryHandle(ASPECT, "group-output", "Coordinates"), "r", input("Value")],
+				["r", RESULT, "out", "color"],
+			],
+		);
+		const ref = graph.deepClone("r");
+		const clone = ref ? graph.project.definitions.get(ref) : undefined;
+		expect(clone?.typeVariables.map((v) => v.name)).toEqual(["T"]);
+		expect(graph.resolveOutputHandleType("r", RESULT)).toBe("vec2f");
+		const { shader } = generateShader(graph);
+		expect(shader).toContain("t_vec2f(");
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+		const [file] = ref ? graph.exportGroupFiles(ref) : [];
+		expect(file?.contents).toContain('"typeVariables"');
+	});
 });

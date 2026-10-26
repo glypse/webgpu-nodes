@@ -30,7 +30,8 @@ type ResolveNode = (id: string) => GraphNode | undefined;
 type Env = {
 	resolveDescriptor: ResolveDescriptor;
 	getIncomingEdges: GetIncomingEdges;
-	definitions: HydratedGraphProject["definitions"];
+	/** The project's definitions as they are now: the model replaces the map as they change. */
+	definitions: () => HydratedGraphProject["definitions"];
 };
 
 const NO_BINDINGS: TypeBindings = {};
@@ -81,7 +82,7 @@ function resolveNodeTypesForNode(
 	bindings: TypeBindings,
 ): ResolvedNodeTypes {
 	if (node.type === "group-input" || node.type === "group-output") {
-		const def = definitionOf(node.id, env.definitions);
+		const def = definitionOf(node.id, env.definitions());
 		const bound = completeBindings(def?.typeVariables ?? [], bindings);
 		if (node.type === "group-output") {
 			// The variables' families are forced to their bound types.
@@ -126,7 +127,7 @@ function resolveGroupNodeTypes(
 	resolved: ResolvedNodeTypes,
 	env: Env,
 ): ResolvedNodeTypes {
-	const def = node.group && env.definitions.get(node.group.definitionRef);
+	const def = node.group && env.definitions().get(node.group.definitionRef);
 	if (!def) return resolved;
 	const bindings: Record<string, WgslType> = {};
 	for (const variable of def.typeVariables) {
@@ -298,7 +299,7 @@ function inferHandleType(
  *   through `node-group` instances.
  *
  * The resolver is document-agnostic: it receives a `resolveNode` callback and
- * a `definitions` map, so it can resolve types across the entire project
+ * reads the project's definitions through a getter, so it can resolve types across the entire project
  * without depending on any mutable state.
  *
  * Nodes inside a group with type variables resolve differently for each
@@ -310,15 +311,16 @@ export class TypeResolver {
 	private cache = new Map<string, Map<string, ResolvedNodeTypes>>();
 
 	private env: Env;
-	private definitions: HydratedGraphProject["definitions"];
-
 	constructor(
 		resolveDescriptor: ResolveDescriptor,
-		definitions: HydratedGraphProject["definitions"],
+		definitions: () => HydratedGraphProject["definitions"],
 		getIncomingEdges: GetIncomingEdges,
 	) {
-		this.definitions = definitions;
 		this.env = { resolveDescriptor, definitions, getIncomingEdges };
+	}
+
+	private get definitions(): HydratedGraphProject["definitions"] {
+		return this.env.definitions();
 	}
 
 	private cached(nodeId: string, bindings: TypeBindings): ResolvedNodeTypes | undefined {

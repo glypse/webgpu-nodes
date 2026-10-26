@@ -158,7 +158,7 @@ export abstract class GraphModelBase {
 		this.registerLibraryRefs();
 		this.typeResolver = new TypeResolver(
 			(n) => this.resolveDescriptor(n),
-			this.project.definitions,
+			() => this.project.definitions,
 			(id) => this.getIncomingEdges(id),
 		);
 		this.rebuildTypeCache();

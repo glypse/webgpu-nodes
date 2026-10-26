@@ -40,7 +40,7 @@ describe("type families", () => {
 	];
 	const resolver = new TypeResolver(
 		(node) => (node.type === "pair" ? pair : vec3),
-		new Map(),
+		() => new Map(),
 		(id) => edges.filter((e) => e.target === id),
 	);
 

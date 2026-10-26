@@ -167,6 +167,7 @@ export abstract class GroupModel extends ZoneModel {
 			definition: structuredClone({
 				nodes: def.nodes.map(serialiseNode),
 				edges: def.edges.map(serialiseEdge),
+				...(def.typeVariables.length > 0 ? { typeVariables: def.typeVariables } : {}),
 			}),
 		};
 	}
@@ -548,12 +549,20 @@ export abstract class GroupModel extends ZoneModel {
 					nodes: clone.nodes,
 					edges: clone.edges,
 					label: this.uniqueCopyLabel(sourceDef.label),
+					typeVariables: structuredClone(sourceDef.typeVariables),
 				}),
 			],
 		]);
 
 		// Point the group node at the new (unlocked) clone
-		node.group = { definitionRef: newDefRef, locked: false };
+		const doc = this.documentOf(node.id);
+		if (doc) {
+			const group = { definitionRef: newDefRef, locked: false };
+			this.setContent(doc, {
+				nodes: doc.nodes.map((n) => (n.id === node.id ? { ...n, group } : n)),
+			});
+		}
+		this.rebuildTypeCache();
 
 		return newDefRef;
 	}
