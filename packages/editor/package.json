@@ -26,24 +26,25 @@
 		}
 	},
 	"dependencies": {
+		"$core": "workspace:*",
 		"$theme": "workspace:*",
-		"@motion-core/motion-gpu": "^0.12.0",
-		"@xyflow/svelte": "^1.6.2",
+		"@xyflow/svelte": "^1.7.0",
 		"phosphor-svelte": "catalog:",
-		"valibot": "^1.4.2"
+		"spektral": "^0.17.2"
 	},
 	"devDependencies": {
 		"@sveltejs/package": "catalog:",
 		"@sveltejs/vite-plugin-svelte": "catalog:",
 		"@tailwindcss/vite": "catalog:",
-		"@typescript/native-preview": "catalog:",
 		"eslint": "catalog:",
 		"globals": "catalog:",
 		"mode-watcher": "catalog:",
 		"svelte": "catalog:",
 		"svelte-check": "catalog:",
+		"typescript": "catalog:",
 		"typescript-eslint": "catalog:",
-		"vite": "catalog:"
+		"vite": "catalog:",
+		"vitest": "catalog:"
 	},
 	"peerDependencies": {
 		"svelte": "catalog:",

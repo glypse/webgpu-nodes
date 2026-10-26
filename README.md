@@ -8,6 +8,6 @@ If you're reading this, this project is in its earliest of early stages - there'
 
 - Svelte 5
 - Svelte Flow
-- Motion GPU
+- Spektral
 
-Thank you very much to all contributors of all technologies used in this project, see [apps/web/package.json](apps/web/package.json)
+Thank you very much to all contributors of all technologies used in this project, see [packages/editor/package.json](packages/editor/package.json)

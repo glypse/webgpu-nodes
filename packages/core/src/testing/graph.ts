@@ -1,0 +1,80 @@
+import { generateShader } from "../codegen";
+import {
+	type GraphDocumentEdge,
+	type GraphDocumentNode,
+	type GraphProject,
+	ROOT_ID,
+	type StandardLibraryEntry,
+} from "../graph/document";
+import { GraphModel } from "../graph/model";
+import { standardLibrary } from "../library";
+import type { NodeData } from "../types";
+
+export type TestNode = {
+	id: string;
+	type: string;
+	data?: NodeData;
+	group?: GraphDocumentNode["group"];
+};
+
+/** `[source, sourceHandle, target, targetHandle]` */
+export type TestEdge = [string, string, string, string];
+
+export function edge([source, sourceHandle, target, targetHandle]: TestEdge): GraphDocumentEdge {
+	return {
+		id: `${source}.${sourceHandle}->${target}.${targetHandle}`,
+		source,
+		sourceHandle,
+		target,
+		targetHandle,
+	};
+}
+
+/** Build a one-document project. A `frag-output` node with id "out" is always present. */
+export function rootProject(nodes: TestNode[], edges: TestEdge[]): GraphProject {
+	const docNodes: GraphDocumentNode[] = [
+		{ id: "out", type: "frag-output", data: {}, position: { x: 0, y: 0 } },
+		...nodes.map((n, i) => ({
+			id: n.id,
+			type: n.type,
+			data: n.data ?? {},
+			position: { x: i * 200, y: 0 },
+			...(n.group ? { group: n.group } : {}),
+		})),
+	];
+	return { definitions: { [ROOT_ID]: { nodes: docNodes, edges: edges.map(edge) } } };
+}
+
+export function managerFor(nodes: TestNode[], edges: TestEdge[]): GraphModel {
+	return new GraphModel(rootProject(nodes, edges));
+}
+
+export function shaderFor(nodes: TestNode[], edges: TestEdge[]): string {
+	return generateShader(managerFor(nodes, edges)).shader;
+}
+
+/** The latest version of a standard-library entry. */
+export function libraryEntry(id: string): StandardLibraryEntry {
+	const entry = standardLibrary.find((e) => e.id === id);
+	if (!entry) throw new Error(`no standard-library entry "${id}"`);
+	return entry;
+}
+
+/** The id of the handle labelled `label` on a standard-library entry's group input or output. */
+export function libraryHandle(
+	entry: StandardLibraryEntry,
+	boundary: "group-input" | "group-output",
+	label: string,
+): string {
+	const node = entry.definition.nodes.find((n) => n.type === boundary);
+	const handle = node?.data.handles?.find((h) => h.label === label);
+	if (!handle) throw new Error(`no ${boundary} handle "${label}" in "${entry.id}"`);
+	return handle.id;
+}
+
+/** The WGSL variable of the only node of `type` in a standard-library entry. */
+export function libraryVar(entry: StandardLibraryEntry, type: string): string {
+	const nodes = entry.definition.nodes.filter((n) => n.type === type);
+	if (nodes.length !== 1 || !nodes[0]) throw new Error(`no single "${type}" in "${entry.id}"`);
+	return `v_${nodes[0].id.replace(/[^A-Za-z0-9_]/g, "_")}`;
+}

@@ -1,0 +1,217 @@
+@import "@xyflow/svelte/dist/style.css" layer(base);
+
+@reference "$theme/css";
+
+.svelte-flow__node {
+	@apply bg-card w-45 justify-center rounded-sm;
+	box-shadow: 0 0 10px var(--background);
+}
+
+/* Room for the curve's graph beside its presets. */
+.svelte-flow__node-curve {
+	@apply w-60;
+}
+
+/* Reroute nodes are a bare handle: no card around it. */
+.svelte-flow__node-reroute {
+	width: auto;
+	min-width: 0;
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
+}
+
+.reroute {
+	position: relative;
+	width: 18px;
+	height: 18px;
+	border-radius: 9999px;
+}
+
+.svelte-flow__node-reroute.selected .reroute {
+	outline: 1px solid var(--primary);
+}
+
+/* Both handles on the node's centre, the output on top. */
+.reroute .reroute__handle {
+	top: 50%;
+	right: auto;
+	left: 50%;
+	margin: 0;
+	transform: translate(-50%, -50%);
+}
+
+.reroute .reroute__handle--out {
+	z-index: 1;
+}
+
+.node-shell__label {
+	@apply flex flex-col gap-1 border-b px-3 pt-3 pb-2;
+}
+
+.node-shell__label > svg {
+	@apply shrink-0;
+}
+
+.node-shell__body {
+	@apply p-3;
+}
+
+.svelte-flow__node.selectable:focus {
+	@apply outline-ring outline;
+}
+
+.svelte-flow__node.selectable:hover,
+.svelte-flow__node.draggable:hover {
+	border-color: var(--ring);
+}
+
+.svelte-flow__handle {
+	@apply border-card -mx-3 size-2 rounded-full;
+}
+
+.svelte-flow__node.selectable.selected {
+	border-color: var(--primary);
+}
+
+.svelte-flow__node-group {
+	@apply border-accent bg-accent/40;
+	min-width: 150px;
+	min-height: 100px;
+}
+
+.svelte-flow__handle {
+	background-color: var(--muted-foreground);
+}
+
+.svelte-flow__handle.connectionindicator:hover {
+	@apply bg-foreground pointer-events-auto;
+}
+
+/* Handle colour follows the value's component count (set inline as
+   --handle-color), its shape follows the scalar kind: circle for f32, square
+   for i32, diamond for u32, triangle for bool.
+   Each shape is drawn by two layers: ::before is the outline (the card colour,
+   like a plain handle's border), ::after the fill, inset by about a pixel.
+   Clip-paths can't have borders and rotations would skew SvelteFlow's
+   centring translate, hence the layers. */
+.node-shell__handle {
+	&.kind-f32,
+	&.kind-i32,
+	&.kind-u32,
+	&.kind-bool {
+		border: none;
+		border-radius: 0;
+		background: transparent;
+
+		&::before,
+		&::after {
+			content: "";
+			position: absolute;
+			pointer-events: none;
+		}
+
+		&::before {
+			inset: 0;
+			background: var(--card);
+		}
+
+		&::after {
+			inset: 1px;
+			background: var(--handle-color, var(--muted-foreground));
+		}
+
+		/* Highlight the shape only: SvelteFlow's hover rule would paint the whole box. */
+		&.connectionindicator:hover {
+			background: transparent;
+		}
+
+		&.connectionindicator:hover::after {
+			background: var(--foreground);
+		}
+	}
+
+	&.kind-f32 {
+		&::before,
+		&::after {
+			border-radius: 9999px;
+		}
+	}
+
+	&.kind-u32 {
+		width: 11px;
+		height: 11px;
+
+		&::before,
+		&::after {
+			clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
+		}
+
+		/* A 1.5px inset leaves ~1px of outline along the diagonals. */
+		&::after {
+			inset: 1.5px;
+		}
+	}
+
+	&.kind-bool {
+		width: 10px;
+		height: 10px;
+
+		&::before,
+		&::after {
+			clip-path: polygon(0 0, 100% 50%, 0 100%);
+		}
+
+		&::after {
+			inset: 1.5px;
+		}
+	}
+
+	&.variadic {
+		@apply min-h-6;
+	}
+
+	/* Zone "new item" socket: hollow, like Blender's virtual socket. */
+	&.node-shell__handle--virtual {
+		background-color: transparent;
+		border: 1px dashed var(--muted-foreground);
+	}
+}
+
+.svelte-flow__node:has(.svelte-flow__resize-control.line) {
+	@apply rounded-none;
+}
+
+.svelte-flow__resize-control.handle {
+	@apply h-1.25 w-1.25 rounded-none border-none;
+}
+
+.svelte-flow__edge-label {
+	@apply bg-card;
+}
+
+.node-shell--unknown {
+	@apply text-destructive;
+}
+
+.node-shell__body {
+	@apply flex flex-col gap-1;
+}
+
+.node-shell__inputs,
+.node-shell__outputs {
+	@apply flex flex-col gap-1;
+}
+
+.node-shell__row {
+	@apply relative flex min-h-6 items-center gap-1.5;
+}
+
+.node-shell__row--right {
+	@apply justify-end;
+}
+
+.node-shell__handle-label {
+	@apply text-muted-foreground text-xs whitespace-nowrap;
+}

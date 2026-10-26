@@ -1,13 +1,13 @@
 {
 	"extends": "../../tsconfig.base.json",
 	"compilerOptions": {
-		"types": ["svelte", "vite/client"]
+		"types": ["svelte", "vite/client", "bun"]
 	},
 	"include": [
 		"src/**/*",
-		"oxfmt.config.ts",
 		"svelte.config.ts",
 		"vite.config.ts",
+		"vitest.environment.ts",
 		"eslint.config.ts"
 	],
 	"exclude": ["../node_modules/**"]

@@ -1,0 +1,38 @@
+{
+	"name": "$core",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Headless graph model and WGSL code generation for webgpu-nodes",
+	"files": [
+		"dist",
+		"!dist/**/*.test.*",
+		"!dist/testing"
+	],
+	"type": "module",
+	"sideEffects": false,
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"development": "./src/index.ts",
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
+		}
+	},
+	"scripts": {
+		"stdlib:archive": "bun scripts/archive-stdlib.ts"
+	},
+	"dependencies": {
+		"elkjs": "^0.12.0",
+		"valibot": "^1.5.0"
+	},
+	"devDependencies": {
+		"@types/bun": "catalog:",
+		"eslint": "catalog:",
+		"globals": "catalog:",
+		"typescript": "catalog:",
+		"typescript-eslint": "catalog:",
+		"vite": "catalog:",
+		"vitest": "catalog:"
+	}
+}

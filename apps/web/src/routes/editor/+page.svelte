@@ -1,18 +1,15 @@
 <script lang="ts">
-	import {
-		Editor,
-		GraphManager,
-		setDevContext,
-		setGraphManager,
-		type GraphDocument,
-	} from "$editor";
+	import { dev } from "$app/env";
+	import { type GraphDocument } from "$core";
+	import { DevTools, Editor, GraphManager, setDevTools, setGraphManager } from "$editor";
 	import { Menubar, AlertDialog } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
 	const graph = new GraphManager();
 	setGraphManager(graph);
 
-	setDevContext(true); // TODO: Replace with `dev` from `$app/env` past 1.0 release
+	const devTools = new DevTools(dev);
+	setDevTools(devTools);
 
 	function pickFiles(opts: { accept: string; multiple?: boolean }): Promise<File[]> {
 		return new Promise((resolve) => {
@@ -55,6 +52,18 @@
 		const ids = new Set(graph.selectedNodeIds);
 		if (ids.size === 0) return;
 		graph.ungroupSelection(ids);
+	}
+
+	async function handleLayoutSelected() {
+		await graph.layoutSelection();
+	}
+
+	async function handleLayoutDocument() {
+		if (await graph.layoutDocument()) await graph.canvas?.fitView();
+	}
+
+	async function handleLayoutGraph() {
+		if (await graph.layoutProject()) await graph.canvas?.fitView();
 	}
 
 	let pruneDialogOpen = $state(false);
@@ -110,10 +119,14 @@
 					},
 			),
 		);
-		const result = graph.importGroups(entries);
+		const result = await graph.importGroups(entries);
 		if (result.missing.length > 0) {
 			console.warn("Import completed with missing dependencies:", result.missing);
 		}
+	}
+
+	function handleBeforeUnload(event: BeforeUnloadEvent) {
+		if (graph.hasUnsavedChanges()) event.preventDefault();
 	}
 
 	function handleKeydown(event: KeyboardEvent) {
@@ -124,7 +137,7 @@
 	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeydown} onbeforeunload={handleBeforeUnload} />
 
 <div class="flex h-dvh w-full flex-col overflow-hidden">
 	<Menubar.Root class="h-auto gap-1 rounded-none border-t-0 border-r-0 border-l-0 p-2">
@@ -144,12 +157,25 @@
 					Export selected group
 				</Menubar.Item>
 				<Menubar.Item onSelect={handleImportGroups}>Import groups</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.CheckboxItem bind:checked={devTools.enabled}>
+					Developer tools
+				</Menubar.CheckboxItem>
 			</Menubar.Content>
 		</Menubar.Menu>
 
 		<Menubar.Menu>
 			<Menubar.Trigger>Edit</Menubar.Trigger>
 			<Menubar.Content>
+				<Menubar.Item onSelect={() => graph.undo()} disabled={!graph.history.canUndo}>
+					Undo
+					<Menubar.Shortcut>⌘Z</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Item onSelect={() => graph.redo()} disabled={!graph.history.canRedo}>
+					Redo
+					<Menubar.Shortcut>⇧⌘Z</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
 				<Menubar.Item
 					onSelect={handleGroupSelected}
 					disabled={!(hasSelection && !graph.isLocked)}
@@ -163,6 +189,17 @@
 				>
 					Ungroup selected
 					<Menubar.Shortcut>⇧G</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item
+					onSelect={handleLayoutSelected}
+					disabled={!(hasSelection && !graph.isLocked)}
+				>
+					Layout selected nodes
+				</Menubar.Item>
+				<Menubar.Item onSelect={handleLayoutGraph}>Layout graph</Menubar.Item>
+				<Menubar.Item onSelect={handleLayoutDocument} disabled={graph.isLocked}>
+					Layout document
 				</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item onSelect={openPruneDialog} disabled={!hasPrunable}>

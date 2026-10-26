@@ -43,10 +43,27 @@
 	--sidebar-border: oklch(0.922 0 0);
 	--sidebar-ring: oklch(0.708 0 0);
 
+	/* Value types: hue encodes the component count, handle shape encodes the
+	   scalar kind (see the editor's xy-theme.css). */
 	--color-f32: var(--color-neutral-500);
 	--color-vec2f: var(--color-green-500);
 	--color-vec3f: var(--color-violet-500);
 	--color-vec4f: var(--color-amber-500);
+	--color-i32: var(--color-f32);
+	--color-vec2i: var(--color-vec2f);
+	--color-vec3i: var(--color-vec3f);
+	--color-vec4i: var(--color-vec4f);
+	--color-u32: var(--color-f32);
+	--color-vec2u: var(--color-vec2f);
+	--color-vec3u: var(--color-vec3f);
+	--color-vec4u: var(--color-vec4f);
+	--color-bool: var(--color-f32);
+	--color-vec2b: var(--color-vec2f);
+	--color-vec3b: var(--color-vec3f);
+	--color-vec4b: var(--color-vec4f);
+
+	/* Zones (loops): bubble drawn under the nodes they enclose. */
+	--color-zone-repeat: oklch(0.55 0 0);
 }
 
 .dark {
@@ -81,6 +98,7 @@
 	--sidebar-accent-foreground: oklch(0.985 0 0);
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.556 0 0);
+	--color-zone-repeat: oklch(0.75 0 0);
 }
 
 /* =============================================
@@ -132,6 +150,7 @@
 	--color-vec2f: var(--color-vec2f);
 	--color-vec3f: var(--color-vec3f);
 	--color-vec4f: var(--color-vec4f);
+	--color-zone-repeat: var(--color-zone-repeat);
 }
 
 /* =============================================

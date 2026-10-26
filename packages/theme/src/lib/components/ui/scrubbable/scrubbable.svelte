@@ -12,6 +12,18 @@
 			value?: number;
 			label?: string;
 			readonly?: boolean;
+			/** Restrict the value to whole numbers (step 1, no decimals shown). */
+			integer?: boolean;
+			/** Lowest accepted value. */
+			min?: number;
+			/** Highest accepted value. */
+			max?: number;
+			/**
+			 * Range scrubbing, arrow keys and the side buttons stay within,
+			 * widened to include a value typed past it. Typing isn't held by it.
+			 */
+			softMin?: number;
+			softMax?: number;
 		}
 	>;
 
@@ -22,6 +34,11 @@
 		"data-slot": dataSlot = "scrubbable",
 		label,
 		readonly = false,
+		integer = false,
+		min,
+		max,
+		softMin,
+		softMax,
 		...restProps
 	}: Props = $props();
 
@@ -39,16 +56,35 @@
 	let cleanupScrubEnd: (() => void) | null = null;
 
 	function getStep(event: MouseEvent | KeyboardEvent): number {
+		if (integer) return 1;
 		return event.shiftKey ? 0.01 : 0.1;
 	}
 
 	function formatValue(n: number): string {
-		return n.toFixed(3);
+		return integer ? String(Math.round(n)) : n.toFixed(3);
+	}
+
+	/** Apply the integer / range constraints to a candidate value. */
+	function constrain(n: number): number {
+		const stepped = integer ? Math.round(n) : n;
+		const above = min === undefined ? stepped : Math.max(min, stepped);
+		return max === undefined ? above : Math.min(max, above);
+	}
+
+	function setValue(n: number): void {
+		value = constrain(n);
+	}
+
+	/** Set `from` moved to `n`, kept within the soft range widened to include `from`. */
+	function nudgeValue(n: number, from: number): void {
+		const low = softMin === undefined ? n : Math.min(softMin, from);
+		const high = softMax === undefined ? n : Math.max(softMax, from);
+		setValue(Math.min(high, Math.max(low, n)));
 	}
 
 	function commitValue(raw: string): void {
 		const parsed = parseFloat(raw);
-		value = Number.isNaN(parsed) ? 0 : parsed;
+		setValue(Number.isNaN(parsed) ? 0 : parsed);
 		localDisplay = formatValue(value);
 	}
 
@@ -94,12 +130,12 @@
 			const step = getStep(event);
 			const increment =
 				Math.sign(lockedMovementX) * step * Math.ceil(Math.abs(lockedMovementX) / 2);
-			value = scrubStartValue + increment;
+			nudgeValue(scrubStartValue + increment, scrubStartValue);
 		} else {
 			const dx = event.clientX - scrubStartX;
 			const step = getStep(event);
 			const increment = Math.sign(dx) * step * Math.ceil(Math.abs(dx) / 2);
-			value = scrubStartValue + increment;
+			nudgeValue(scrubStartValue + increment, scrubStartValue);
 		}
 		void emitInput();
 	}
@@ -128,11 +164,11 @@
 		const step = getStep(event);
 		if (event.key === "ArrowRight" || event.key === "ArrowUp") {
 			event.preventDefault();
-			value += step;
+			nudgeValue(value + step, value);
 			void emitInput();
 		} else if (event.key === "ArrowLeft" || event.key === "ArrowDown") {
 			event.preventDefault();
-			value -= step;
+			nudgeValue(value - step, value);
 			void emitInput();
 		}
 	}
@@ -140,14 +176,14 @@
 	function handleDecrement(event: MouseEvent): void {
 		event.stopPropagation();
 		const step = getStep(event);
-		value -= step;
+		nudgeValue(value - step, value);
 		void emitInput();
 	}
 
 	function handleIncrement(event: MouseEvent): void {
 		event.stopPropagation();
 		const step = getStep(event);
-		value += step;
+		nudgeValue(value + step, value);
 		void emitInput();
 	}
 
@@ -159,7 +195,7 @@
 		const target = event.target as HTMLInputElement;
 		const parsed = parseFloat(target.value);
 		if (!Number.isNaN(parsed)) {
-			value = parsed;
+			setValue(parsed);
 		}
 	}
 
@@ -227,7 +263,7 @@
 		isFocused
 			? 'bg-foreground/10'
 			: ''} {scrubbing ? 'cursor-none' : ''} {readonly ? 'opacity-50' : ''}"
-		inputmode="decimal"
+		inputmode={integer ? "numeric" : "decimal"}
 		aria-label="Numeric value"
 		aria-valuenow={value}
 		aria-valuetext={formatValue(value)}
