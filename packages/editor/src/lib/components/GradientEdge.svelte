@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { getBezierPath, type EdgeProps } from "@xyflow/svelte";
 
+	import { getDocumentView } from "../document-view";
 	import { bezierMidpointAngle } from "../geometry/edge-geometry";
 	import { getGraphManager } from "../graph-manager.svelte";
 
@@ -22,6 +23,7 @@
 	const PADDING = 24;
 
 	const graph = getGraphManager();
+	const view = getDocumentView();
 
 	const [path, midX, midY] = $derived(
 		getBezierPath({
@@ -137,7 +139,7 @@
 			fill="none"
 			stroke="transparent"
 			stroke-width="20"
-			class="cursor-pointer"
+			class={view.locked ? undefined : "cursor-pointer"}
 		/>
 	</g>
 {/if}
