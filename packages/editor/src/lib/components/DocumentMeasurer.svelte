@@ -25,6 +25,8 @@
 			return document;
 		},
 		locked: false,
+		path: [],
+		activate: () => undefined,
 	});
 
 	// Copies: SvelteFlow's bookkeeping stays out of the model's nodes.

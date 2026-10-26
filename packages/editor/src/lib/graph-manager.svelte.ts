@@ -1,5 +1,6 @@
 import {
 	defaultScene,
+	defaultScreen,
 	defaultSettings,
 	GraphModel,
 	type GraphModelState,
@@ -35,10 +36,11 @@ export class GraphManager extends GraphModel {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- Map is reassigned, not mutated
 			project: { definitions: new Map() },
 			settings: defaultSettings(),
-			path: [],
+			screen: defaultScreen(),
+			activeArea: null,
 			selectedNodeIds: [],
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- reassigned for reactivity, not mutated
-			typeCache: new Map(),
+			typeCaches: new Map(),
 		});
 		return state;
 	}
@@ -88,11 +90,17 @@ export class GraphManager extends GraphModel {
 
 	// ── Layout ──────────────────────────────────────────────────────────────
 
+	/** The canvases of the graph areas mounted, by area id. */
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- registered by canvases as they mount, read on demand
+	readonly canvases = new Map<string, GraphCanvas>();
+
 	/**
-	 * The canvas showing the document in view, while one is mounted: it
-	 * measures nodes as drawn, for layouts to use.
+	 * The active graph area's canvas, while one is mounted: it measures nodes
+	 * as drawn, for layouts to use.
 	 */
-	canvas: GraphCanvas | null = null;
+	get canvas(): GraphCanvas | null {
+		return (this.activeArea === null ? undefined : this.canvases.get(this.activeArea)) ?? null;
+	}
 
 	override async layoutDocument(
 		definitionRef: string = this.activeDefinitionRef,

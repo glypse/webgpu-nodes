@@ -53,8 +53,10 @@
 	);
 
 	const hiddenInputs = $derived(graph.hiddenInputs(id));
-	const inputs = $derived(graph.resolveNodeInputs(id).filter((i) => !hiddenInputs.has(i.id)));
-	const outputs = $derived(graph.resolveNodeOutputs(id));
+	const inputs = $derived(
+		graph.resolveNodeInputs(id, view.path).filter((i) => !hiddenInputs.has(i.id)),
+	);
+	const outputs = $derived(graph.resolveNodeOutputs(id, view.path));
 	const label = $derived(descriptor?.label);
 
 	const nodeLabels = $derived(graph.resolveNodeLabels(id));
@@ -62,18 +64,18 @@
 	const sheetTargetId = $derived(
 		nodeType === "node-group"
 			? id
-			: graph.path.length > 0
-				? graph.path[graph.path.length - 1]
+			: view.path.length > 0
+				? view.path[view.path.length - 1]
 				: undefined,
 	);
 
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
-	const typeChoice = $derived(graph.typeChoice(id));
+	const typeChoice = $derived(graph.typeChoice(id, view.path));
 	const variableChoices = $derived(
 		nodeType === "node-group"
-			? graph.variableChoices(id).filter((c) => c.variable.types.length > 1)
+			? graph.variableChoices(id, view.path).filter((c) => c.variable.types.length > 1)
 			: [],
 	);
 
@@ -117,7 +119,7 @@
 	}
 
 	function resolvedInputType(inputDef: { id: string }): WgslType {
-		return graph.resolveInputType(id, inputDef.id);
+		return graph.resolveInputType(id, inputDef.id, view.path);
 	}
 
 	function handleStyle(type: WgslType): string {
@@ -202,7 +204,10 @@
 					type="button"
 					size="icon-sm"
 					title="Enter node group"
-					onclick={() => graph.enterGroup(id)}
+					onclick={() => {
+						view.activate();
+						graph.enterGroup(id);
+					}}
 				>
 					<TreeViewIcon class="size-4" />
 				</Button>

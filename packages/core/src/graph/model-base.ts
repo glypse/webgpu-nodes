@@ -11,6 +11,14 @@ import {
 } from "../library";
 import { nodeRegistry } from "../nodes/registry";
 import {
+	type Area,
+	type EditorState,
+	type GraphEditorState,
+	type Screen,
+	defaultScreen,
+	setAreaEditor,
+} from "../screen/screen";
+import {
 	type InputValue,
 	type NodeData,
 	type NodeDescriptor,
@@ -53,10 +61,22 @@ export type ResolvedTypes = ResolvedNodeTypes;
 export type GraphModelState = {
 	project: HydratedGraphProject;
 	settings: ProjectSettings;
-	path: string[];
+	/** The editor panels; graph areas hold the paths documents are viewed at. */
+	screen: Screen;
+	/** The graph area commands act on (the one last used), if any. */
+	activeArea: string | null;
 	selectedNodeIds: string[];
-	typeCache: Map<string, ResolvedTypes>;
+	/**
+	 * Resolved types by node id, per path viewed (`pathKey`), the root's
+	 * always among them: a group's nodes take the types its instance binds.
+	 */
+	typeCaches: Map<string, Map<string, ResolvedTypes>>;
 };
+
+/** The key of a path in `GraphModelState.typeCaches`. */
+export function pathKey(path: readonly string[]): string {
+	return path.join("/");
+}
 
 export function emptyProject(): GraphProject {
 	return { definitions: { [ROOT_ID]: { nodes: [], edges: [] } } };
@@ -82,9 +102,10 @@ export abstract class GraphModelBase {
 		return {
 			project: { definitions: new Map() },
 			settings: defaultSettings(),
-			path: [],
+			screen: defaultScreen(),
+			activeArea: null,
 			selectedNodeIds: [],
-			typeCache: new Map(),
+			typeCaches: new Map(),
 		};
 	}
 
@@ -122,18 +143,88 @@ export abstract class GraphModelBase {
 		return true;
 	}
 
+	/** The editor panels. Replaced, never mutated (see `setScreen`). */
+	get screen(): Screen {
+		return this.state.screen;
+	}
+
 	/**
-	 * Breadcrumb path of group-node ids from root down to the currently-viewed subgraph.
-	 * [] means "viewing root". ["node-7"] means "viewing node-7's content".
-	 * ["node-7", "node-12"] means nested two levels deep.
+	 * Lay the panels out anew. Graph areas' paths that no longer lead to a
+	 * document are cut back to what still exists.
+	 */
+	setScreen(screen: Screen) {
+		this.state.screen = {
+			areas: screen.areas.map((a) => {
+				if (a.editor.type !== "graph") return a;
+				const path = this.validPath(a.editor.path);
+				// Unchanged areas stay the same objects, so views of them don't redraw.
+				return path.length === a.editor.path.length
+					? a
+					: { ...a, editor: { ...a.editor, path } };
+			}),
+		};
+		const active = this.state.activeArea;
+		if (active === null || this.graphArea(active) === undefined) {
+			this.state.activeArea = this.graphAreas()[0]?.id ?? null;
+		}
+		this.refreshViewTypes();
+	}
+
+	/** The graph areas, in screen order. */
+	graphAreas(): (Area & { editor: GraphEditorState })[] {
+		return this.screen.areas.filter(
+			(a): a is Area & { editor: GraphEditorState } => a.editor.type === "graph",
+		);
+	}
+
+	graphArea(id: string): (Area & { editor: GraphEditorState }) | undefined {
+		return this.graphAreas().find((a) => a.id === id);
+	}
+
+	/** The graph area commands act on; null when the screen has none. */
+	get activeArea(): string | null {
+		return this.state.activeArea;
+	}
+
+	set activeArea(id: string | null) {
+		if (id === this.state.activeArea || (id !== null && !this.graphArea(id))) return;
+		this.state.activeArea = id;
+		this.refreshViewTypes();
+	}
+
+	/** Change an area's editor (its type, or a graph area's camera). */
+	setAreaEditor(id: string, editor: EditorState) {
+		this.setScreen(setAreaEditor(this.screen, id, editor));
+	}
+
+	/** Set the path a graph area views. */
+	setAreaPath(id: string, path: string[]) {
+		const area = this.graphArea(id);
+		if (!area) return;
+		this.state.screen = setAreaEditor(this.screen, id, { ...area.editor, path });
+		this.refreshViewTypes();
+	}
+
+	/**
+	 * Breadcrumb path of group-node ids from root down to the subgraph the
+	 * active graph area views: [] for the root, ["node-7"] inside node-7's
+	 * group, ["node-7", "node-12"] two levels deep. Always the root without
+	 * a graph area.
 	 */
 	get path(): string[] {
-		return this.state.path;
+		const id = this.activeArea;
+		return (id === null ? undefined : this.graphArea(id)?.editor.path) ?? [];
 	}
 
 	set path(value: string[]) {
-		this.state.path = value;
-		this.refreshViewTypes();
+		if (this.activeArea !== null) this.setAreaPath(this.activeArea, value);
+	}
+
+	/** The longest start of `path` that still walks through group nodes. */
+	protected validPath(path: readonly string[]): string[] {
+		const valid: string[] = [];
+		for (const { nodeId } of this.walkPath(path)) valid.push(nodeId);
+		return valid;
 	}
 
 	/** Currently selected node IDs (grouping acts on them, ungrouping selects its result). */
@@ -146,15 +237,20 @@ export abstract class GraphModelBase {
 	}
 
 	/**
-	 * Cache of resolved types per node, keyed by node ID. Replaced (never
-	 * mutated) after graph mutations.
+	 * Resolved types by node id, as seen from `path` (the active one by
+	 * default). Replaced (never mutated) after graph mutations.
 	 */
-	get typeCache(): Map<string, ResolvedTypes> {
-		return this.state.typeCache;
+	typesAt(path: readonly string[] = this.path): Map<string, ResolvedTypes> {
+		return (
+			this.state.typeCaches.get(pathKey(path)) ??
+			this.state.typeCaches.get("") ??
+			new Map<string, ResolvedTypes>()
+		);
 	}
 
-	set typeCache(value: Map<string, ResolvedTypes>) {
-		this.state.typeCache = value;
+	/** Resolved types as seen from the active path. */
+	get typeCache(): Map<string, ResolvedTypes> {
+		return this.typesAt();
 	}
 
 	/** Shortcut for the root document. Always exists after construction. */
@@ -170,9 +266,10 @@ export abstract class GraphModelBase {
 	 * definitions next to it (so group nodes can reference them), and rebuild
 	 * the type resolver and type cache for the new definitions.
 	 */
-	protected setProject(project: GraphProject) {
+	protected setProject(project: GraphProject, { keepScreen = false } = {}) {
 		this.project = hydrateProject(project, () => this.createDocument());
 		this.state.settings = project.settings ?? defaultSettings();
+		const screen = keepScreen ? this.screen : (project.layout ?? defaultScreen());
 		for (const entry of this.library) this.registerLibraryEntry(entry.ref, entry);
 		this.registerLibraryRefs();
 		this.typeResolver = new TypeResolver(
@@ -180,6 +277,7 @@ export abstract class GraphModelBase {
 			() => this.project.definitions,
 			(id) => this.getIncomingEdges(id),
 		);
+		this.setScreen(screen);
 		this.rebuildTypeCache();
 	}
 
@@ -201,11 +299,7 @@ export abstract class GraphModelBase {
 		this.project.definitions = new Map(
 			[...this.project.definitions].filter(([key]) => !removed.has(key)),
 		);
-		const inPath = this.path.some((nodeId) => {
-			const ref = this.root.nodesById.get(nodeId)?.group?.definitionRef;
-			return ref !== undefined && removed.has(ref);
-		});
-		if (inPath) this.path = [];
+		this.setScreen(this.screen);
 	}
 
 	protected setContent(
@@ -231,6 +325,14 @@ export abstract class GraphModelBase {
 		return undefined;
 	}
 
+	/** The document holding a node, anywhere in the project. */
+	protected documentOf(nodeId: string): HydratedGraphDocument | undefined {
+		for (const doc of this.project.definitions.values()) {
+			if (doc.nodesById.has(nodeId)) return doc;
+		}
+		return undefined;
+	}
+
 	/**
 	 * Find all edges targeting a node across the entire project.
 	 * Used by TypeResolver for recursive type inference.
@@ -247,14 +349,14 @@ export abstract class GraphModelBase {
 	 * Walk the breadcrumb path, yielding (node, definition) at each step.
 	 * Stops early if a step is invalid (missing node or definition).
 	 */
-	protected *walkPath(): Generator<{
+	protected *walkPath(path: readonly string[] = this.path): Generator<{
 		node: GraphNode;
 		group: NonNullable<GraphNode["group"]>;
 		definition: HydratedGraphDocument;
 		nodeId: string;
 	}> {
 		let current: HydratedGraphDocument = this.root;
-		for (const nodeId of this.path) {
+		for (const nodeId of path) {
 			const node = current.nodesById.get(nodeId);
 			if (!node?.group) return;
 			const definition = this.project.definitions.get(node.group.definitionRef);
@@ -264,26 +366,36 @@ export abstract class GraphModelBase {
 		}
 	}
 
-	get activeDocument(): HydratedGraphDocument {
+	/** The document `path` leads to; the root when it leads nowhere. */
+	documentAt(path: readonly string[]): HydratedGraphDocument {
 		let current: HydratedGraphDocument = this.root;
 		let steps = 0;
-		for (const { definition } of this.walkPath()) {
+		for (const { definition } of this.walkPath(path)) {
 			current = definition;
 			steps++;
 		}
-		// If the walk didn't consume the entire path, the path is invalid — reset
-		if (steps !== this.path.length) {
-			this.path = [];
-			return this.root;
+		return steps === path.length ? current : this.root;
+	}
+
+	/** The key in `project.definitions` of the document `path` leads to. */
+	definitionRefAt(path: readonly string[]): string {
+		let ref = ROOT_ID;
+		let steps = 0;
+		for (const { group } of this.walkPath(path)) {
+			ref = group.definitionRef;
+			steps++;
 		}
-		return current;
+		return steps === path.length ? ref : ROOT_ID;
+	}
+
+	/** The document the active graph area views. */
+	get activeDocument(): HydratedGraphDocument {
+		return this.documentAt(this.path);
 	}
 
 	/** The key of the active document in `project.definitions`. */
 	get activeDefinitionRef(): string {
-		let ref = ROOT_ID;
-		for (const { group } of this.walkPath()) ref = group.definitionRef;
-		return ref;
+		return this.definitionRefAt(this.path);
 	}
 
 	resolveDescriptor(node: GraphNode): NodeDescriptor {
@@ -346,28 +458,44 @@ export abstract class GraphModelBase {
 		return targetInputDef.types.some((t) => isConnectionCompatible(sourceType, t));
 	}
 
-	/** Replace the data of some nodes of the active document (reactively). */
+	/** Replace the data of some nodes, in whichever documents hold them (reactively). */
 	protected patchNodeData(patches: Map<string, NodeData>) {
-		const doc = this.activeDocument;
-		doc.nodes = doc.nodes.map((n) => {
-			const data = patches.get(n.id);
-			return data ? { ...n, data } : n;
-		});
-		indexDocument(doc);
+		const docs = new Set(
+			[...patches.keys()]
+				.map((id) => this.documentOf(id))
+				.filter((doc): doc is HydratedGraphDocument => doc !== undefined),
+		);
+		for (const doc of docs) {
+			doc.nodes = doc.nodes.map((n) => {
+				const data = patches.get(n.id);
+				return data ? { ...n, data } : n;
+			});
+			indexDocument(doc);
+		}
 	}
 
-	/** Whether the currently-viewed subgraph (or any of its ancestors) is locked. */
-	get isLocked(): boolean {
-		for (const { group } of this.walkPath()) {
+	/** Whether the subgraph `path` leads to (or any of its ancestors) is locked. */
+	isLockedAt(path: readonly string[]): boolean {
+		for (const { group } of this.walkPath(path)) {
 			if (group.locked) return true;
 		}
 		return false;
 	}
 
-	/** Labels for each segment of the breadcrumb path, suitable for rendering. */
+	/** Whether the active subgraph (or any of its ancestors) is locked. */
+	get isLocked(): boolean {
+		return this.isLockedAt(this.path);
+	}
+
+	/** Labels for each segment of the active breadcrumb path. */
 	get pathLabels(): { id: string; label: string; locked: boolean }[] {
+		return this.pathLabelsAt(this.path);
+	}
+
+	/** Labels for each segment of a breadcrumb path, suitable for rendering. */
+	pathLabelsAt(path: readonly string[]): { id: string; label: string; locked: boolean }[] {
 		const labels: { id: string; label: string; locked: boolean }[] = [];
-		for (const { node, definition, nodeId } of this.walkPath()) {
+		for (const { node, definition, nodeId } of this.walkPath(path)) {
 			if (node.type === "node-group") {
 				labels.push({
 					id: nodeId,
@@ -534,7 +662,7 @@ export abstract class GraphModelBase {
 	 * Resolve the effective type for an input handle on a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveInputType(nodeId: string, inputId: string): WgslType {
+	resolveInputType(nodeId: string, inputId: string, path?: readonly string[]): WgslType {
 		const node = this.resolveNode(nodeId);
 		if (!node) return "f32";
 
@@ -542,60 +670,49 @@ export abstract class GraphModelBase {
 		const inputDef = descriptor.inputs.find((i) => i.id === inputId);
 		if (!inputDef) return "f32";
 
-		// Check cache first
-		const cached = this.typeCache.get(nodeId);
-		if (cached) {
-			return cached.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
-		}
-
-		// Fallback: compute on the fly (shouldn't happen after initial cache build)
-		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(
-			node,
-			incoming,
-			this.lookup,
-			this.viewBindings(node.id),
-		);
+		const result = this.typesOf(node, path);
 		return result.inputTypes[inputId] ?? inputDef.types[0] ?? "f32";
+	}
+
+	/**
+	 * A node's types as seen from `path` (the active one by default): cached,
+	 * or computed on the fly for a node not cached yet.
+	 */
+	private typesOf(node: GraphNode, path: readonly string[] = this.path): ResolvedTypes {
+		const cached = this.typesAt(path).get(node.id);
+		if (cached) return cached;
+		return this.typeResolver.resolveNodeTypes(
+			node,
+			this.getIncomingEdges(node.id),
+			this.lookup,
+			this.viewBindings(node.id, path),
+		);
 	}
 
 	/**
 	 * Resolve the output type for a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveNodeOutputType(nodeId: string): WgslType {
-		const cached = this.typeCache.get(nodeId);
-		if (cached) return cached.outputType;
-
-		// Fallback: compute on the fly
+	resolveNodeOutputType(nodeId: string, path?: readonly string[]): WgslType {
 		const node = this.resolveNode(nodeId);
-		if (!node) return "f32";
-		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(
-			node,
-			incoming,
-			this.lookup,
-			this.viewBindings(node.id),
-		);
-		return result.outputType;
+		return node ? this.typesOf(node, path).outputType : "f32";
 	}
 
 	/**
 	 * The type an input would get from its links alone, ignoring the type the
 	 * user forced on the node.
 	 */
-	resolveInferredInputType(nodeId: string, inputId: string): WgslType {
-		const forced = this.resolveInputType(nodeId, inputId); // also tracks the type cache
+	resolveInferredInputType(nodeId: string, inputId: string, path?: readonly string[]): WgslType {
+		const forced = this.resolveInputType(nodeId, inputId, path); // also tracks the type cache
 		const node = this.resolveNode(nodeId);
 		if (!node?.data.types) return forced;
 		const data = { ...node.data, types: undefined };
-		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
 		const result = this.typeResolver.resolveNodeTypesUncached(
 			node,
-			incoming,
+			this.getIncomingEdges(nodeId),
 			data,
 			this.lookup,
-			this.viewBindings(node.id),
+			this.viewBindings(node.id, path),
 		);
 		return result.inputTypes[inputId] ?? forced;
 	}
@@ -604,51 +721,29 @@ export abstract class GraphModelBase {
 	 * Resolve the type carried by one output handle of a node.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveOutputHandleType(nodeId: string, handleId: string): WgslType {
-		const outputs = this.resolveNodeOutputs(nodeId);
-		return outputs.find((o) => o.id === handleId)?.type ?? this.resolveNodeOutputType(nodeId);
+	resolveOutputHandleType(nodeId: string, handleId: string, path?: readonly string[]): WgslType {
+		const outputs = this.resolveNodeOutputs(nodeId, path);
+		return (
+			outputs.find((o) => o.id === handleId)?.type ?? this.resolveNodeOutputType(nodeId, path)
+		);
 	}
 
 	/**
 	 * Resolve the active inputs for a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveNodeInputs(nodeId: string): NodeInputDef[] {
-		const cached = this.typeCache.get(nodeId);
-		if (cached) return cached.resolvedInputs;
-
-		// Fallback: compute on the fly
+	resolveNodeInputs(nodeId: string, path?: readonly string[]): NodeInputDef[] {
 		const node = this.resolveNode(nodeId);
-		if (!node) return [];
-		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(
-			node,
-			incoming,
-			this.lookup,
-			this.viewBindings(node.id),
-		);
-		return result.resolvedInputs;
+		return node ? this.typesOf(node, path).resolvedInputs : [];
 	}
 
 	/**
 	 * Resolve the active outputs for a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveNodeOutputs(nodeId: string): NodeOutputDef[] {
-		const cached = this.typeCache.get(nodeId);
-		if (cached) return cached.resolvedOutputs;
-
-		// Fallback: compute on the fly
+	resolveNodeOutputs(nodeId: string, path?: readonly string[]): NodeOutputDef[] {
 		const node = this.resolveNode(nodeId);
-		if (!node) return [];
-		const incoming = this.activeDocument.edgesByTarget.get(nodeId) ?? [];
-		const result = this.typeResolver.resolveNodeTypes(
-			node,
-			incoming,
-			this.lookup,
-			this.viewBindings(node.id),
-		);
-		return result.resolvedOutputs;
+		return node ? this.typesOf(node, path).resolvedOutputs : [];
 	}
 
 	/**
@@ -665,19 +760,27 @@ export abstract class GraphModelBase {
 			allEdges,
 		);
 
-		// Recompute types for all invalidated nodes
-		for (const nodeId of invalidated) {
-			const node = this.resolveNode(nodeId);
-			if (!node) continue;
-			const incoming = allEdges.filter((e) => e.target === nodeId);
-			const result = this.typeResolver.resolveNodeTypes(
-				node,
-				incoming,
-				this.lookup,
-				this.viewBindings(node.id),
-			);
-			this.typeCache.set(nodeId, result);
+		// Recompute types for all invalidated nodes, as seen from every path viewed.
+		const caches = new Map<string, Map<string, ResolvedTypes>>();
+		for (const path of this.viewedPaths()) {
+			const cache = new Map(this.typesAt(path));
+			for (const nodeId of invalidated) {
+				const node = this.resolveNode(nodeId);
+				if (!node) continue;
+				const incoming = allEdges.filter((e) => e.target === nodeId);
+				cache.set(
+					nodeId,
+					this.typeResolver.resolveNodeTypes(
+						node,
+						incoming,
+						this.lookup,
+						this.viewBindings(node.id, path),
+					),
+				);
+			}
+			caches.set(pathKey(path), cache);
 		}
+		this.state.typeCaches = caches;
 
 		// Disconnect edges to outputs/inputs that no longer exist
 		// (e.g. separate vec3f → vec2f drops z output; declare vec3f → f32 drops y/w inputs)
@@ -705,24 +808,21 @@ export abstract class GraphModelBase {
 			}
 		}
 
-		// Trigger reactivity by creating a new Map reference
-		this.typeCache = new Map(this.typeCache);
+		this.state.typeCaches = new Map(this.state.typeCaches);
+		this.refreshViewTypes();
 	}
 
 	private lookup = (id: string) => this.resolveNode(id);
 
-	/** The `bindingsKey` each document's nodes are in `typeCache` with. */
-	private viewKeys = new Map<string, string>();
-
 	/**
-	 * The variables' types of the groups on the breadcrumb path, by
+	 * The variables' types of the groups on a breadcrumb path, by
 	 * definitionRef: those of the group node each was entered through.
 	 */
-	protected pathBindings(): Map<string, TypeBindings> {
+	protected pathBindings(path: readonly string[] = this.path): Map<string, TypeBindings> {
 		const bound = new Map<string, TypeBindings>();
 		let bindings: TypeBindings = {};
 		let doc = this.root;
-		for (const { node, group, definition } of this.walkPath()) {
+		for (const { node, group, definition } of this.walkPath(path)) {
 			const incoming = doc.edgesByTarget.get(node.id) ?? [];
 			bindings =
 				this.typeResolver.resolveNodeTypes(node, incoming, this.lookup, bindings)
@@ -733,40 +833,82 @@ export abstract class GraphModelBase {
 		return bound;
 	}
 
-	/** The variables' types a node's document is viewed with (see `pathBindings`). */
-	viewBindings(nodeId: string): TypeBindings {
-		const viewed = this.pathBindings();
+	/** The variables' types a node's document is viewed with from `path` (see `pathBindings`). */
+	viewBindings(nodeId: string, path: readonly string[] = this.path): TypeBindings {
+		const viewed = this.pathBindings(path);
 		for (const [ref, bindings] of viewed) {
 			if (this.project.definitions.get(ref)?.nodesById.has(nodeId)) return bindings;
 		}
 		return {};
 	}
 
-	/** Re-resolve the documents viewed with other variables' types than before. */
-	private refreshViewTypes() {
-		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a project being set may reset the path before its resolver exists
-		if (!this.typeResolver) return;
-		const viewed = this.pathBindings();
-		let changed = false;
-		for (const [ref, doc] of this.project.definitions) {
-			const bindings = viewed.get(ref) ?? {};
-			const key = bindingsKey(bindings);
-			if (this.viewKeys.get(ref) === key) continue;
-			this.viewKeys.set(ref, key);
+	/** The paths types are kept for: the root's, the graph areas' and the active one. */
+	private viewedPaths(): string[][] {
+		const paths = new Map<string, string[]>([["", []]]);
+		for (const area of this.graphAreas())
+			paths.set(pathKey(area.editor.path), area.editor.path);
+		paths.set(pathKey(this.path), this.path);
+		return [...paths.values()];
+	}
+
+	/**
+	 * Types as seen from `path`: the root's for documents viewed without
+	 * variables bound, computed for those its groups bind.
+	 */
+	private computeTypesAt(path: readonly string[], root: Map<string, ResolvedTypes>) {
+		const cache = new Map(root);
+		for (const [ref, bindings] of this.pathBindings(path)) {
+			const doc = this.project.definitions.get(ref);
+			if (!doc || bindingsKey(bindings) === bindingsKey({})) continue;
 			const resolved = this.typeResolver.computeAll(
 				doc.nodes,
 				doc.edges,
 				this.lookup,
 				bindings,
 			);
-			for (const [nodeId, result] of resolved) this.typeCache.set(nodeId, result);
-			changed = true;
+			for (const [nodeId, result] of resolved) cache.set(nodeId, result);
 		}
-		if (changed) this.typeCache = new Map(this.typeCache);
+		return cache;
+	}
+
+	/** The variables' types each path's cache was computed with, by `pathKey`. */
+	private viewSignatures = new Map<string, string>();
+
+	private bindingsSignature(path: readonly string[]): string {
+		return [...this.pathBindings(path)].map(([ref, b]) => `${ref}:${bindingsKey(b)}`).join("|");
 	}
 
 	/**
-	 * Rebuild the entire type cache from scratch. Called on project load
+	 * Keep types for the paths viewed now: computing those of new paths and
+	 * of paths whose groups now bind other types, dropping the rest.
+	 */
+	private refreshViewTypes() {
+		// eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- a project being set lays the screen out before its resolver exists
+		if (!this.typeResolver) return;
+		const root = this.state.typeCaches.get("");
+		if (!root) return;
+		const caches = new Map<string, Map<string, ResolvedTypes>>([["", root]]);
+		const signatures = new Map<string, string>();
+		let changed = false;
+		for (const path of this.viewedPaths()) {
+			const key = pathKey(path);
+			if (key === "") continue;
+			const signature = this.bindingsSignature(path);
+			signatures.set(key, signature);
+			const existing = this.state.typeCaches.get(key);
+			if (existing && this.viewSignatures.get(key) === signature) {
+				caches.set(key, existing);
+			} else {
+				caches.set(key, this.computeTypesAt(path, root));
+				changed = true;
+			}
+		}
+		this.viewSignatures = signatures;
+		if (changed || caches.size !== this.state.typeCaches.size) this.state.typeCaches = caches;
+	}
+
+	/**
+	 * Rebuild every type cache from scratch. Called on project load
 	 * and when the document structure changes fundamentally.
 	 */
 	rebuildTypeCache(): void {
@@ -775,25 +917,14 @@ export abstract class GraphModelBase {
 		// Clear the TypeResolver's memoisation cache so every node is recomputed
 		this.typeResolver.clearCache();
 
-		this.typeCache = new Map();
-
-		// Compute types for all nodes across all documents, as viewed.
-		const viewed = this.pathBindings();
-		this.viewKeys = new Map();
-		for (const [ref, doc] of this.project.definitions) {
-			const bindings = viewed.get(ref) ?? {};
-			this.viewKeys.set(ref, bindingsKey(bindings));
-			const resolved = this.typeResolver.computeAll(
-				doc.nodes,
-				doc.edges,
-				this.lookup,
-				bindings,
-			);
-			for (const [nodeId, result] of resolved) this.typeCache.set(nodeId, result);
+		const root = new Map<string, ResolvedTypes>();
+		for (const doc of this.project.definitions.values()) {
+			const resolved = this.typeResolver.computeAll(doc.nodes, doc.edges, this.lookup, {});
+			for (const [nodeId, result] of resolved) root.set(nodeId, result);
 		}
-
-		// Trigger reactivity
-		this.typeCache = new Map(this.typeCache);
+		this.state.typeCaches = new Map([["", root]]);
+		this.viewSignatures = new Map();
+		this.refreshViewTypes();
 	}
 
 	/**
@@ -814,13 +945,13 @@ export abstract class GraphModelBase {
 	// ── Node data edits ─────────────────────────────────────────────────────────
 
 	/**
-	 * Merge `patch` into a node's data in the active document (`undefined`
+	 * Merge `patch` into a node's data, in its document (`undefined`
 	 * clears a field). The node object is replaced, never mutated, so front
 	 * ends notice. Types are re-resolved unless `retype` is false (plain value
 	 * edits, e.g. while scrubbing).
 	 */
 	updateNodeData(nodeId: string, patch: Partial<NodeData>, { retype = true } = {}) {
-		const node = this.activeDocument.nodesById.get(nodeId);
+		const node = this.resolveNode(nodeId);
 		if (!node) return;
 		const data: NodeData = { ...node.data, ...patch };
 		this.patchNodeData(new Map([[nodeId, data]]));
@@ -829,7 +960,7 @@ export abstract class GraphModelBase {
 
 	/** Set the value an input holds while unlinked (`undefined` clears it). */
 	setInputValue(nodeId: string, inputId: string, value: InputValue | undefined) {
-		const node = this.activeDocument.nodesById.get(nodeId);
+		const node = this.resolveNode(nodeId);
 		if (!node) return;
 		const values = withEntry(node.data.values, inputId, value);
 		const widget = this.resolveDescriptor(node).widget;
@@ -861,9 +992,7 @@ export abstract class GraphModelBase {
 			];
 		const from = modeOf(node.data.values);
 		const to = modeOf(values);
-		const linked = new Set(
-			(this.activeDocument.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle),
-		);
+		const linked = new Set(this.getIncomingEdges(node.id).map((e) => e.targetHandle));
 		if (!from || !to || from === to) return values;
 		if ([...from.components, ...to.components].some((c) => linked.has(c))) return values;
 		const read = (c: string) => readComponent(values?.[c] ?? defaults?.[c], "_");
@@ -883,7 +1012,7 @@ export abstract class GraphModelBase {
 
 	/** Pick an option of one of the node's settings. */
 	setSetting(nodeId: string, key: string, value: string) {
-		const node = this.activeDocument.nodesById.get(nodeId);
+		const node = this.resolveNode(nodeId);
 		if (!node) return;
 		this.updateNodeData(nodeId, { settings: withEntry(node.data.settings, key, value) });
 	}

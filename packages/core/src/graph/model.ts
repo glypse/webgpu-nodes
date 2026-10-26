@@ -95,8 +95,8 @@ export class GraphModel extends CustomWgslModel {
 	}
 
 	/**
-	 * Restore a content snapshot, keeping each document's camera and as much
-	 * of the breadcrumb path as still exists.
+	 * Restore a content snapshot, keeping each document's camera, the panels,
+	 * and as much of the graph areas' paths as still exists.
 	 */
 	private restoreSnapshot(snapshot: string) {
 		const parsed = v.safeParse(GraphProjectSchema, JSON.parse(snapshot));
@@ -107,23 +107,10 @@ export class GraphModel extends CustomWgslModel {
 		const viewports = new Map(
 			[...this.project.definitions.entries()].map(([key, doc]) => [key, doc.viewport]),
 		);
-		const path = this.path;
-		this.setProject(parsed.output);
+		this.setProject(parsed.output, { keepScreen: true });
 		for (const [key, doc] of this.project.definitions) {
 			doc.viewport ??= viewports.get(key);
 		}
-
-		const validPath: string[] = [];
-		let current = this.root;
-		for (const nodeId of path) {
-			const node = current.nodesById.get(nodeId);
-			const definition =
-				node?.group && this.project.definitions.get(node.group.definitionRef);
-			if (!definition) break;
-			validPath.push(nodeId);
-			current = definition;
-		}
-		this.path = validPath;
 		this.selectedNodeIds = [];
 		// Hydration may normalise the content (e.g. fill in default data):
 		// that normalised form is the state we're now at.
@@ -388,8 +375,7 @@ export class GraphModel extends CustomWgslModel {
 	}
 
 	set nodes(value: GraphNode[]) {
-		this.activeDocument.nodes = value;
-		indexDocument(this.activeDocument);
+		this.setDocumentNodes(this.activeDefinitionRef, value);
 	}
 
 	get edges(): GraphEdge[] {
@@ -397,8 +383,23 @@ export class GraphModel extends CustomWgslModel {
 	}
 
 	set edges(value: GraphEdge[]) {
-		this.activeDocument.edges = value;
-		indexDocument(this.activeDocument);
+		this.setDocumentEdges(this.activeDefinitionRef, value);
+	}
+
+	/** Replace a document's nodes (e.g. as a canvas moves or selects them). */
+	setDocumentNodes(definitionRef: string, nodes: GraphNode[]) {
+		const doc = this.project.definitions.get(definitionRef);
+		if (!doc) return;
+		doc.nodes = nodes;
+		indexDocument(doc);
+	}
+
+	/** Replace a document's edges, re-resolving types. */
+	setDocumentEdges(definitionRef: string, edges: GraphEdge[]) {
+		const doc = this.project.definitions.get(definitionRef);
+		if (!doc) return;
+		doc.edges = edges;
+		indexDocument(doc);
 		this.rebuildTypeCache();
 	}
 
@@ -411,14 +412,16 @@ export class GraphModel extends CustomWgslModel {
 		}
 		await this.fetchArchivedVersions(Object.values(parsed.output.definitions));
 		this.setProject(parsed.output);
-		this.path = [];
 		this.markSaved();
 		this.history.reset(this.contentSnapshot());
 
 		return true;
 	}
 
-	/** The project as saved: the user's documents, the standard library being the app's own. */
+	/**
+	 * The project as saved: the user's documents (the standard library being
+	 * the app's own), its settings and its panels.
+	 */
 	getProjectJson(): string {
 		const definitions = Object.fromEntries(
 			[...this.project.definitions.entries()]
@@ -428,7 +431,7 @@ export class GraphModel extends CustomWgslModel {
 					serialiseDocument(definition, { viewport: true }),
 				]),
 		);
-		const project: GraphProject = { definitions, settings: this.settings };
+		const project: GraphProject = { definitions, settings: this.settings, layout: this.screen };
 		return JSON.stringify(project, null, "\t");
 	}
 
@@ -490,7 +493,7 @@ export class GraphModel extends CustomWgslModel {
 	 * user forced (if any) and the type its links infer. Undefined for nodes
 	 * without a choice of types.
 	 */
-	typeChoice(nodeId: string): TypeChoice | undefined {
+	typeChoice(nodeId: string, path?: readonly string[]): TypeChoice | undefined {
 		const node = this.resolveNode(nodeId);
 		// Group nodes and their boundaries take their types from the group's variables.
 		if (!node || node.type === "node-group" || BOUNDARY_TYPES.has(node.type ?? "")) {
@@ -507,16 +510,16 @@ export class GraphModel extends CustomWgslModel {
 			inferable: !family && types.length > 1,
 			forced: node.data.types?.[family?.key ?? familyKey(types)],
 			inferred: family
-				? this.resolveNodeOutputType(nodeId)
+				? this.resolveNodeOutputType(nodeId, path)
 				: primary
-					? this.resolveInferredInputType(nodeId, primary.id)
+					? this.resolveInferredInputType(nodeId, primary.id, path)
 					: "f32",
 		};
 	}
 
 	/** Force a node's type (see `typeChoice`), or go back to inference with `undefined`. */
 	setNodeType(nodeId: string, type: WgslType | undefined) {
-		const node = this.activeDocument.nodesById.get(nodeId);
+		const node = this.resolveNode(nodeId);
 		const choice = this.typeChoice(nodeId);
 		if (!node || !choice) return;
 		const key = this.resolveDescriptor(node).typeFamily?.key ?? familyKey(choice.types);

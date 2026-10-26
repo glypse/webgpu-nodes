@@ -226,9 +226,9 @@ describe("curve node", () => {
 
 	it("keeps the shader while points move, reading them from uniforms", () => {
 		const graph = managerFor([curveNode()], [["c", "result", "out", "color"]]);
-		const before = generateShader(graph, { uniformScope: ROOT_ID });
+		const before = generateShader(graph, { uniformScopes: [ROOT_ID] });
 		graph.setCurve("c", moveCurvePoint(LINEAR_CURVE, 1, 1, 0.5));
-		const after = generateShader(graph, { uniformScope: ROOT_ID });
+		const after = generateShader(graph, { uniformScopes: [ROOT_ID] });
 		expect(after.shader).toBe(before.shader);
 		const end = after.uniforms.u_c_segment0b;
 		expect(Array.isArray(end) ? end.map((n) => n.toFixed(4)) : end).toEqual([

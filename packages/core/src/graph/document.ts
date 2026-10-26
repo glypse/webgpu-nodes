@@ -1,3 +1,4 @@
+import type { Screen } from "../screen/screen";
 import type { NodeData, NodeWidget, TypeVariable } from "../types";
 import type { ProjectSettings } from "./settings";
 
@@ -57,6 +58,8 @@ export type GraphProject = {
 	definitions: Record<string, GraphDocument>;
 	/** Defaults when absent (see `defaultSettings`). */
 	settings?: ProjectSettings;
+	/** The editor panels it was saved with; the default layout when absent. */
+	layout?: Screen;
 };
 
 // ── In-memory (hydrated) types ───────────────────────────────────────────────

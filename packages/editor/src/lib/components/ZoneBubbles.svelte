@@ -3,10 +3,12 @@
 	import { ViewportPortal, type Node } from "@xyflow/svelte";
 	import { onMount } from "svelte";
 
+	import { getDocumentView } from "../document-view";
 	import { boundaryPoints, bubblePath, type Rect } from "../geometry/zone-geometry";
 	import { getGraphManager } from "../graph-manager.svelte";
 
 	const graph = getGraphManager();
+	const view = getDocumentView();
 
 	/** Base distance between a zone's nodes and its outline. */
 	const PADDING = 28;
@@ -39,12 +41,12 @@
 	});
 
 	/**
-	 * One bubble per zone of the active document, outermost first so inner
+	 * One bubble per zone of the document in view, outermost first so inner
 	 * bubbles are painted on top. Derived from the zone analysis (the same one
 	 * codegen uses) and the nodes' current positions.
 	 */
 	const bubbles = $derived.by(() => {
-		const doc = graph.activeDocument;
+		const doc = view.document;
 		const nodes = doc.nodes;
 		const { zones } = graph.zoneAnalysis(doc);
 

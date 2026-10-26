@@ -856,14 +856,6 @@ export abstract class GroupModel extends ZoneModel {
 		return { inputs, outputs };
 	}
 
-	/** The document holding a node, anywhere in the project. */
-	protected documentOf(nodeId: string): HydratedGraphDocument | undefined {
-		for (const doc of this.project.definitions.values()) {
-			if (doc.nodesById.has(nodeId)) return doc;
-		}
-		return undefined;
-	}
-
 	/** The enum values a group node sets itself (see `groupConstants`), by handle id. */
 	protected instanceEnumValues(node: GraphNode): Map<string, number> {
 		const doc = this.documentOf(node.id);
@@ -1135,7 +1127,10 @@ export abstract class GroupModel extends ZoneModel {
 	 * A group node's type variables: the type each takes, the one forced on
 	 * the node if any, and whether links can decide it (it has input sockets).
 	 */
-	variableChoices(nodeId: string): {
+	variableChoices(
+		nodeId: string,
+		path?: readonly string[],
+	): {
 		variable: TypeVariable;
 		type: WgslType;
 		inferred: WgslType;
@@ -1147,11 +1142,11 @@ export abstract class GroupModel extends ZoneModel {
 		if (!node || !def) return [];
 		const doc = this.documentOf(nodeId);
 		const incoming = doc?.edgesByTarget.get(nodeId) ?? [];
-		const bindings = this.viewBindings(nodeId);
+		const bindings = this.viewBindings(nodeId, path);
 		const lookup = (id: string) => this.resolveNode(id);
 		// The type cache keeps front ends following types decided upstream.
 		const resolved =
-			this.typeCache.get(nodeId) ??
+			this.typesAt(path).get(nodeId) ??
 			this.typeResolver.resolveNodeTypes(node, incoming, lookup, bindings);
 		const unforced = this.typeResolver.resolveNodeTypesUncached(
 			node,
@@ -1181,7 +1176,7 @@ export abstract class GroupModel extends ZoneModel {
 
 	/** Force a group node's type variable to `type`, or back to inference with `undefined`. */
 	setVariableType(nodeId: string, variableId: string, type: WgslType | undefined) {
-		const node = this.activeDocument.nodesById.get(nodeId);
+		const node = this.resolveNode(nodeId);
 		if (node?.type !== "node-group") return;
 		this.updateNodeData(nodeId, { types: withEntry(node.data.types, variableId, type) });
 	}

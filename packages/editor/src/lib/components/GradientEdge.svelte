@@ -36,12 +36,14 @@
 		}),
 	);
 
-	const sourceType = $derived(graph.resolveOutputHandleType(source, sourceHandleId ?? ""));
+	const sourceType = $derived(
+		graph.resolveOutputHandleType(source, sourceHandleId ?? "", view.path),
+	);
 
 	const targetType = $derived.by(() => {
 		const node = graph.resolveNode(target);
 		if (!node) return "f32";
-		return graph.resolveInputType(target, targetHandleId ?? "");
+		return graph.resolveInputType(target, targetHandleId ?? "", view.path);
 	});
 
 	/** Links between two reroutes get a direction arrow at their middle. */

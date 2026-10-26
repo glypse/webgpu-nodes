@@ -4,18 +4,21 @@
 	import { on } from "svelte/events";
 
 	import { getGraphManager } from "../graph-manager.svelte";
-	import type { Point } from "../preview-view.svelte";
+	import { type Point, PreviewView } from "../preview-view.svelte";
 	import { getPreview } from "../preview.svelte";
+	import AreaHeader from "./AreaHeader.svelte";
 	import PreviewToolbar from "./PreviewToolbar.svelte";
+
+	let { areaId }: { areaId: string } = $props();
 
 	const graph = getGraphManager();
 	const preview = getPreview();
-	const view = preview.view;
+	const view = new PreviewView();
+
+	$effect(() => preview.addArea(areaId, view));
 
 	let canvas = $state<HTMLCanvasElement>();
 	let pane = $state<HTMLDivElement>();
-	/** The pane's size in device pixels, which a canvas following the preview renders at. */
-	let devicePane = $state({ width: 0, height: 0 });
 	let hovered = $state(false);
 	let panning = $state<{ pointerId: number; last: Point } | null>(null);
 
@@ -32,7 +35,7 @@
 			if (!css || !device) return;
 			view.pane = { width: css.inlineSize, height: css.blockSize };
 			view.dpr = css.inlineSize > 0 ? device.inlineSize / css.inlineSize : 1;
-			devicePane = { width: device.inlineSize, height: device.blockSize };
+			preview.setPaneSize(areaId, { width: device.inlineSize, height: device.blockSize });
 		});
 		observer.observe(pane, { box: "device-pixel-content-box" });
 		return () => {
@@ -41,25 +44,10 @@
 	});
 
 	const followPreview = $derived(graph.settings.canvas.followPreview);
-	const resolution = $derived(
-		followPreview
-			? devicePane
-			: { width: graph.settings.canvas.width, height: graph.settings.canvas.height },
-	);
-
-	$effect(() => {
-		preview.configure(resolution, graph.settings.colorSpace);
-	});
 
 	// Following the preview, the canvas fills it: start from there.
 	$effect(() => {
 		if (followPreview) view.fit();
-	});
-
-	const fps = $derived(graph.settings.timing.fps);
-	const realtime = $derived(graph.settings.timing.realtime);
-	$effect(() => {
-		preview.setTiming({ fps, realtime });
 	});
 
 	function pointIn(event: MouseEvent): Point {
@@ -140,6 +128,9 @@
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="flex size-full flex-col">
+	<AreaHeader {areaId}>
+		<PreviewToolbar {view} />
+	</AreaHeader>
 	<!-- Svelte Flow's classes, so the controls look like the graph's. -->
 	<div
 		bind:this={pane}
@@ -152,6 +143,9 @@
 		aria-label="Preview"
 		onpointerenter={() => (hovered = true)}
 		onpointerleave={() => (hovered = false)}
+		onpointerdowncapture={() => {
+			preview.activeArea = areaId;
+		}}
 		onpointerdown={handlePointerDown}
 		onpointermove={handlePointerMove}
 		onpointerup={handlePointerUp}
@@ -208,7 +202,6 @@
 			</div>
 		{/if}
 	</div>
-	<PreviewToolbar {resolution} />
 </div>
 
 <style>

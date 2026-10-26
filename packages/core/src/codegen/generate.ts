@@ -231,8 +231,8 @@ type ShaderState = {
 	groupDecls: Map<string, GroupDecl>;
 	/** Group output structs already declared, by name. */
 	groupStructs: Set<string>;
-	/** The definition whose input values are uniforms (see `ShaderOptions`). */
-	uniformScope: string | undefined;
+	/** The definitions whose input values are uniforms (see `ShaderOptions`). */
+	uniformScopes: ReadonlySet<string>;
 	uniforms: Map<string, UniformValue>;
 };
 
@@ -251,11 +251,11 @@ export type ShaderSource = { fragment: string; uniforms: Record<string, UniformV
 
 export type ShaderOptions = {
 	/**
-	 * The definition (`ROOT_ID` for the root) whose unlinked input values are
-	 * read from uniforms rather than written into the shader: editing them
-	 * then only changes the uniforms. Values of other documents stay literals.
+	 * The definitions (`ROOT_ID` for the root) whose unlinked input values
+	 * are read from uniforms rather than written into the shader: editing
+	 * them then only changes the uniforms. Values of other documents stay literals.
 	 */
-	uniformScope?: string;
+	uniformScopes?: Iterable<string>;
 };
 
 /**
@@ -706,7 +706,7 @@ function emitGroupFunction(
 		"group-output",
 		absentInputs,
 		constants,
-		state.uniformScope === definitionRef,
+		state.uniformScopes.has(definitionRef),
 		bindings,
 	);
 
@@ -758,14 +758,14 @@ function emitGroupFunction(
  */
 export function generateShader(
 	graph: CodegenGraph,
-	{ uniformScope }: ShaderOptions = {},
+	{ uniformScopes = [] }: ShaderOptions = {},
 ): { shader: string; lineMap: LineMap; uniforms: Record<string, UniformValue> } {
 	const state: ShaderState = {
 		graph,
 		helpers: new HelperRegistry(),
 		groupDecls: new Map(),
 		groupStructs: new Set(),
-		uniformScope,
+		uniformScopes: new Set(uniformScopes),
 		uniforms: new Map(),
 	};
 
@@ -775,7 +775,7 @@ export function generateShader(
 		"frag-output",
 		new Set(),
 		new Map(),
-		uniformScope === ROOT_ID,
+		state.uniformScopes.has(ROOT_ID),
 	);
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");
 	const result = output && body.lineMap.has(output.id) ? getVarName(output.id) : undefined;

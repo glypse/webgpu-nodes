@@ -8,6 +8,9 @@
 
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { getPreview } from "../preview.svelte";
+	import AreaHeader from "./AreaHeader.svelte";
+
+	let { areaId }: { areaId: string } = $props();
 
 	const graph = getGraphManager();
 	const preview = getPreview();
@@ -19,38 +22,10 @@
 		const rest = (seconds - minutes * 60).toFixed(2).padStart(5, "0");
 		return `${String(minutes)}:${rest}`;
 	}
-
-	function handleKeydown(event: KeyboardEvent) {
-		if (event.metaKey || event.ctrlKey || event.altKey) return;
-		const target = event.target as HTMLElement | null;
-		// A focused control keeps its own keys (Space presses a button).
-		if (target?.closest("input, textarea, select, button, [contenteditable], [role=menuitem]"))
-			return;
-		const actions: Record<string, () => void> = {
-			" ": () => {
-				preview.toggle();
-			},
-			",": () => {
-				preview.step(-1);
-			},
-			".": () => {
-				preview.step(1);
-			},
-			Home: () => {
-				preview.seek(0);
-			},
-		};
-		const action = actions[event.key];
-		if (!action) return;
-		event.preventDefault();
-		action();
-	}
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
-
 <div class="bg-background flex size-full flex-col">
-	<div class="flex h-10 shrink-0 items-center gap-1 border-b px-2 text-xs">
+	<AreaHeader {areaId}>
 		<Button
 			variant="ghost"
 			size="icon-sm"
@@ -123,5 +98,5 @@
 		>
 			{timing.fps} fps{timing.realtime ? " · real time" : ""}
 		</Button>
-	</div>
+	</AreaHeader>
 </div>

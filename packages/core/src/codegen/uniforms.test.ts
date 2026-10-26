@@ -11,7 +11,7 @@ const toOutput: TestEdge[] = [["s", "result", "out", "color"]];
 describe("uniforms", () => {
 	it("reads the scoped document's values from uniforms", () => {
 		const { shader, uniforms } = generateShader(managerFor(sine, toOutput), {
-			uniformScope: ROOT_ID,
+			uniformScopes: [ROOT_ID],
 		});
 		expect(shader).toContain("sin(runtime_uniforms.u_s_e)");
 		expect(uniforms).toMatchObject({ u_s_e: 2 });
@@ -20,9 +20,9 @@ describe("uniforms", () => {
 
 	it("keeps the shader when only a value changes", () => {
 		const graph = managerFor(sine, toOutput);
-		const before = generateShader(graph, { uniformScope: ROOT_ID });
+		const before = generateShader(graph, { uniformScopes: [ROOT_ID] });
 		graph.setInputValue("s", "e", 5);
-		const after = generateShader(graph, { uniformScope: ROOT_ID });
+		const after = generateShader(graph, { uniformScopes: [ROOT_ID] });
 		expect(after.shader).toBe(before.shader);
 		expect(after.uniforms).toMatchObject({ u_s_e: 5 });
 	});
@@ -51,7 +51,7 @@ describe("uniforms", () => {
 			["sw", "result", "out", "color"],
 		];
 		const { shader, uniforms } = generateShader(managerFor(nodes, edges), {
-			uniformScope: ROOT_ID,
+			uniformScopes: [ROOT_ID],
 		});
 		expect(uniforms).toMatchObject({ u_i_x: 1, u_i_y: -2, u_u_x: 0, u_b_e: 1 });
 		expect(shader).toContain("i32(runtime_uniforms.u_i_y)");
@@ -65,7 +65,7 @@ describe("uniforms", () => {
 		graph.groupSelection(new Set(["s"]));
 		const group = graph.root.nodes.find((n) => n.type === "node-group");
 		const ref = group?.group?.definitionRef ?? "";
-		const { shader, uniforms } = generateShader(graph, { uniformScope: ref });
+		const { shader, uniforms } = generateShader(graph, { uniformScopes: [ref] });
 		expect(Object.keys(uniforms)).toEqual(["u_s_e"]);
 		expect(shader).toMatch(/fn group_[^]*runtime_uniforms\.u_s_e[^]*fn frag/);
 		if (nagaBin) expect(validateFragment(shader, uniforms)).toBeNull();

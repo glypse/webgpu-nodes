@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import { COLOR_MODES } from "../color/modes";
 import { CURVE_POINT_KINDS } from "../curve";
+import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, WGSL_TYPES } from "../types";
 import { ProjectSettingsSchema, defaultSettings } from "./settings";
 
@@ -95,12 +96,6 @@ const GraphDocumentEdgeSchema = v.object({
 	targetHandle: v.string(),
 });
 
-const ViewportSchema = v.object({
-	x: v.number(),
-	y: v.number(),
-	zoom: v.number(),
-});
-
 export const GraphDocumentSchema = v.object({
 	nodes: v.array(GraphDocumentNodeSchema),
 	edges: v.array(GraphDocumentEdgeSchema),
@@ -113,6 +108,7 @@ export const GraphDocumentSchema = v.object({
 export const GraphProjectSchema = v.object({
 	definitions: v.record(v.string(), GraphDocumentSchema),
 	settings: v.optional(ProjectSettingsSchema, defaultSettings),
+	layout: v.optional(ScreenSchema),
 });
 
 /** A group exported on its own (see `GraphModel.exportGroupFiles`). */

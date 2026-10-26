@@ -2,14 +2,11 @@
 	import {
 		addMenuEntries,
 		type AddMenuEntry,
-		generateShader,
 		type HydratedGraphDocument,
 		type HydratedGraphProject,
 		isZoneNodeType,
 		type NodeGeometry,
 		type PendingConnection,
-		type ShaderSource,
-		reachableShaderHash,
 	} from "$core";
 
 	import "../styles/xy-theme.css";
@@ -29,17 +26,15 @@
 	import { tick, untrack } from "svelte";
 
 	import { getDevTools } from "../dev-tools.svelte";
-	import { setDocumentView } from "../document-view";
 	import { measureInternalNode } from "../geometry/measure";
 	import { getGraphManager } from "../graph-manager.svelte";
+	import { getGraphView } from "../graph-view.svelte";
 	import { openContextMenuAt } from "../utils";
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import DocumentMeasurer from "./DocumentMeasurer.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
-	import GroupSheet from "./GroupSheet.svelte";
 	import { nodeTypes } from "./node-types";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
-	import ZoneSheet from "./ZoneSheet.svelte";
 
 	const edgeTypes: EdgeTypes = {
 		gradient: GradientEdge,
@@ -52,27 +47,17 @@
 		wrapperClass,
 		nodes = $bindable([]),
 		edges = $bindable([]),
-		shader = $bindable(),
 	}: {
 		class?: string;
 		wrapperClass?: string;
 		nodes?: Node[];
 		edges?: Edge[];
-		shader?: ShaderSource;
 	} = $props();
 
 	const { screenToFlowPosition, getNodes, getViewport, setViewport, fitView, getInternalNode } =
 		useSvelteFlow();
 	const graph = getGraphManager();
-
-	setDocumentView({
-		get document() {
-			return graph.activeDocument;
-		},
-		get locked() {
-			return graph.isLocked;
-		},
-	});
+	const view = getGraphView();
 
 	/** Documents drawn out of sight to be measured, with who's waiting for it. */
 	let measuring = $state.raw<
@@ -96,57 +81,69 @@
 	}
 
 	$effect(() => {
-		graph.canvas = {
+		graph.canvases.set(view.areaId, {
 			measure: (node) => measureInternalNode(getInternalNode(node.id)),
 			measureDocument,
 			fitView: async () => {
 				await tick();
 				await fitView({ duration: 300 });
 			},
-		};
+		});
 		return () => {
-			graph.canvas = null;
+			graph.canvases.delete(view.areaId);
 		};
 	});
 
-	// ── Per-document viewport (pan/zoom) persistence ──────────────────────────
-	// Each graph document (root + every group definition) stores its own camera so
-	// navigating between subgraphs restores the previous view instead of sharing a
-	// single global viewport. A document with no stored viewport falls back to
-	// fitView the first time it is entered, then keeps whatever the user leaves it at.
-	let prevPathKey = $state("");
+	// ── Viewport (pan/zoom) persistence ─────────────────────────────────────
+	// Each document keeps the camera it was last left at, so entering it again
+	// (here or in another area) restores that view instead of sharing one
+	// global viewport; one never left is fitted the first time it's entered.
+	// The area also keeps its own camera, for the document it shows when the
+	// project is saved and opened again.
+	let prevPathKey: string | null = null;
 	let prevProject: HydratedGraphProject | null = null;
 	let prevDoc: HydratedGraphDocument | null = null;
 
-	async function applyActiveViewport() {
-		const doc = graph.activeDocument;
+	async function applyViewport(first: boolean) {
+		const doc = view.document;
+		const viewport = (first ? view.viewport : undefined) ?? doc.viewport;
 		// Wait for the DOM to swap in the new document's nodes, then give SvelteFlow
 		// a frame to measure them before restoring the camera or fitting.
 		await tick();
 		requestAnimationFrame(() => {
-			if (doc.viewport) {
-				void setViewport(doc.viewport);
+			if (viewport) {
+				void setViewport(viewport);
 			} else {
 				void fitView();
 			}
 		});
 	}
 
+	const pathKey = $derived(view.path.join("|"));
+
+	// Only a new path or project moves the camera: any other change (e.g. the
+	// layout, which this area's camera is saved in) must leave it alone.
 	$effect(() => {
-		const pathKey = graph.path.join("|");
+		const key = pathKey;
 		const project = graph.project;
-		const projectChanged = prevProject !== project;
-		if (prevDoc && prevPathKey !== pathKey && !projectChanged) {
-			// Capture the camera of the document we're leaving before it's lost.
-			prevDoc.viewport = { ...getViewport() };
-		}
-		prevPathKey = pathKey;
-		prevProject = project;
-		prevDoc = graph.activeDocument;
-		void applyActiveViewport();
+		untrack(() => {
+			const projectChanged = prevProject !== project;
+			if (prevDoc && prevPathKey !== key && !projectChanged) {
+				// Capture the camera of the document we're leaving before it's lost.
+				prevDoc.viewport = { ...getViewport() };
+			}
+			const first = prevPathKey === null || projectChanged;
+			prevPathKey = key;
+			prevProject = project;
+			prevDoc = view.document;
+			void applyViewport(first);
+		});
 	});
 
-	const isLocked = $derived(graph.isLocked);
+	const isLocked = $derived(view.locked);
+
+	/** Whether the pointer is over this area: keys act on the area under it. */
+	let hovered = $state(false);
 
 	// ── Add menu ───────────────────────────────────────────────────────────
 	// Right-click (or Shift+A) opens the add menu at the pointer; the picked
@@ -230,22 +227,13 @@
 	let pointer = { x: 0, y: 0 };
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (!hovered) return;
 		const tag = (event.target as HTMLElement | null)?.tagName;
 		if (tag === "INPUT" || tag === "TEXTAREA") return;
+		view.activate();
 
 		const mod = event.metaKey || event.ctrlKey;
 		const key = event.key.toLowerCase();
-		if (mod && key === "z") {
-			event.preventDefault();
-			if (event.shiftKey) graph.redo();
-			else graph.undo();
-			return;
-		}
-		if (mod && key === "y") {
-			event.preventDefault();
-			graph.redo();
-			return;
-		}
 		if (event.shiftKey && !mod && !event.altKey && key === "a") {
 			event.preventDefault();
 			openAddMenu(pointer.x, pointer.y);
@@ -259,7 +247,7 @@
 
 			if (selected.type === "node-group") {
 				event.preventDefault();
-				graph.enterGroup(selected.id);
+				view.enterGroup(selected.id);
 			}
 		} else if (event.key === "Escape") {
 			if (graph.zoneSheetId) {
@@ -268,9 +256,9 @@
 			} else if (graph.sheetOpen) {
 				event.preventDefault();
 				graph.sheetOpen = false;
-			} else if (graph.path.length > 0) {
+			} else if (view.path.length > 0) {
 				event.preventDefault();
-				graph.exitGroup();
+				view.exitGroup();
 			}
 		} else if (event.key === "n" && !event.metaKey && !event.ctrlKey) {
 			const selectedZoneNode = getNodes().find((n) => n.selected && isZoneNodeType(n.type));
@@ -327,76 +315,6 @@
 			}
 		}
 	}
-
-	// Undo history: record a step once the documents stop changing for a
-	// moment, so a drag or a scrub becomes one step. Node/edge arrays and the
-	// settings are reassigned on every change, which is what this effect tracks.
-	const HISTORY_DEBOUNCE_MS = 300;
-	$effect(() => {
-		const tracked: unknown[] = [...graph.project.definitions.values()].map((doc) => [
-			doc.nodes,
-			doc.edges,
-			doc.label,
-			doc.locked,
-		]);
-		if (tracked.length === 0) return;
-		tracked.push(graph.settings);
-		const timer = setTimeout(() => {
-			graph.recordHistory();
-		}, HISTORY_DEBOUNCE_MS);
-		return () => {
-			clearTimeout(timer);
-		};
-	});
-
-	// Track the shader-relevant hash to avoid regenerating on position changes.
-	// Only hash the reachable subgraph so edits to disconnected nodes or unused
-	// group definitions don't trigger unnecessary shader regeneration.
-	let prevHash = "";
-
-	// The values of the document in view are uniforms: editing them only
-	// changes the uniforms, while the fragment (and its compiled pipeline)
-	// stays the same.
-	$effect(() => {
-		const uniformScope = graph.isLocked ? undefined : graph.activeDefinitionRef;
-		const hash = `${uniformScope ?? ""}|${reachableShaderHash(graph.project)}`;
-		if (hash === prevHash) return;
-		prevHash = hash;
-		let generated: ReturnType<typeof generateShader>;
-		try {
-			generated = generateShader(graph, { uniformScope });
-		} catch (error) {
-			// Keep the last valid shader (e.g. the graph briefly contains a cycle).
-			console.error("[shader] generation failed", error);
-			return;
-		}
-		const fragmentChanged = generated.shader !== untrack(() => shader?.fragment);
-		shader = { fragment: generated.shader, uniforms: generated.uniforms };
-
-		if (devTools.enabled && fragmentChanged) {
-			/* const sortedIds = debugSort(rootNodes, rootEdges); */
-			console.groupCollapsed("[shader debug]");
-			console.log("// Compiled fragment shader:\n", generated.shader);
-			/* console.log("Sorted order:\n", sortedIds.join("\n"));
-			console.log(JSON.parse(graph.getProjectJson())); */
-			console.groupEnd();
-		}
-	});
-
-	// Close the group config sheet when selection no longer contains a group node.
-	$effect(() => {
-		const _ids = graph.selectedNodeIds;
-		if (!graph.sheetOpen) return;
-		// Keep the sheet open when we're inside a group (viewing its contents).
-		if (graph.path.length > 0) return;
-		const hasGroup = _ids.some((id) => {
-			const node = graph.activeDocument.nodes.find((n) => n.id === id);
-			return node?.type === "node-group" && node.group;
-		});
-		if (!hasGroup) {
-			graph.sheetOpen = false;
-		}
-	});
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -405,6 +323,11 @@
 	onpointermove={(e) => {
 		pointer = { x: e.clientX, y: e.clientY };
 	}}
+	onpointerdowncapture={() => {
+		view.activate();
+	}}
+	onpointerenter={() => (hovered = true)}
+	onpointerleave={() => (hovered = false)}
 	class={cn("size-full", wrapperClass)}
 >
 	<AddNodeMenu
@@ -431,19 +354,23 @@
 			nodesDraggable={!isLocked}
 			nodesConnectable={!isLocked}
 			elementsSelectable={!isLocked}
-			deleteKey={isLocked ? null : undefined}
+			deleteKey={isLocked || !hovered ? null : undefined}
 			onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
 				Promise.resolve(
 					isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges),
 				)}
 			isValidConnection={(connection) => graph.isValidConnection(connection)}
 			onmove={(_event, viewport) => {
-				graph.activeDocument.viewport = { ...viewport };
+				view.document.viewport = { ...viewport };
+			}}
+			onmoveend={(event, viewport) => {
+				// Moves of our own (restoring a camera) have no event.
+				if (event) view.viewport = { ...viewport };
 			}}
 			onconnect={handleConnect}
 			onconnectend={handleConnectEnd}
 			onselectionchange={({ nodes: selectedNodes }) => {
-				graph.selectedNodeIds = selectedNodes.map((n) => n.id);
+				if (view.active) graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 			}}
 		>
 			<ZoneBubbles />
@@ -458,6 +385,3 @@
 {/each}
 
 <svelte:window onkeydown={handleKeydown} />
-
-<ZoneSheet />
-<GroupSheet />

@@ -69,7 +69,7 @@ describe.skipIf(!nagaBin)("every node generates valid WGSL for every input type"
 			expect(error, `${error ?? ""}\n\n${shader}`).toBeNull();
 
 			// The same with every value read from uniforms.
-			const scoped = generateShader(managerFor(nodes, edges), { uniformScope: ROOT_ID });
+			const scoped = generateShader(managerFor(nodes, edges), { uniformScopes: [ROOT_ID] });
 			const scopedError = validateFragment(scoped.shader, scoped.uniforms);
 			expect(scopedError, `${scopedError ?? ""}\n\n${scoped.shader}`).toBeNull();
 		});

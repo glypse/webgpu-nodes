@@ -1,29 +1,27 @@
 <script lang="ts">
-	import type { Size } from "$runtime";
 	import { Button, DropdownMenu } from "$theme";
 	import CaretUpDownIcon from "phosphor-svelte/lib/CaretUpDownIcon";
 	import DownloadSimpleIcon from "phosphor-svelte/lib/DownloadSimpleIcon";
 
 	import { exportFrame } from "../exports";
 	import { getGraphManager } from "../graph-manager.svelte";
+	import type { PreviewView } from "../preview-view.svelte";
 	import { getPreview } from "../preview.svelte";
 
-	let { resolution }: { resolution: Size } = $props();
+	let { view }: { view: PreviewView } = $props();
 
 	const graph = getGraphManager();
 	const preview = getPreview();
-	const view = preview.view;
+	const resolution = $derived(view.resolution);
 
 	const PERCENTAGES = [50, 100, 200, 400];
 </script>
 
-<div class="bg-background flex h-9 shrink-0 items-center gap-1 border-t px-2 text-xs">
-	<div class="flex-1"></div>
-
+<div class="@container flex min-w-0 flex-1 items-center justify-end gap-1 text-xs">
 	<Button
 		variant="ghost"
 		size="xs"
-		class="text-muted-foreground tabular-nums"
+		class="text-muted-foreground hidden tabular-nums @[13rem]:inline-flex"
 		title="Canvas settings"
 		onclick={() => {
 			graph.settingsPage = "canvas";
