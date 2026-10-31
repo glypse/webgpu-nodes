@@ -2,7 +2,6 @@
 	import { type AddMenuEntry, groupByHeading, searchEntries } from "$core";
 	import { Button, ContextMenu } from "$theme";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
-	import type { Snippet } from "svelte";
 
 	let {
 		open = $bindable(false),
@@ -12,10 +11,9 @@
 		placeholder = "Search…",
 		onpick,
 		ondelete,
-		children,
 	}: {
 		open?: boolean;
-		/** The element right-clicks open the menu on (see `openContextMenuAt`). */
+		/** The element the menu is opened from, at a point (see `openContextMenuAt`). */
 		trigger?: HTMLElement | null;
 		entries: AddMenuEntry[];
 		/** Prevent the menu from opening (e.g. in a locked group). */
@@ -23,8 +21,6 @@
 		placeholder?: string;
 		onpick: (entry: AddMenuEntry) => void;
 		ondelete?: (entry: AddMenuEntry) => void;
-		/** The area right-clicking opens the menu on. */
-		children: Snippet;
 	} = $props();
 
 	let search = $state<HTMLInputElement | null>(null);
@@ -91,9 +87,13 @@
 {/snippet}
 
 <ContextMenu.Root bind:open>
-	<ContextMenu.Trigger bind:ref={trigger} {disabled} class="block size-full">
-		{@render children()}
-	</ContextMenu.Trigger>
+	<!-- Out of the pointer's way: only opened from code, never by a right-click. -->
+	<ContextMenu.Trigger
+		bind:ref={trigger}
+		{disabled}
+		class="absolute inset-0"
+		style="pointer-events: none"
+	/>
 
 	<ContextMenu.Content
 		class="w-56"

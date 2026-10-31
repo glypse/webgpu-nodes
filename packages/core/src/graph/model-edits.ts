@@ -93,6 +93,18 @@ export abstract class EditModel extends CustomWgslModel {
 		return clipboard ? this.pasteNodes(clipboard) : [];
 	}
 
+	/** Select exactly these nodes of the active document. */
+	selectNodes(nodeIds: Iterable<string>) {
+		const ids = new Set(nodeIds);
+		const doc = this.activeDocument;
+		this.setContent(doc, {
+			nodes: doc.nodes.map((n) =>
+				(n.selected ?? false) === ids.has(n.id) ? n : { ...n, selected: ids.has(n.id) },
+			),
+		});
+		this.selectedNodeIds = doc.nodes.filter((n) => ids.has(n.id)).map((n) => n.id);
+	}
+
 	/** Move nodes of the active document by an offset from the positions given. */
 	moveNodes(from: ReadonlyMap<string, Point>, offset: Point) {
 		const doc = this.activeDocument;

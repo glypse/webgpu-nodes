@@ -32,6 +32,7 @@
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import DocumentMeasurer from "./DocumentMeasurer.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
+	import GraphMenu from "./GraphMenu.svelte";
 	import { nodeTypes } from "./node-types";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
 
@@ -145,10 +146,10 @@
 	let hovered = $state(false);
 
 	// ── Add menu ───────────────────────────────────────────────────────────
-	// Right-click (or Shift+A) opens the add menu at the pointer; the picked
-	// entry is created where the menu was opened. When a link is dropped on
-	// empty space, the menu only lists what can take it, and the picked node
-	// gets linked.
+	// Shift+A (or Add… in the context menu) opens the add menu at the
+	// pointer; the picked entry is created where the menu was opened. When a
+	// link is dropped on empty space, the menu only lists what can take it,
+	// and the picked node gets linked.
 	/** The add menu's trigger, which opening events are dispatched on. */
 	let addMenuTrigger = $state<HTMLElement | null>(null);
 	let addMenuOpen = $state<boolean>(false);
@@ -179,17 +180,79 @@
 		return `Nodes producing a ${type}…`;
 	});
 
-	/** Open the add menu at a point, as a right-click there would. */
+	/** Open the add menu at a point. */
 	function openAddMenu(x: number, y: number, pending: PendingConnection | null = null) {
 		if (isLocked) return;
 		nextPending = pending;
 		if (addMenuTrigger) openContextMenuAt(addMenuTrigger, x, y);
 	}
 
-	/** Every opening (real right-click or `openAddMenu`) goes through here. */
-	function handleContextMenu(e: MouseEvent) {
+	/** Every opening of the add menu goes through here. */
+	function handleAddMenuOpening(e: MouseEvent) {
 		addMenuAt = { x: e.clientX, y: e.clientY, pending: nextPending };
 		nextPending = null;
+	}
+
+	/** Fields keep the browser's own menu, for their text. */
+	function handleContextMenuCapture(e: MouseEvent) {
+		const target = e.target instanceof Element ? e.target : null;
+		if (target?.closest("input, textarea, [contenteditable]")) e.stopPropagation();
+	}
+
+	// ── Duplicate ──────────────────────────────────────────────────────────
+	// Duplicates start where their originals are and follow the pointer until
+	// a click drops them; a right-click (or Escape) takes them back.
+	let grab: {
+		ids: string[];
+		originals: string[];
+		from: Map<string, { x: number; y: number }>;
+		start: { x: number; y: number };
+	} | null = null;
+
+	function duplicateSelection() {
+		const originals = view.selectedNodeIds;
+		const ids = graph.duplicateNodes(originals);
+		if (ids.length === 0) return;
+		const from = new Map(
+			view.document.nodes.filter((n) => ids.includes(n.id)).map((n) => [n.id, n.position]),
+		);
+		grab = { ids, originals, from, start: screenToFlowPosition(pointer) };
+	}
+
+	function moveGrab() {
+		if (!grab) return;
+		const at = screenToFlowPosition(pointer);
+		graph.moveNodes(grab.from, { x: at.x - grab.start.x, y: at.y - grab.start.y });
+	}
+
+	function endGrab(cancel: boolean) {
+		if (!grab) return;
+		if (cancel) {
+			graph.deleteNodes(grab.ids);
+			graph.selectNodes(grab.originals);
+		}
+		grab = null;
+	}
+
+	/** Set when a right-click cancels: its context menu mustn't open. */
+	let cancelledByRightClick = false;
+
+	function handleWindowPointerDown(e: PointerEvent) {
+		pointer = { x: e.clientX, y: e.clientY };
+		if (!grab) return;
+		e.preventDefault();
+		e.stopPropagation();
+		cancelledByRightClick = e.button === 2;
+		endGrab(e.button !== 0);
+	}
+
+	/** Some browsers send the context menu before the press: it cancels too. */
+	function handleWindowContextMenu(e: MouseEvent) {
+		if (grab) endGrab(true);
+		else if (!cancelledByRightClick) return;
+		cancelledByRightClick = false;
+		e.preventDefault();
+		e.stopPropagation();
 	}
 
 	function pickAddEntry(entry: AddMenuEntry) {
@@ -222,10 +285,17 @@
 		if (entry.definitionRef) graph.deleteDefinition(entry.definitionRef);
 	}
 
-	/** Last pointer position over the graph, for keyboard-opened menus. */
+	/** Last pointer position, for keyboard-opened menus and pastes. */
 	let pointer = { x: 0, y: 0 };
 
 	function handleKeydown(event: KeyboardEvent) {
+		if (grab) {
+			if (event.key === "Escape") {
+				event.preventDefault();
+				endGrab(true);
+			}
+			return;
+		}
 		if (!hovered) return;
 		const target = event.target as HTMLElement | null;
 		if (target?.closest("input, textarea, select, [contenteditable]")) return;
@@ -248,6 +318,11 @@
 			event.preventDefault();
 			if (mod) graph.dissolveNodes(view.selectedNodeIds);
 			else graph.deleteNodes(view.selectedNodeIds, view.selectedEdgeIds);
+			return;
+		}
+		if (key === "d" && event.shiftKey && !mod && !event.altKey) {
+			event.preventDefault();
+			if (!isLocked) duplicateSelection();
 			return;
 		}
 		if (key === "r" && !mod && !event.altKey && !event.shiftKey) {
@@ -299,16 +374,14 @@
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
 <div
-	oncontextmenu={handleContextMenu}
-	onpointermove={(e) => {
-		pointer = { x: e.clientX, y: e.clientY };
-	}}
+	oncontextmenu={handleAddMenuOpening}
+	oncontextmenucapture={handleContextMenuCapture}
 	onpointerdowncapture={() => {
 		view.activate();
 	}}
 	onpointerenter={() => (hovered = true)}
 	onpointerleave={() => (hovered = false)}
-	class={cn("size-full", wrapperClass)}
+	class={cn("relative size-full", wrapperClass)}
 >
 	<AddNodeMenu
 		bind:trigger={addMenuTrigger}
@@ -318,6 +391,10 @@
 		placeholder={addMenuPlaceholder}
 		onpick={pickAddEntry}
 		ondelete={deleteGroupEntry}
+	/>
+	<GraphMenu
+		onadd={(x: number, y: number) => setTimeout(() => openAddMenu(x, y))}
+		onduplicate={duplicateSelection}
 	>
 		<!-- The flow's id scopes its SVG ids (the background pattern's): areas must not share one. -->
 		<SvelteFlow
@@ -355,11 +432,19 @@
 			<Controls showLock={false} showZoom={false} />
 			<Background class="bg-background" />
 		</SvelteFlow>
-	</AddNodeMenu>
+	</GraphMenu>
 </div>
 
 {#each measuring as { key, document, resolve } (key)}
 	<DocumentMeasurer {document} onmeasured={resolve} />
 {/each}
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window
+	onkeydown={handleKeydown}
+	onpointermove={(e: PointerEvent) => {
+		pointer = { x: e.clientX, y: e.clientY };
+		moveGrab();
+	}}
+	onpointerdowncapture={handleWindowPointerDown}
+	oncontextmenucapture={handleWindowContextMenu}
+/>
