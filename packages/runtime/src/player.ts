@@ -63,6 +63,12 @@ export class Player {
 		this.schedule();
 	}
 
+	/** Draw the current frame right away rather than on the next animation frame. */
+	drawNow() {
+		this.dirty = false;
+		this.onFrame(this.clock);
+	}
+
 	destroy() {
 		this.playingState = false;
 		if (this.request !== undefined) cancelAnimationFrame(this.request);

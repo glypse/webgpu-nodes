@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { generateShader, reachableShaderHash } from "$core";
+	import { untrack } from "svelte";
 
 	import { getDevTools } from "../dev-tools.svelte";
 	import { getGraphManager } from "../graph-manager.svelte";
@@ -82,10 +83,11 @@
 		if (graph.sheetNodeId && !graph.resolveNode(graph.sheetNodeId)) graph.sheetNodeId = null;
 	});
 
-	// The canvas renders at a fixed size, or at the size of the preview area last used.
+	// The canvas renders at a fixed size, or at the size of the preview area
+	// last used, keeping its size while no preview area is laid out.
 	const resolution = $derived(
 		graph.settings.canvas.followPreview
-			? preview.paneSize
+			? (preview.paneSize ?? untrack(() => preview.output.size))
 			: { width: graph.settings.canvas.width, height: graph.settings.canvas.height },
 	);
 	$effect(() => {

@@ -21,13 +21,17 @@ export class CanvasTarget {
 		this.context = context;
 	}
 
-	/** Set the resolution and colour space; cheap when nothing changed. */
-	configure({ width, height }: Size, colorSpace: ColorSpace) {
+	/**
+	 * Set the resolution and colour space; cheap when nothing changed.
+	 * Returns whether the canvas was cleared, which either change does.
+	 */
+	configure({ width, height }: Size, colorSpace: ColorSpace): boolean {
 		// A canvas can't present at zero size, e.g. before it's laid out.
-		if (width === 0 || height === 0) return;
+		if (width === 0 || height === 0) return false;
+		const resized = this.canvas.width !== width || this.canvas.height !== height;
 		if (this.canvas.width !== width) this.canvas.width = width;
 		if (this.canvas.height !== height) this.canvas.height = height;
-		if (colorSpace === this.colorSpace) return;
+		if (colorSpace === this.colorSpace) return resized;
 		this.colorSpace = colorSpace;
 		this.context.configure({
 			device: this.renderer.device,
@@ -35,6 +39,7 @@ export class CanvasTarget {
 			colorSpace,
 			alphaMode: "premultiplied",
 		});
+		return true;
 	}
 
 	render(program: CompiledProgram, frame: FrameInputs) {

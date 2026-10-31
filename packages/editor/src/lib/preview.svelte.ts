@@ -114,17 +114,18 @@ export class Preview {
 
 	/** Report a preview area's size in device pixels. */
 	setPaneSize(areaId: string, size: Size) {
+		// A hidden or collapsed pane keeps its last size, which a canvas
+		// following it couldn't render at anyway.
+		if (size.width === 0 || size.height === 0) return;
 		this.paneSizes.set(areaId, size);
 	}
 
-	/** The active preview area's size in device pixels: what a canvas following the preview renders at. */
-	get paneSize(): Size {
-		return (
-			(this.activeArea === null ? undefined : this.paneSizes.get(this.activeArea)) ?? {
-				width: 0,
-				height: 0,
-			}
-		);
+	/**
+	 * The active preview area's size in device pixels: what a canvas
+	 * following the preview renders at. Undefined until it's laid out.
+	 */
+	get paneSize(): Size | undefined {
+		return this.activeArea === null ? undefined : this.paneSizes.get(this.activeArea);
 	}
 
 	/** Present on `canvas` from now on; returns a function detaching it. */
@@ -148,8 +149,14 @@ export class Preview {
 		this.size = size;
 		for (const view of this.views.values()) view.resolution = size;
 		this.colorSpace = colorSpace;
-		for (const target of this.targets.values()) target?.configure(size, colorSpace);
-		this.player.invalidate();
+		let cleared = false;
+		for (const target of this.targets.values())
+			if (target?.configure(size, colorSpace)) cleared = true;
+		// A resize follows its pane's layout, after this frame's draw: drawing
+		// again on the next frame would show the cleared canvas until then,
+		// so for as long as the pane keeps resizing.
+		if (cleared) this.player.drawNow();
+		else this.player.invalidate();
 	}
 
 	setTiming(timing: Timing) {
