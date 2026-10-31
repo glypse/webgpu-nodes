@@ -274,6 +274,8 @@ function writeGroup(group: BuiltGroup) {
 		name: group.spec.name,
 		aliases: group.spec.aliases ?? [],
 		category: group.spec.category,
+		...(group.spec.section ? { section: group.spec.section } : {}),
+		...(group.spec.searchSection ? { searchSection: group.spec.searchSection } : {}),
 		dependencies: group.dependencies,
 		definition: group.definition,
 	};

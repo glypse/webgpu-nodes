@@ -45,6 +45,8 @@ export const LibraryFileSchema = v.object({
 	/** Other names it's found by in the add menu (see `NodeDescriptor.aliases`). */
 	aliases: v.optional(v.array(v.string()), []),
 	category: v.string(),
+	section: v.optional(v.array(v.string()), []),
+	searchSection: v.optional(v.string()),
 	dependencies: v.array(v.string()),
 	definition: GraphDocumentSchema,
 	widget: v.optional(NodeWidgetSchema),
@@ -87,6 +89,8 @@ function toEntry(json: unknown): StandardLibraryEntry {
 		label: file.name,
 		aliases: file.aliases,
 		category: file.category,
+		section: file.section,
+		...(file.searchSection ? { searchSection: file.searchSection } : {}),
 		dependencies: file.dependencies,
 		definition: file.definition,
 		...(file.widget ? { widget: file.widget } : {}),

@@ -31,6 +31,10 @@ export type GroupSpec = {
 	name: string;
 	aliases?: string[];
 	category: string;
+	/** Sections of the add menu it's in, under its category. */
+	section?: string[];
+	/** Section of search results it's listed in, after the main results. */
+	searchSection?: string;
 	build: (g: GroupBuilder) => void;
 };
 

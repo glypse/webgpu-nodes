@@ -138,6 +138,10 @@ export type StandardLibraryEntry = {
 	label: string;
 	aliases: string[];
 	category: string;
+	/** Sections of the add menu it's in, under its category (see `AddMenuEntry.section`). */
+	section: string[];
+	/** Section of search results it's listed in (see `AddMenuEntry.searchSection`). */
+	searchSection?: string;
 	dependencies: string[];
 	definition: GraphDocument;
 	/**

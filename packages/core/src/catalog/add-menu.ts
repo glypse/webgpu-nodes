@@ -28,6 +28,14 @@ export type AddMenuEntry = {
 	aliases: readonly string[];
 	/** Heading the entry is listed under. */
 	heading: string;
+	/** Nested sections under the heading the entry is listed in, outermost first. */
+	section?: readonly string[];
+	/**
+	 * Section search results list the entry under, after the main results.
+	 * Independent of `section`: an entry deep in the menu can still be a
+	 * main result.
+	 */
+	searchSection?: string;
 	/**
 	 * - `node`: a registered node type (`type`), "node-group" creating a new empty group,
 	 * - `group`: an instance of an existing group definition (`definitionRef`),
@@ -86,6 +94,8 @@ export function addMenuEntries(
 			label: entry.label,
 			aliases: entry.aliases,
 			heading: headingOf(entry.category),
+			...(entry.section.length > 0 ? { section: entry.section } : {}),
+			...(entry.searchSection ? { searchSection: entry.searchSection } : {}),
 			kind: "group",
 			definitionRef: entry.ref,
 			disabled: graph.wouldCreateCycle(entry.ref),
@@ -124,17 +134,35 @@ export function addMenuEntries(
 	return entries.toSorted((a, b) => rank(a.heading) - rank(b.heading));
 }
 
-/** Entries grouped under their heading, keeping order. */
+/** A section of the menu: its entries, then its own sections, each in order. */
+export type MenuSection = { name: string; entries: AddMenuEntry[]; sections: MenuSection[] };
+
+/** `entries` in their sections, from `depth` on in their `section` path. */
+function sectionsOf(entries: readonly AddMenuEntry[], depth: number): MenuSection[] {
+	const names = [...new Set(entries.flatMap((e) => e.section?.[depth] ?? []))];
+	return names.map((name) => {
+		const inside = entries.filter((e) => e.section?.[depth] === name);
+		return {
+			name,
+			entries: inside.filter((e) => (e.section?.length ?? 0) === depth + 1),
+			sections: sectionsOf(inside, depth + 1),
+		};
+	});
+}
+
+/** Entries grouped under their heading, then in their sections, keeping order. */
 export function groupByHeading(
 	entries: readonly AddMenuEntry[],
-): { heading: string; entries: AddMenuEntry[] }[] {
-	const groups: { heading: string; entries: AddMenuEntry[] }[] = [];
-	for (const entry of entries) {
-		const group = groups.find((g) => g.heading === entry.heading);
-		if (group) group.entries.push(entry);
-		else groups.push({ heading: entry.heading, entries: [entry] });
-	}
-	return groups;
+): { heading: string; entries: AddMenuEntry[]; sections: MenuSection[] }[] {
+	const headings = [...new Set(entries.map((e) => e.heading))];
+	return headings.map((heading) => {
+		const under = entries.filter((e) => e.heading === heading);
+		return {
+			heading,
+			entries: under.filter((e) => !e.section?.length),
+			sections: sectionsOf(under, 0),
+		};
+	});
 }
 
 export type SearchResult = {
@@ -187,4 +215,19 @@ export function searchEntries(entries: readonly AddMenuEntry[], query: string): 
 		})
 		.toSorted((a, b) => a.s - b.s || a.entry.label.localeCompare(b.entry.label))
 		.map(({ entry, alias }) => (alias === undefined ? { entry } : { entry, alias }));
+}
+
+/**
+ * Search results in their search sections: the main results first, then
+ * each section's, flattened, keeping the results' order within each.
+ */
+export function groupResults(
+	results: readonly SearchResult[],
+): { section?: string; results: SearchResult[] }[] {
+	const sections = [undefined, ...new Set(results.flatMap((r) => r.entry.searchSection ?? []))];
+	return sections.flatMap((section) => {
+		const inside = results.filter((r) => r.entry.searchSection === section);
+		if (inside.length === 0) return [];
+		return [section === undefined ? { results: inside } : { section, results: inside }];
+	});
 }
