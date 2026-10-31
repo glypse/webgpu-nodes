@@ -3,6 +3,8 @@
 	"name": "Dimension Mask",
 	"aliases": ["Dimensions", "Axis Mask"],
 	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
 	"dependencies": [],
 	"definition": {
 		"nodes": [

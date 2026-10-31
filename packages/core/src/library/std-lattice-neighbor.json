@@ -3,6 +3,8 @@
 	"name": "Lattice Neighbor",
 	"aliases": ["Neighbor Cell", "Cell Offset", "Grid Neighbor"],
 	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
 	"dependencies": ["std-dimension-mask@0acfbe5f0d377e"],
 	"definition": {
 		"nodes": [

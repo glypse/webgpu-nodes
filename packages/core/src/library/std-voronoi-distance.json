@@ -8,6 +8,8 @@
 		"Chebyshev Distance"
 	],
 	"category": "texture",
+	"section": ["Helpers", "Voronoi"],
+	"searchSection": "Helpers",
 	"dependencies": [],
 	"definition": {
 		"nodes": [

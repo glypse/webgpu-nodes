@@ -3,6 +3,8 @@
 	"name": "Noise Coordinates",
 	"aliases": ["Texture Coordinates", "Noise Vector"],
 	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
 	"dependencies": [],
 	"definition": {
 		"nodes": [

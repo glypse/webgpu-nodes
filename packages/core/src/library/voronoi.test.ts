@@ -73,16 +73,20 @@ function reference(coordinates: number[], p: Params) {
 		}
 	}
 
-	const toClosest = sub(p1, local);
-	let edge = 1e10;
-	for (const offset of neighbors(dims, 1)) {
-		const toPoint = sub(pointAt(offset), local);
-		const across = sub(toPoint, toClosest);
-		if (dot(across, across) > 0.0001) {
-			const normal = scaled(across, 1 / Math.sqrt(dot(across, across)));
-			edge = Math.min(edge, dot(scaled(add(toClosest, toPoint), 0.5), normal));
+	/** The distance to the closest bisector of `point` and another point. */
+	const edgeOf = (point: number[]) => {
+		const from = sub(point, local);
+		let edge = 1e10;
+		for (const offset of neighbors(dims, 1)) {
+			const toPoint = sub(pointAt(offset), local);
+			const across = sub(toPoint, from);
+			if (dot(across, across) > 0.0001) {
+				const normal = scaled(across, 1 / Math.sqrt(dot(across, across)));
+				edge = Math.min(edge, Math.abs(dot(scaled(add(from, toPoint), 0.5), normal)));
+			}
 		}
-	}
+		return edge;
+	};
 
 	let nearest = p1;
 	let nearestSq = 1e10;
@@ -117,7 +121,8 @@ function reference(coordinates: number[], p: Params) {
 		f2Color: colorAt(o2),
 		smoothDistance: smooth,
 		smoothColor,
-		edge,
+		edge: edgeOf(p1),
+		f2Edge: edgeOf(p2),
 		radius: distance(nearest, p1) / 2,
 	};
 }
@@ -225,8 +230,9 @@ describe("Voronoi Texture", () => {
 			expectClose(at("F2 Color"), expected.f2Color);
 		});
 
-		it("measures the distance to the closest cell's edge", () => {
+		it("measures the distance to the closest two cells' edges", () => {
 			expect(at("Distance to Edge")[0]).toBeCloseTo(expected.edge, 5);
+			expect(at("F2 Distance to Edge")[0]).toBeCloseTo(expected.f2Edge, 5);
 		});
 
 		it("measures the closest cell's n-sphere radius", () => {

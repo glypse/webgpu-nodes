@@ -2,7 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import type { PendingConnection } from "../graph/model";
 import { managerFor } from "../testing/graph";
-import { CATEGORY_LABELS, addMenuEntries, groupByHeading, searchEntries } from "./add-menu";
+import {
+	CATEGORY_LABELS,
+	addMenuEntries,
+	groupByHeading,
+	groupResults,
+	searchEntries,
+} from "./add-menu";
 
 describe("add menu entries", () => {
 	it("lists visible nodes, the repeat zone and library groups, by heading", () => {
@@ -236,5 +242,27 @@ describe("searchEntries", () => {
 		expect(results[0]?.entry.label).toBe("Dot Product");
 		expect(results[0]?.alias).toBeUndefined();
 		expect(results.find((r) => r.entry.label === "Reroute")?.alias).toBe("Dot");
+	});
+});
+
+describe("add menu sections", () => {
+	const entries = addMenuEntries(managerFor([], []));
+
+	it("nests entries in their sections under their heading", () => {
+		const texture = groupByHeading(entries).find((g) => g.heading === CATEGORY_LABELS.texture);
+		expect(texture?.entries.map((e) => e.label)).toEqual(["Fractal Voronoi"]);
+		const helpers = texture?.sections.find((s) => s.name === "Helpers");
+		expect(helpers?.entries.map((e) => e.label)).toContain("Hash");
+		expect(helpers?.sections.map((s) => s.name)).toEqual(["Voronoi"]);
+		expect(helpers?.sections[0]?.entries.map((e) => e.label)).toContain("Voronoi Texture");
+	});
+
+	it("lists search results of a search section after the main ones, flattened", () => {
+		const groups = groupResults(searchEntries(entries, "voronoi"));
+		expect(groups.map((g) => g.section)).toEqual([undefined, "Helpers"]);
+		expect(groups[0]?.results.map((r) => r.entry.label)).toEqual(["Fractal Voronoi"]);
+		expect(groups[1]?.results.map((r) => r.entry.label)).toEqual(
+			expect.arrayContaining(["Voronoi Texture", "Voronoi Point", "Voronoi Distance"]),
+		);
 	});
 });

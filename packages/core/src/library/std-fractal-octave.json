@@ -3,6 +3,8 @@
 	"name": "Fractal Octave",
 	"aliases": ["fBm Octave", "Octave", "Fractal Brownian Motion"],
 	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
 	"dependencies": [],
 	"definition": {
 		"nodes": [

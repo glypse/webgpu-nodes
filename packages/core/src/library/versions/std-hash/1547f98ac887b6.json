@@ -3,6 +3,8 @@
 	"name": "Hash",
 	"aliases": ["Random", "White Noise", "PCG", "Integer Hash", "Random Vector"],
 	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
 	"dependencies": [],
 	"definition": {
 		"nodes": [

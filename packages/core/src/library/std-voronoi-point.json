@@ -3,6 +3,8 @@
 	"name": "Voronoi Point",
 	"aliases": ["Feature Point", "Jittered Point", "Cell Point"],
 	"category": "texture",
+	"section": ["Helpers", "Voronoi"],
+	"searchSection": "Helpers",
 	"dependencies": ["std-dimension-mask@0acfbe5f0d377e", "std-hash@1547f98ac887b6"],
 	"definition": {
 		"nodes": [

@@ -48,6 +48,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-remap/0b5541582e564f.json").then((m) => m.default),
 	"std-remap@137bbf5d74be24": () =>
 		import("./std-remap/137bbf5d74be24.json").then((m) => m.default),
+	"std-voronoi-texture@0ac6c0de2c5f5d": () =>
+		import("./std-voronoi-texture/0ac6c0de2c5f5d.json").then((m) => m.default),
 	"std-voronoi-texture@1f788bb4a1ce86": () =>
 		import("./std-voronoi-texture/1f788bb4a1ce86.json").then((m) => m.default),
 	"std-oklch-to-linear-rgb@15169209b2bb3d": () =>
@@ -56,6 +58,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-linear-rgb/15fc7634215b1f.json").then((m) => m.default),
 	"std-fractal-voronoi@119e6c8ca71cc9": () =>
 		import("./std-fractal-voronoi/119e6c8ca71cc9.json").then((m) => m.default),
+	"std-fractal-voronoi@1b2fa6e46ee7f0": () =>
+		import("./std-fractal-voronoi/1b2fa6e46ee7f0.json").then((m) => m.default),
 	"std-fractal-octave@17b8f0ac59dd41": () =>
 		import("./std-fractal-octave/17b8f0ac59dd41.json").then((m) => m.default),
 };
