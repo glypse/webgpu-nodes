@@ -87,6 +87,9 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	"to-uint": nodes.toUintNode,
 	"to-bool": nodes.toBoolNode,
 
+	// Color
+	"display-gamut-clip": nodes.displayGamutClipNode,
+
 	// Misc
 	reroute: nodes.rerouteNode,
 	[nodes.CUSTOM_WGSL]: nodes.buildCustomWgslDescriptor({}),

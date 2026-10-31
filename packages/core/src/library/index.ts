@@ -4,7 +4,7 @@ import type { StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
-import inSrgbGamut from "./std-in-srgb-gamut.json";
+import inDisplayGamut from "./std-in-display-gamut.json";
 import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
 import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
@@ -55,7 +55,7 @@ const files: unknown[] = [
 	oklchToOklab,
 	linearRgbToOklch,
 	oklchToLinearRgb,
-	inSrgbGamut,
+	inDisplayGamut,
 	oklchGamutMap,
 ];
 

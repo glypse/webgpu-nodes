@@ -1,7 +1,9 @@
 import type { UniformValue } from "./generate";
 
-/** What the generated code reads per frame (Time, Delta, Resolution and Frame nodes). */
+/** What the generated code reads per draw: the frame's timing and the target's size and gamut. */
 export const FRAME_VAR = "runtime_frame";
+/** The frame field telling whether the target is Display P3 (1) rather than sRGB (0). */
+export const DISPLAY_P3_FIELD = "display_p3";
 /** The struct holding the values of uniform inputs. */
 export const UNIFORMS_VAR = "runtime_uniforms";
 /** Per-fragment values readable from any function, unlike `frag()`'s own parameters. */
@@ -32,7 +34,10 @@ export type ShaderProgram = {
 	code: string;
 	vertexEntry: string;
 	fragmentEntry: string;
-	/** Fields named after `FrameInputs`, written by the runtime each frame. */
+	/**
+	 * Fields named after `FrameInputs`, plus `resolution` and `DISPLAY_P3_FIELD`,
+	 * written by the runtime on each draw.
+	 */
 	frame: UniformBlock;
 	/** Fields named after the uniforms `generateShader` returns. */
 	uniforms: UniformBlock;
@@ -45,6 +50,7 @@ const FRAME_FIELDS: readonly FieldDecl[] = [
 	{ name: "delta", scalar: "f32", components: 1 },
 	{ name: "resolution", scalar: "f32", components: 2 },
 	{ name: "frame", scalar: "u32", components: 1 },
+	{ name: DISPLAY_P3_FIELD, scalar: "u32", components: 1 },
 ];
 
 /** A struct can't be empty: this stands in when the graph has no uniforms. */

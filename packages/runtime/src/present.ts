@@ -1,4 +1,4 @@
-import type { ColorSpace } from "$core";
+import { type ColorSpace, SRGB_TO_DISPLAY_P3, wgslMat3 } from "$core";
 
 /**
  * Turns the linear-sRGB colour a program drew into a display encoding:
@@ -11,12 +11,7 @@ override premultiply: bool = true;
 
 @group(0) @binding(0) var source: texture_2d<f32>;
 
-// Linear sRGB to linear Display P3 (both D65), column by column.
-const SRGB_TO_P3 = mat3x3f(
-	vec3f(0.8224621, 0.0331941, 0.0170827),
-	vec3f(0.1775380, 0.9668058, 0.0723974),
-	vec3f(0.0, 0.0, 0.9105199),
-);
+const SRGB_TO_P3 = ${wgslMat3(SRGB_TO_DISPLAY_P3)};
 
 fn encode(c: vec3f) -> vec3f {
 	let v = max(c, vec3f(0.0));

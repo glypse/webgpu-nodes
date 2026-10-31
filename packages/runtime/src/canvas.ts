@@ -47,7 +47,7 @@ export class CanvasTarget {
 		if (width === 0 || height === 0 || !this.colorSpace) return;
 		const linear = this.renderer.linearTexture(this.slot, { width, height });
 		const encoder = this.renderer.device.createCommandEncoder();
-		program.encode(encoder, linear, frame);
+		program.encode(encoder, linear, frame, this.colorSpace);
 		this.renderer.presenter.encode(
 			encoder,
 			linear,

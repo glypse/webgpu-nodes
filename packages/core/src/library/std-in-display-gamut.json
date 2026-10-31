@@ -1,7 +1,13 @@
 {
-	"id": "std-in-srgb-gamut",
-	"name": "In sRGB Gamut",
-	"aliases": ["Gamut Check", "Out of Gamut", "Color Space Conversion"],
+	"id": "std-in-display-gamut",
+	"name": "In Display Gamut",
+	"aliases": [
+		"Gamut Check",
+		"Out of Gamut",
+		"In sRGB Gamut",
+		"In Display P3 Gamut",
+		"Color Space Conversion"
+	],
 	"category": "color",
 	"dependencies": [],
 	"definition": {
@@ -42,12 +48,10 @@
 			},
 			{
 				"id": "554691a7-d77c-4ef2-9595-86a65836ea64",
-				"type": "clamp",
+				"type": "display-gamut-clip",
 				"data": {
 					"values": {
-						"e": 0,
-						"low": 0,
-						"high": 1
+						"color": 0
 					}
 				},
 				"position": {
@@ -93,7 +97,7 @@
 				"source": "bdc89f38-2f45-4495-8250-86156b33fef4",
 				"sourceHandle": "bf484551-aa1b-433f-8de4-b949f03ebc8f",
 				"target": "554691a7-d77c-4ef2-9595-86a65836ea64",
-				"targetHandle": "e"
+				"targetHandle": "color"
 			},
 			{
 				"id": "9da54d5d-70d3-4624-96db-6869f9196629",
@@ -105,7 +109,7 @@
 			{
 				"id": "21070499-bc76-4820-972c-0d1f3718efe8",
 				"source": "554691a7-d77c-4ef2-9595-86a65836ea64",
-				"sourceHandle": "result",
+				"sourceHandle": "color",
 				"target": "da7d8ace-b751-40da-8927-c77b06e067cc",
 				"targetHandle": "e2"
 			},

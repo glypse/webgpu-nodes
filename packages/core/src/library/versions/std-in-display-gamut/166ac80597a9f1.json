@@ -1,0 +1,132 @@
+{
+	"id": "std-in-display-gamut",
+	"name": "In Display Gamut",
+	"aliases": [
+		"Gamut Check",
+		"Out of Gamut",
+		"In sRGB Gamut",
+		"In Display P3 Gamut",
+		"Color Space Conversion"
+	],
+	"category": "color",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "bdc89f38-2f45-4495-8250-86156b33fef4",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "bf484551-aa1b-433f-8de4-b949f03ebc8f",
+							"label": "Linear RGB",
+							"type": "vec3f"
+						}
+					]
+				},
+				"position": {
+					"x": 0,
+					"y": 128
+				}
+			},
+			{
+				"id": "f61de473-3986-4b5a-954c-49f910735067",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "f0023a7b-df8c-45a0-9bce-b6142f7e1c86",
+							"label": "In Gamut",
+							"type": "bool"
+						}
+					]
+				},
+				"position": {
+					"x": 1052,
+					"y": 68
+				}
+			},
+			{
+				"id": "554691a7-d77c-4ef2-9595-86a65836ea64",
+				"type": "display-gamut-clip",
+				"data": {
+					"values": {
+						"color": 0
+					}
+				},
+				"position": {
+					"x": 267,
+					"y": 208
+				}
+			},
+			{
+				"id": "da7d8ace-b751-40da-8927-c77b06e067cc",
+				"type": "distance",
+				"data": {
+					"values": {
+						"e1": 0,
+						"e2": 0
+					}
+				},
+				"position": {
+					"x": 532,
+					"y": 64
+				}
+			},
+			{
+				"id": "19e66085-a3d4-4618-9fcc-77628dfcfa32",
+				"type": "compare",
+				"data": {
+					"values": {
+						"a": 0,
+						"b": 0.00001
+					},
+					"settings": {
+						"op": "<="
+					}
+				},
+				"position": {
+					"x": 792,
+					"y": 0
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "44159150-50eb-441b-b824-057082d4bbbe",
+				"source": "bdc89f38-2f45-4495-8250-86156b33fef4",
+				"sourceHandle": "bf484551-aa1b-433f-8de4-b949f03ebc8f",
+				"target": "554691a7-d77c-4ef2-9595-86a65836ea64",
+				"targetHandle": "color"
+			},
+			{
+				"id": "9da54d5d-70d3-4624-96db-6869f9196629",
+				"source": "bdc89f38-2f45-4495-8250-86156b33fef4",
+				"sourceHandle": "bf484551-aa1b-433f-8de4-b949f03ebc8f",
+				"target": "da7d8ace-b751-40da-8927-c77b06e067cc",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "21070499-bc76-4820-972c-0d1f3718efe8",
+				"source": "554691a7-d77c-4ef2-9595-86a65836ea64",
+				"sourceHandle": "color",
+				"target": "da7d8ace-b751-40da-8927-c77b06e067cc",
+				"targetHandle": "e2"
+			},
+			{
+				"id": "21aae5e0-62c4-40ab-ba64-5990fd160d39",
+				"source": "da7d8ace-b751-40da-8927-c77b06e067cc",
+				"sourceHandle": "result",
+				"target": "19e66085-a3d4-4618-9fcc-77628dfcfa32",
+				"targetHandle": "a"
+			},
+			{
+				"id": "8af542b0-7e51-4d2e-9bdb-80a091148c0e",
+				"source": "19e66085-a3d4-4618-9fcc-77628dfcfa32",
+				"sourceHandle": "result",
+				"target": "f61de473-3986-4b5a-954c-49f910735067",
+				"targetHandle": "f0023a7b-df8c-45a0-9bce-b6142f7e1c86"
+			}
+		]
+	}
+}

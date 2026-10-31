@@ -11,3 +11,4 @@ export * from "./match";
 export * from "./dev";
 export * from "./curve";
 export * from "./custom";
+export * from "./color";

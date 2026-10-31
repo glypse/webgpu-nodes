@@ -5,6 +5,7 @@
 		"Gamut Mapping",
 		"Gamut Clip",
 		"OKLch to sRGB",
+		"OKLch to Display P3",
 		"Fit in Gamut",
 		"Color Space Conversion"
 	],
@@ -13,7 +14,7 @@
 		"std-oklch-to-oklab@115633a275b19b",
 		"std-oklab-to-linear-rgb@15fc7634215b1f",
 		"std-linear-rgb-to-oklab@0315ad15e24cb7",
-		"std-in-srgb-gamut@020ef109fa3e11"
+		"std-in-display-gamut@166ac80597a9f1"
 	],
 	"definition": {
 		"nodes": [
@@ -88,12 +89,10 @@
 			},
 			{
 				"id": "0f1a266c-3599-45a1-8cb1-80432518436e",
-				"type": "clamp",
+				"type": "display-gamut-clip",
 				"data": {
 					"values": {
-						"e": 0,
-						"low": 0,
-						"high": 1
+						"color": 0
 					}
 				},
 				"position": {
@@ -273,18 +272,16 @@
 					"y": 1292
 				},
 				"group": {
-					"definitionRef": "std-in-srgb-gamut@020ef109fa3e11",
+					"definitionRef": "std-in-display-gamut@166ac80597a9f1",
 					"locked": true
 				}
 			},
 			{
 				"id": "fb1f5c6b-b464-48db-8bd5-5a33140e7e07",
-				"type": "clamp",
+				"type": "display-gamut-clip",
 				"data": {
 					"values": {
-						"e": 0,
-						"low": 0,
-						"high": 1
+						"color": 0
 					}
 				},
 				"position": {
@@ -493,12 +490,10 @@
 			},
 			{
 				"id": "8d988b53-6f31-4b7a-90ed-0e1a69d3ae7f",
-				"type": "clamp",
+				"type": "display-gamut-clip",
 				"data": {
 					"values": {
-						"e": 0,
-						"low": 0,
-						"high": 1
+						"color": 0
 					}
 				},
 				"position": {
@@ -649,12 +644,12 @@
 				"source": "521076ef-46b3-4829-bd3c-60e7b17e9066",
 				"sourceHandle": "d20a7d54-dc68-4867-b9b1-4c60a1191c84",
 				"target": "0f1a266c-3599-45a1-8cb1-80432518436e",
-				"targetHandle": "e"
+				"targetHandle": "color"
 			},
 			{
 				"id": "f4a26b7d-7ff5-4d1f-aa10-f7100cdc4dd1",
 				"source": "0f1a266c-3599-45a1-8cb1-80432518436e",
-				"sourceHandle": "result",
+				"sourceHandle": "color",
 				"target": "97434315-c278-472d-bad8-ba0c73e0add2",
 				"targetHandle": "6fdeb842-bca1-4588-9436-9b5253034637"
 			},
@@ -761,12 +756,12 @@
 				"source": "335d3615-cf37-4812-9cf0-c34b6456361b",
 				"sourceHandle": "d20a7d54-dc68-4867-b9b1-4c60a1191c84",
 				"target": "fb1f5c6b-b464-48db-8bd5-5a33140e7e07",
-				"targetHandle": "e"
+				"targetHandle": "color"
 			},
 			{
 				"id": "b30d0f2b-0b99-4133-8364-a26ed7fd35d7",
 				"source": "fb1f5c6b-b464-48db-8bd5-5a33140e7e07",
-				"sourceHandle": "result",
+				"sourceHandle": "color",
 				"target": "b47c7f72-da00-4ec7-9a74-62b30fc69f84",
 				"targetHandle": "6fdeb842-bca1-4588-9436-9b5253034637"
 			},
@@ -957,7 +952,7 @@
 				"source": "ff9cbf76-651f-40dc-8697-a01b46738aa9",
 				"sourceHandle": "d20a7d54-dc68-4867-b9b1-4c60a1191c84",
 				"target": "8d988b53-6f31-4b7a-90ed-0e1a69d3ae7f",
-				"targetHandle": "e"
+				"targetHandle": "color"
 			},
 			{
 				"id": "f806b596-eb1c-4b91-b426-0cf7ea6cc4a1",
@@ -969,14 +964,14 @@
 			{
 				"id": "a960427f-4018-4969-b543-c4cae793db72",
 				"source": "8d988b53-6f31-4b7a-90ed-0e1a69d3ae7f",
-				"sourceHandle": "result",
+				"sourceHandle": "color",
 				"target": "f3a45f27-a443-4c25-a66a-6053242872f0",
 				"targetHandle": "false"
 			},
 			{
 				"id": "4db96ea2-dd8b-40e8-a04e-33598aed9075",
 				"source": "0f1a266c-3599-45a1-8cb1-80432518436e",
-				"sourceHandle": "result",
+				"sourceHandle": "color",
 				"target": "f3a45f27-a443-4c25-a66a-6053242872f0",
 				"targetHandle": "true"
 			},

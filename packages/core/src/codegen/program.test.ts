@@ -12,6 +12,7 @@ describe("buildProgram", () => {
 			delta: { offset: 4, scalar: "f32", components: 1 },
 			resolution: { offset: 8, scalar: "f32", components: 2 },
 			frame: { offset: 16, scalar: "u32", components: 1 },
+			display_p3: { offset: 20, scalar: "u32", components: 1 },
 		});
 		expect(frame.size).toBe(32);
 	});

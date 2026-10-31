@@ -17,6 +17,16 @@ const XYZ_TO_LIN_SRGB: M = [
 	[-851781 / 878810, 1648619 / 878810, 36519 / 878810],
 	[705 / 12673, -2585 / 12673, 705 / 667],
 ];
+const LIN_P3_TO_XYZ: M = [
+	[608311 / 1250200, 189793 / 714400, 198249 / 1000160],
+	[35783 / 156275, 247089 / 357200, 198249 / 2500400],
+	[0 / 1, 32229 / 714400, 5220557 / 5000800],
+];
+const XYZ_TO_LIN_P3: M = [
+	[446124 / 178915, -333277 / 357830, -72051 / 178915],
+	[-14852 / 17905, 63121 / 35810, 423 / 17905],
+	[11844 / 330415, -50337 / 660830, 316169 / 330415],
+];
 const XYZ_TO_LMS: M = [
 	[0.819022437996703, 0.3619062600528904, -0.1288737815209879],
 	[0.0329836539323885, 0.929286861586343, 0.0361446663506424],
@@ -54,13 +64,24 @@ export const oklabToLinear = (lab: V): V =>
 	mul(XYZ_TO_LIN_SRGB, mul(LMS_TO_XYZ, mul(OKLAB_TO_LMS, lab).map((x) => x ** 3) as V));
 export const linearToOklab = (rgb: V): V =>
 	mul(LMS_TO_OKLAB, mul(XYZ_TO_LMS, mul(LIN_SRGB_TO_XYZ, rgb)).map(Math.cbrt) as V);
+/** Linear Display P3 of a linear sRGB colour. */
+export const linearToP3 = (rgb: V): V => mul(XYZ_TO_LIN_P3, mul(LIN_SRGB_TO_XYZ, rgb));
+/** Linear sRGB of a linear Display P3 colour. */
+export const p3ToLinear = (p3: V): V => mul(XYZ_TO_LIN_SRGB, mul(LIN_P3_TO_XYZ, p3));
+
+export type Gamut = "srgb" | "display-p3";
 export const deltaEOK = (a: V, b: V) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-/** sRGB (gamma-encoded) of an OKLch colour, mapped into gamut as CSS Color 4 §13.2 says. */
-export function cssGamutMap([L, C, H]: V): V {
-	const encoded = (lch: V) => oklabToLinear(oklchToOklab(lch)).map(gam) as V;
+/**
+ * An OKLch colour mapped into `gamut` as CSS Color 4 §13.2 says, as that
+ * gamut's gamma-encoded RGB.
+ */
+export function cssGamutMap([L, C, H]: V, gamut: Gamut = "srgb"): V {
+	const toGamut = (rgb: V) => (gamut === "srgb" ? rgb : linearToP3(rgb));
+	const fromGamut = (rgb: V) => (gamut === "srgb" ? rgb : p3ToLinear(rgb));
+	const encoded = (lch: V) => toGamut(oklabToLinear(oklchToOklab(lch))).map(gam) as V;
 	const clip = (rgb: V) => rgb.map((x) => Math.min(1, Math.max(0, x))) as V;
 	const inGamut = (rgb: V) => rgb.every((x) => x >= -1e-6 && x <= 1 + 1e-6);
-	const okOf = (rgb: V) => linearToOklab(rgb.map(lin) as V);
+	const okOf = (rgb: V) => linearToOklab(fromGamut(rgb.map(lin) as V));
 	if (L >= 1) return [1, 1, 1];
 	if (L <= 0) return [0, 0, 0];
 	if (inGamut(encoded([L, C, H]))) return encoded([L, C, H]);

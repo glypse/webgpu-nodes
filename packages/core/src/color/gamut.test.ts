@@ -1,14 +1,17 @@
 import { describe, expect, it } from "vitest";
 
 import { generateShader } from "../codegen";
+import type { ColorSpace } from "../graph/settings";
 import {
 	type V,
 	cssGamutMap,
 	deltaEOK,
 	lin,
 	linearToOklab,
+	linearToP3,
 	oklabToLinear,
 	oklchToOklab,
+	p3ToLinear,
 } from "../testing/css-color";
 import { evaluate } from "../testing/evaluate";
 import { libraryEntry, libraryHandle, managerFor } from "../testing/graph";
@@ -29,11 +32,14 @@ const SAMPLES: V[] = [0.15, 0.35, 0.55, 0.75, 0.92].flatMap((l) =>
 );
 
 const inGamut = (lch: V) => oklabToLinear(oklchToOklab(lch)).every((n) => n >= 0 && n <= 1);
-/** The CSS reference, in linear RGB. */
-const reference = (lch: V) => cssGamutMap(lch).map(lin) as V;
+/** The CSS reference, in linear sRGB. */
+function reference(lch: V, gamut: ColorSpace = "srgb"): V {
+	const mapped = cssGamutMap(lch, gamut).map(lin) as V;
+	return gamut === "srgb" ? mapped : p3ToLinear(mapped);
+}
 const distance = (a: V, b: V) => deltaEOK(linearToOklab(a), linearToOklab(b));
 
-function gamutMap([x, y, z]: V): V {
+function gamutMap([x, y, z]: V, gamut: ColorSpace = "srgb"): V {
 	const graph = managerFor(
 		[
 			{
@@ -45,7 +51,7 @@ function gamutMap([x, y, z]: V): V {
 		],
 		[],
 	);
-	return evaluate(graph, "g", MAP_OUT) as V;
+	return evaluate(graph, "g", MAP_OUT, gamut) as V;
 }
 
 describe("OKLch gamut mapping", () => {
@@ -73,6 +79,30 @@ describe("OKLch gamut mapping", () => {
 				expect(n).toBeCloseTo(exact[i] ?? 0, 6);
 			});
 		}
+	});
+
+	it("maps colours into Display P3 as CSS Color 4 does when drawn to it", () => {
+		const inP3 = (lch: V) => linearToP3(oklabToLinear(oklchToOklab(lch)));
+		expect(
+			SAMPLES.filter((s) => !inGamut(s) && inP3(s).every((n) => n >= 0 && n <= 1)),
+		).not.toHaveLength(0);
+		for (const lch of SAMPLES) {
+			const ours = gamutMap(lch, "display-p3");
+			for (const n of linearToP3(ours)) {
+				expect(n).toBeGreaterThanOrEqual(-1e-6);
+				expect(n).toBeLessThanOrEqual(1 + 1e-6);
+			}
+			expect(distance(ours, reference(lch, "display-p3"))).toBeLessThan(2e-4);
+		}
+	});
+
+	it("keeps colours past sRGB but within Display P3 as they are", () => {
+		const lch: V = [0.7015, 0.1559, 203.59];
+		const exact = oklabToLinear(oklchToOklab(lch));
+		expect(exact[0]).toBeLessThan(0);
+		gamutMap(lch, "display-p3").forEach((n, i) => {
+			expect(n).toBeCloseTo(exact[i] ?? 0, 6);
+		});
 	});
 
 	it("maps the extremes of lightness to white and black", () => {
@@ -106,9 +136,10 @@ describe("OKLch gamut mapping", () => {
 				],
 				[],
 			);
-			expect(distance(evaluate(graph, "c", COLOR_OUT) as V, reference(lch))).toBeLessThan(
-				2e-4,
-			);
+			for (const gamut of ["srgb", "display-p3"] as const) {
+				const ours = evaluate(graph, "c", COLOR_OUT, gamut) as V;
+				expect(distance(ours, reference(lch, gamut))).toBeLessThan(2e-4);
+			}
 		}
 	});
 

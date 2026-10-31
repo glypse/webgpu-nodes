@@ -1,5 +1,4 @@
-import type { ShaderProgram, UniformValue } from "$core";
-import type { ColorSpace } from "$core";
+import { type ColorSpace, DISPLAY_P3_FIELD, type ShaderProgram, type UniformValue } from "$core";
 
 import { Presenter } from "./present";
 import { packBlock } from "./uniforms";
@@ -79,11 +78,23 @@ export class CompiledProgram {
 		);
 	}
 
-	/** Encode a pass drawing one frame into `target` (a linear texture). */
-	encode(encoder: GPUCommandEncoder, target: GPUTexture, frame: FrameInputs) {
+	/**
+	 * Encode a pass drawing one frame into `target` (a linear texture), to be
+	 * presented in `colorSpace`.
+	 */
+	encode(
+		encoder: GPUCommandEncoder,
+		target: GPUTexture,
+		frame: FrameInputs,
+		colorSpace: ColorSpace,
+	) {
 		packBlock(
 			this.program.frame,
-			{ ...frame, resolution: [target.width, target.height] },
+			{
+				...frame,
+				resolution: [target.width, target.height],
+				[DISPLAY_P3_FIELD]: colorSpace === "display-p3" ? 1 : 0,
+			},
 			this.frameData,
 		);
 		this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameData);
@@ -237,7 +248,7 @@ export class Renderer {
 		});
 		try {
 			const encoder = this.device.createCommandEncoder();
-			program.encode(encoder, linear, frame);
+			program.encode(encoder, linear, frame, colorSpace);
 			this.presenter.encode(encoder, linear, output.createView(), {
 				format: READBACK_FORMAT,
 				colorSpace,

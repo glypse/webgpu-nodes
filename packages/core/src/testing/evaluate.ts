@@ -1,7 +1,9 @@
+import { clipToGamut } from "../color/display";
 import { LINEAR_CURVE, evaluateCurve } from "../curve";
 import { MATCH_SELECTOR, caseHandle } from "../enums";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
+import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
 import { type ResolvedNodeTypes, type TypeBindings, enumValue, typeComponents } from "../types";
 import {
@@ -18,6 +20,8 @@ export type Value = number[];
 
 type Frame = {
 	doc: HydratedGraphDocument;
+	/** The gamut of the target drawn to. */
+	colorSpace: ColorSpace;
 	/** The types the document's variables take (see `TypeBindings`). */
 	bindings: TypeBindings;
 	groupInputs: ReadonlyMap<string, Value>;
@@ -88,11 +92,18 @@ const BOOLEAN: Record<string, (a: boolean, b: boolean) => boolean> = {
 
 /**
  * Compute an output of a node of the root document on the CPU, for the
- * node types the standard library's maths uses. Throws on any other.
+ * node types the standard library's maths uses, as drawn to `colorSpace`.
+ * Throws on any other node type.
  */
-export function evaluate(model: GraphModel, nodeId: string, handleId: string): Value {
+export function evaluate(
+	model: GraphModel,
+	nodeId: string,
+	handleId: string,
+	colorSpace: ColorSpace = "srgb",
+): Value {
 	const frame = {
 		doc: model.root,
+		colorSpace,
 		groupInputs: new Map(),
 		zones: new Map(),
 		finals: new Map(),
@@ -159,6 +170,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		const groupInputs = new Map(descriptor.inputs.map((i) => [i.id, get(i.id)]));
 		const inner = {
 			doc,
+			colorSpace: frame.colorSpace,
 			groupInputs,
 			zones: new Map(),
 			finals: new Map(),
@@ -210,6 +222,11 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			return zip([get("e"), get("low"), get("high")], (e, lo, hi) =>
 				Math.min(hi, Math.max(lo, e)),
 			);
+		case "display-gamut-clip": {
+			const [r = 0, g = 0, b = 0] = get("color");
+			const clipped = clipToGamut({ r, g, b }, frame.colorSpace);
+			return [clipped.r, clipped.g, clipped.b];
+		}
 		case "mix":
 			return zip([get("e1"), get("e2"), get("e3")], (a, b, t) => a * (1 - t) + b * t);
 		case "curve": {
