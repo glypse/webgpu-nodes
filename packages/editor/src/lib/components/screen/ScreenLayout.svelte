@@ -20,9 +20,11 @@
 	} from "$core";
 
 	import { getGraphManager } from "../../graph-manager.svelte";
+	import { openContextMenuAt } from "../../utils";
 	import NodeGraph from "../NodeGraph.svelte";
 	import Preview from "../Preview.svelte";
 	import Timeline from "../Timeline.svelte";
+	import EdgeMenu from "./EdgeMenu.svelte";
 	import { setScreenControls } from "./screen-controls";
 
 	const graph = getGraphManager();
@@ -70,7 +72,7 @@
 	const createId = () => crypto.randomUUID();
 
 	/** A pointer position as window fractions. */
-	function toScreen(event: PointerEvent): { x: number; y: number } {
+	function toScreen(event: MouseEvent): { x: number; y: number } {
 		return {
 			x: (event.clientX - size.left) / size.width,
 			y: (event.clientY - size.top) / size.height,
@@ -98,6 +100,11 @@
 	}
 
 	function handlePointerMove(event: PointerEvent) {
+		lastPoint = toScreen(event);
+		if (splitting) {
+			splitting = splitAt(splitting.axis, lastPoint);
+			return;
+		}
 		if (edgeDrag) {
 			if (event.pointerId !== edgeDrag.pointerId) return;
 			const point = toScreen(event);
@@ -111,6 +118,13 @@
 	}
 
 	function handlePointerDown(event: PointerEvent) {
+		if (splitting) {
+			event.preventDefault();
+			event.stopPropagation();
+			cancelledByRightClick = event.button === 2;
+			finishSplit(event.button === 0);
+			return;
+		}
 		if (event.button !== 0 || maximized) return;
 		const point = toScreen(event);
 		const edge = edgeAt(graph.screen, point.x, point.y, grab, { extend: event.shiftKey });
@@ -125,6 +139,82 @@
 		if (edgeDrag?.pointerId !== event.pointerId) return;
 		applyEdgeMove();
 		edgeDrag = null;
+	}
+
+	// ── Edge menu: split, join, swap ─────────────────────────────────────────
+	// Right-clicking an edge offers Blender's options for the two areas
+	// meeting there under the pointer. Splitting then follows the pointer,
+	// over any area, until a click splits there (a right-click or Escape
+	// cancels).
+
+	let edgeMenuTrigger = $state<HTMLElement | null>(null);
+	let edgeMenu = $state<{ axis: "x" | "y"; before: string; after: string }>({
+		axis: "x",
+		before: "",
+		after: "",
+	});
+
+	/** Where the pointer last was over the screen, as window fractions. */
+	let lastPoint = { x: 0, y: 0 };
+
+	let splitting = $state<{ axis: "x" | "y"; area: string | null; at: number } | null>(null);
+	/** Set when a right-click cancels a split: its context menu mustn't open. */
+	let cancelledByRightClick = false;
+
+	function joined(forward: boolean): Screen | undefined {
+		const [keep, remove] = forward
+			? [edgeMenu.before, edgeMenu.after]
+			: [edgeMenu.after, edgeMenu.before];
+		return joinAreas(graph.screen, keep, remove, min, createId);
+	}
+
+	function handleContextMenuCapture(event: MouseEvent) {
+		// The menu's own opening comes through here too.
+		if (!event.isTrusted) return;
+		// Some browsers send it before the press, which then hasn't cancelled yet.
+		if (cancelledByRightClick || splitting) {
+			cancelledByRightClick = false;
+			finishSplit(false);
+			event.preventDefault();
+			event.stopPropagation();
+			return;
+		}
+		if (maximized) return;
+		const point = toScreen(event);
+		const edge = edgeAt(graph.screen, point.x, point.y, grab);
+		if (!edge) return;
+		const offset = 2 * (edge.axis === "x" ? grab.width : grab.height);
+		const [before, after] = [-offset, offset].map((d) =>
+			edge.axis === "x"
+				? areaAt(graph.screen, edge.position + d, point.y)
+				: areaAt(graph.screen, point.x, edge.position + d),
+		);
+		if (!before || !after || before.id === after.id) return;
+		event.preventDefault();
+		event.stopPropagation();
+		edgeMenu = { axis: edge.axis, before: before.id, after: after.id };
+		if (edgeMenuTrigger) openContextMenuAt(edgeMenuTrigger, event.clientX, event.clientY);
+	}
+
+	/** Where a split along `axis` would go, at a point. */
+	function splitAt(axis: "x" | "y", point: { x: number; y: number }) {
+		const area = areaAt(graph.screen, point.x, point.y);
+		if (!area) return { axis, area: null, at: 0 };
+		const { rect } = area;
+		const w = rect.right - rect.left;
+		const h = rect.bottom - rect.top;
+		const at =
+			axis === "x"
+				? rect.left + snapHalf((point.x - rect.left) / w, min.width / w) * w
+				: rect.top + snapHalf((point.y - rect.top) / h, min.height / h) * h;
+		return { axis, area: area.id, at };
+	}
+
+	function finishSplit(confirm: boolean) {
+		const split = splitting;
+		splitting = null;
+		if (!confirm || !split?.area) return;
+		apply(splitArea(graph.screen, split.area, split.axis, split.at, createId(), "after", min));
 	}
 
 	// ── Corners: split, join, dock, swap ─────────────────────────────────────
@@ -276,10 +366,11 @@
 	}
 
 	function handleWindowKeydown(event: KeyboardEvent) {
-		if (event.key === "Escape" && cornerDrag) {
+		if (event.key === "Escape" && (cornerDrag || splitting)) {
 			event.preventDefault();
 			event.stopPropagation();
 			cornerDrag = null;
+			splitting = null;
 		}
 		if (event.key === " " && event.ctrlKey && !event.metaKey && !event.altKey) {
 			const hovered = hoveredArea;
@@ -335,6 +426,14 @@
 
 	/** The rectangle the outcome of a corner drag highlights. */
 	const highlight = $derived.by((): { rect: Rect; label: string } | null => {
+		if (splitting) {
+			const area = splitting.area ? findArea(graph.screen, splitting.area) : undefined;
+			if (!area) return null;
+			const r = area.rect;
+			const rect =
+				splitting.axis === "x" ? { ...r, left: splitting.at } : { ...r, top: splitting.at };
+			return { rect, label: "Split" };
+		}
 		const drag = cornerDrag;
 		const outcome = drag?.outcome;
 		if (!drag || !outcome) return null;
@@ -374,23 +473,27 @@
 	});
 
 	const cursor = $derived(
-		edgeDrag
-			? edgeDrag.edge.axis === "x"
+		splitting
+			? splitting.axis === "x"
 				? "col-resize"
 				: "row-resize"
-			: cornerDrag
-				? cornerDrag.outcome
-					? cornerDrag.outcome.kind === "split"
-						? cornerDrag.outcome.axis === "x"
-							? "col-resize"
-							: "row-resize"
-						: "move"
-					: "crosshair"
-				: hoverEdge === "x"
+			: edgeDrag
+				? edgeDrag.edge.axis === "x"
 					? "col-resize"
-					: hoverEdge === "y"
-						? "row-resize"
-						: undefined,
+					: "row-resize"
+				: cornerDrag
+					? cornerDrag.outcome
+						? cornerDrag.outcome.kind === "split"
+							? cornerDrag.outcome.axis === "x"
+								? "col-resize"
+								: "row-resize"
+							: "move"
+						: "crosshair"
+					: hoverEdge === "x"
+						? "col-resize"
+						: hoverEdge === "y"
+							? "row-resize"
+							: undefined,
 	);
 </script>
 
@@ -405,11 +508,12 @@
 	bind:this={container}
 	class={[
 		"bg-muted relative size-full overflow-hidden",
-		(edgeDrag ?? cornerDrag) && "select-none",
+		(edgeDrag ?? cornerDrag ?? splitting) && "select-none",
 	]}
 	style:cursor
 	onpointermovecapture={handlePointerMove}
 	onpointerdowncapture={handlePointerDown}
+	oncontextmenucapture={handleContextMenuCapture}
 	onpointerup={handlePointerUp}
 	onpointercancel={handlePointerUp}
 	onpointerleave={() => {
@@ -429,7 +533,7 @@
 				class={[
 					"bg-background relative flex size-full flex-col overflow-hidden rounded-md",
 					// Gestures over an area shouldn't reach its editor.
-					(edgeDrag ?? cornerDrag) && "pointer-events-none",
+					(edgeDrag ?? cornerDrag ?? splitting) && "pointer-events-none",
 				]}
 			>
 				{#if area.editor.type === "graph"}
@@ -453,6 +557,18 @@
 			</div>
 		</div>
 	{/each}
+
+	<EdgeMenu
+		bind:trigger={edgeMenuTrigger}
+		axis={edgeMenu.axis}
+		canJoinForward={joined(true) !== undefined}
+		canJoinBackward={joined(false) !== undefined}
+		onsplit={(axis: "x" | "y") => {
+			splitting = splitAt(axis, lastPoint);
+		}}
+		onjoin={(forward: boolean) => apply(joined(forward))}
+		onswap={() => apply(swapAreas(graph.screen, edgeMenu.before, edgeMenu.after))}
+	/>
 
 	{#if highlight}
 		<div
