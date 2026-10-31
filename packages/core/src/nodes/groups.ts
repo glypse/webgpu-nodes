@@ -128,7 +128,7 @@ export function buildGroupDescriptor(
 
 	const inputNode = definition.nodes.find((n) => n.type === "group-input");
 	const outputNode = definition.nodes.find((n) => n.type === "group-output");
-	const fallbacks = fallbackHandleIds(definition);
+	const fallbacks = fallbackHandleIds(definition, definitions);
 
 	const handles = {
 		inputs: inputNode?.data.handles ?? [],

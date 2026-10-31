@@ -150,34 +150,48 @@ export const fallbackNode: NodeDescriptor = {
 	},
 };
 
-/**
- * Group-input handles of a definition whose value goes straight into a
- * Fallback node: unlinked on a group node, they fall back to the group's
- * own default instead of showing an editor.
- */
-export function fallbackHandleIds(definition: {
-	nodes: readonly { id: string; type?: string }[];
+type FallbackDocument = {
+	nodes: readonly { id: string; type?: string; group?: { definitionRef: string } }[];
 	edges: readonly {
 		source: string;
 		sourceHandle: string;
 		target: string;
 		targetHandle: string;
 	}[];
-}): Set<string> {
+};
+
+/**
+ * Group-input handles of a definition whose value goes straight into a
+ * Fallback node, or into a fallback input of a nested group: unlinked on a
+ * group node, they fall back to the group's own default instead of showing
+ * an editor.
+ */
+export function fallbackHandleIds(
+	definition: FallbackDocument,
+	definitions: ReadonlyMap<string, FallbackDocument> = new Map(),
+	visiting: ReadonlySet<FallbackDocument> = new Set(),
+): Set<string> {
 	const inputIds = new Set(
 		definition.nodes.filter((n) => n.type === "group-input").map((n) => n.id),
 	);
-	const fallbackIds = new Set(
-		definition.nodes.filter((n) => n.type === "fallback").map((n) => n.id),
-	);
+	const nodesById = new Map(definition.nodes.map((n) => [n.id, n]));
+	const nested = new Map<string, Set<string>>();
+	const isFallback = (target: string, handle: string): boolean => {
+		const node = nodesById.get(target);
+		if (node?.type === "fallback") return handle === "value";
+		const ref = node?.type === "node-group" ? node.group?.definitionRef : undefined;
+		const inner = ref === undefined ? undefined : definitions.get(ref);
+		if (!ref || !inner || visiting.has(inner)) return false;
+		let handles = nested.get(ref);
+		if (!handles) {
+			handles = fallbackHandleIds(inner, definitions, new Set([...visiting, definition]));
+			nested.set(ref, handles);
+		}
+		return handles.has(handle);
+	};
 	return new Set(
 		definition.edges
-			.filter(
-				(e) =>
-					inputIds.has(e.source) &&
-					fallbackIds.has(e.target) &&
-					e.targetHandle === "value",
-			)
+			.filter((e) => inputIds.has(e.source) && isFallback(e.target, e.targetHandle))
 			.map((e) => e.sourceHandle),
 	);
 }
