@@ -20,7 +20,8 @@
 		}
 	},
 	"scripts": {
-		"stdlib:archive": "bun scripts/archive-stdlib.ts"
+		"stdlib:archive": "bun scripts/archive-stdlib.ts",
+		"stdlib:build": "bun scripts/stdlib/build.ts"
 	},
 	"dependencies": {
 		"elkjs": "^0.12.0",

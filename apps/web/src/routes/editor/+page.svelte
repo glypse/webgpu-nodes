@@ -16,11 +16,25 @@
 	import { AlertDialog, buttonVariants, Menubar } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
+	import { STDLIB_LAYOUT_PARAM, layoutServedProject } from "../../lib/stdlib-layout";
+
 	const graph = new GraphManager();
 	setGraphManager(graph);
 
 	const devTools = new DevTools(dev);
 	setDevTools(devTools);
+
+	if (dev) {
+		const url = new URL(window.location.href);
+		const server = url.searchParams.get(STDLIB_LAYOUT_PARAM);
+		if (server) {
+			url.searchParams.delete(STDLIB_LAYOUT_PARAM);
+			window.history.replaceState(window.history.state, "", url);
+			layoutServedProject(graph, server).catch((error: unknown) => {
+				console.error(error);
+			});
+		}
+	}
 
 	setPreferences(new Preferences());
 
