@@ -29,6 +29,7 @@ import {
 	ITERATIONS_HANDLE,
 	ITERATION_HANDLE,
 	REPEAT_INPUT,
+	REPEAT_OUTPUT,
 	type Zone,
 	type ZoneAnalysis,
 	analyzeZones,
@@ -120,6 +121,51 @@ function topologicalSort(
 		throw new Error("Cycle detected in the node graph - cannot generate shader");
 	}
 	return sorted;
+}
+
+/**
+ * The edges needed to compute the `seedType` nodes, and the state items of
+ * each repeat zone (by Repeat Output id) they need. An item is needed when
+ * its final value is read, or when its current value is read inside the loop
+ * by something needed: others are left out, with what only they used.
+ */
+function neededEdges(
+	nodes: Map<string, GraphNode>,
+	edges: readonly GraphEdge[],
+	seedType: string,
+): { edges: GraphEdge[]; reachable: Set<string>; liveItems: Map<string, Set<string>> } {
+	const liveItems = new Map<string, Set<string>>();
+	const itemOwner = (nodeId: string, handle: string): string | undefined => {
+		const node = nodes.get(nodeId);
+		if (node?.type === REPEAT_OUTPUT) return nodeId;
+		if (
+			node?.type === REPEAT_INPUT &&
+			handle !== ITERATIONS_HANDLE &&
+			handle !== ITERATION_HANDLE
+		)
+			return pairedOutputId(node);
+		return undefined;
+	};
+	const isLive = (nodeId: string, handle: string): boolean => {
+		const owner = itemOwner(nodeId, handle);
+		return owner === undefined || (liveItems.get(owner)?.has(handle) ?? false);
+	};
+	for (;;) {
+		const active = edges.filter((e) => isLive(e.target, e.targetHandle));
+		const reachable = findReachableNodeIds(nodes, active, seedType);
+		let grew = false;
+		for (const e of active) {
+			if (!reachable.has(e.target) || isLive(e.source, e.sourceHandle)) continue;
+			const owner = itemOwner(e.source, e.sourceHandle);
+			if (owner === undefined) continue;
+			liveItems.set(owner, new Set([...(liveItems.get(owner) ?? []), e.sourceHandle]));
+			grew = true;
+		}
+		if (!grew) {
+			const needed = active.filter((e) => reachable.has(e.source) && reachable.has(e.target));
+			return { edges: needed, reachable, liveItems };
+		}
+	}
 }
 
 /** WGSL identifiers can't contain characters like "-" from a UUID's dashes. */
@@ -228,9 +274,9 @@ type ShaderState = {
 	helpers: HelperRegistry;
 	/**
 	 * Every group's generated function (and, for the first one, its output
-	 * struct), keyed by definitionRef plus the absent fallback inputs and the
-	 * known enum values, so each variant is emitted once no matter how many
-	 * instances use it.
+	 * struct), keyed by definitionRef plus the absent fallback inputs, the
+	 * known enum values, the types and the outputs read, so each variant is
+	 * emitted once no matter how many instances use it.
 	 */
 	groupDecls: Map<string, GroupDecl>;
 	/** Group output structs already declared, by name. */
@@ -272,6 +318,8 @@ class BodyEmitter {
 	private incomingByTarget = new Map<string, GraphEdge[]>();
 	/** WGSL variables standing for zone boundary outputs, keyed by node id then handle id. */
 	private zoneVars = new Map<string, Map<string, string>>();
+	/** The output handles of each node something reads. */
+	private readHandles = new Map<string, Set<string>>();
 
 	constructor(
 		private state: ShaderState,
@@ -286,12 +334,17 @@ class BodyEmitter {
 		private uniforms = false,
 		/** The types the document's variables take (see `TypeBindings`). */
 		readonly bindings: TypeBindings = {},
+		/** The state items each zone computes, by Repeat Output id (see `neededEdges`). */
+		readonly liveItems: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		for (const edge of edges) {
 			const list = this.incomingByTarget.get(edge.target) ?? [];
 			list.push(edge);
 			this.incomingByTarget.set(edge.target, list);
+			const read = this.readHandles.get(edge.source) ?? new Set();
+			read.add(edge.sourceHandle);
+			this.readHandles.set(edge.source, read);
 		}
 		for (const zone of zones.zones.values()) {
 			const vars = zoneVarNames(zone, this.zoneItems(zone));
@@ -516,6 +569,7 @@ class BodyEmitter {
 			absent,
 			constants,
 			resolved.bindings,
+			this.readHandles.get(node.id) ?? new Set(),
 		);
 		if (!decl) return;
 		// Converted to the function's parameters, which its body was emitted for.
@@ -563,6 +617,8 @@ function emitDocumentBody(
 	constants: ReadonlyMap<string, number> = new Map(),
 	uniforms = false,
 	bindings: TypeBindings = {},
+	/** The seed's input handles to compute; all of them when undefined. */
+	seedHandles?: ReadonlySet<string>,
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -572,9 +628,17 @@ function emitDocumentBody(
 	const edgesByTarget = new Map<string, GraphEdge[]>();
 	for (const e of validEdges)
 		edgesByTarget.set(e.target, [...(edgesByTarget.get(e.target) ?? []), e]);
-	const usedEdges = liveEdges({ nodesById: nodeMap, edgesByTarget }, validEdges, constants);
-	const reachable = findReachableNodeIds(nodeMap, usedEdges, seedType);
-	const edges = usedEdges.filter((e) => reachable.has(e.source) && reachable.has(e.target));
+	const usedEdges = liveEdges(
+		{ nodesById: nodeMap, edgesByTarget },
+		validEdges,
+		constants,
+	).filter(
+		(e) =>
+			!seedHandles ||
+			nodeMap.get(e.target)?.type !== seedType ||
+			seedHandles.has(e.targetHandle),
+	);
+	const { edges, reachable, liveItems } = neededEdges(nodeMap, usedEdges, seedType);
 	const emitter = new BodyEmitter(
 		state,
 		doc,
@@ -584,6 +648,7 @@ function emitDocumentBody(
 		constants,
 		uniforms,
 		bindings,
+		liveItems,
 	);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
@@ -627,13 +692,19 @@ function emitDocumentBody(
 		const input = nodeMap.get(zone.inputId);
 		const output = nodeMap.get(zone.outputId);
 		if (!input || !output) return;
-		const items = emitter.zoneItems(zone);
-		const vars = zoneVarNames(zone, items);
-		const stateVar = (k: number) => [...vars.state.values()][k] ?? "";
+		const allItems = emitter.zoneItems(zone);
+		const vars = zoneVarNames(zone, allItems);
+		const live = liveItems.get(zone.outputId);
+		// Variables keep their item's index among all items, live or not.
+		const items = allItems.flatMap((item, k) =>
+			live?.has(item.id)
+				? [{ item, state: vars.state.get(item.id) ?? "", next: vars.next[k] ?? "" }]
+				: [],
+		);
 
 		const setup: string[] = items.map(
-			(item, k) =>
-				`var ${stateVar(k)}: ${wgslTypeName(item.type)} = ${emitter.inputExpr(input, item.id, item.type)};`,
+			({ item, state }) =>
+				`var ${state}: ${wgslTypeName(item.type)} = ${emitter.inputExpr(input, item.id, item.type)};`,
 		);
 		const iterations = emitter.inputExpr(input, ITERATIONS_HANDLE, "i32", DEFAULT_ITERATIONS);
 		const max = String(zoneMaxIterations(input));
@@ -649,10 +720,10 @@ function emitDocumentBody(
 		// another item's current value.
 		const update = [
 			...items.map(
-				(item, k) =>
-					`  let ${vars.next[k] ?? ""} = ${emitter.inputExpr(output, item.id, item.type)};`,
+				({ item, next }) =>
+					`  let ${next} = ${emitter.inputExpr(output, item.id, item.type)};`,
 			),
-			...items.map((_, k) => `  ${stateVar(k)} = ${vars.next[k] ?? ""};`),
+			...items.map(({ state, next }) => `  ${state} = ${next};`),
 			"}",
 		];
 		emitter.push(zone.outputId, update, indent);
@@ -669,6 +740,8 @@ function emitGroupFunction(
 	absentInputs: ReadonlySet<string> = new Set(),
 	constants: ReadonlyMap<string, number> = new Map(),
 	given: TypeBindings = {},
+	/** The outputs the caller reads; all of them when undefined. */
+	readOutputs?: ReadonlySet<string>,
 ): GroupDecl | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
@@ -678,16 +751,30 @@ function emitGroupFunction(
 
 	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
 	const inputHandles = groupInputNode?.data.handles ?? [];
+	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
+	const outputHandles = groupOutputNode?.data.handles ?? [];
 
-	// One function per combination of absent fallback inputs, enum values
-	// and variables' types, so each only contains the branches it uses.
+	// One function per combination of absent fallback inputs, enum values,
+	// variables' types and outputs read, so each only contains what it uses.
 	const absentIndices = inputHandles.flatMap((h, i) => (absentInputs.has(h.id) ? [i] : []));
 	const enumValues = inputHandles.flatMap((h, i) => {
 		const value = constants.get(h.id);
 		return value === undefined ? [] : [`${String(i)}_${String(value)}`];
 	});
 	const typeSuffix = variables.map((v) => bindings[v.id] ?? "f32").join("_");
-	const key = [definitionRef, ...absentIndices, "e", ...enumValues, "t", typeSuffix].join("|");
+	const unreadIndices = outputHandles.flatMap((h, i) =>
+		readOutputs && !readOutputs.has(h.id) ? [i] : [],
+	);
+	const key = [
+		definitionRef,
+		...absentIndices,
+		"e",
+		...enumValues,
+		"t",
+		typeSuffix,
+		"u",
+		...unreadIndices,
+	].join("|");
 	const existing = state.groupDecls.get(key);
 	if (existing) return existing;
 
@@ -695,15 +782,16 @@ function emitGroupFunction(
 	const suffix = [
 		...(absentIndices.length > 0 ? [`d${absentIndices.join("_")}`] : []),
 		...enumValues.map((v) => `e${v}`),
+		...(unreadIndices.length > 0 ? [`u${unreadIndices.join("_")}`] : []),
 	];
 	const fnName = [`group_${ident}`, ...suffix, ...(typeSuffix ? [`t_${typeSuffix}`] : [])].join(
 		"__",
 	);
 	const structName = [`GroupOutputs_${ident}`, ...(typeSuffix ? [typeSuffix] : [])].join("__");
 
-	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
-	const outputHandles = groupOutputNode?.data.handles ?? [];
-
+	const readHandles = new Set(
+		outputHandles.filter((_, i) => !unreadIndices.includes(i)).map((h) => h.id),
+	);
 	const body = emitDocumentBody(
 		state,
 		definition,
@@ -712,6 +800,7 @@ function emitGroupFunction(
 		constants,
 		state.uniformScopes.has(definitionRef),
 		bindings,
+		readHandles,
 	);
 
 	// Struct fields follow the handle types; whatever feeds them is converted
@@ -728,8 +817,9 @@ function emitGroupFunction(
 		boundType(h.type, variables, bindings) ?? outputTypes[h.id] ?? "f32";
 	const inputType = (h: GroupHandleDef): WgslType =>
 		boundType(h.type, variables, bindings) ?? "f32";
+	// Outputs the caller doesn't read keep their struct field, zeroed.
 	const fieldValues = outputHandles.map((h) =>
-		groupOutputNode
+		groupOutputNode && readHandles.has(h.id)
 			? body.inputExpr(groupOutputNode, h.id, outputType(h))
 			: WGSL_DEFAULTS[outputType(h)],
 	);

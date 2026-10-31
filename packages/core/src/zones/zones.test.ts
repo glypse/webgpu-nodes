@@ -322,4 +322,81 @@ describe("repeat zone codegen", () => {
 		expect(shader).toContain("for (var z_gz_in_i");
 		expectValid(shader);
 	});
+
+	it("leaves out state items nothing needs", () => {
+		const used: HandleDef = { id: "used", label: "used", type: "f32" };
+		const feeder: HandleDef = { id: "feeder", label: "feeder", type: "f32" };
+		const unused: HandleDef = { id: "unused", label: "unused", type: "f32" };
+		const shader = shaderFor(
+			[
+				...zone("z", [used, feeder, unused]),
+				{ id: "next", type: "add" },
+				{ id: "wave", type: "sin" },
+				{ id: "bump", type: "cos" },
+			],
+			[
+				["z_in", "used", "next", "operands"],
+				["z_in", "feeder", "next", "operands"],
+				["next", "result", "z_out", "used"],
+				["z_in", "iteration", "wave", "e"],
+				["wave", "result", "z_out", "feeder"],
+				["z_in", "unused", "bump", "e"],
+				["bump", "result", "z_out", "unused"],
+				["z_out", "used", "out", "color"],
+			],
+		);
+		expect(shader).toContain("var z_z_in_s0");
+		expect(shader).toContain("var z_z_in_s1");
+		expect(shader).not.toContain("z_z_in_s2");
+		expect(shader).not.toContain("cos(");
+		expectValid(shader);
+	});
+
+	it("computes only the outputs of a group its node reads", () => {
+		const project = rootProject(
+			[{ id: "g", type: "node-group", group: { definitionRef: "def", locked: false } }],
+			[["g", "cheap", "out", "color"]],
+		);
+		project.definitions.def = {
+			label: "Two outputs",
+			nodes: [
+				{
+					id: "gi",
+					type: "group-input",
+					data: { handles: [{ id: "x", label: "x", type: "f32" }] },
+					position: { x: 0, y: 0 },
+				},
+				{
+					id: "go",
+					type: "group-output",
+					data: {
+						handles: [
+							{ id: "cheap", label: "cheap", type: "f32" },
+							{ id: "costly", label: "costly", type: "f32" },
+						],
+					},
+					position: { x: 0, y: 0 },
+				},
+				...zone("gz", [ACC]).map((n) => ({
+					...n,
+					data: n.data ?? {},
+					position: { x: 0, y: 0 },
+				})),
+				{ id: "gsin", type: "sin", data: {}, position: { x: 0, y: 0 } },
+				{ id: "gabs", type: "abs", data: {}, position: { x: 0, y: 0 } },
+			],
+			edges: [
+				edge(["gi", "x", "gz_in", "acc"]),
+				edge(["gz_in", "acc", "gsin", "e"]),
+				edge(["gsin", "result", "gz_out", "acc"]),
+				edge(["gz_out", "acc", "go", "costly"]),
+				edge(["gi", "x", "gabs", "e"]),
+				edge(["gabs", "result", "go", "cheap"]),
+			],
+		};
+		const shader = generateShader(new GraphModel(project)).shader;
+		expect(shader).not.toContain("for (");
+		expect(shader).toContain("fn group_h_def__u1(");
+		expectValid(shader);
+	});
 });

@@ -141,8 +141,8 @@ describe("type variables", () => {
 		root.edges.push(edge(["h", "sum", "out", "color"]));
 		const graph = new GraphModel(base);
 		const { shader } = generateShader(graph);
-		expect(shader).toContain("fn group_h_pairs__t_vec3f_f32(");
-		expect(shader).toContain("fn group_h_pairs__t_f32_f32(");
+		expect(shader).toContain("fn group_h_pairs__u1__t_vec3f_f32(");
+		expect(shader).toContain("fn group_h_pairs__u1__t_f32_f32(");
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 
