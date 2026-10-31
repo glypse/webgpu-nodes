@@ -14,6 +14,7 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
 	converter: "Converter",
 	zone: "Zones",
 	color: "Color",
+	texture: "Texture",
 	misc: "Miscellaneous",
 };
 

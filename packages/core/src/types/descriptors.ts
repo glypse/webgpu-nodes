@@ -199,6 +199,7 @@ export type NodeCategory =
 	| "converter"
 	| "zone"
 	| "color"
+	| "texture"
 	| "misc";
 
 /** Shader helper functions nodes may request through `WgslCtx.helper`. */

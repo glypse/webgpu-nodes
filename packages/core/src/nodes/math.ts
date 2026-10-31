@@ -140,3 +140,17 @@ export const mixNode: NodeDescriptor = {
 	),
 	aliases: ["Lerp", "Linear Interpolate", "Interpolate", "Blend", "Mix Color", "Cross Fade"],
 };
+export const smoothstepNode: NodeDescriptor = {
+	...nAryFn(
+		"smoothstep",
+		"Smoothstep",
+		"smoothstep",
+		[
+			{ id: "low", label: "low", types: FLOAT_TYPES },
+			{ id: "high", label: "high", types: FLOAT_TYPES },
+			{ id: "x", label: "x", types: FLOAT_TYPES },
+		],
+		{ low: 0, high: 1, x: 0 },
+	),
+	aliases: ["Smooth Step", "Hermite", "Ease", "Smooth Threshold"],
+};

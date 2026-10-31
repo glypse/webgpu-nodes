@@ -39,6 +39,7 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	mod: nodes.modNode,
 	negate: nodes.negateNode,
 	mix: nodes.mixNode,
+	smoothstep: nodes.smoothstepNode,
 	abs: nodes.absNode,
 	min: nodes.minNode,
 	max: nodes.maxNode,
