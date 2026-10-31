@@ -1304,7 +1304,7 @@ export abstract class GroupModel extends ZoneModel {
 		this.removeHandles(definitionRef, handleNodeId, [handleId, ...under.map((h) => h.id)]);
 	}
 
-	private removeHandles(definitionRef: string, handleNodeId: string, ids: readonly string[]) {
+	protected removeHandles(definitionRef: string, handleNodeId: string, ids: readonly string[]) {
 		const def = this.project.definitions.get(definitionRef);
 		const handleNode = def?.nodesById.get(handleNodeId);
 		if (!def || !handleNode || ids.length === 0) return;

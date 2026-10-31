@@ -25,8 +25,8 @@
 
 	/** Where the menu was opened, in client coordinates. */
 	let at = { x: 0, y: 0 };
-	/** Whether it was opened on a node rather than the canvas. */
-	let onNode = $state(false);
+	/** The node it was opened on, if not on the canvas. */
+	let onNode = $state<string | undefined>();
 
 	const selected = $derived(view.selectedNodeIds);
 	const locked = $derived(view.locked);
@@ -35,7 +35,7 @@
 		at = { x: event.clientX, y: event.clientY };
 		const target = event.target instanceof Element ? event.target : null;
 		const nodeId = target?.closest<HTMLElement>(".svelte-flow__node")?.dataset.id;
-		onNode = nodeId !== undefined;
+		onNode = nodeId;
 		// A node right-clicked outside the selection becomes the selection.
 		if (nodeId && !selected.includes(nodeId)) graph.selectNodes([nodeId]);
 	}
@@ -46,7 +46,14 @@
 		{@render children()}
 	</ContextMenu.Trigger>
 	<ContextMenu.Content class="w-52">
-		{#if !onNode}
+		{#if onNode}
+			{@const nodeId = onNode}
+			<ContextMenu.Item disabled={locked} onSelect={() => graph.previewNode(nodeId)}>
+				Preview
+				<ContextMenu.Shortcut>⇧⌘Click</ContextMenu.Shortcut>
+			</ContextMenu.Item>
+			<ContextMenu.Separator />
+		{:else}
 			<ContextMenu.Item disabled={locked} onSelect={() => onadd(at.x, at.y)}>
 				Add…
 				<ContextMenu.Shortcut>⇧A</ContextMenu.Shortcut>

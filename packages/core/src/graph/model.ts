@@ -30,7 +30,7 @@ import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
 import { indexDocument, serialiseDocument } from "./hydrate";
 import { emptyProject, withEntry } from "./model-base";
-import { EditModel } from "./model-edits";
+import { PreviewModel } from "./model-preview";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
 
@@ -62,7 +62,7 @@ export type TypeChoice = {
  * Front ends subclass it to plug in their own reactivity, by overriding the
  * `create*` factories (state, documents, history counts).
  */
-export class GraphModel extends EditModel {
+export class GraphModel extends PreviewModel {
 	/** Content snapshots of past states (see `contentSnapshot`). */
 	readonly history = new History(this.createHistoryCounts());
 

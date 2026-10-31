@@ -425,6 +425,12 @@
 			}}
 			onconnect={handleConnect}
 			onconnectend={handleConnectEnd}
+			onnodeclick={({ node, event }) => {
+				// Ctrl/Cmd+Shift+click previews the node.
+				if (!event.shiftKey || !(event.metaKey || event.ctrlKey)) return;
+				view.activate();
+				if (graph.previewNode(node.id)) graph.selectNodes([node.id]);
+			}}
 			onselectionchange={({ nodes: selectedNodes }) => {
 				if (view.active) graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 			}}

@@ -74,6 +74,11 @@
 		graph.ungroupSelection(ids);
 	}
 
+	function handlePreviewSelected() {
+		const [id] = graph.selectedNodeIds;
+		if (id) graph.previewNode(id);
+	}
+
 	async function handleLayoutSelected() {
 		await graph.layoutSelection();
 	}
@@ -229,6 +234,14 @@
 				>
 					Ungroup selected
 					<Menubar.Shortcut>⇧G</Menubar.Shortcut>
+				</Menubar.Item>
+				<Menubar.Separator />
+				<Menubar.Item
+					onSelect={handlePreviewSelected}
+					disabled={!(graph.selectedNodeIds.length === 1 && !graph.isLocked)}
+				>
+					Preview selected node
+					<Menubar.Shortcut>⇧⌘Click</Menubar.Shortcut>
 				</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item

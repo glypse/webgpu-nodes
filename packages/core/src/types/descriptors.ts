@@ -53,7 +53,11 @@ export type TypeVariable = {
 export type SocketType = WgslType | { variable: string } | { inferred: true };
 
 /** A socket of a group's boundary node: a handle whose type may be decided per group node. */
-export type GroupHandleDef = Omit<HandleDef, "type"> & { type: SocketType };
+export type GroupHandleDef = Omit<HandleDef, "type"> & {
+	type: SocketType;
+	/** On a group output: added to preview a node inside the group, and removed by the next preview. */
+	viewer?: true;
+};
 
 /** The types a group's variables take for one group node, by variable id. */
 export type TypeBindings = Readonly<Record<string, WgslType>>;
