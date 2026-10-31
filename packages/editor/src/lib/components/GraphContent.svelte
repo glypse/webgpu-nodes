@@ -339,7 +339,9 @@
 		onpick={pickAddEntry}
 		ondelete={deleteGroupEntry}
 	>
+		<!-- The flow's id scopes its SVG ids (the background pattern's): areas must not share one. -->
 		<SvelteFlow
+			id={view.areaId}
 			bind:nodes
 			bind:edges
 			{nodeTypes}
