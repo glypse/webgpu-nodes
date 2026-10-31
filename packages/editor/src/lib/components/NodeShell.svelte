@@ -12,7 +12,7 @@
 		type WgslType,
 	} from "$core";
 	import { Button, Select } from "$theme";
-	import { Handle, Position, useNodeConnections } from "@xyflow/svelte";
+	import { Handle, Position, useNodeConnections, useUpdateNodeInternals } from "@xyflow/svelte";
 	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
@@ -63,6 +63,26 @@
 
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
+
+	// Svelte Flow measures a node's handles only when the node is resized, so
+	// a handle swapped for another in place (an enum showing another variant's
+	// inputs) would stay unmeasured, and links to it undrawn.
+	const updateNodeInternals = useUpdateNodeInternals();
+	const handleIds = $derived(
+		[
+			...inputs.map((i) => i.id),
+			...[...hiddenInputs].filter((i) => connectedHandles.has(i)),
+			"|",
+			...outputs.map((o) => o.id),
+		].join(" "),
+	);
+	let measuredHandleIds: string | undefined;
+	$effect(() => {
+		if (measuredHandleIds !== undefined && measuredHandleIds !== handleIds) {
+			updateNodeInternals(id);
+		}
+		measuredHandleIds = handleIds;
+	});
 
 	const typeChoice = $derived(graph.typeChoice(id, view.path));
 	const variableChoices = $derived(
