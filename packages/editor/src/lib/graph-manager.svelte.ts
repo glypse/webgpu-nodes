@@ -9,6 +9,7 @@ import {
 	type GraphNode,
 	type HydratedGraphDocument,
 	type LayoutOptions,
+	type NodeClipboard,
 	type NodeGeometry,
 } from "$core";
 import { getContext, setContext } from "svelte";
@@ -86,6 +87,26 @@ export class GraphManager extends GraphModel {
 			this.sheetGroupId = targetNodeId;
 			this.sheetOpen = true;
 		}
+	}
+
+	// ── Clipboard ───────────────────────────────────────────────────────────
+
+	/** Nodes last copied or cut, shared by every graph area. */
+	clipboard = $state.raw<NodeClipboard | null>(null);
+
+	copy(nodeIds: Iterable<string>): boolean {
+		const clipboard = this.copyNodes(nodeIds);
+		if (clipboard) this.clipboard = clipboard;
+		return clipboard !== undefined;
+	}
+
+	cut(nodeIds: string[]) {
+		if (!this.isLocked && this.copy(nodeIds)) this.deleteNodes(nodeIds);
+	}
+
+	/** Paste the clipboard into the active document (see `pasteNodes`). Returns the new ids. */
+	paste(position?: { x: number; y: number }): string[] {
+		return this.clipboard ? this.pasteNodes(this.clipboard, position) : [];
 	}
 
 	// ── Layout ──────────────────────────────────────────────────────────────

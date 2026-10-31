@@ -21,5 +21,6 @@ export * from "./graph/model-base";
 export * from "./graph/model-zones";
 export * from "./graph/model-groups";
 export * from "./graph/model-custom";
+export * from "./graph/model-edits";
 export * from "./graph/model";
 export { defaultScene } from "./scenes";

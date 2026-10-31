@@ -228,8 +228,8 @@
 
 	function handleKeydown(event: KeyboardEvent) {
 		if (!hovered) return;
-		const tag = (event.target as HTMLElement | null)?.tagName;
-		if (tag === "INPUT" || tag === "TEXTAREA") return;
+		const target = event.target as HTMLElement | null;
+		if (target?.closest("input, textarea, select, [contenteditable]")) return;
 		view.activate();
 
 		const mod = event.metaKey || event.ctrlKey;
@@ -237,6 +237,23 @@
 		if (event.shiftKey && !mod && !event.altKey && key === "a") {
 			event.preventDefault();
 			openAddMenu(pointer.x, pointer.y);
+			return;
+		}
+		if (mod && !event.altKey && !event.shiftKey && (key === "c" || key === "v")) {
+			event.preventDefault();
+			if (key === "c") graph.copy(view.selectedNodeIds);
+			else graph.paste(screenToFlowPosition(pointer));
+			return;
+		}
+		if (event.key === "Delete" || event.key === "Backspace") {
+			event.preventDefault();
+			if (mod) graph.dissolveNodes(view.selectedNodeIds);
+			else graph.deleteNodes(view.selectedNodeIds, view.selectedEdgeIds);
+			return;
+		}
+		if (key === "r" && !mod && !event.altKey && !event.shiftKey) {
+			event.preventDefault();
+			graph.resetNodes(view.selectedNodeIds);
 			return;
 		}
 
@@ -309,10 +326,6 @@
 			} else {
 				graph.groupSelection(selectedIds);
 			}
-		} else if (event.key === "Delete" || event.key === "Backspace") {
-			if (isLocked) {
-				event.preventDefault();
-			}
 		}
 	}
 </script>
@@ -356,11 +369,7 @@
 			nodesDraggable={!isLocked}
 			nodesConnectable={!isLocked}
 			elementsSelectable={!isLocked}
-			deleteKey={isLocked || !hovered ? null : undefined}
-			onbeforedelete={({ nodes: deletedNodes, edges: deletedEdges }) =>
-				Promise.resolve(
-					isLocked ? false : graph.expandDeletion(deletedNodes, deletedEdges),
-				)}
+			deleteKey={null}
 			isValidConnection={(connection) => graph.isValidConnection(connection)}
 			onmove={(_event, viewport) => {
 				view.document.viewport = { ...viewport };

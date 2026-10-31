@@ -45,6 +45,14 @@ export class GraphView implements DocumentView {
 		this.graph.selectedNodeIds = this.document.nodes.filter((n) => n.selected).map((n) => n.id);
 	}
 
+	get selectedNodeIds(): string[] {
+		return this.document.nodes.filter((n) => n.selected).map((n) => n.id);
+	}
+
+	get selectedEdgeIds(): string[] {
+		return this.document.edges.filter((e) => e.selected).map((e) => e.id);
+	}
+
 	get nodes(): GraphNode[] {
 		return this.document.nodes;
 	}

@@ -78,7 +78,7 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 
 const NON_DELETABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
 
-function hydrateNode(node: GraphDocumentNode): GraphNode {
+export function hydrateNode(node: GraphDocumentNode): GraphNode {
 	const base = {
 		id: node.id,
 		type: node.type,
