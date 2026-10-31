@@ -31,6 +31,9 @@ export default defineConfig(
 		languageOptions: {
 			parserOptions: {
 				projectService: true,
+				// The same for every file: typescript-eslint reloads the whole project each time
+				// consecutive files differ, which made linting quadratic in the file count.
+				extraFileExtensions: [".svelte"],
 			},
 		},
 		rules: {
