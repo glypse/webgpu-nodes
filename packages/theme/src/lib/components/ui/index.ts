@@ -1,38 +1,22 @@
 // Single-component: exported as bare names (use as <Button>, <Input>, etc.)
-export { Root as Button, buttonVariants } from "./button/index";
-export { Root as Checkbox } from "./checkbox/index";
-export {
-	ColorPicker,
-	ColorValueRamp,
-	ColorWheel,
-	ColorWheels,
-	OKLCH_MAX_CHROMA,
-	OklchLightness,
-	OklchWheel,
-} from "./color-picker/index";
-export { CurveEditor } from "./curve-editor/index";
-export { Root as Input } from "./input/index";
-export { Root as Label } from "./label/index";
-export { Root as Progress } from "./progress/index";
-export { Root as Separator } from "./separator/index";
-export { Root as Textarea } from "./textarea/index";
-export { Root as Toggle, toggleVariants } from "./toggle/index";
-export { Root as Scrubbable } from "./scrubbable/index";
+export { default as Button } from "./button.svelte";
+export { buttonVariants } from "./button-variants.js";
+export { default as Checkbox } from "./checkbox.svelte";
+export { default as CurveEditor } from "./curve-editor.svelte";
+export { default as Input } from "./input.svelte";
+export { default as Kbd } from "./kbd.svelte";
+export { default as Progress } from "./progress.svelte";
+export { default as Scrubbable } from "./scrubbable.svelte";
+export { default as ColorPicker } from "./color-picker/color-picker.svelte";
+export { default as ColorWheels } from "./color-picker/color-wheels.svelte";
 
 // Multi-component: exported as namespaces (use as <ContextMenu.Root>, <Menubar.Menu>, etc.)
-export * as AlertDialog from "./alert-dialog/index";
-export * as Breadcrumb from "./breadcrumb/index";
-export * as Card from "./card/index";
-export * as Command from "./command/index";
-export * as ContextMenu from "./context-menu/index";
+export * as AlertDialog from "./dialog/alert-dialog";
+export * as ContextMenu from "./menu/context-menu";
 export * as Dialog from "./dialog/index";
-export * as DropdownMenu from "./dropdown-menu/index";
-export * as InputGroup from "./input-group/index";
-export * as Kbd from "./kbd/index";
-export * as Menubar from "./menubar/index";
+export * as DropdownMenu from "./menu/dropdown-menu";
+export * as Menubar from "./menu/menubar";
 export * as Popover from "./popover/index";
 export * as RadioGroup from "./radio-group/index";
-export * as Resizable from "./resizable/index";
 export * as Select from "./select/index";
-export * as Sheet from "./sheet/index";
 export * as ToggleGroup from "./toggle-group/index";

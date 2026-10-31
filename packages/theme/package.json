@@ -32,12 +32,6 @@
 			"svelte": "./dist/components/ui/index.js",
 			"import": "./dist/components/ui/index.js",
 			"default": "./dist/components/ui/index.js"
-		},
-		"./components/ui/*": {
-			"development": "./src/lib/components/ui/*/index.ts",
-			"svelte": "./dist/components/ui/*/index.js",
-			"import": "./dist/components/ui/*/index.js",
-			"default": "./dist/components/ui/*/index.js"
 		}
 	},
 	"dependencies": {
@@ -45,7 +39,6 @@
 		"@fontsource-variable/atkinson-hyperlegible-next": "^5.3.0",
 		"bits-ui": "^2.20.0",
 		"clsx": "^2.1.1",
-		"paneforge": "^1.0.2",
 		"phosphor-svelte": "catalog:",
 		"shadcn-svelte": "^1.7.0",
 		"tailwind-merge": "^3.7.0",
@@ -53,7 +46,6 @@
 		"tw-animate-css": "^1.4.0"
 	},
 	"devDependencies": {
-		"@internationalized/date": "^3.12.4",
 		"@sveltejs/package": "catalog:",
 		"@sveltejs/vite-plugin-svelte": "catalog:",
 		"@tailwindcss/vite": "catalog:",

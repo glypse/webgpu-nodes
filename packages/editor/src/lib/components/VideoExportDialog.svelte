@@ -102,7 +102,6 @@
 			<SettingField label="Format">
 				<ToggleGroup.Root
 					type="single"
-					variant="outline"
 					value={options.format}
 					onValueChange={(value: string) => {
 						if (value in VIDEO_FORMATS) options.format = value as VideoFormat;
@@ -117,7 +116,6 @@
 			<SettingField label="Quality">
 				<ToggleGroup.Root
 					type="single"
-					variant="outline"
 					value={options.quality}
 					onValueChange={(value: string) => {
 						if (value in VIDEO_QUALITIES) options.quality = value as VideoQuality;

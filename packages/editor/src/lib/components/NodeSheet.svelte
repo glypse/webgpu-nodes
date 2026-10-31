@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { isZoneNodeType } from "$core";
-	import { Button, Input, Sheet } from "$theme";
+	import { Button, Dialog, Input } from "$theme";
 	import ArrowCounterClockwiseIcon from "phosphor-svelte/lib/ArrowCounterClockwiseIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
@@ -40,7 +40,7 @@
 	}
 </script>
 
-<Sheet.Root
+<Dialog.Root
 	open={node !== undefined}
 	onOpenChange={(open: boolean) => {
 		if (open) return;
@@ -49,18 +49,19 @@
 		graph.sheetNodeId = null;
 	}}
 >
-	<Sheet.Content
+	<Dialog.Content
+		side="right"
 		class="w-[350px] overflow-y-auto sm:w-[400px]"
 		onOpenAutoFocus={(e: Event) => e.preventDefault()}
 		escapeKeydownBehavior="ignore"
 	>
 		{#if node}
-			<Sheet.Header>
-				<Sheet.Title>{node.data.label ?? defaultLabel}</Sheet.Title>
+			<Dialog.Header class="gap-0.5 p-4">
+				<Dialog.Title>{node.data.label ?? defaultLabel}</Dialog.Title>
 				{#if node.data.label !== undefined}
-					<Sheet.Description>{defaultLabel}</Sheet.Description>
+					<Dialog.Description>{defaultLabel}</Dialog.Description>
 				{/if}
-			</Sheet.Header>
+			</Dialog.Header>
 			<div class="flex flex-col gap-4 p-4">
 				<div class="flex flex-col gap-1.5">
 					<span class="text-sm font-medium">Label</span>
@@ -96,5 +97,5 @@
 				{/if}
 			</div>
 		{/if}
-	</Sheet.Content>
-</Sheet.Root>
+	</Dialog.Content>
+</Dialog.Root>

@@ -21,7 +21,6 @@
 <SettingField label="Theme">
 	<ToggleGroup.Root
 		type="single"
-		variant="outline"
 		value={preferences.theme}
 		onValueChange={(value: string) => {
 			const theme = THEMES.find((t) => t.value === value);

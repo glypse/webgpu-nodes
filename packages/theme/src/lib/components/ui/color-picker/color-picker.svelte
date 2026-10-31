@@ -24,7 +24,7 @@
 
 	import { linearToCss } from "../../../color-css.js";
 	import { cn } from "../../../utils.js";
-	import { Root as Scrubbable } from "../scrubbable/index.js";
+	import Scrubbable from "../scrubbable.svelte";
 	import ColorWheels from "./color-wheels.svelte";
 
 	let {

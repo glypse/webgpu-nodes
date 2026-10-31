@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Card, Dialog } from "$theme";
+	import { Dialog } from "$theme";
 
 	import { getGraphManager } from "../../graph-manager.svelte";
 	import AppearanceSettings from "./AppearanceSettings.svelte";
@@ -32,7 +32,9 @@
 		class="h-[min(36rem,85dvh)] gap-0 bg-transparent p-0 ring-0 sm:max-w-3xl"
 		showCloseButton
 	>
-		<Card.Root class="size-full flex-col gap-0 py-0 sm:flex-row">
+		<div
+			class="bg-card text-card-foreground ring-foreground/10 flex size-full flex-col overflow-hidden rounded-xl text-sm ring-1 sm:flex-row"
+		>
 			<nav
 				class="bg-muted/40 flex shrink-0 gap-4 overflow-x-auto border-b p-3 sm:w-52 sm:flex-col sm:border-r sm:border-b-0"
 			>
@@ -76,17 +78,17 @@
 			{#if page}
 				{@const Page = PAGES[page.id]}
 				<div class="flex min-h-0 min-w-0 flex-1 flex-col">
-					<Card.Header class="border-b py-4 pr-12">
-						<Card.Title>{page.label}</Card.Title>
+					<div class="grid auto-rows-min items-start gap-1 border-b py-4 pr-12 pl-4">
+						<div class="text-base leading-snug font-medium">{page.label}</div>
 						<Dialog.Description class="text-muted-foreground text-sm">
 							{page.description}
 						</Dialog.Description>
-					</Card.Header>
-					<Card.Content class="flex flex-1 flex-col gap-6 overflow-y-auto py-5">
+					</div>
+					<div class="flex flex-1 flex-col gap-6 overflow-y-auto px-4 py-5">
 						<Page />
-					</Card.Content>
+					</div>
 				</div>
 			{/if}
-		</Card.Root>
+		</div>
 	</Dialog.Content>
 </Dialog.Root>

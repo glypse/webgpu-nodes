@@ -2,35 +2,19 @@
 	import { ToggleGroup as ToggleGroupPrimitive } from "bits-ui";
 
 	import { cn } from "../../../utils.js";
-	import { type ToggleVariants, toggleVariants } from "../toggle/variants.js";
-	import { getToggleGroupCtx } from "./context.js";
 
 	let {
 		ref = $bindable(null),
-		value,
 		class: className,
-		size,
-		variant,
 		...restProps
-	}: ToggleGroupPrimitive.ItemProps & ToggleVariants = $props();
-
-	const ctx = getToggleGroupCtx();
+	}: ToggleGroupPrimitive.ItemProps = $props();
 </script>
 
 <ToggleGroupPrimitive.Item
 	bind:ref
-	data-slot="toggle-group-item"
-	data-variant={ctx.variant ?? variant}
-	data-size={ctx.size ?? size}
-	data-spacing={ctx.spacing}
 	class={cn(
-		"shrink-0 group-data-[spacing=0]/toggle-group:rounded-none group-data-[spacing=0]/toggle-group:px-2 focus:z-10 focus-visible:z-10 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-end]:pr-1.5 group-data-[spacing=0]/toggle-group:has-data-[icon=inline-start]:pl-1.5 group-data-horizontal/toggle-group:data-[spacing=0]:first:rounded-l-lg group-data-vertical/toggle-group:data-[spacing=0]:first:rounded-t-lg group-data-horizontal/toggle-group:data-[spacing=0]:last:rounded-r-lg group-data-vertical/toggle-group:data-[spacing=0]:last:rounded-b-lg group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:border-l-0 group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:border-t-0 group-data-horizontal/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-l group-data-vertical/toggle-group:data-[spacing=0]:data-[variant=outline]:first:border-t",
-		toggleVariants({
-			variant: ctx.variant ?? variant,
-			size: ctx.size ?? size,
-		}),
+		"hover:text-foreground hover:bg-muted data-[state=on]:bg-muted border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive inline-flex h-8 min-w-8 shrink-0 items-center justify-center gap-1 border border-l-0 bg-transparent px-2 text-sm font-medium whitespace-nowrap transition-all outline-none group-data-[size=sm]/toggle-group:h-7 group-data-[size=sm]/toggle-group:min-w-7 group-data-[size=sm]/toggle-group:text-[0.8rem] first:rounded-l-lg first:border-l last:rounded-r-lg focus:z-10 focus-visible:z-10 focus-visible:ring-[3px] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 group-data-[size=sm]/toggle-group:[&_svg:not([class*='size-'])]:size-3.5",
 		className,
 	)}
-	{value}
 	{...restProps}
 />

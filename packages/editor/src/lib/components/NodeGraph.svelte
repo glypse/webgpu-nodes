@@ -1,7 +1,8 @@
 <script lang="ts">
-	import { Breadcrumb, Button } from "$theme";
+	import { Button } from "$theme";
 	import { SvelteFlowProvider } from "@xyflow/svelte";
 	import ArrowElbowLeftUpIcon from "phosphor-svelte/lib/ArrowElbowLeftUpIcon";
+	import CaretRightIcon from "phosphor-svelte/lib/CaretRightIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 
 	import { setDocumentView } from "../document-view";
@@ -35,38 +36,38 @@
 					<ArrowElbowLeftUpIcon />
 				</Button>
 			{/if}
-			<Breadcrumb.Root class="min-w-0 overflow-x-auto text-xs">
-				<Breadcrumb.List class="flex-nowrap gap-1 text-xs sm:gap-1.5">
-					<Breadcrumb.Item>
+			<nav aria-label="breadcrumb" class="min-w-0 overflow-x-auto text-xs">
+				<ol
+					class="text-muted-foreground flex flex-nowrap items-center gap-1 wrap-break-word sm:gap-1.5"
+				>
+					<li class="inline-flex items-center">
 						{#if view.path.length === 0}
-							<Breadcrumb.Page>Root</Breadcrumb.Page>
+							<span aria-current="page">Root</span>
 						{:else}
-							<Breadcrumb.Link
-								href="#"
-								onclick={(e: MouseEvent) => {
-									e.preventDefault();
-									view.jumpToPath([]);
-								}}
+							<button
+								type="button"
+								class="hover:text-foreground cursor-pointer transition-colors"
+								onclick={() => view.jumpToPath([])}
 							>
 								Root
-							</Breadcrumb.Link>
+							</button>
 						{/if}
-					</Breadcrumb.Item>
+					</li>
 					{#each view.pathLabels as segment, i (segment.id)}
-						<Breadcrumb.Separator />
-						<Breadcrumb.Item class="flex shrink-0 items-center gap-1 whitespace-nowrap">
+						<li role="presentation" aria-hidden="true">
+							<CaretRightIcon class="size-4" />
+						</li>
+						<li class="flex shrink-0 items-center gap-1 whitespace-nowrap">
 							{#if i === view.pathLabels.length - 1}
-								<Breadcrumb.Page>{segment.label}</Breadcrumb.Page>
+								<span aria-current="page">{segment.label}</span>
 							{:else}
-								<Breadcrumb.Link
-									href="#"
-									onclick={(e: MouseEvent) => {
-										e.preventDefault();
-										view.jumpToPath(view.path.slice(0, i + 1));
-									}}
+								<button
+									type="button"
+									class="hover:text-foreground cursor-pointer transition-colors"
+									onclick={() => view.jumpToPath(view.path.slice(0, i + 1))}
 								>
 									{segment.label}
-								</Breadcrumb.Link>
+								</button>
 							{/if}
 							{#if segment.locked}
 								<Button
@@ -82,10 +83,10 @@
 									<LockSimpleIcon />
 								</Button>
 							{/if}
-						</Breadcrumb.Item>
+						</li>
 					{/each}
-				</Breadcrumb.List>
-			</Breadcrumb.Root>
+				</ol>
+			</nav>
 		</AreaHeader>
 
 		<GraphContent

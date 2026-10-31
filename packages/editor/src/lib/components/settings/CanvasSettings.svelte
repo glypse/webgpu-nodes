@@ -50,7 +50,6 @@
 >
 	<ToggleGroup.Root
 		type="single"
-		variant="outline"
 		value={canvas.followPreview ? "preview" : "fixed"}
 		onValueChange={(value: string) => {
 			if (value) update({ followPreview: value === "preview" });

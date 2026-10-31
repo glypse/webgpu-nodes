@@ -21,7 +21,7 @@
 
 <ContextMenu.Root>
 	<ContextMenu.Trigger
-		class="bg-background flex h-9 min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b px-1.5"
+		class="bg-background flex h-9 min-w-0 shrink-0 items-center gap-1 overflow-hidden border-b px-1.5 select-none"
 	>
 		<DropdownMenu.Root>
 			<DropdownMenu.Trigger>

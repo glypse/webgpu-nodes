@@ -1,10 +1,4 @@
-import Item from "./radio-group-item.svelte";
-import Root from "./radio-group.svelte";
+import { RadioGroup } from "bits-ui";
 
-export {
-	Root,
-	Item,
-	//
-	Root as RadioGroup,
-	Item as RadioGroupItem,
-};
+export const Root = RadioGroup.Root;
+export { default as Item } from "./radio-group-item.svelte";

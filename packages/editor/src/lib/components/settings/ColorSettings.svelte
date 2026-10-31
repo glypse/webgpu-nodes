@@ -25,7 +25,7 @@
 		const colorSpace = COLOR_SPACES.find((c) => c === value);
 		if (colorSpace) graph.updateSettings({ ...graph.settings, colorSpace });
 	}}
-	class="gap-2"
+	class="grid w-full gap-2"
 >
 	{#each COLOR_SPACES as colorSpace (colorSpace)}
 		{@const option = OPTIONS[colorSpace]}

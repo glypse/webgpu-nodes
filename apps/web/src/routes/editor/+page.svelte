@@ -13,7 +13,7 @@
 		setPreferences,
 		setPreview,
 	} from "$editor";
-	import { Menubar, AlertDialog } from "$theme";
+	import { AlertDialog, buttonVariants, Menubar } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
 	const graph = new GraphManager();
@@ -155,7 +155,7 @@
 <svelte:window onkeydown={handleKeydown} onbeforeunload={handleBeforeUnload} />
 
 <div class="flex h-dvh w-full flex-col overflow-hidden">
-	<Menubar.Root class="h-auto gap-1 rounded-none border-t-0 border-r-0 border-l-0 p-2">
+	<Menubar.Root class="flex items-center gap-1 border-b p-2">
 		<Menubar.Menu>
 			<Menubar.Trigger>File</Menubar.Trigger>
 			<Menubar.Content>
@@ -306,40 +306,37 @@
 	</Menubar.Root>
 
 	<AlertDialog.Root bind:open={pruneDialogOpen}>
-		<AlertDialog.Portal>
-			<AlertDialog.Overlay />
-			<AlertDialog.Content>
-				<AlertDialog.Header>
-					<AlertDialog.Title>Remove unused group references?</AlertDialog.Title>
-					<AlertDialog.Description>
-						This will permanently delete the following group definition{prunableGroups.length ===
-						1
-							? ""
-							: "s"} that {prunableGroups.length === 1 ? "is" : "are"} not referenced by
-						any node in the project.
-					</AlertDialog.Description>
-				</AlertDialog.Header>
-				<ul class="flex max-h-64 flex-col gap-1 overflow-y-auto text-sm">
-					{#each prunableGroups as group (group.ref)}
-						<li
-							class="flex items-center justify-between gap-4 rounded-md border px-3 py-2"
-						>
-							<span class="font-medium">{group.label}</span>
-							<span class="text-muted-foreground tabular-nums">
-								{group.nodeCount}
-								{group.nodeCount === 1 ? "node" : "nodes"}
-							</span>
-						</li>
-					{/each}
-				</ul>
-				<AlertDialog.Footer>
-					<AlertDialog.Cancel>Cancel</AlertDialog.Cancel>
-					<AlertDialog.Action onclick={confirmPruneUnused}>
-						Remove {prunableGroups.length}
-					</AlertDialog.Action>
-				</AlertDialog.Footer>
-			</AlertDialog.Content>
-		</AlertDialog.Portal>
+		<AlertDialog.Content interactOutsideBehavior="ignore" showCloseButton={false}>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Remove unused group references?</AlertDialog.Title>
+				<AlertDialog.Description>
+					This will permanently delete the following group definition{prunableGroups.length ===
+					1
+						? ""
+						: "s"} that {prunableGroups.length === 1 ? "is" : "are"} not referenced by any
+					node in the project.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<ul class="flex max-h-64 flex-col gap-1 overflow-y-auto text-sm">
+				{#each prunableGroups as group (group.ref)}
+					<li class="flex items-center justify-between gap-4 rounded-md border px-3 py-2">
+						<span class="font-medium">{group.label}</span>
+						<span class="text-muted-foreground tabular-nums">
+							{group.nodeCount}
+							{group.nodeCount === 1 ? "node" : "nodes"}
+						</span>
+					</li>
+				{/each}
+			</ul>
+			<AlertDialog.Footer>
+				<AlertDialog.Cancel class={buttonVariants({ variant: "outline" })}>
+					Cancel
+				</AlertDialog.Cancel>
+				<AlertDialog.Action class={buttonVariants()} onclick={confirmPruneUnused}>
+					Remove {prunableGroups.length}
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
 	</AlertDialog.Root>
 
 	<Editor class="min-h-0 flex-1" />

@@ -42,7 +42,7 @@
 </script>
 
 <ContextMenu.Root>
-	<ContextMenu.Trigger class="block size-full" oncontextmenu={handleContextMenu}>
+	<ContextMenu.Trigger class="block size-full select-none" oncontextmenu={handleContextMenu}>
 		{@render children()}
 	</ContextMenu.Trigger>
 	<ContextMenu.Content class="w-52">

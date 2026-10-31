@@ -23,7 +23,6 @@
 >
 	<ToggleGroup.Root
 		type="single"
-		variant="outline"
 		value={timing.realtime ? "realtime" : "fixed"}
 		onValueChange={(value: string) => {
 			if (value) update({ realtime: value === "realtime" });
@@ -54,7 +53,6 @@
 		/>
 		<ToggleGroup.Root
 			type="single"
-			variant="outline"
 			size="sm"
 			value={RATES.includes(timing.fps) ? String(timing.fps) : ""}
 			onValueChange={(value: string) => {

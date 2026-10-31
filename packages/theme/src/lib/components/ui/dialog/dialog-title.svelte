@@ -10,9 +10,4 @@
 	}: DialogPrimitive.TitleProps = $props();
 </script>
 
-<DialogPrimitive.Title
-	bind:ref
-	data-slot="dialog-title"
-	class={cn("text-base leading-none font-medium", className)}
-	{...restProps}
-/>
+<DialogPrimitive.Title bind:ref class={cn("text-base font-medium", className)} {...restProps} />

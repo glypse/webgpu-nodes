@@ -1,10 +1,2 @@
-import Item from "./toggle-group-item.svelte";
-import Root from "./toggle-group.svelte";
-
-export {
-	Root,
-	Item,
-	//
-	Root as ToggleGroup,
-	Item as ToggleGroupItem,
-};
+export { default as Root } from "./toggle-group.svelte";
+export { default as Item } from "./toggle-group-item.svelte";
