@@ -1,7 +1,11 @@
+import type { ColorSpace } from "../graph/settings";
+import { clipToGamut, fromGamut, toGamut } from "./display";
+
 /**
- * Colour conversions. Colours are held as linear RGB
- * (what shaders compute with), components unbounded above for HDR; hex, HSV
- * and on-screen swatches are sRGB-encoded, as Blender shows them.
+ * Colour conversions. Colours are held as linear sRGB (what shaders compute
+ * with), components unbounded above for HDR and below for colours past sRGB;
+ * HSV is of the sRGB-encoded colour, as Blender shows it, and hex and
+ * on-screen swatches are encoded in the colour space shown.
  */
 
 export type Rgb = { r: number; g: number; b: number };
@@ -25,6 +29,16 @@ export function srgbDecode(encoded: number): number {
 
 export function encodeRgb({ r, g, b }: Rgb): Rgb {
 	return { r: srgbEncode(r), g: srgbEncode(g), b: srgbEncode(b) };
+}
+
+/** A linear sRGB colour, gamma-encoded in `space` (whose transfer curve is sRGB's). */
+export function encodeIn(color: Rgb, space: ColorSpace): Rgb {
+	return encodeRgb(toGamut(color, space));
+}
+
+/** The linear sRGB colour of one gamma-encoded in `space`. */
+export function decodeFrom(color: Rgb, space: ColorSpace): Rgb {
+	return fromGamut(decodeRgb(color), space);
 }
 
 export function decodeRgb({ r, g, b }: Rgb): Rgb {
@@ -92,12 +106,6 @@ export function oklchToLinearUnmapped({ l, c, h }: Lch): Rgb {
 	return oklabToLinear(oklchToOklab(l, c, h));
 }
 
-/** Whether a linear RGB colour is within sRGB, up to rounding. */
-export function inSrgbGamut({ r, g, b }: Rgb): boolean {
-	const EPSILON = 1e-5;
-	return [r, g, b].every((n) => n >= -EPSILON && n <= 1 + EPSILON);
-}
-
 /** OKLch of a linear RGB colour. */
 export function linearToOklch(rgb: Rgb): Lch {
 	const [L, A, B] = linearToOklab(rgb);
@@ -106,17 +114,17 @@ export function linearToOklch(rgb: Rgb): Lch {
 }
 
 /**
- * Linear RGB of an OKLch colour, mapped into the sRGB gamut as CSS Color 4
+ * Linear sRGB of an OKLch colour, mapped into `space`'s gamut as CSS Color 4
  * does (and the standard library's OKLch Gamut Map group): lightness and hue
  * kept, chroma lowered until the colour fits or its clip is less than a just
  * noticeable difference away. Clipping each channel instead shifts hue and
  * lightness.
  */
-export function oklchToLinear({ l, c, h }: Lch): Rgb {
+export function oklchToLinear({ l, c, h }: Lch, space: ColorSpace = "srgb"): Rgb {
 	const JND = 0.02;
 	if (l >= 1) return { r: 1, g: 1, b: 1 };
 	if (l <= 0) return { r: 0, g: 0, b: 0 };
-	const clip = ({ r, g, b }: Rgb): Rgb => ({ r: clamp01(r), g: clamp01(g), b: clamp01(b) });
+	const clip = (rgb: Rgb): Rgb => clipToGamut(rgb, space);
 	const offBy = (lab: Lab, clipped: Rgb) => {
 		const [L, A, B] = linearToOklab(clipped);
 		return Math.hypot(L - lab[0], A - lab[1], B - lab[2]);
@@ -153,17 +161,17 @@ const hexByte = (n: number) =>
 		.padStart(2, "0")
 		.toUpperCase();
 
-/** `#RRGGBB` (or `#RRGGBBAA` with `alpha`) of a linear colour, sRGB-encoded. */
-export function linearToHex(color: Rgba, alpha: boolean): string {
-	const { r, g, b } = encodeRgb(color);
+/** `#RRGGBB` (or `#RRGGBBAA` with `alpha`) of a linear colour, encoded in `space`. */
+export function linearToHex(color: Rgba, alpha: boolean, space: ColorSpace = "srgb"): string {
+	const { r, g, b } = encodeIn(color, space);
 	return `#${hexByte(r)}${hexByte(g)}${hexByte(b)}${alpha ? hexByte(color.a) : ""}`;
 }
 
 /**
  * The linear colour of a hex string (`#RGB`, `#RGBA`, `#RRGGBB` or
- * `#RRGGBBAA`, `#` optional), or undefined if it isn't one.
+ * `#RRGGBBAA`, `#` optional) encoded in `space`, or undefined if it isn't one.
  */
-export function hexToLinear(hex: string): Rgba | undefined {
+export function hexToLinear(hex: string, space: ColorSpace = "srgb"): Rgba | undefined {
 	let digits = hex.trim().replace(/^#/, "");
 	if (!/^[\da-f]+$/i.test(digits)) return undefined;
 	if (digits.length === 3 || digits.length === 4) {
@@ -172,7 +180,7 @@ export function hexToLinear(hex: string): Rgba | undefined {
 	if (digits.length !== 6 && digits.length !== 8) return undefined;
 	const byte = (i: number) => parseInt(digits.slice(i, i + 2), 16) / 255;
 	return {
-		...decodeRgb({ r: byte(0), g: byte(2), b: byte(4) }),
+		...decodeFrom({ r: byte(0), g: byte(2), b: byte(4) }, space),
 		a: digits.length === 8 ? byte(6) : 1,
 	};
 }

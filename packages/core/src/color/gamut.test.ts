@@ -111,10 +111,12 @@ describe("OKLch gamut mapping", () => {
 	});
 
 	it("is what the colour picker shows", () => {
-		for (const lch of SAMPLES) {
-			const [l, c, h] = lch;
-			const { r, g, b } = oklchToLinear({ l, c, h });
-			expect(distance([r, g, b], reference(lch))).toBeLessThan(2e-4);
+		for (const gamut of ["srgb", "display-p3"] as const) {
+			for (const lch of SAMPLES) {
+				const [l, c, h] = lch;
+				const { r, g, b } = oklchToLinear({ l, c, h }, gamut);
+				expect(distance([r, g, b], reference(lch, gamut))).toBeLessThan(2e-4);
+			}
 		}
 	});
 

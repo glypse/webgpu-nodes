@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { readComponent, type Rgba } from "$core";
-	import { ColorPicker, linearToCss, Popover } from "$theme";
+	import { ColorPicker, getDisplayGamut, linearToCss, Popover } from "$theme";
 
 	import type { ControlProps } from "./types";
 
@@ -9,6 +9,7 @@
 	// Shows through the alpha half of the swatch.
 	const CHECKERBOARD = "repeating-conic-gradient(#999 0 25%, #666 0 50%) 0 0 / 12px 12px";
 
+	const gamut = getDisplayGamut();
 	const alpha = $derived(type === "vec4f");
 	const color = $derived<Rgba>({
 		r: readComponent(value, "x"),
@@ -33,9 +34,10 @@
 		class="nodrag flex h-8 w-full overflow-hidden rounded-sm ring-1 ring-black/20 disabled:opacity-50"
 	>
 		<!-- Opaque on the left, with its alpha on the right (as Blender). -->
-		<span class="h-full flex-1" style:background={linearToCss({ ...color, a: 1 })}></span>
+		<span class="h-full flex-1" style:background={linearToCss({ ...color, a: 1 }, gamut())}
+		></span>
 		{#if alpha}
-			<span class="h-full flex-1" style:background={linearToCss(color)}></span>
+			<span class="h-full flex-1" style:background={linearToCss(color, gamut())}></span>
 		{/if}
 	</Popover.Trigger>
 	<Popover.Content class="w-auto" side="right" align="start">

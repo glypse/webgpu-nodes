@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { generateShader, reachableShaderHash } from "$core";
+	import { setDisplayGamut } from "$theme";
 	import { untrack } from "svelte";
 
 	import { getDevTools } from "../dev-tools.svelte";
@@ -15,6 +16,7 @@
 	const graph = getGraphManager();
 	const preview = getPreview();
 	const devTools = getDevTools();
+	setDisplayGamut(() => graph.settings.colorSpace);
 
 	// Undo history: record a step once the documents stop changing for a
 	// moment, so a drag or a scrub becomes one step. Node/edge arrays and the

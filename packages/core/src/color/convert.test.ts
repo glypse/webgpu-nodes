@@ -53,4 +53,12 @@ describe("colour conversions", () => {
 		expect(hexToLinear("#12345")).toBeUndefined();
 		expect(hexToLinear("nothex")).toBeUndefined();
 	});
+
+	it("reads and writes hex in Display P3", () => {
+		const outsideSrgb = oklchToLinear({ l: 0.7015, c: 0.1559, h: 203.59 }, "display-p3");
+		const hex = linearToHex({ ...outsideSrgb, a: 1 }, false, "display-p3");
+		expect(hex).toBe("#16B6C7");
+		close(hexToLinear(hex, "display-p3") ?? {}, outsideSrgb, 2);
+		expect(linearToHex({ r: 1, g: 1, b: 1, a: 1 }, false, "display-p3")).toBe("#FFFFFF");
+	});
 });

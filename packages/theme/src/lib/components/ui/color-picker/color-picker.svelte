@@ -23,6 +23,7 @@
 	import { untrack } from "svelte";
 
 	import { linearToCss } from "../../../color-css.js";
+	import { getDisplayGamut } from "../../../color-gamut.js";
 	import { cn } from "../../../utils.js";
 	import Scrubbable from "../scrubbable.svelte";
 	import ColorWheels from "./color-wheels.svelte";
@@ -54,6 +55,7 @@
 		{ mode: "oklch", label: "OKLch" },
 	];
 	let mode = $state<Mode>(lastMode);
+	const gamut = getDisplayGamut();
 
 	// HSV and OKLch are kept apart from `value` so a hue survives going
 	// through grey (no hue) or black, as it does in Blender.
@@ -90,7 +92,7 @@
 
 	function setLch(patch: Partial<Lch>) {
 		const next = { ...lch, ...patch };
-		commit({ ...oklchToLinear(next), a: value.a }, { lch: next });
+		commit({ ...oklchToLinear(next, gamut()), a: value.a }, { lch: next });
 	}
 
 	const components = $derived<ColorComponents>(
@@ -114,10 +116,11 @@
 
 	let hexFocused = $state(false);
 	let hexDraft = $state("");
-	const hex = $derived(linearToHex(value, alpha));
+	// In the colour space shown, as design tools write hex in their document's.
+	const hex = $derived(linearToHex(value, alpha, gamut()));
 
 	function commitHex() {
-		const parsed = hexToLinear(hexDraft);
+		const parsed = hexToLinear(hexDraft, gamut());
 		const withAlpha = alpha && /^#?([\da-f]{4}|[\da-f]{8})$/i.test(hexDraft.trim());
 		if (parsed) commit({ ...parsed, a: withAlpha ? parsed.a : value.a });
 		hexFocused = false;
@@ -219,11 +222,12 @@
 	<div class="flex items-center gap-1.5">
 		<span
 			class="size-7 shrink-0 rounded-sm ring-1 ring-black/20"
-			style:background={linearToCss({ ...value, a: 1 })}
+			style:background={linearToCss({ ...value, a: 1 }, gamut())}
 		></span>
 		<input
 			type="text"
-			aria-label="Hex"
+			aria-label={gamut() === "srgb" ? "Hex" : "Hex, in Display P3"}
+			title={gamut() === "srgb" ? undefined : "In Display P3"}
 			spellcheck="false"
 			autocomplete="off"
 			class="bg-foreground/5 focus:bg-foreground/10 h-7 min-w-0 flex-1 rounded-sm px-2 text-xs uppercase outline-none"

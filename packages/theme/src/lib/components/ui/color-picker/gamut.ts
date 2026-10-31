@@ -1,4 +1,11 @@
-import { type Lch, encodeRgb, inSrgbGamut, oklchToLinear, oklchToLinearUnmapped } from "$core";
+import {
+	type ColorSpace,
+	type Lch,
+	encodeIn,
+	inGamut,
+	oklchToLinear,
+	oklchToLinearUnmapped,
+} from "$core";
 import type { Attachment } from "svelte/attachments";
 
 /** Sub-samples per side for the pixels on the gamut's edge. */
@@ -14,17 +21,19 @@ const OUTLINE_OPACITY = 0.85;
 
 /**
  * Paints, pixel by pixel, the OKLch colour `at` gives for each point of the
- * canvas (in [0, 1] from its top left; transparent where it gives none).
- * Colours outside sRGB show what they're mapped to, and a thin line traces
- * the gamut's edge, anti-aliased by sub-sampling the pixels it crosses.
- * Repaints when `at` changes, at most once a frame.
+ * canvas (in [0, 1] from its top left; transparent where it gives none), in
+ * `gamut`. Colours outside it show what they're mapped to, and a thin line
+ * traces its edge, anti-aliased by sub-sampling the pixels it crosses.
+ * Repaints when `at` changes, at most once a frame. A canvas keeps the colour
+ * space it was first painted in, so give each gamut its own.
  */
 export function paintGamut(
 	at: (x: number, y: number) => Lch | undefined,
+	gamut: ColorSpace,
 ): Attachment<HTMLCanvasElement> {
 	return (canvas) => {
 		const frame = requestAnimationFrame(() => {
-			paint(canvas, at);
+			paint(canvas, at, gamut);
 		});
 		return () => {
 			cancelAnimationFrame(frame);
@@ -32,17 +41,22 @@ export function paintGamut(
 	};
 }
 
-function paint(canvas: HTMLCanvasElement, at: (x: number, y: number) => Lch | undefined) {
+function paint(
+	canvas: HTMLCanvasElement,
+	at: (x: number, y: number) => Lch | undefined,
+	gamut: ColorSpace,
+) {
 	const scale = window.devicePixelRatio;
 	const width = Math.max(1, Math.round(canvas.clientWidth * scale));
 	const height = Math.max(1, Math.round(canvas.clientHeight * scale));
 	canvas.width = width;
 	canvas.height = height;
-	const context = canvas.getContext("2d");
+	const context = canvas.getContext("2d", { colorSpace: gamut });
 	if (!context) return;
 
 	const lchAt = (x: number, y: number) => at(x / width, y / height);
-	const fits = (lch: Lch) => inSrgbGamut(oklchToLinearUnmapped(lch));
+	const fits = (lch: Lch) => inGamut(oklchToLinearUnmapped(lch), gamut);
+	const encoded = (lch: Lch) => encodeIn(oklchToLinear(lch, gamut), gamut);
 
 	// Per pixel: 1 inside the gamut, 0 outside, -1 where nothing is drawn;
 	// its encoded colour when inside, and its lightness.
@@ -57,9 +71,9 @@ function paint(canvas: HTMLCanvasElement, at: (x: number, y: number) => Lch | un
 		}
 		lightness[i] = lch.l;
 		const linear = oklchToLinearUnmapped(lch);
-		if (!inSrgbGamut(linear)) continue;
+		if (!inGamut(linear, gamut)) continue;
 		state[i] = 1;
-		const { r, g, b } = encodeRgb(linear);
+		const { r, g, b } = encodeIn(linear, gamut);
 		colors.set([r, g, b], i * 3);
 	}
 
@@ -67,7 +81,7 @@ function paint(canvas: HTMLCanvasElement, at: (x: number, y: number) => Lch | un
 	const rows = Math.ceil(height / MAPPED_GRID) + 1;
 	const mapped = Array.from({ length: columns * rows }, (_, i) => {
 		const lch = lchAt((i % columns) * MAPPED_GRID, Math.floor(i / columns) * MAPPED_GRID);
-		return lch && encodeRgb(oklchToLinear(lch));
+		return lch && encoded(lch);
 	});
 	/** A mapped colour between the grid's points, or exactly when one is missing. */
 	const mappedAt = (x: number, y: number) => {
@@ -81,7 +95,7 @@ function paint(canvas: HTMLCanvasElement, at: (x: number, y: number) => Lch | un
 		const d = mapped[(y0 + 1) * columns + x0 + 1];
 		if (!a || !b || !c || !d) {
 			const lch = lchAt(x + 0.5, y + 0.5);
-			return lch ? encodeRgb(oklchToLinear(lch)) : { r: 0, g: 0, b: 0 };
+			return lch ? encoded(lch) : { r: 0, g: 0, b: 0 };
 		}
 		const tx = gx - x0;
 		const ty = gy - y0;
@@ -93,7 +107,7 @@ function paint(canvas: HTMLCanvasElement, at: (x: number, y: number) => Lch | un
 	const across = (x: number, y: number, inside: number) =>
 		x >= 0 && y >= 0 && x < width && y < height && (state[y * width + x] ?? -1) === 1 - inside;
 
-	const image = context.createImageData(width, height);
+	const image = context.createImageData(width, height, { colorSpace: gamut });
 	for (let y = 0; y < height; y++) {
 		for (let x = 0; x < width; x++) {
 			const i = y * width + x;
