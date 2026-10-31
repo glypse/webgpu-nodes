@@ -137,6 +137,7 @@
 		<!-- Invisible interaction path for click/hover detection -->
 		<path
 			{id}
+			data-link-path
 			d={path}
 			fill="none"
 			stroke="transparent"

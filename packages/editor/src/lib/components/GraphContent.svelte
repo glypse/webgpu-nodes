@@ -33,6 +33,7 @@
 	import DocumentMeasurer from "./DocumentMeasurer.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
 	import GraphMenu from "./GraphMenu.svelte";
+	import LinkStroke from "./LinkStroke.svelte";
 	import { nodeTypes } from "./node-types";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
 
@@ -429,6 +430,7 @@
 			}}
 		>
 			<ZoneBubbles />
+			<LinkStroke />
 			<Controls showLock={false} showZoom={false} />
 			<Background class="bg-background" />
 		</SvelteFlow>

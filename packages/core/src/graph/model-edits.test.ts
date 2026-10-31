@@ -112,3 +112,44 @@ describe("GraphModel reset", () => {
 		expect(graph.root.nodesById.get("a")?.data.values).toEqual({ e: 0 });
 	});
 });
+
+describe("GraphModel reroutes", () => {
+	it("routes a link through a reroute", () => {
+		const graph = chain();
+		const [id] = graph.rerouteEdges([{ edgeId: "a.result->b.e", position: { x: 50, y: 60 } }]);
+		expect(graph.root.nodesById.get(id ?? "")?.position).toEqual({ x: 50, y: 60 });
+		expect(graph.root.edges).toEqual(
+			expect.arrayContaining([
+				expect.objectContaining({ source: "a", sourceHandle: "result", target: id }),
+				expect.objectContaining({ source: id, target: "b", targetHandle: "e" }),
+			]),
+		);
+		expect(graph.root.edges.some((e) => e.id === "a.result->b.e")).toBe(false);
+	});
+
+	it("shares one reroute between links leaving the same output", () => {
+		const graph = managerFor(
+			[
+				{ id: "a", type: "sin" },
+				{ id: "b", type: "sin" },
+				{ id: "c", type: "sin" },
+			],
+			[
+				["a", "result", "b", "e"],
+				["a", "result", "c", "e"],
+			],
+		);
+		const ids = graph.rerouteEdges([
+			{ edgeId: "a.result->b.e", position: { x: 0, y: 0 } },
+			{ edgeId: "a.result->c.e", position: { x: 10, y: 20 } },
+		]);
+		expect(ids).toHaveLength(1);
+		const [id] = ids;
+		expect(graph.root.nodesById.get(id ?? "")?.position).toEqual({ x: 5, y: 10 });
+		expect(graph.root.edges.filter((e) => e.source === id).map((e) => e.target)).toEqual([
+			"b",
+			"c",
+		]);
+		expect(graph.root.edges.filter((e) => e.target === id)).toHaveLength(1);
+	});
+});

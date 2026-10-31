@@ -1,8 +1,10 @@
+import { defaultDataForType } from "../nodes/registry";
 import type { NodeData } from "../types";
 import type {
 	GraphDocumentEdge,
 	GraphDocumentNode,
 	GraphEdge,
+	GraphNode,
 	HydratedGraphDocument,
 } from "./document";
 import { cloneSubgraph } from "./editing";
@@ -26,7 +28,7 @@ type Point = { x: number; y: number };
 
 /**
  * Editing nodes of the document in view as a whole: copy and paste, delete
- * and dissolve, reset, and labels.
+ * and dissolve, reset, labels, and inserting reroutes into links.
  */
 export abstract class EditModel extends CustomWgslModel {
 	abstract isValidConnection(connection: Connection): boolean;
@@ -251,6 +253,69 @@ export abstract class EditModel extends CustomWgslModel {
 		const custom = trimmed && trimmed !== this.defaultNodeLabel(nodeId) ? trimmed : undefined;
 		if (this.resolveNode(nodeId)?.data.label === custom) return;
 		this.updateNodeData(nodeId, { label: custom }, { retype: false });
+	}
+
+	/**
+	 * Route links of the active document through new reroute nodes at the
+	 * positions given. Links leaving the same output share one reroute (at
+	 * the middle of their positions) which then branches out to their
+	 * targets. Returns the reroutes' ids.
+	 */
+	rerouteEdges(cuts: readonly { edgeId: string; position: Point }[]): string[] {
+		if (this.isLocked) return [];
+		const doc = this.activeDocument;
+		const bySource = new Map<string, { edges: GraphEdge[]; positions: Point[] }>();
+		for (const { edgeId, position } of cuts) {
+			const edge = doc.edges.find((e) => e.id === edgeId);
+			if (!edge) continue;
+			const key = `${edge.source}\0${edge.sourceHandle}`;
+			const entry = bySource.get(key) ?? { edges: [], positions: [] };
+			if (entry.edges.includes(edge)) continue;
+			entry.edges.push(edge);
+			entry.positions.push(position);
+			bySource.set(key, entry);
+		}
+		if (bySource.size === 0) return [];
+		const cut = new Set<string>();
+		const reroutes: GraphNode[] = [];
+		const links: GraphEdge[] = [];
+		for (const { edges, positions } of bySource.values()) {
+			const [first] = edges;
+			if (!first) continue;
+			const id = crypto.randomUUID();
+			reroutes.push({
+				id,
+				type: "reroute",
+				data: defaultDataForType("reroute"),
+				position: {
+					x: positions.reduce((sum, p) => sum + p.x, 0) / positions.length,
+					y: positions.reduce((sum, p) => sum + p.y, 0) / positions.length,
+				},
+			});
+			links.push({
+				id: crypto.randomUUID(),
+				source: first.source,
+				sourceHandle: first.sourceHandle,
+				target: id,
+				targetHandle: "in",
+			});
+			for (const edge of edges) {
+				cut.add(edge.id);
+				links.push({
+					id: crypto.randomUUID(),
+					source: id,
+					sourceHandle: "out",
+					target: edge.target,
+					targetHandle: edge.targetHandle,
+				});
+			}
+		}
+		this.setContent(doc, {
+			nodes: [...doc.nodes, ...reroutes],
+			edges: [...doc.edges.filter((e) => !cut.has(e.id)), ...links],
+		});
+		this.rebuildTypeCache();
+		return reroutes.map((n) => n.id);
 	}
 
 	/** The ids given, plus the partner of every zone boundary among them. */
