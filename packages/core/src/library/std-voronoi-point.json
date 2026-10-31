@@ -1,0 +1,232 @@
+{
+	"id": "std-voronoi-point",
+	"name": "Voronoi Point",
+	"aliases": ["Feature Point", "Jittered Point", "Cell Point"],
+	"category": "texture",
+	"dependencies": ["std-dimension-mask@0acfbe5f0d377e", "std-hash@1547f98ac887b6"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "49edf500-c93a-4ba0-bebf-ab844b41df33",
+							"label": "Cell",
+							"type": "vec4f"
+						},
+						{
+							"id": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+							"label": "Offset",
+							"type": "vec4f"
+						},
+						{
+							"id": "baaa207e-4d38-472a-909c-fc453335e8c1",
+							"label": "Randomness",
+							"type": "f32"
+						},
+						{
+							"id": "37f38414-06e2-4832-8b0f-a4ba7e7cac1a",
+							"label": "Seed",
+							"type": "i32"
+						},
+						{
+							"id": "9ebec6e6-b8d4-47c3-a0f3-551c0427db28",
+							"label": "Dimensions",
+							"type": "u32",
+							"variants": [
+								{
+									"value": 1,
+									"label": "1D"
+								},
+								{
+									"value": 2,
+									"label": "2D"
+								},
+								{
+									"value": 3,
+									"label": "3D"
+								},
+								{
+									"value": 4,
+									"label": "4D"
+								}
+							]
+						}
+					],
+					"values": {
+						"baaa207e-4d38-472a-909c-fc453335e8c1": 1,
+						"37f38414-06e2-4832-8b0f-a4ba7e7cac1a": 0,
+						"9ebec6e6-b8d4-47c3-a0f3-551c0427db28": 2
+					}
+				},
+				"position": {
+					"x": 0,
+					"y": 231
+				}
+			},
+			{
+				"id": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "d555ec1a-297d-42af-901e-d6ad9ec77da3",
+							"label": "Point",
+							"type": "vec4f"
+						},
+						{
+							"id": "0375221a-046e-414c-b880-c5e7898e3986",
+							"label": "Neighbor Cell",
+							"type": "vec4f"
+						}
+					]
+				},
+				"position": {
+					"x": 1338,
+					"y": 4
+				}
+			},
+			{
+				"id": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
+				"type": "add",
+				"data": {},
+				"position": {
+					"x": 270,
+					"y": 0
+				}
+			},
+			{
+				"id": "e5ebcda5-3d8a-4a66-b828-411d1908241b",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 540,
+					"y": 384
+				},
+				"group": {
+					"definitionRef": "std-dimension-mask@0acfbe5f0d377e",
+					"locked": true
+				}
+			},
+			{
+				"id": "cefe941d-f459-4dde-98b9-78462e2e7616",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 540,
+					"y": 178
+				},
+				"group": {
+					"definitionRef": "std-hash@1547f98ac887b6",
+					"locked": true
+				}
+			},
+			{
+				"id": "7cf30943-f33a-44f6-8019-3e0e9814733d",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 806,
+					"y": 240
+				}
+			},
+			{
+				"id": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
+				"type": "add",
+				"data": {},
+				"position": {
+					"x": 1071,
+					"y": 116
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "2368c4b9-d20d-4b8b-af8f-9fac02d1dd40",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "49edf500-c93a-4ba0-bebf-ab844b41df33",
+				"target": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "d1416b65-21c4-4faf-8d2c-3a4e22d0da25",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+				"target": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "2747dab6-ee9d-49e9-be8f-b4d291122116",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "9ebec6e6-b8d4-47c3-a0f3-551c0427db28",
+				"target": "e5ebcda5-3d8a-4a66-b828-411d1908241b",
+				"targetHandle": "7a1c809e-957c-41ac-bca8-4a6725f7bc97"
+			},
+			{
+				"id": "2f6bef68-6bb1-48eb-b5ab-2c5bd206b58a",
+				"source": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
+				"sourceHandle": "result",
+				"target": "cefe941d-f459-4dde-98b9-78462e2e7616",
+				"targetHandle": "4de0afc6-7aba-4846-b22f-152e825964c3"
+			},
+			{
+				"id": "966a36a0-a0b3-42ae-bcf5-4c6fdad93ca2",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "37f38414-06e2-4832-8b0f-a4ba7e7cac1a",
+				"target": "cefe941d-f459-4dde-98b9-78462e2e7616",
+				"targetHandle": "57df1ede-3658-49de-ab04-8eb051ac6f5d"
+			},
+			{
+				"id": "8a3486ad-70c2-4b7f-8e13-342bf0a92372",
+				"source": "cefe941d-f459-4dde-98b9-78462e2e7616",
+				"sourceHandle": "5ba21c73-6e6c-4a11-8432-3bdde0dda177",
+				"target": "7cf30943-f33a-44f6-8019-3e0e9814733d",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "72ebf86b-9e7d-49a7-9d28-8bfbeb290432",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "baaa207e-4d38-472a-909c-fc453335e8c1",
+				"target": "7cf30943-f33a-44f6-8019-3e0e9814733d",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "fd1abdfd-827b-49a4-84f0-1958ccbbd2d5",
+				"source": "e5ebcda5-3d8a-4a66-b828-411d1908241b",
+				"sourceHandle": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5",
+				"target": "7cf30943-f33a-44f6-8019-3e0e9814733d",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "a7b50400-caa8-4162-a4bc-846acf424c83",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+				"target": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "e38ae523-668d-42f6-917b-616120585ea0",
+				"source": "7cf30943-f33a-44f6-8019-3e0e9814733d",
+				"sourceHandle": "result",
+				"target": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "0432c918-4fa0-4646-a040-d2634296b90d",
+				"source": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
+				"sourceHandle": "result",
+				"target": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
+				"targetHandle": "d555ec1a-297d-42af-901e-d6ad9ec77da3"
+			},
+			{
+				"id": "66062d14-ac79-4e2d-abf1-82e190c5783d",
+				"source": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
+				"sourceHandle": "result",
+				"target": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
+				"targetHandle": "0375221a-046e-414c-b880-c5e7898e3986"
+			}
+		]
+	}
+}

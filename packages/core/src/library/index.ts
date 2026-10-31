@@ -4,10 +4,16 @@ import type { StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
+import dimensionMask from "./std-dimension-mask.json";
+import fractalOctave from "./std-fractal-octave.json";
+import fractalVoronoi from "./std-fractal-voronoi.json";
+import hash from "./std-hash.json";
 import inDisplayGamut from "./std-in-display-gamut.json";
+import latticeNeighbor from "./std-lattice-neighbor.json";
 import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
 import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
+import noiseCoordinates from "./std-noise-coordinates.json";
 import oklabToLinearRgb from "./std-oklab-to-linear-rgb.json";
 import oklabToOklch from "./std-oklab-to-oklch.json";
 import oklabToXyz from "./std-oklab-to-xyz.json";
@@ -15,6 +21,9 @@ import oklchGamutMap from "./std-oklch-gamut-map.json";
 import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
 import remap from "./std-remap.json";
+import voronoiDistance from "./std-voronoi-distance.json";
+import voronoiPoint from "./std-voronoi-point.json";
+import voronoiTexture from "./std-voronoi-texture.json";
 import xyzToLinearRgb from "./std-xyz-to-linear-rgb.json";
 import xyzToOklab from "./std-xyz-to-oklab.json";
 import { libraryRef, libraryVersion } from "./version";
@@ -57,6 +66,15 @@ const files: unknown[] = [
 	oklchToLinearRgb,
 	inDisplayGamut,
 	oklchGamutMap,
+	dimensionMask,
+	noiseCoordinates,
+	hash,
+	latticeNeighbor,
+	voronoiPoint,
+	voronoiDistance,
+	voronoiTexture,
+	fractalOctave,
+	fractalVoronoi,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

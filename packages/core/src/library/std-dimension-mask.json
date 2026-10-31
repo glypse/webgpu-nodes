@@ -1,0 +1,121 @@
+{
+	"id": "std-dimension-mask",
+	"name": "Dimension Mask",
+	"aliases": ["Dimensions", "Axis Mask"],
+	"category": "texture",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "796f492e-d386-4546-a205-8091270f35f9",
+				"type": "group-input",
+				"data": {
+					"handles": [
+						{
+							"id": "7a1c809e-957c-41ac-bca8-4a6725f7bc97",
+							"label": "Dimensions",
+							"type": "u32",
+							"variants": [
+								{
+									"value": 1,
+									"label": "1D"
+								},
+								{
+									"value": 2,
+									"label": "2D"
+								},
+								{
+									"value": 3,
+									"label": "3D"
+								},
+								{
+									"value": 4,
+									"label": "4D"
+								}
+							]
+						}
+					],
+					"values": {
+						"7a1c809e-957c-41ac-bca8-4a6725f7bc97": 2
+					}
+				},
+				"position": {
+					"x": 0,
+					"y": 64
+				}
+			},
+			{
+				"id": "64c21dfa-dc37-4199-890b-913a10629acd",
+				"type": "group-output",
+				"data": {
+					"handles": [
+						{
+							"id": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5",
+							"label": "Mask",
+							"type": "vec4f"
+						}
+					]
+				},
+				"position": {
+					"x": 520,
+					"y": 32
+				}
+			},
+			{
+				"id": "e397cfdd-6a2b-4e76-b27e-bc0919d42857",
+				"type": "match",
+				"data": {
+					"types": {
+						"f32,vec2f,vec3f,vec4f,i32,vec2i,vec3i,vec4i,u32,vec2u,vec3u,vec4u,bool,vec2b,vec3b,vec4b": "vec4f"
+					},
+					"values": {
+						"case-1": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"case-2": {
+							"x": 1,
+							"y": 1,
+							"z": 0,
+							"w": 0
+						},
+						"case-3": {
+							"x": 1,
+							"y": 1,
+							"z": 1,
+							"w": 0
+						},
+						"case-4": {
+							"x": 1,
+							"y": 1,
+							"z": 1,
+							"w": 1
+						}
+					}
+				},
+				"position": {
+					"x": 260,
+					"y": 0
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "e7f56105-b637-480d-b780-1e7f68413c75",
+				"source": "796f492e-d386-4546-a205-8091270f35f9",
+				"sourceHandle": "7a1c809e-957c-41ac-bca8-4a6725f7bc97",
+				"target": "e397cfdd-6a2b-4e76-b27e-bc0919d42857",
+				"targetHandle": "selector"
+			},
+			{
+				"id": "dd7dcfbf-1aae-4b72-a61f-ff3182641703",
+				"source": "e397cfdd-6a2b-4e76-b27e-bc0919d42857",
+				"sourceHandle": "result",
+				"target": "64c21dfa-dc37-4199-890b-913a10629acd",
+				"targetHandle": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5"
+			}
+		]
+	}
+}

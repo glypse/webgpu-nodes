@@ -5,7 +5,14 @@ import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
-import { type ResolvedNodeTypes, type TypeBindings, enumValue, typeComponents } from "../types";
+import {
+	type ResolvedNodeTypes,
+	type TypeBindings,
+	type WgslType,
+	enumValue,
+	typeComponents,
+	typeKind,
+} from "../types";
 import {
 	ITERATIONS_HANDLE,
 	ITERATION_HANDLE,
@@ -48,6 +55,20 @@ function fit(value: Value, width: number): Value {
 	return Array.from({ length: width }, (_, i) => value[i] ?? 0);
 }
 
+/** A number as a value of `type`'s kind: integers wrap as in WGSL. */
+function asKind(type: WgslType): (n: number) => number {
+	switch (typeKind(type)) {
+		case "i32":
+			return (n) => Math.trunc(n) | 0;
+		case "u32":
+			return (n) => Math.trunc(n) >>> 0;
+		case "bool":
+			return (n) => Number(n !== 0);
+		default:
+			return (n) => n;
+	}
+}
+
 const UNARY: Record<string, (n: number) => number> = {
 	abs: Math.abs,
 	sign: Math.sign,
@@ -55,7 +76,10 @@ const UNARY: Record<string, (n: number) => number> = {
 	cos: Math.cos,
 	fract: (n) => n - Math.floor(n),
 	floor: Math.floor,
+	ceil: Math.ceil,
 	sqrt: Math.sqrt,
+	negate: (n) => -n,
+	"to-float": (n) => n,
 };
 
 const VARIADIC: Record<string, (a: number, b: number) => number> = {
@@ -65,11 +89,23 @@ const VARIADIC: Record<string, (a: number, b: number) => number> = {
 	min: Math.min,
 };
 
+/** Integer multiplication wraps where the product exceeds a float's precision. */
+const INT_VARIADIC: Record<string, (a: number, b: number) => number> = {
+	mul: Math.imul,
+};
+
 const BINARY: Record<string, [string, string, (a: number, b: number) => number]> = {
 	sub: ["a", "b", (a, b) => a - b],
 	div: ["a", "b", (a, b) => (b === 0 ? 0 : a / b)],
+	mod: ["a", "b", (a, b) => (b === 0 ? 0 : a % b)],
 	pow: ["e1", "e2", (a, b) => (b === 0 ? 1 : a ** b)],
 	atan2: ["e1", "e2", Math.atan2],
+};
+
+const BITWISE: Record<string, (a: number, b: number) => number> = {
+	"&": (a, b) => a & b,
+	"|": (a, b) => a | b,
+	"^": (a, b) => a ^ b,
 };
 
 const COMPARE: Record<string, (a: number, b: number) => boolean> = {
@@ -127,7 +163,8 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 	const type = typesIn(model, frame, node).inputTypes[inputId] ?? "f32";
 	const width = typeComponents(type);
 	const edge = frame.doc.edgesByTarget.get(node.id)?.find((e) => e.targetHandle === inputId);
-	if (edge) return fit(output(model, frame, edge.source, edge.sourceHandle), width);
+	if (edge)
+		return map(fit(output(model, frame, edge.source, edge.sourceHandle), width), asKind(type));
 	const stored =
 		node.data.values?.[inputId] ?? model.resolveDescriptor(node).defaultData.values?.[inputId];
 	const keys = componentKeys(type);
@@ -154,9 +191,10 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 	const type = node.type;
 	const get = (id: string) => input(model, frame, node, id);
 	const resolved = typesIn(model, frame, node);
-	const width = typeComponents(
-		resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType,
-	);
+	const outputType =
+		resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType;
+	const width = typeComponents(outputType);
+	const integer = typeKind(outputType) === "i32" || typeKind(outputType) === "u32";
 
 	if (type === "group-input") {
 		const value = frame.groupInputs.get(handleId);
@@ -182,13 +220,16 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		return input(model, inner, out, handleId);
 	}
 	const unary = UNARY[type];
-	if (unary) return map(get("e"), unary);
-	const variadic = VARIADIC[type];
+	if (unary) return map(map(get("e"), unary), asKind(outputType));
+	const variadic = (integer ? INT_VARIADIC[type] : undefined) ?? VARIADIC[type];
 	if (variadic) {
 		const operands = inputs(model, frame, node, "operands");
-		return fit(
-			operands.reduce((a, b) => zip([a, b], variadic)),
-			width,
+		return map(
+			fit(
+				operands.reduce((a, b) => zip([a, b], variadic)),
+				width,
+			),
+			asKind(outputType),
 		);
 	}
 	if (type === REPEAT_INPUT) {
@@ -199,7 +240,12 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 	}
 	if (type === REPEAT_OUTPUT) return runZone(model, frame, node).get(handleId) ?? [0];
 	const binary = BINARY[type];
-	if (binary) return fit(zip([get(binary[0]), get(binary[1])], binary[2]), width);
+	if (binary) {
+		return map(
+			fit(zip([get(binary[0]), get(binary[1])], binary[2]), width),
+			asKind(outputType),
+		);
+	}
 
 	switch (type) {
 		case "declare":
@@ -218,6 +264,46 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			return [zip([get("e1"), get("e2")], (a, b) => a * b).reduce((a, b) => a + b, 0)];
 		case "length":
 			return [Math.hypot(...get("e1"))];
+		case "normalize": {
+			const v = get("e");
+			const length = Math.hypot(...v);
+			return map(v, (n) => n / length);
+		}
+		case "smoothstep":
+			return zip([get("low"), get("high"), get("x")], (low, high, x) => {
+				const t = Math.min(1, Math.max(0, (x - low) / (high - low)));
+				return t * t * (3 - 2 * t);
+			});
+		case "bitwise": {
+			const op = BITWISE[node.data.settings?.op ?? "&"];
+			return map(
+				zip([get("a"), get("b")], (a, b) => op?.(a, b) ?? 0),
+				asKind(outputType),
+			);
+		}
+		case "bit-shift": {
+			const right = node.data.settings?.op === ">>";
+			const unsigned = typeKind(outputType) === "u32";
+			return map(
+				zip([get("a"), get("b")], (a, b) =>
+					right ? (unsigned ? a >>> (b & 31) : a >> (b & 31)) : a << (b & 31),
+				),
+				asKind(outputType),
+			);
+		}
+		case "to-int":
+		case "to-uint": {
+			const mode = node.data.settings?.rounding ?? "trunc";
+			const round =
+				mode === "floor"
+					? Math.floor
+					: mode === "ceil"
+						? Math.ceil
+						: mode === "round"
+							? Math.round
+							: Math.trunc;
+			return map(map(get("e"), round), asKind(outputType));
+		}
 		case "clamp":
 			return zip([get("e"), get("low"), get("high")], (e, lo, hi) =>
 				Math.min(hi, Math.max(lo, e)),
