@@ -20,8 +20,6 @@
 		selected,
 	}: EdgeProps = $props();
 
-	const PADDING = 24;
-
 	const graph = getGraphManager();
 	const view = getDocumentView();
 
@@ -59,13 +57,6 @@
 
 	/** Links breaking zone rules are drawn red and ignored by codegen. */
 	const invalid = $derived(graph.isEdgeInvalid(id));
-
-	const bounds = $derived({
-		x: Math.min(sourceX, targetX) - PADDING,
-		y: Math.min(sourceY, targetY) - PADDING,
-		w: Math.abs(targetX - sourceX) + PADDING * 2,
-		h: Math.abs(targetY - sourceY) + PADDING * 2,
-	});
 </script>
 
 {#if !parked}
@@ -81,10 +72,6 @@
 			<stop offset="0%" style="stop-color: var(--color-{sourceType})" />
 			<stop offset="100%" style="stop-color: var(--color-{targetType})" />
 		</linearGradient>
-
-		<mask id="edge-mask-{id}" maskContentUnits="userSpaceOnUse">
-			<path d={path} fill="none" stroke="white" stroke-width="1" />
-		</mask>
 	</defs>
 
 	<g class="group">
@@ -100,26 +87,23 @@
 				<title>Invalid link: it can't leave the zone it starts in</title>
 			</path>
 		{:else}
-			<!-- Gradient stroke -->
-			<rect
-				x={bounds.x}
-				y={bounds.y}
-				width={bounds.w}
-				height={bounds.h}
-				fill="url(#edge-gradient-{id})"
-				mask="url(#edge-mask-{id})"
+			<!-- Stroked with the gradient itself: a mask per link made zooming
+			     re-rasterize every link's whole bounding box. -->
+			<path
+				d={path}
+				fill="none"
+				stroke="url(#edge-gradient-{id})"
+				stroke-width="1"
 				class="transition-opacity {selected ? 'opacity-100' : 'opacity-60'}"
 			/>
 		{/if}
 
 		<!-- Hover overlay -->
-		<rect
-			x={bounds.x}
-			y={bounds.y}
-			width={bounds.w}
-			height={bounds.h}
-			fill="var(--color-foreground)"
-			mask="url(#edge-mask-{id})"
+		<path
+			d={path}
+			fill="none"
+			stroke="var(--color-foreground)"
+			stroke-width="1"
 			class="opacity-0 transition-opacity group-hover:opacity-40"
 		/>
 
