@@ -57,17 +57,9 @@
 		graph.resolveNodeInputs(id, view.path).filter((i) => !hiddenInputs.has(i.id)),
 	);
 	const outputs = $derived(graph.resolveNodeOutputs(id, view.path));
-	const label = $derived(descriptor?.label);
+	const label = $derived(graph.nodeLabel(id));
 
 	const nodeLabels = $derived(graph.resolveNodeLabels(id));
-
-	const sheetTargetId = $derived(
-		nodeType === "node-group"
-			? id
-			: view.path.length > 0
-				? view.path[view.path.length - 1]
-				: undefined,
-	);
 
 	const connections = useNodeConnections({ handleType: "target" });
 	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
@@ -169,33 +161,30 @@
 	</div>
 {:else if descriptor}
 	<div class="node-shell__label">
-		{#if isZoneNode}
-			<div class="flex items-center justify-between gap-2">
-				<span>{label}</span>
-				{#if zoneId}
-					<Button
-						variant="secondary"
-						type="button"
-						size="icon-sm"
-						title="Open repeat zone settings"
-						onclick={() => graph.openZoneSheet(id)}
-					>
-						<FadersIcon />
-					</Button>
+		<div class="flex items-center justify-between gap-2">
+			<span class="truncate">{label}</span>
+			<div class="flex shrink-0 items-center gap-1">
+				{#if outdated}
+					<span class="text-amber-500" title={outdatedMessage}>
+						<WarningIcon class="size-4" weight="fill" />
+					</span>
 				{/if}
+				<Button
+					variant="ghost"
+					type="button"
+					size="icon-xs"
+					title="Node settings (N)"
+					onclick={() => {
+						view.activate();
+						graph.openSheet(id);
+					}}
+				>
+					<FadersIcon />
+				</Button>
 			</div>
-			{#if !zoneId}
-				<span class="text-destructive text-xs">Missing its paired node</span>
-			{/if}
-		{:else if outdated}
-			<div class="flex items-center justify-between gap-2">
-				<span>{label}</span>
-				<span class="text-amber-500" title={outdatedMessage}>
-					<WarningIcon class="size-4" weight="fill" />
-				</span>
-			</div>
-		{:else}
-			<span>{label}</span>
+		</div>
+		{#if isZoneNode && !zoneId}
+			<span class="text-destructive text-xs">Missing its paired node</span>
 		{/if}
 		{#if nodeType === "node-group"}
 			<div class="flex items-stretch gap-1 pb-1 *:flex-1">
@@ -220,17 +209,6 @@
 						onclick={() => graph.deepClone(id)}
 					>
 						<LockSimpleIcon />
-					</Button>
-				{/if}
-				{#if sheetTargetId}
-					<Button
-						variant="secondary"
-						type="button"
-						size="icon-sm"
-						title="Open group settings"
-						onclick={() => graph.openGroupSheet(sheetTargetId)}
-					>
-						<FadersIcon />
 					</Button>
 				{/if}
 			</div>

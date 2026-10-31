@@ -66,6 +66,7 @@ const InputValueSchema = v.union([
 ]);
 
 const NodeDataSchema = v.strictObject({
+	label: v.optional(v.string()),
 	values: v.optional(v.record(v.string(), InputValueSchema)),
 	settings: v.optional(v.record(v.string(), v.string())),
 	types: v.optional(v.record(v.string(), v.picklist(WGSL_TYPES))),

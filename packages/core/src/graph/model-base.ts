@@ -499,14 +499,14 @@ export abstract class GraphModelBase {
 			if (node.type === "node-group") {
 				labels.push({
 					id: nodeId,
-					label: definition.label ?? "Group",
+					label: node.data.label ?? definition.label ?? "Group",
 					locked: node.group?.locked ?? false,
 				});
 			} else {
 				const desc = nodeRegistry[node.type ?? ""];
 				labels.push({
 					id: nodeId,
-					label: desc?.label ?? node.type ?? "unknown",
+					label: node.data.label ?? desc?.label ?? node.type ?? "unknown",
 					locked: false,
 				});
 			}

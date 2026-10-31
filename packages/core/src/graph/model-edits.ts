@@ -26,7 +26,7 @@ type Point = { x: number; y: number };
 
 /**
  * Editing nodes of the document in view as a whole: copy and paste, delete
- * and dissolve, reset.
+ * and dissolve, reset, and labels.
  */
 export abstract class EditModel extends CustomWgslModel {
 	abstract isValidConnection(connection: Connection): boolean;
@@ -221,6 +221,24 @@ export abstract class EditModel extends CustomWgslModel {
 		if (patches.size === 0) return;
 		this.patchNodeData(patches);
 		this.rebuildTypeCache();
+	}
+
+	/** The label a node has unless the user gives it one. */
+	defaultNodeLabel(nodeId: string): string {
+		const node = this.resolveNode(nodeId);
+		return node ? this.resolveDescriptor(node).label : "";
+	}
+
+	nodeLabel(nodeId: string): string {
+		return this.resolveNode(nodeId)?.data.label ?? this.defaultNodeLabel(nodeId);
+	}
+
+	/** Name a node; a blank label (or its default one) gives it back its default. */
+	setNodeLabel(nodeId: string, label: string | undefined) {
+		const trimmed = label?.trim();
+		const custom = trimmed && trimmed !== this.defaultNodeLabel(nodeId) ? trimmed : undefined;
+		if (this.resolveNode(nodeId)?.data.label === custom) return;
+		this.updateNodeData(nodeId, { label: custom }, { retype: false });
 	}
 
 	/** The ids given, plus the partner of every zone boundary among them. */

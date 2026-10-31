@@ -138,9 +138,13 @@ function sanitizeIdent(id: string): string {
 // ── Hashing ──────────────────────────────────────────────────────────────────
 
 function stripLabels(data: NodeData): NodeData {
-	return data.handles
-		? { ...data, handles: data.handles.map(({ id, type }) => ({ id, type, label: "" })) }
-		: data;
+	return {
+		...data,
+		label: undefined,
+		...(data.handles
+			? { handles: data.handles.map(({ id, type }) => ({ id, type, label: "" })) }
+			: {}),
+	};
 }
 
 function hashDoc(doc: { nodes: GraphNode[]; edges: GraphEdge[] }) {

@@ -4,11 +4,10 @@
 	import { getDevTools } from "../dev-tools.svelte";
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { getPreview } from "../preview.svelte";
-	import GroupSheet from "./GroupSheet.svelte";
+	import NodeSheet from "./NodeSheet.svelte";
 	import ScreenLayout from "./screen/ScreenLayout.svelte";
 	import SettingsDialog from "./settings/SettingsDialog.svelte";
 	import VideoExportDialog from "./VideoExportDialog.svelte";
-	import ZoneSheet from "./ZoneSheet.svelte";
 
 	let { class: className }: { class?: string } = $props();
 
@@ -78,17 +77,9 @@
 		prevFragment = generated.shader;
 	});
 
-	// Close the group config sheet when selection no longer contains a group node.
+	// A node's sheet goes with it.
 	$effect(() => {
-		const ids = graph.selectedNodeIds;
-		if (!graph.sheetOpen) return;
-		// Keep the sheet open when we're inside a group (viewing its contents).
-		if (graph.path.length > 0) return;
-		const hasGroup = ids.some((id) => {
-			const node = graph.activeDocument.nodes.find((n) => n.id === id);
-			return node?.type === "node-group" && node.group;
-		});
-		if (!hasGroup) graph.sheetOpen = false;
+		if (graph.sheetNodeId && !graph.resolveNode(graph.sheetNodeId)) graph.sheetNodeId = null;
 	});
 
 	// The canvas renders at a fixed size, or at the size of the preview area last used.
@@ -149,7 +140,6 @@
 	<ScreenLayout />
 </div>
 
-<ZoneSheet />
-<GroupSheet />
+<NodeSheet />
 <SettingsDialog />
 <VideoExportDialog />

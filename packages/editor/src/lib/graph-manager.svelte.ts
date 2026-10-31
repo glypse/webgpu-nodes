@@ -57,36 +57,15 @@ export class GraphManager extends GraphModel {
 
 	// ── Sheets ──────────────────────────────────────────────────────────────
 
-	/**
-	 * Group configuration sheet state. Opened via the "n" key (see GraphContent)
-	 * or the faders button on group / group-input / group-output nodes (see NodeShell).
-	 * `sheetGroupId` is the id of the group node *instance* whose definition is being edited.
-	 */
-	sheetOpen = $state(false);
-	sheetGroupId = $state<string | null>(null);
-
-	/**
-	 * Repeat zone settings sheet: the zone (Repeat Input node id) being edited.
-	 */
-	zoneSheetId = $state<string | null>(null);
+	/** The node whose sheet is open, if any. */
+	sheetNodeId = $state<string | null>(null);
 
 	/** The page of the settings dialog shown, or null while it's closed. */
 	settingsPage = $state<SettingsPage | null>(null);
 
-	/** Open (or toggle closed) the settings sheet of the zone a boundary node belongs to. */
-	openZoneSheet(boundaryNodeId: string) {
-		const zoneId = this.activeZones.zoneOfBoundary.get(boundaryNodeId) ?? null;
-		this.zoneSheetId = this.zoneSheetId === zoneId ? null : zoneId;
-	}
-
-	/** Open (or toggle closed) the group configuration sheet for a group node instance. */
-	openGroupSheet(targetNodeId: string) {
-		if (this.sheetOpen && this.sheetGroupId === targetNodeId) {
-			this.sheetOpen = false;
-		} else {
-			this.sheetGroupId = targetNodeId;
-			this.sheetOpen = true;
-		}
+	/** Open (or toggle closed) a node's sheet. */
+	openSheet(nodeId: string) {
+		this.sheetNodeId = this.sheetNodeId === nodeId ? null : nodeId;
 	}
 
 	// ── Clipboard ───────────────────────────────────────────────────────────

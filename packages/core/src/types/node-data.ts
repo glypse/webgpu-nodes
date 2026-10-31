@@ -16,6 +16,8 @@ export type InputValue = ScalarValue | VectorValue;
 
 /** Everything a node stores. Which fields apply depends on the node type. */
 export type NodeData = {
+	/** The name the user gave the node, shown instead of its default one. */
+	label?: string;
 	/** Values of the node's unlinked inputs, by input id. */
 	values?: Record<string, InputValue>;
 	/** Enum settings shown on the node, by setting key. */

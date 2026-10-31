@@ -106,16 +106,11 @@
 		graph.exitGroup();
 	}
 
-	function handleToggleGroupSheet() {
-		const id = getSelectedGroupNodeId();
-		if (id) {
-			graph.openGroupSheet(id);
-		} else if (graph.path.length > 0) {
-			const top = graph.path[graph.path.length - 1];
-			if (top) graph.openGroupSheet(top);
-		} else {
-			graph.sheetOpen = !graph.sheetOpen;
-		}
+	/** The selected node's sheet, or that of the group entered. */
+	function handleToggleNodeSheet() {
+		const id = graph.selectedNodeIds[0] ?? graph.path.at(-1);
+		if (id) graph.openSheet(id);
+		else graph.sheetNodeId = null;
 	}
 
 	const hasSelection = $derived(graph.selectedNodeIds.length > 0);
@@ -261,10 +256,10 @@
 				</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item
-					onSelect={handleToggleGroupSheet}
-					disabled={!(hasSelectedGroup || canExitGroup || graph.sheetOpen)}
+					onSelect={handleToggleNodeSheet}
+					disabled={!(hasSelection || canExitGroup || graph.sheetNodeId)}
 				>
-					Toggle node group sheet
+					Toggle node sheet
 					<Menubar.Shortcut>N</Menubar.Shortcut>
 				</Menubar.Item>
 				<Menubar.Separator />

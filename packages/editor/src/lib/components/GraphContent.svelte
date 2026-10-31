@@ -4,7 +4,6 @@
 		type AddMenuEntry,
 		type HydratedGraphDocument,
 		type HydratedGraphProject,
-		isZoneNodeType,
 		type NodeGeometry,
 		type PendingConnection,
 	} from "$core";
@@ -267,51 +266,19 @@
 				view.enterGroup(selected.id);
 			}
 		} else if (event.key === "Escape") {
-			if (graph.zoneSheetId) {
+			if (graph.sheetNodeId) {
 				event.preventDefault();
-				graph.zoneSheetId = null;
-			} else if (graph.sheetOpen) {
-				event.preventDefault();
-				graph.sheetOpen = false;
+				graph.sheetNodeId = null;
 			} else if (view.path.length > 0) {
 				event.preventDefault();
 				view.exitGroup();
 			}
-		} else if (event.key === "n" && !event.metaKey && !event.ctrlKey) {
-			const selectedZoneNode = getNodes().find((n) => n.selected && isZoneNodeType(n.type));
-			if (selectedZoneNode) {
-				event.preventDefault();
-				graph.openZoneSheet(selectedZoneNode.id);
-				return;
-			}
-			const selectedGroupRef = graph.selectedGroupRef;
-			let targetNodeId: string | undefined;
-
-			if (selectedGroupRef) {
-				// A group node is selected - use it
-				const groupNode = graph.activeDocument.nodes.find(
-					(n) => n.type === "node-group" && n.group?.definitionRef === selectedGroupRef,
-				);
-				targetNodeId = groupNode?.id;
-			} else if (graph.path.length > 0) {
-				// Inside a subgraph - use the group we're currently viewing
-				let current = graph.root;
-				for (const nodeId of graph.path) {
-					const node = current.nodes.find((n) => n.id === nodeId);
-					if (!node?.group) break;
-					targetNodeId = nodeId;
-					const def = graph.project.definitions.get(node.group.definitionRef);
-					if (!def) break;
-					current = def;
-				}
-			}
-
-			if (targetNodeId) {
-				event.preventDefault();
-				graph.openGroupSheet(targetNodeId);
-			} else if (graph.sheetOpen) {
-				graph.sheetOpen = false;
-			}
+		} else if (event.key === "n" && !mod) {
+			// The selected node's sheet, or that of the group entered.
+			const target = view.selectedNodeIds[0] ?? view.path.at(-1);
+			event.preventDefault();
+			if (target) graph.openSheet(target);
+			else graph.sheetNodeId = null;
 		} else if (event.code === "KeyG" && !event.metaKey && !event.ctrlKey && !event.altKey) {
 			if (isLocked) return;
 			event.preventDefault();

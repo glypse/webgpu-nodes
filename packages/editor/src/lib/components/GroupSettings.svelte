@@ -21,7 +21,7 @@
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
-	import { Button, DropdownMenu, Input, Scrubbable, Select, Sheet } from "$theme";
+	import { Button, DropdownMenu, Input, Scrubbable, Select } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
@@ -36,14 +36,10 @@
 
 	const graph = getGraphManager();
 
-	const sheetGroupNode = $derived.by(() => {
-		if (!graph.sheetGroupId) return undefined;
-		if (graph.path.length > 0) {
-			const inParent = graph.parentDocument.nodes.find((n) => n.id === graph.sheetGroupId);
-			if (inParent) return inParent;
-		}
-		return graph.activeDocument.nodes.find((n) => n.id === graph.sheetGroupId);
-	});
+	/** The group node whose definition is edited. */
+	let { groupId }: { groupId: string } = $props();
+
+	const sheetGroupNode = $derived(graph.resolveNode(groupId));
 	const definitionRef = $derived(sheetGroupNode?.group?.definitionRef);
 	const definition = $derived(
 		definitionRef ? graph.project.definitions.get(definitionRef) : undefined,
@@ -150,8 +146,8 @@
 	);
 
 	function commitGroupLabel() {
-		if (graph.sheetGroupId && groupLabelBuffer.trim()) {
-			graph.setGroupLabel(graph.sheetGroupId, groupLabelBuffer);
+		if (groupLabelBuffer.trim()) {
+			graph.setGroupLabel(groupId, groupLabelBuffer);
 		}
 	}
 
@@ -499,175 +495,146 @@
 	</div>
 {/snippet}
 
-<Sheet.Root bind:open={graph.sheetOpen}>
-	<Sheet.Content
-		class="w-[350px] overflow-y-auto sm:w-[400px]"
-		onOpenAutoFocus={(e: Event) => e.preventDefault()}
-		escapeKeydownBehavior="ignore"
-	>
-		<Sheet.Header>
-			<Sheet.Title>Group settings</Sheet.Title>
-		</Sheet.Header>
-		{#if sheetGroupNode && definition}
-			<div class="flex flex-col gap-4 p-4">
-				<Button
-					variant="outline"
-					onclick={() => {
-						if (graph.sheetGroupId) {
-							graph.deepClone(graph.sheetGroupId);
-						}
-					}}
-				>
-					Clone & Edit
-				</Button>
+{#if sheetGroupNode && definition}
+	<div class="flex flex-col gap-4">
+		<Button variant="outline" onclick={() => graph.deepClone(groupId)}>Clone & Edit</Button>
 
-				<div class="flex flex-col gap-1.5">
-					<span class="text-sm font-medium">Group Label</span>
-					<Input
-						value={groupLabelBuffer}
-						placeholder="Group name"
-						disabled={locked}
-						aria-invalid={groupLabelInvalid}
-						oninput={(e: Event) => {
-							groupLabelBuffer = inputValue(e);
-						}}
-						onblur={commitGroupLabel}
-						onkeydown={handleEnterBlur}
-					/>
-				</div>
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-medium">Group name</span>
+			<Input
+				value={groupLabelBuffer}
+				placeholder="Group name"
+				disabled={locked}
+				aria-invalid={groupLabelInvalid}
+				oninput={(e: Event) => {
+					groupLabelBuffer = inputValue(e);
+				}}
+				onblur={commitGroupLabel}
+				onkeydown={handleEnterBlur}
+			/>
+		</div>
 
-				{#if variables.length > 0 || !locked}
-					<div class="flex flex-col gap-1.5">
-						<span class="text-sm font-medium">Shared types</span>
-						<span class="text-muted-foreground text-xs">
-							Sockets sharing a type take the same one on each group node, inferred
-							from what's linked to them or picked on the node.
+		{#if variables.length > 0 || !locked}
+			<div class="flex flex-col gap-1.5">
+				<span class="text-sm font-medium">Shared types</span>
+				<span class="text-muted-foreground text-xs">
+					Sockets sharing a type take the same one on each group node, inferred from
+					what's linked to them or picked on the node.
+				</span>
+				{#each variables as variable (variable.id)}
+					{@const set = setOf(variable)}
+					<div class="flex items-center gap-2">
+						<Input
+							value={variable.name}
+							disabled={locked}
+							class="w-16 shrink-0"
+							title="Name"
+							onchange={(e: Event) => {
+								const name = inputValue(e).trim();
+								if (name && definitionRef) {
+									graph.setTypeVariable(definitionRef, variable.id, {
+										name,
+									});
+								}
+							}}
+							onkeydown={handleEnterBlur}
+						/>
+						<Select.Root
+							type="single"
+							value={set?.id ?? ""}
+							disabled={locked}
+							onValueChange={(id: string) => {
+								const picked = TYPE_SETS.find((s) => s.id === id);
+								if (picked && definitionRef) {
+									graph.setTypeVariable(definitionRef, variable.id, {
+										types: picked.types,
+									});
+								}
+							}}
+						>
+							<Select.Trigger class="min-w-0 flex-1" title="Types it may take">
+								{set?.label ?? "Custom"}
+							</Select.Trigger>
+							<Select.Content>
+								{#each TYPE_SETS as option (option.id)}
+									<Select.Item value={option.id} label={option.label}>
+										{option.label}
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+						<span class="text-muted-foreground w-14 shrink-0 text-right text-xs">
+							{socketCount(variable)}
+							{socketCount(variable) === 1 ? "socket" : "sockets"}
 						</span>
-						{#each variables as variable (variable.id)}
-							{@const set = setOf(variable)}
-							<div class="flex items-center gap-2">
-								<Input
-									value={variable.name}
-									disabled={locked}
-									class="w-16 shrink-0"
-									title="Name"
-									onchange={(e: Event) => {
-										const name = inputValue(e).trim();
-										if (name && definitionRef) {
-											graph.setTypeVariable(definitionRef, variable.id, {
-												name,
-											});
-										}
-									}}
-									onkeydown={handleEnterBlur}
-								/>
-								<Select.Root
-									type="single"
-									value={set?.id ?? ""}
-									disabled={locked}
-									onValueChange={(id: string) => {
-										const picked = TYPE_SETS.find((s) => s.id === id);
-										if (picked && definitionRef) {
-											graph.setTypeVariable(definitionRef, variable.id, {
-												types: picked.types,
-											});
-										}
-									}}
-								>
-									<Select.Trigger
-										class="min-w-0 flex-1"
-										title="Types it may take"
-									>
-										{set?.label ?? "Custom"}
-									</Select.Trigger>
-									<Select.Content>
-										{#each TYPE_SETS as option (option.id)}
-											<Select.Item value={option.id} label={option.label}>
-												{option.label}
-											</Select.Item>
-										{/each}
-									</Select.Content>
-								</Select.Root>
-								<span
-									class="text-muted-foreground w-14 shrink-0 text-right text-xs"
-								>
-									{socketCount(variable)}
-									{socketCount(variable) === 1 ? "socket" : "sockets"}
-								</span>
-								{#if !locked}
-									<Button
-										variant="ghost"
-										size="icon-sm"
-										class="shrink-0"
-										title="Remove: its sockets keep its first type"
-										onclick={() => {
-											if (definitionRef)
-												graph.removeTypeVariable(
-													definitionRef,
-													variable.id,
-												);
-										}}
-									>
-										<TrashIcon />
-									</Button>
-								{/if}
-							</div>
-						{/each}
 						{#if !locked}
 							<Button
-								variant="outline"
-								size="sm"
+								variant="ghost"
+								size="icon-sm"
+								class="shrink-0"
+								title="Remove: its sockets keep its first type"
 								onclick={() => {
 									if (definitionRef)
-										graph.addTypeVariable(definitionRef, FLOAT_TYPES);
+										graph.removeTypeVariable(definitionRef, variable.id);
 								}}
 							>
-								Add shared type
+								<TrashIcon />
 							</Button>
 						{/if}
 					</div>
-				{/if}
-
-				{#if inputNode}
-					{@const nodeId = inputNode.id}
-					<div class="flex flex-col gap-1.5">
-						<span class="text-sm font-medium">Inputs</span>
-						{@render inputList(nodeId, undefined)}
-						{#if !locked}
-							{@render addInputPicker(undefined)}
-						{/if}
-					</div>
-				{/if}
-
-				{#if outputNode}
-					{@const nodeId = outputNode.id}
-					<div class="flex flex-col gap-1.5">
-						<span class="text-sm font-medium">Outputs</span>
-						{#each outputHandles as handle (handle.id)}
-							{@render handleRow(handle, nodeId, outputHandles.length > 1)}
-						{/each}
-						{#if !locked}
-							<TypePicker
-								types={WGSL_TYPES}
-								label="Add output"
-								title="Add an output"
-								onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
-							>
-								{#snippet extra()}
-									<DropdownMenu.Item
-										onSelect={() => graph.addHandle(nodeId, { inferred: true })}
-									>
-										Inferred
-										<span class="text-muted-foreground ml-auto text-xs">
-											What reaches it
-										</span>
-									</DropdownMenu.Item>
-								{/snippet}
-							</TypePicker>
-						{/if}
-					</div>
+				{/each}
+				{#if !locked}
+					<Button
+						variant="outline"
+						size="sm"
+						onclick={() => {
+							if (definitionRef) graph.addTypeVariable(definitionRef, FLOAT_TYPES);
+						}}
+					>
+						Add shared type
+					</Button>
 				{/if}
 			</div>
 		{/if}
-	</Sheet.Content>
-</Sheet.Root>
+
+		{#if inputNode}
+			{@const nodeId = inputNode.id}
+			<div class="flex flex-col gap-1.5">
+				<span class="text-sm font-medium">Inputs</span>
+				{@render inputList(nodeId, undefined)}
+				{#if !locked}
+					{@render addInputPicker(undefined)}
+				{/if}
+			</div>
+		{/if}
+
+		{#if outputNode}
+			{@const nodeId = outputNode.id}
+			<div class="flex flex-col gap-1.5">
+				<span class="text-sm font-medium">Outputs</span>
+				{#each outputHandles as handle (handle.id)}
+					{@render handleRow(handle, nodeId, outputHandles.length > 1)}
+				{/each}
+				{#if !locked}
+					<TypePicker
+						types={WGSL_TYPES}
+						label="Add output"
+						title="Add an output"
+						onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
+					>
+						{#snippet extra()}
+							<DropdownMenu.Item
+								onSelect={() => graph.addHandle(nodeId, { inferred: true })}
+							>
+								Inferred
+								<span class="text-muted-foreground ml-auto text-xs">
+									What reaches it
+								</span>
+							</DropdownMenu.Item>
+						{/snippet}
+					</TypePicker>
+				{/if}
+			</div>
+		{/if}
+	</div>
+{/if}
