@@ -2,52 +2,32 @@
 
 /** Every archived standard-library version, by ref, loaded on demand. */
 export const archivedVersions: Record<string, () => Promise<unknown>> = {
-	"std-oklch-gamut-map@03aa31e8b4e495": () =>
-		import("./std-oklch-gamut-map/03aa31e8b4e495.json").then((m) => m.default),
-	"std-voronoi-point@0a57f1f215dd94": () =>
-		import("./std-voronoi-point/0a57f1f215dd94.json").then((m) => m.default),
-	"std-linear-rgb-to-oklch@1d31820365910e": () =>
-		import("./std-linear-rgb-to-oklch/1d31820365910e.json").then((m) => m.default),
-	"std-in-display-gamut@08f3a271063dc1": () =>
-		import("./std-in-display-gamut/08f3a271063dc1.json").then((m) => m.default),
-	"std-xyz-to-oklab@130bda8ad22e1f": () =>
-		import("./std-xyz-to-oklab/130bda8ad22e1f.json").then((m) => m.default),
-	"std-linear-rgb-to-oklab@1725e68fe7d502": () =>
-		import("./std-linear-rgb-to-oklab/1725e68fe7d502.json").then((m) => m.default),
-	"std-noise-coordinates@144ff9922ad8e8": () =>
-		import("./std-noise-coordinates/144ff9922ad8e8.json").then((m) => m.default),
-	"std-oklch-to-oklab@03a255722e5123": () =>
-		import("./std-oklch-to-oklab/03a255722e5123.json").then((m) => m.default),
-	"std-oklab-to-xyz@1edb3be647ef4b": () =>
-		import("./std-oklab-to-xyz/1edb3be647ef4b.json").then((m) => m.default),
-	"std-voronoi-distance@056024b800e85c": () =>
-		import("./std-voronoi-distance/056024b800e85c.json").then((m) => m.default),
-	"std-lattice-neighbor@0016ea85eb051f": () =>
-		import("./std-lattice-neighbor/0016ea85eb051f.json").then((m) => m.default),
-	"std-aspect-uv@0bc33aef268b00": () =>
-		import("./std-aspect-uv/0bc33aef268b00.json").then((m) => m.default),
-	"std-color@17c7f155756e15": () =>
-		import("./std-color/17c7f155756e15.json").then((m) => m.default),
-	"std-oklab-to-oklch@10ea526cf67dc8": () =>
-		import("./std-oklab-to-oklch/10ea526cf67dc8.json").then((m) => m.default),
-	"std-linear-rgb-to-xyz@1e92d057460d93": () =>
-		import("./std-linear-rgb-to-xyz/1e92d057460d93.json").then((m) => m.default),
-	"std-xyz-to-linear-rgb@17a67cbcbfb74d": () =>
-		import("./std-xyz-to-linear-rgb/17a67cbcbfb74d.json").then((m) => m.default),
-	"std-dimension-mask@1dfb9036300c90": () =>
-		import("./std-dimension-mask/1dfb9036300c90.json").then((m) => m.default),
-	"std-hash@173fe967101a4d": () =>
-		import("./std-hash/173fe967101a4d.json").then((m) => m.default),
-	"std-remap@0105dffc98ef77": () =>
-		import("./std-remap/0105dffc98ef77.json").then((m) => m.default),
-	"std-voronoi-texture@03c2cddacc6581": () =>
-		import("./std-voronoi-texture/03c2cddacc6581.json").then((m) => m.default),
-	"std-oklch-to-linear-rgb@1d22bdba2a195d": () =>
-		import("./std-oklch-to-linear-rgb/1d22bdba2a195d.json").then((m) => m.default),
-	"std-oklab-to-linear-rgb@0c09da78c859fa": () =>
-		import("./std-oklab-to-linear-rgb/0c09da78c859fa.json").then((m) => m.default),
-	"std-fractal-voronoi@04fb1df34850e7": () =>
-		import("./std-fractal-voronoi/04fb1df34850e7.json").then((m) => m.default),
-	"std-fractal-octave@1a74ffc0961228": () =>
-		import("./std-fractal-octave/1a74ffc0961228.json").then((m) => m.default),
+	"std-oklch-gamut-map@03aa31e8b4e495": () => import("./std-oklch-gamut-map/03aa31e8b4e495.json").then((m) => m.default),
+	"std-voronoi-point@1b593e78281976": () => import("./std-voronoi-point/1b593e78281976.json").then((m) => m.default),
+	"std-linear-rgb-to-oklch@1d31820365910e": () => import("./std-linear-rgb-to-oklch/1d31820365910e.json").then((m) => m.default),
+	"std-in-display-gamut@08f3a271063dc1": () => import("./std-in-display-gamut/08f3a271063dc1.json").then((m) => m.default),
+	"std-xyz-to-oklab@130bda8ad22e1f": () => import("./std-xyz-to-oklab/130bda8ad22e1f.json").then((m) => m.default),
+	"std-linear-rgb-to-oklab@1725e68fe7d502": () => import("./std-linear-rgb-to-oklab/1725e68fe7d502.json").then((m) => m.default),
+	"std-noise-coordinates@00f5df7962d95f": () => import("./std-noise-coordinates/00f5df7962d95f.json").then((m) => m.default),
+	"std-voronoi-nearest@0f9deee7135799": () => import("./std-voronoi-nearest/0f9deee7135799.json").then((m) => m.default),
+	"std-oklch-to-oklab@03a255722e5123": () => import("./std-oklch-to-oklab/03a255722e5123.json").then((m) => m.default),
+	"std-oklab-to-xyz@1edb3be647ef4b": () => import("./std-oklab-to-xyz/1edb3be647ef4b.json").then((m) => m.default),
+	"std-voronoi-distance@033da377315729": () => import("./std-voronoi-distance/033da377315729.json").then((m) => m.default),
+	"std-lattice-neighbor@17eab156ee37ae": () => import("./std-lattice-neighbor/17eab156ee37ae.json").then((m) => m.default),
+	"std-voronoi-radius@1ab49afa340b2e": () => import("./std-voronoi-radius/1ab49afa340b2e.json").then((m) => m.default),
+	"std-aspect-uv@0bc33aef268b00": () => import("./std-aspect-uv/0bc33aef268b00.json").then((m) => m.default),
+	"std-voronoi-edges@1c0fc838d663a0": () => import("./std-voronoi-edges/1c0fc838d663a0.json").then((m) => m.default),
+	"std-color@17c7f155756e15": () => import("./std-color/17c7f155756e15.json").then((m) => m.default),
+	"std-oklab-to-oklch@10ea526cf67dc8": () => import("./std-oklab-to-oklch/10ea526cf67dc8.json").then((m) => m.default),
+	"std-voronoi-smooth@0f90e97f3111bf": () => import("./std-voronoi-smooth/0f90e97f3111bf.json").then((m) => m.default),
+	"std-linear-rgb-to-xyz@1e92d057460d93": () => import("./std-linear-rgb-to-xyz/1e92d057460d93.json").then((m) => m.default),
+	"std-xyz-to-linear-rgb@17a67cbcbfb74d": () => import("./std-xyz-to-linear-rgb/17a67cbcbfb74d.json").then((m) => m.default),
+	"std-dimension-mask@0420ec82eb2601": () => import("./std-dimension-mask/0420ec82eb2601.json").then((m) => m.default),
+	"std-hash@019d6613a7682f": () => import("./std-hash/019d6613a7682f.json").then((m) => m.default),
+	"std-remap@0105dffc98ef77": () => import("./std-remap/0105dffc98ef77.json").then((m) => m.default),
+	"std-voronoi-texture@16b86307caafaa": () => import("./std-voronoi-texture/16b86307caafaa.json").then((m) => m.default),
+	"std-oklch-to-linear-rgb@1d22bdba2a195d": () => import("./std-oklch-to-linear-rgb/1d22bdba2a195d.json").then((m) => m.default),
+	"std-oklab-to-linear-rgb@0c09da78c859fa": () => import("./std-oklab-to-linear-rgb/0c09da78c859fa.json").then((m) => m.default),
+	"std-fractal-voronoi@1ec4ae0649676e": () => import("./std-fractal-voronoi/1ec4ae0649676e.json").then((m) => m.default),
+	"std-fractal-octave@037e9fdcb9b3b9": () => import("./std-fractal-octave/037e9fdcb9b3b9.json").then((m) => m.default),
 };

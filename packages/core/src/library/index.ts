@@ -22,7 +22,11 @@ import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
 import remap from "./std-remap.json";
 import voronoiDistance from "./std-voronoi-distance.json";
+import voronoiEdges from "./std-voronoi-edges.json";
+import voronoiNearest from "./std-voronoi-nearest.json";
 import voronoiPoint from "./std-voronoi-point.json";
+import voronoiRadius from "./std-voronoi-radius.json";
+import voronoiSmooth from "./std-voronoi-smooth.json";
 import voronoiTexture from "./std-voronoi-texture.json";
 import xyzToLinearRgb from "./std-xyz-to-linear-rgb.json";
 import xyzToOklab from "./std-xyz-to-oklab.json";
@@ -77,6 +81,10 @@ const files: unknown[] = [
 	voronoiTexture,
 	fractalOctave,
 	fractalVoronoi,
+	voronoiNearest,
+	voronoiEdges,
+	voronoiRadius,
+	voronoiSmooth,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {
