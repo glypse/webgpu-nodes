@@ -1,0 +1,96 @@
+{
+	"id": "std-oklch-to-linear-rgb",
+	"name": "OKLch to Linear RGB",
+	"aliases": ["OKLch to sRGB", "OKLch to RGB", "Color Space Conversion", "Perceptual Color"],
+	"category": "color",
+	"dependencies": ["std-oklch-to-oklab@06de8acf481c99", "std-oklab-to-linear-rgb@0deeb5e1a34c78"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "29adf9df-5d19-4c14-92b1-62b0ba5070bb",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 28
+				},
+				"group": {
+					"definitionRef": "std-oklch-to-oklab@06de8acf481c99",
+					"locked": true
+				}
+			},
+			{
+				"id": "a981de0f-18fd-4901-b9fb-b7cb64fea470",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 92
+				}
+			},
+			{
+				"id": "f16415c9-dd73-4545-9626-8cbe000b465e",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 520,
+					"y": 0
+				},
+				"group": {
+					"definitionRef": "std-oklab-to-linear-rgb@0deeb5e1a34c78",
+					"locked": true
+				}
+			},
+			{
+				"id": "5f31ac12-a4fb-4cca-aa9c-039d454a959b",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 780,
+					"y": 32
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "2e33d2a9-fb4a-40e6-8dd0-a16806cd85e1",
+				"source": "a981de0f-18fd-4901-b9fb-b7cb64fea470",
+				"sourceHandle": "134df7c8-ec35-4fcd-939f-dc54e299b9ae",
+				"target": "29adf9df-5d19-4c14-92b1-62b0ba5070bb",
+				"targetHandle": "fbd00cb9-72e7-4097-a8dd-b7fb44620b1d"
+			},
+			{
+				"id": "04911242-5564-40ab-84c5-d4d9ecaba636",
+				"source": "29adf9df-5d19-4c14-92b1-62b0ba5070bb",
+				"sourceHandle": "9baa836b-c1bf-4732-ba08-5239a2ddbcb5",
+				"target": "f16415c9-dd73-4545-9626-8cbe000b465e",
+				"targetHandle": "2ce931f2-1f8d-41f6-92dd-6f8b3fe91ff4"
+			},
+			{
+				"id": "c452269e-49da-4270-9e7d-10909d9416bc",
+				"source": "f16415c9-dd73-4545-9626-8cbe000b465e",
+				"sourceHandle": "ec7a9a8b-bf8f-4e6e-8c8e-e9bd54492952",
+				"target": "5f31ac12-a4fb-4cca-aa9c-039d454a959b",
+				"targetHandle": "52ee7867-f145-4aa5-b726-98d8178e29ec"
+			}
+		],
+		"inputs": [
+			{
+				"id": "134df7c8-ec35-4fcd-939f-dc54e299b9ae",
+				"label": "OKLch",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "52ee7867-f145-4aa5-b726-98d8178e29ec",
+				"label": "Linear RGB",
+				"type": "vec3f"
+			}
+		]
+	}
+}

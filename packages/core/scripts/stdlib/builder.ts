@@ -15,6 +15,9 @@ import {
 	type HandleDef,
 	type InputValue,
 	type NodeData,
+	type NodeWidget,
+	type SocketType,
+	type TypeVariable,
 	WGSL_TYPES,
 	type WgslType,
 	familyKey,
@@ -45,6 +48,8 @@ export type GroupSpec = {
 	/** Section of search results it's listed in, after the main results. */
 	searchSection?: string;
 	build: (g: GroupBuilder) => void;
+	/** The widget its nodes draw, given the handle id of each input by key. */
+	widget?: (input: (key: string) => string) => NodeWidget;
 };
 
 /** A group another one calls: one described in the same run, or a library entry by id. */
@@ -95,6 +100,7 @@ export class GroupBuilder {
 	readonly inputKeys = new Map<string, string>();
 	readonly outputKeys = new Map<string, string>();
 	readonly dependencies = new Set<string>();
+	private readonly typeVariables: TypeVariable[] = [];
 	private readonly inputValues: Record<string, InputValue> = {};
 	private count = 0;
 	/** The frames being described, outermost first. */
@@ -123,6 +129,7 @@ export class GroupBuilder {
 			inputs: this.inputs,
 			outputs: this.outputs,
 			...(defaults ? { defaults } : {}),
+			...(this.typeVariables.length > 0 ? { typeVariables: this.typeVariables } : {}),
 		};
 	}
 
@@ -229,7 +236,14 @@ export class GroupBuilder {
 
 	// ── Boundary ──────────────────────────────────────────────────────────
 
-	input(key: string, type: WgslType, options: InputOptions = {}): Ref {
+	/** A type the sockets typed with it share, decided per group node among `types`. */
+	typeVariable(key: string, name: string, types: readonly WgslType[]): SocketType {
+		const id = stableId(`${this.id}/type/${key}`);
+		this.typeVariables.push({ id, name, types });
+		return { variable: id };
+	}
+
+	input(key: string, type: SocketType, options: InputOptions = {}): Ref {
 		const id = handleId(this.id, "in", key);
 		this.inputKeys.set(key, id);
 		this.inputs.push({
@@ -262,7 +276,7 @@ export class GroupBuilder {
 		return { node: GROUP_INPUT, handle: id, variants: list };
 	}
 
-	output(key: string, source: Operand, type: WgslType, options: { label?: string } = {}) {
+	output(key: string, source: Operand, type: SocketType, options: { label?: string } = {}) {
 		const id = handleId(this.id, "out", key);
 		this.outputKeys.set(key, id);
 		this.outputs.push({ id, label: options.label ?? key, type });
@@ -337,6 +351,7 @@ export class GroupBuilder {
 	};
 
 	uv = (): Ref => this.node("uv", {}, { output: "uv" });
+	resolution = (): Ref => this.node("resolution", {}, { output: "resolution" });
 
 	// ── Math ──────────────────────────────────────────────────────────────
 
@@ -355,6 +370,10 @@ export class GroupBuilder {
 	abs = (e: Operand) => this.node("abs", { e });
 	sqrt = (e: Operand) => this.node("sqrt", { e });
 	log = (e: Operand) => this.node("log", { e });
+	sign = (e: Operand) => this.node("sign", { e });
+	sin = (e: Operand) => this.node("sin", { e });
+	cos = (e: Operand) => this.node("cos", { e });
+	atan2 = (y: Operand, x: Operand) => this.node("atan2", { e1: y, e2: x });
 	negate = (e: Operand) => this.node("negate", { e });
 	mix = (a: Operand, b: Operand, t: Operand) => this.node("mix", { e1: a, e2: b, e3: t });
 	clamp = (e: Operand, low: Operand, high: Operand) => this.node("clamp", { e, low, high });
@@ -367,6 +386,11 @@ export class GroupBuilder {
 	length = (v: Operand) => this.node("length", { e1: v });
 	distance = (a: Operand, b: Operand) => this.node("distance", { e1: a, e2: b });
 	normalize = (v: Operand) => this.node("normalize", { e: v });
+
+	// ── Colour ────────────────────────────────────────────────────────────
+
+	displayGamutClip = (color: Operand) =>
+		this.node("display-gamut-clip", { color }, { output: "color" });
 
 	// ── Logic ─────────────────────────────────────────────────────────────
 

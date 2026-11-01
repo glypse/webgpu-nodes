@@ -28,7 +28,7 @@ import {
 	standardLibrary,
 } from "../../src/library";
 import { nagaBin, validateFragment } from "../../src/testing/wgsl";
-import type { GroupHandleDef } from "../../src/types";
+import type { GroupHandleDef, NodeWidget } from "../../src/types";
 import { GroupBuilder, type GroupSpec, type GroupTarget, type ResolvedGroup } from "./builder";
 
 const coreDir = join(import.meta.dirname, "../..");
@@ -37,6 +37,7 @@ const libraryDir = join(coreDir, "src/library");
 export type BuiltGroup = ResolvedGroup & {
 	spec: GroupSpec;
 	definition: GraphDocument;
+	widget?: NodeWidget;
 	dependencies: string[];
 	/** Enum inputs and their variants' values, by handle id. */
 	enums: Map<string, number[]>;
@@ -71,9 +72,15 @@ export function buildGroups(specs: readonly GroupSpec[]): BuiltGroup[] {
 		const g = new GroupBuilder(spec.id, resolveTarget);
 		spec.build(g);
 		const definition = g.document();
+		const inputId = (key: string) => {
+			const id = g.inputKeys.get(key);
+			if (!id) throw new Error(`${spec.id}: its widget names no input "${key}"`);
+			return id;
+		};
 		const group: BuiltGroup = {
 			spec,
 			definition,
+			...(spec.widget ? { widget: spec.widget(inputId) } : {}),
 			ref: libraryRef(spec.id, libraryVersion(definition)),
 			inputs: g.inputKeys,
 			outputs: g.outputKeys,
@@ -295,6 +302,7 @@ function writeGroup(group: BuiltGroup) {
 		...(group.spec.searchSection ? { searchSection: group.spec.searchSection } : {}),
 		dependencies: group.dependencies,
 		definition: group.definition,
+		...(group.widget ? { widget: group.widget } : {}),
 	};
 	writeFileSync(
 		join(libraryDir, `${group.spec.id}.json`),

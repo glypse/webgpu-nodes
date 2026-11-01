@@ -1,0 +1,443 @@
+{
+	"id": "std-linear-rgb-to-oklab",
+	"name": "Linear RGB to OKLab",
+	"aliases": ["sRGB to OKLab", "RGB to OKLab", "Color Space Conversion", "Perceptual Color"],
+	"category": "color",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "37e61dfb-3365-4d04-b210-de6e6a7276dd",
+				"type": "layout-frame",
+				"data": {
+					"label": "LMS",
+					"note": "The cones' responses to the linear RGB colour."
+				},
+				"position": {
+					"x": 0,
+					"y": 0
+				}
+			},
+			{
+				"id": "0d0a8d3b-630e-4432-9e0a-8ee7e2883e5a",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 0.4122214708,
+							"y": 0.5363325363,
+							"z": 0.0514459929
+						}
+					}
+				},
+				"position": {
+					"x": 262,
+					"y": 74
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "27529912-66e0-4e8a-b645-ec6f1f9b125d",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 24,
+					"y": 138
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "0a6fa791-3993-40eb-9051-5aadd7778708",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 0.2119034982,
+							"y": 0.6806995451,
+							"z": 0.1073969566
+						}
+					}
+				},
+				"position": {
+					"x": 262,
+					"y": 371
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "de8aec5a-4269-4edb-a8c8-70bc2f68fd5f",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 0.0883024619,
+							"y": 0.2817188376,
+							"z": 0.6299787005
+						}
+					}
+				},
+				"position": {
+					"x": 262,
+					"y": 668
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "58a95d58-6996-4581-a5e3-f50d8364919f",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec3f"
+					}
+				},
+				"position": {
+					"x": 462,
+					"y": 315
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "91475930-4fa1-4f1f-bacf-d171e1b9056c",
+				"type": "layout-frame",
+				"data": {
+					"label": "Cube root",
+					"note": "Compressed the way perception is (signed, for colours out of gamut)."
+				},
+				"position": {
+					"x": 807,
+					"y": 185
+				}
+			},
+			{
+				"id": "e34bb71a-5a49-4e9b-aab0-67b872227928",
+				"type": "sign",
+				"data": {},
+				"position": {
+					"x": 1031,
+					"y": 556
+				},
+				"frame": "91475930-4fa1-4f1f-bacf-d171e1b9056c"
+			},
+			{
+				"id": "8780bf6f-f3b3-4781-bdd6-dc04c50a1633",
+				"type": "abs",
+				"data": {},
+				"position": {
+					"x": 831,
+					"y": 287
+				},
+				"frame": "91475930-4fa1-4f1f-bacf-d171e1b9056c"
+			},
+			{
+				"id": "356c5f9a-3f3e-474e-87f3-44db27ec59c2",
+				"type": "pow",
+				"data": {
+					"values": {
+						"e2": 0.3333333333333333
+					}
+				},
+				"position": {
+					"x": 1031,
+					"y": 259
+				},
+				"frame": "91475930-4fa1-4f1f-bacf-d171e1b9056c"
+			},
+			{
+				"id": "8013b401-f731-4643-a5db-3ef810f1c8d7",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 1231,
+					"y": 528
+				},
+				"frame": "91475930-4fa1-4f1f-bacf-d171e1b9056c"
+			},
+			{
+				"id": "c28ee0f1-1b98-4f05-8e63-7ad26eef2499",
+				"type": "layout-frame",
+				"data": {
+					"label": "OKLab",
+					"note": "Lightness, then green–red and blue–yellow, from the compressed responses."
+				},
+				"position": {
+					"x": 1578,
+					"y": 129
+				}
+			},
+			{
+				"id": "fa579508-5047-4a0f-9091-58471fc3d916",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 0.2104542553,
+							"y": 0.793617785,
+							"z": -0.0040720468
+						}
+					}
+				},
+				"position": {
+					"x": 1602,
+					"y": 203
+				},
+				"frame": "c28ee0f1-1b98-4f05-8e63-7ad26eef2499"
+			},
+			{
+				"id": "5ac10891-f685-40a7-9463-298bb7b83a61",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 1.9779984951,
+							"y": -2.428592205,
+							"z": 0.4505937099
+						}
+					}
+				},
+				"position": {
+					"x": 1602,
+					"y": 500
+				},
+				"frame": "c28ee0f1-1b98-4f05-8e63-7ad26eef2499"
+			},
+			{
+				"id": "e3eaa03a-f678-41c0-be44-28192d269838",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 0.0259040371,
+							"y": 0.7827717662,
+							"z": -0.808675766
+						}
+					}
+				},
+				"position": {
+					"x": 1602,
+					"y": 797
+				},
+				"frame": "c28ee0f1-1b98-4f05-8e63-7ad26eef2499"
+			},
+			{
+				"id": "b235b54f-ef23-4b37-92f5-5355c48c2412",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec3f"
+					}
+				},
+				"position": {
+					"x": 1802,
+					"y": 444
+				},
+				"frame": "c28ee0f1-1b98-4f05-8e63-7ad26eef2499"
+			},
+			{
+				"id": "7a2e3276-e4de-4a2e-a97e-1d90cc4efddb",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 2091,
+					"y": 476
+				}
+			},
+			{
+				"id": "eed5c548-b89f-4692-96ce-2aedabc0b6c1",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 224,
+					"y": 198
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "4cfbbb0b-2dfe-4bd3-b512-cf5f6688430d",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 662,
+					"y": 411
+				},
+				"frame": "37e61dfb-3365-4d04-b210-de6e6a7276dd"
+			},
+			{
+				"id": "f88bd4c2-70e7-4201-a2b3-82c25fcd86ec",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 1431,
+					"y": 624
+				},
+				"frame": "91475930-4fa1-4f1f-bacf-d171e1b9056c"
+			}
+		],
+		"edges": [
+			{
+				"id": "22f65e1f-ec5e-4947-94d4-1edb8666749e",
+				"source": "eed5c548-b89f-4692-96ce-2aedabc0b6c1",
+				"sourceHandle": "out",
+				"target": "0d0a8d3b-630e-4432-9e0a-8ee7e2883e5a",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "c0855744-dd60-4b77-9877-21060c5ac9ca",
+				"source": "eed5c548-b89f-4692-96ce-2aedabc0b6c1",
+				"sourceHandle": "out",
+				"target": "0a6fa791-3993-40eb-9051-5aadd7778708",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "a21e79b9-fb62-4d83-8d78-927f2e237a3c",
+				"source": "eed5c548-b89f-4692-96ce-2aedabc0b6c1",
+				"sourceHandle": "out",
+				"target": "de8aec5a-4269-4edb-a8c8-70bc2f68fd5f",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "1f4d851a-a8f9-453d-9787-eaf09035828f",
+				"source": "0d0a8d3b-630e-4432-9e0a-8ee7e2883e5a",
+				"sourceHandle": "result",
+				"target": "58a95d58-6996-4581-a5e3-f50d8364919f",
+				"targetHandle": "x"
+			},
+			{
+				"id": "63bd2f2c-2ce5-4a65-876c-2c173a161970",
+				"source": "0a6fa791-3993-40eb-9051-5aadd7778708",
+				"sourceHandle": "result",
+				"target": "58a95d58-6996-4581-a5e3-f50d8364919f",
+				"targetHandle": "y"
+			},
+			{
+				"id": "b40d071a-dfb4-4720-8ba5-4b09774b9295",
+				"source": "de8aec5a-4269-4edb-a8c8-70bc2f68fd5f",
+				"sourceHandle": "result",
+				"target": "58a95d58-6996-4581-a5e3-f50d8364919f",
+				"targetHandle": "z"
+			},
+			{
+				"id": "dbd4bfb9-a946-4d3d-bc3e-f57871d1cdf2",
+				"source": "4cfbbb0b-2dfe-4bd3-b512-cf5f6688430d",
+				"sourceHandle": "out",
+				"target": "e34bb71a-5a49-4e9b-aab0-67b872227928",
+				"targetHandle": "e"
+			},
+			{
+				"id": "8c739d03-b236-464c-bdf0-8aa2de87b82d",
+				"source": "4cfbbb0b-2dfe-4bd3-b512-cf5f6688430d",
+				"sourceHandle": "out",
+				"target": "8780bf6f-f3b3-4781-bdd6-dc04c50a1633",
+				"targetHandle": "e"
+			},
+			{
+				"id": "ec706ef8-1440-4dec-b35a-9e21363fafef",
+				"source": "8780bf6f-f3b3-4781-bdd6-dc04c50a1633",
+				"sourceHandle": "result",
+				"target": "356c5f9a-3f3e-474e-87f3-44db27ec59c2",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "a4152c8a-f9b3-43c6-8cb4-f23c230a5109",
+				"source": "e34bb71a-5a49-4e9b-aab0-67b872227928",
+				"sourceHandle": "result",
+				"target": "8013b401-f731-4643-a5db-3ef810f1c8d7",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "0b7b4f8d-1ffc-42e3-b194-2abc68a06394",
+				"source": "356c5f9a-3f3e-474e-87f3-44db27ec59c2",
+				"sourceHandle": "result",
+				"target": "8013b401-f731-4643-a5db-3ef810f1c8d7",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "6431214c-65db-41e4-9908-f43e9faf4618",
+				"source": "f88bd4c2-70e7-4201-a2b3-82c25fcd86ec",
+				"sourceHandle": "out",
+				"target": "fa579508-5047-4a0f-9091-58471fc3d916",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "0897a222-056a-4c57-a22c-d966c90c99ca",
+				"source": "f88bd4c2-70e7-4201-a2b3-82c25fcd86ec",
+				"sourceHandle": "out",
+				"target": "5ac10891-f685-40a7-9463-298bb7b83a61",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "113cc4f3-a182-4fa4-99a5-373bf4163bba",
+				"source": "f88bd4c2-70e7-4201-a2b3-82c25fcd86ec",
+				"sourceHandle": "out",
+				"target": "e3eaa03a-f678-41c0-be44-28192d269838",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "4acfc9bf-d052-47a1-87f2-00d6e085c4b8",
+				"source": "fa579508-5047-4a0f-9091-58471fc3d916",
+				"sourceHandle": "result",
+				"target": "b235b54f-ef23-4b37-92f5-5355c48c2412",
+				"targetHandle": "x"
+			},
+			{
+				"id": "13e8ee1b-373d-409d-be17-123c723964a4",
+				"source": "5ac10891-f685-40a7-9463-298bb7b83a61",
+				"sourceHandle": "result",
+				"target": "b235b54f-ef23-4b37-92f5-5355c48c2412",
+				"targetHandle": "y"
+			},
+			{
+				"id": "e64dead1-cd7e-456d-9669-333588b96aeb",
+				"source": "e3eaa03a-f678-41c0-be44-28192d269838",
+				"sourceHandle": "result",
+				"target": "b235b54f-ef23-4b37-92f5-5355c48c2412",
+				"targetHandle": "z"
+			},
+			{
+				"id": "b25b6165-905e-4a0d-a1c2-f462b59d930c",
+				"source": "b235b54f-ef23-4b37-92f5-5355c48c2412",
+				"sourceHandle": "value",
+				"target": "7a2e3276-e4de-4a2e-a97e-1d90cc4efddb",
+				"targetHandle": "841f164a-bab7-4132-a582-27a1123e4573"
+			},
+			{
+				"id": "028ba456-b898-4459-9225-d0c7c085d335",
+				"source": "27529912-66e0-4e8a-b645-ec6f1f9b125d",
+				"sourceHandle": "65c825d9-c5b0-4ee4-87f2-7a32977036dc",
+				"target": "eed5c548-b89f-4692-96ce-2aedabc0b6c1",
+				"targetHandle": "in"
+			},
+			{
+				"id": "e0a8a8c6-2862-4bff-9c72-47a0de50d412",
+				"source": "58a95d58-6996-4581-a5e3-f50d8364919f",
+				"sourceHandle": "value",
+				"target": "4cfbbb0b-2dfe-4bd3-b512-cf5f6688430d",
+				"targetHandle": "in"
+			},
+			{
+				"id": "00568022-a14c-4d37-b627-edb4af8508b7",
+				"source": "8013b401-f731-4643-a5db-3ef810f1c8d7",
+				"sourceHandle": "result",
+				"target": "f88bd4c2-70e7-4201-a2b3-82c25fcd86ec",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "65c825d9-c5b0-4ee4-87f2-7a32977036dc",
+				"label": "Linear RGB",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "841f164a-bab7-4132-a582-27a1123e4573",
+				"label": "OKLab",
+				"type": "vec3f"
+			}
+		]
+	}
+}

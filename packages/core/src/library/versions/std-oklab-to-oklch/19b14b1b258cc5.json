@@ -1,0 +1,336 @@
+{
+	"id": "std-oklab-to-oklch",
+	"name": "OKLab to OKLch",
+	"aliases": ["Lab to LCh", "Polar", "Color Space Conversion"],
+	"category": "color",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "bcea39f0-ea4d-48a0-aef8-449f51c38043",
+				"type": "separate-vector",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 0
+				}
+			},
+			{
+				"id": "35b0d4a1-f4e7-4ac7-a2d5-355378641248",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 120
+				}
+			},
+			{
+				"id": "17acc6dc-5981-4864-a4ee-20f2ef42f832",
+				"type": "layout-frame",
+				"data": {
+					"label": "Chroma",
+					"note": "How far from grey: the length of (a, b)."
+				},
+				"position": {
+					"x": 798,
+					"y": 116
+				}
+			},
+			{
+				"id": "05e15f51-e0f9-4cbd-8865-4c915ad843ca",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec2f"
+					}
+				},
+				"position": {
+					"x": 822,
+					"y": 218
+				},
+				"frame": "17acc6dc-5981-4864-a4ee-20f2ef42f832"
+			},
+			{
+				"id": "b8b0ada4-d14f-4cd6-a58a-59297b6bbf97",
+				"type": "length",
+				"data": {},
+				"position": {
+					"x": 1022,
+					"y": 190
+				},
+				"frame": "17acc6dc-5981-4864-a4ee-20f2ef42f832"
+			},
+			{
+				"id": "e90482b7-2c38-465b-9dba-b51fd9195afa",
+				"type": "layout-frame",
+				"data": {
+					"label": "Hue",
+					"note": "The angle of (a, b), in degrees from 0 to 360."
+				},
+				"position": {
+					"x": 665,
+					"y": 459
+				}
+			},
+			{
+				"id": "1dcf1bb7-a26f-4e27-8535-a1a11c2bab74",
+				"type": "atan2",
+				"data": {},
+				"position": {
+					"x": 689,
+					"y": 792
+				},
+				"frame": "e90482b7-2c38-465b-9dba-b51fd9195afa"
+			},
+			{
+				"id": "1465178f-2b2c-48f3-8770-502da96ea92b",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 889,
+					"y": 764
+				},
+				"frame": "e90482b7-2c38-465b-9dba-b51fd9195afa"
+			},
+			{
+				"id": "11ded433-7438-4351-be92-7d434065fb4d",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "f32"
+					},
+					"values": {
+						"x": 0.15915494309189535,
+						"y": 0.15915494309189535,
+						"z": 0.15915494309189535,
+						"w": 0.15915494309189535
+					}
+				},
+				"position": {
+					"x": 689,
+					"y": 589
+				},
+				"frame": "e90482b7-2c38-465b-9dba-b51fd9195afa"
+			},
+			{
+				"id": "870f14d6-56b2-4281-be2e-ee5471ba3732",
+				"type": "fract",
+				"data": {},
+				"position": {
+					"x": 1089,
+					"y": 736
+				},
+				"frame": "e90482b7-2c38-465b-9dba-b51fd9195afa"
+			},
+			{
+				"id": "1e65ea21-15e8-4c99-bf47-b9b482d96c3f",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 1289,
+					"y": 708
+				},
+				"frame": "e90482b7-2c38-465b-9dba-b51fd9195afa"
+			},
+			{
+				"id": "97a591ed-a335-4cf4-9d71-838b78999df0",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "f32"
+					},
+					"values": {
+						"x": 360,
+						"y": 360,
+						"z": 360,
+						"w": 360
+					}
+				},
+				"position": {
+					"x": 1089,
+					"y": 533
+				},
+				"frame": "e90482b7-2c38-465b-9dba-b51fd9195afa"
+			},
+			{
+				"id": "83fe5057-dbf0-4338-ba58-48fe75fdc016",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec3f"
+					}
+				},
+				"position": {
+					"x": 1603,
+					"y": 134
+				}
+			},
+			{
+				"id": "c74516aa-e215-489e-9029-13971423a7ad",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 1863,
+					"y": 166
+				}
+			},
+			{
+				"id": "94e0ef9d-2868-4990-a92e-ac9e630758d7",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 532,
+					"y": 342
+				}
+			},
+			{
+				"id": "18e53819-07b9-4764-9dbe-c7dcf7b52206",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 532,
+					"y": 392
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "33667f1f-590a-46e7-8d18-2f289a02acbd",
+				"source": "35b0d4a1-f4e7-4ac7-a2d5-355378641248",
+				"sourceHandle": "38152fff-863d-454c-879b-d17f2e272071",
+				"target": "bcea39f0-ea4d-48a0-aef8-449f51c38043",
+				"targetHandle": "v"
+			},
+			{
+				"id": "90db630e-e522-48e9-845a-51050474b76c",
+				"source": "94e0ef9d-2868-4990-a92e-ac9e630758d7",
+				"sourceHandle": "out",
+				"target": "05e15f51-e0f9-4cbd-8865-4c915ad843ca",
+				"targetHandle": "x"
+			},
+			{
+				"id": "8c890067-6ef6-4f5e-9813-0b334b182aa0",
+				"source": "18e53819-07b9-4764-9dbe-c7dcf7b52206",
+				"sourceHandle": "out",
+				"target": "05e15f51-e0f9-4cbd-8865-4c915ad843ca",
+				"targetHandle": "y"
+			},
+			{
+				"id": "061b6c21-968c-4d65-8e14-68aff24e83de",
+				"source": "05e15f51-e0f9-4cbd-8865-4c915ad843ca",
+				"sourceHandle": "value",
+				"target": "b8b0ada4-d14f-4cd6-a58a-59297b6bbf97",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "478394a0-a9c5-4d98-805d-d6adb1ca7d10",
+				"source": "18e53819-07b9-4764-9dbe-c7dcf7b52206",
+				"sourceHandle": "out",
+				"target": "1dcf1bb7-a26f-4e27-8535-a1a11c2bab74",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "bab01c58-ab1a-454a-84b0-3ee81ba86f47",
+				"source": "94e0ef9d-2868-4990-a92e-ac9e630758d7",
+				"sourceHandle": "out",
+				"target": "1dcf1bb7-a26f-4e27-8535-a1a11c2bab74",
+				"targetHandle": "e2"
+			},
+			{
+				"id": "260d292b-35f4-4268-b6b4-1fe82e0c4fab",
+				"source": "1dcf1bb7-a26f-4e27-8535-a1a11c2bab74",
+				"sourceHandle": "result",
+				"target": "1465178f-2b2c-48f3-8770-502da96ea92b",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "d3a1d2ab-9f52-4174-905d-fc96231fb152",
+				"source": "11ded433-7438-4351-be92-7d434065fb4d",
+				"sourceHandle": "value",
+				"target": "1465178f-2b2c-48f3-8770-502da96ea92b",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "e5fe56ec-0144-4354-b161-b8a7516f3e76",
+				"source": "1465178f-2b2c-48f3-8770-502da96ea92b",
+				"sourceHandle": "result",
+				"target": "870f14d6-56b2-4281-be2e-ee5471ba3732",
+				"targetHandle": "e"
+			},
+			{
+				"id": "21c72856-4245-47ce-987b-dbb3aeeddfdd",
+				"source": "870f14d6-56b2-4281-be2e-ee5471ba3732",
+				"sourceHandle": "result",
+				"target": "1e65ea21-15e8-4c99-bf47-b9b482d96c3f",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "d626b43d-cd08-4772-92d3-abc3149c334a",
+				"source": "97a591ed-a335-4cf4-9d71-838b78999df0",
+				"sourceHandle": "value",
+				"target": "1e65ea21-15e8-4c99-bf47-b9b482d96c3f",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "970452c7-858c-437d-ae97-2823fe366676",
+				"source": "bcea39f0-ea4d-48a0-aef8-449f51c38043",
+				"sourceHandle": "x",
+				"target": "83fe5057-dbf0-4338-ba58-48fe75fdc016",
+				"targetHandle": "x"
+			},
+			{
+				"id": "cba78fed-8cb0-425a-8bc6-9e233c6fd042",
+				"source": "b8b0ada4-d14f-4cd6-a58a-59297b6bbf97",
+				"sourceHandle": "result",
+				"target": "83fe5057-dbf0-4338-ba58-48fe75fdc016",
+				"targetHandle": "y"
+			},
+			{
+				"id": "5c43f9fc-d00d-4858-9a87-077b86af2303",
+				"source": "1e65ea21-15e8-4c99-bf47-b9b482d96c3f",
+				"sourceHandle": "result",
+				"target": "83fe5057-dbf0-4338-ba58-48fe75fdc016",
+				"targetHandle": "z"
+			},
+			{
+				"id": "c35bbb13-35c2-42af-a4d2-cf0d243ae346",
+				"source": "83fe5057-dbf0-4338-ba58-48fe75fdc016",
+				"sourceHandle": "value",
+				"target": "c74516aa-e215-489e-9029-13971423a7ad",
+				"targetHandle": "41668a81-633a-44f9-8153-896d4c1266f6"
+			},
+			{
+				"id": "bdfc063a-f961-4290-9967-640d6d818240",
+				"source": "bcea39f0-ea4d-48a0-aef8-449f51c38043",
+				"sourceHandle": "y",
+				"target": "94e0ef9d-2868-4990-a92e-ac9e630758d7",
+				"targetHandle": "in"
+			},
+			{
+				"id": "7975484e-b448-4c41-9659-29693d23fe51",
+				"source": "bcea39f0-ea4d-48a0-aef8-449f51c38043",
+				"sourceHandle": "z",
+				"target": "18e53819-07b9-4764-9dbe-c7dcf7b52206",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "38152fff-863d-454c-879b-d17f2e272071",
+				"label": "OKLab",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "41668a81-633a-44f9-8153-896d4c1266f6",
+				"label": "OKLch",
+				"type": "vec3f"
+			}
+		]
+	}
+}

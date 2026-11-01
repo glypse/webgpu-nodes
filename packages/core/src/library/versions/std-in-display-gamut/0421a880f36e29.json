@@ -1,0 +1,140 @@
+{
+	"id": "std-in-display-gamut",
+	"name": "In Display Gamut",
+	"aliases": [
+		"Gamut Check",
+		"Out of Gamut",
+		"In sRGB Gamut",
+		"In Display P3 Gamut",
+		"Color Space Conversion"
+	],
+	"category": "color",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "8ea3a806-982e-451f-a573-5371d5e26c99",
+				"type": "display-gamut-clip",
+				"data": {},
+				"position": {
+					"x": 363,
+					"y": 208
+				}
+			},
+			{
+				"id": "7118bd86-df4a-4d2f-bc81-ab55d5ff5d5a",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 128
+				}
+			},
+			{
+				"id": "e60c311c-46fe-434c-860a-fb4a13fa7c1d",
+				"type": "distance",
+				"data": {},
+				"position": {
+					"x": 626,
+					"y": 64
+				}
+			},
+			{
+				"id": "f94b3db0-6973-4f1f-9335-6851ca88ce1a",
+				"type": "compare",
+				"data": {
+					"settings": {
+						"op": "<="
+					},
+					"values": {
+						"b": 0.00001
+					}
+				},
+				"position": {
+					"x": 886,
+					"y": 0
+				}
+			},
+			{
+				"id": "0e6d6bae-106c-4f6a-afe9-f42dd2a0164f",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 1146,
+					"y": 68
+				}
+			},
+			{
+				"id": "889ffd19-d6eb-4bd9-b47f-c18746b6dc7a",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 188
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "80144c6a-2ad2-4036-8960-0dbf1d55cf9f",
+				"source": "889ffd19-d6eb-4bd9-b47f-c18746b6dc7a",
+				"sourceHandle": "out",
+				"target": "8ea3a806-982e-451f-a573-5371d5e26c99",
+				"targetHandle": "color"
+			},
+			{
+				"id": "17291621-7458-4e79-8d01-347ecdc22428",
+				"source": "889ffd19-d6eb-4bd9-b47f-c18746b6dc7a",
+				"sourceHandle": "out",
+				"target": "e60c311c-46fe-434c-860a-fb4a13fa7c1d",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "accc8975-6cb1-434f-b45d-1708c569127b",
+				"source": "8ea3a806-982e-451f-a573-5371d5e26c99",
+				"sourceHandle": "color",
+				"target": "e60c311c-46fe-434c-860a-fb4a13fa7c1d",
+				"targetHandle": "e2"
+			},
+			{
+				"id": "89086630-b4e8-4408-8b3b-b4782453daba",
+				"source": "e60c311c-46fe-434c-860a-fb4a13fa7c1d",
+				"sourceHandle": "result",
+				"target": "f94b3db0-6973-4f1f-9335-6851ca88ce1a",
+				"targetHandle": "a"
+			},
+			{
+				"id": "490f009c-8341-4479-976f-64b9bfadeca1",
+				"source": "f94b3db0-6973-4f1f-9335-6851ca88ce1a",
+				"sourceHandle": "result",
+				"target": "0e6d6bae-106c-4f6a-afe9-f42dd2a0164f",
+				"targetHandle": "a4c59d73-9ba4-4de3-afb3-1cf80f4bae51"
+			},
+			{
+				"id": "3ff3148f-6909-4889-82bd-75aebae55291",
+				"source": "7118bd86-df4a-4d2f-bc81-ab55d5ff5d5a",
+				"sourceHandle": "b3bc5fc8-c197-4122-bb80-cfd00ca71072",
+				"target": "889ffd19-d6eb-4bd9-b47f-c18746b6dc7a",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "b3bc5fc8-c197-4122-bb80-cfd00ca71072",
+				"label": "Linear RGB",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "a4c59d73-9ba4-4de3-afb3-1cf80f4bae51",
+				"label": "In Gamut",
+				"type": "bool"
+			}
+		]
+	}
+}

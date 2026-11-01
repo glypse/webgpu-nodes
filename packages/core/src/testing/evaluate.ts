@@ -29,6 +29,8 @@ type Frame = {
 	doc: HydratedGraphDocument;
 	/** The gamut of the target drawn to. */
 	colorSpace: ColorSpace;
+	/** The size of the canvas drawn to, in pixels. */
+	resolution: readonly [number, number];
 	/** The types the document's variables take (see `TypeBindings`). */
 	bindings: TypeBindings;
 	groupInputs: ReadonlyMap<string, Value>;
@@ -130,7 +132,8 @@ const BOOLEAN: Record<string, (a: boolean, b: boolean) => boolean> = {
 
 /**
  * Compute an output of a node of the root document on the CPU, for the
- * node types the standard library's maths uses, as drawn to `colorSpace`.
+ * node types the standard library's maths uses, as drawn to `colorSpace`
+ * on a canvas of `resolution`.
  * Throws on any other node type.
  */
 export function evaluate(
@@ -138,10 +141,12 @@ export function evaluate(
 	nodeId: string,
 	handleId: string,
 	colorSpace: ColorSpace = "srgb",
+	resolution: readonly [number, number] = [1, 1],
 ): Value {
 	const frame: Frame = {
 		doc: model.root,
 		colorSpace,
+		resolution,
 		groupInputs: new Map(),
 		zones: new Map(),
 		finals: new Map(),
@@ -211,6 +216,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		const inner: Frame = {
 			doc,
 			colorSpace: frame.colorSpace,
+			resolution: frame.resolution,
 			groupInputs,
 			zones: new Map(),
 			finals: new Map(),
@@ -315,6 +321,8 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			return zip([get("e"), get("low"), get("high")], (e, lo, hi) =>
 				Math.min(hi, Math.max(lo, e)),
 			);
+		case "resolution":
+			return [...frame.resolution];
 		case "display-gamut-clip": {
 			const [r = 0, g = 0, b = 0] = get("color");
 			const clipped = clipToGamut({ r, g, b }, frame.colorSpace);

@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import type { GraphDocument, StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
+import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
 import dimensionMask from "./std-dimension-mask.json";
@@ -58,8 +59,9 @@ export const LibraryFileSchema = v.object({
 });
 
 /** A standard-library file as written. */
-export type LibraryFile = Omit<v.InferInput<typeof LibraryFileSchema>, "definition"> & {
+export type LibraryFile = Omit<v.InferInput<typeof LibraryFileSchema>, "definition" | "widget"> & {
 	definition: GraphDocument;
+	widget?: NodeWidget;
 };
 
 const files: unknown[] = [
