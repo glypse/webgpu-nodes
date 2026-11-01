@@ -31,10 +31,10 @@ export class GraphView implements DocumentView {
 	readonly locked: boolean;
 
 	/**
-	 * Frames drawn where they were when a drag began, by id: where the drag
-	 * ends decides what they hold, not how they'd grow along with it.
+	 * Nodes being dragged that the drop puts in a frame: frames are drawn
+	 * around what else they hold meanwhile.
 	 */
-	frozenFrames = $state.raw<ReadonlyMap<string, Box> | null>(null);
+	private loose = $state.raw<ReadonlySet<string> | undefined>(undefined);
 	/** The frame a drag would drop its nodes in. */
 	dropFrame = $state<string | null>(null);
 
@@ -53,21 +53,21 @@ export class GraphView implements DocumentView {
 		this.locked = $derived(graph.isLockedAt(this.path));
 		this.frameBoxes = $derived.by(() => {
 			const doc = this.document;
-			const boxes = frameBoxes(doc, graph.frameAnalysis(doc), graph.zoneAnalysis(doc), (id) =>
-				graph.nodeLabel(id),
+			return frameBoxes(
+				doc,
+				graph.frameAnalysis(doc),
+				graph.zoneAnalysis(doc),
+				(id) => graph.nodeLabel(id),
+				this.loose,
 			);
-			const frozen = this.frozenFrames;
-			if (!frozen) return boxes;
-			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- derived, never mutated
-			return new Map([...boxes].map(([id, box]) => [id, frozen.get(id) ?? box]));
 		});
 		this.placedNodes = $derived(placeFrames(this.document.nodes, this.frameBoxes));
 	}
 
 	// ── Dragging in and out of frames ───────────────────────────────────────
-	// A dragged frame takes what it holds along. Other frames stay as they
-	// were until the drop, which puts each node dragged in the innermost
-	// frame it's dropped on (or in none).
+	// A dragged frame takes what it holds along. Other frames shrink around
+	// what else they hold while nodes are dragged out of them; the drop puts
+	// each node dragged in the innermost frame it's dropped on (or in none).
 
 	private drag: FrameDrag | null = null;
 
@@ -79,8 +79,7 @@ export class GraphView implements DocumentView {
 			nodeIds,
 		);
 		this.drag = drag;
-		// eslint-disable-next-line svelte/prefer-svelte-reactivity -- replaced, never mutated
-		this.frozenFrames = new Map([...this.frameBoxes].filter(([id]) => !drag.moving.has(id)));
+		this.loose = drag.loose;
 	}
 
 	/** Follow the node `anchorId` of the drag, now at `position`. */
@@ -103,7 +102,7 @@ export class GraphView implements DocumentView {
 		if (!drag) return;
 		this.dropInFrames([...drag.from.keys()], drag.moving);
 		this.drag = null;
-		this.frozenFrames = null;
+		this.loose = undefined;
 		this.dropFrame = null;
 	}
 
@@ -113,7 +112,7 @@ export class GraphView implements DocumentView {
 		if (!drag) return;
 		if (drag.inside.size > 0) this.graph.moveNodes(drag.inside, { x: 0, y: 0 });
 		this.drag = null;
-		this.frozenFrames = null;
+		this.loose = undefined;
 		this.dropFrame = null;
 	}
 

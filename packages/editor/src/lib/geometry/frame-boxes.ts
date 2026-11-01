@@ -1,4 +1,5 @@
 import {
+	analyzeFrames,
 	type Box,
 	estimateFrameHeader,
 	type FrameAnalysis,
@@ -25,15 +26,22 @@ const holds = (box: Box, p: Point) =>
 /**
  * Where each frame of `doc` is drawn, by id: around what it holds and the
  * bubbles of the zones it holds, under its header as SvelteFlow measured it.
+ * Nodes of `loose` (being dragged) count as in no frame.
  */
 export function frameBoxes(
 	doc: HydratedGraphDocument,
-	frames: FrameAnalysis,
+	analysis: FrameAnalysis,
 	zones: ZoneAnalysis,
 	label: (frameId: string) => string,
+	loose: ReadonlySet<string> = new Set(),
 ): Map<string, Box> {
-	if (frames.frames.size === 0) return new Map();
-	const nodes = doc.nodes as (GraphNode & Pick<Node, "measured">)[];
+	if (analysis.frames.size === 0) return new Map();
+	const nodes = (
+		loose.size === 0
+			? doc.nodes
+			: doc.nodes.map((n) => (loose.has(n.id) ? { ...n, frame: undefined } : n))
+	) as (GraphNode & Pick<Node, "measured">)[];
+	const frames = loose.size === 0 ? analysis : analyzeFrames(nodes);
 	const byId = new Map(nodes.map((n) => [n.id, n]));
 	const header = (id: string) => {
 		const node = byId.get(id);
@@ -97,6 +105,8 @@ export type FrameDrag = {
 	inside: Map<string, Point>;
 	/** Dragged frames and what they hold. */
 	moving: Set<string>;
+	/** Dragged nodes not in a dragged frame: the drop decides their frame. */
+	loose: Set<string>;
 };
 
 export function startFrameDrag(
@@ -118,7 +128,15 @@ export function startFrameDrag(
 			return node ? [[id, node.position] as const] : [];
 		}),
 	);
-	return { from, inside, moving: new Set([...dragged, ...inside.keys()]) };
+	const loose = new Set(
+		nodeIds.filter((id) => {
+			for (let up = frames.frameOf.get(id); up !== undefined; up = frames.frameOf.get(up)) {
+				if (dragged.has(up)) return false;
+			}
+			return true;
+		}),
+	);
+	return { from, inside, moving: new Set([...dragged, ...inside.keys()]), loose };
 }
 
 /**
