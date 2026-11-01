@@ -11,7 +11,6 @@ import {
 	estimateFrameHeader,
 	estimateNodeGeometry,
 } from "../layout";
-import { hidesLinks } from "../nodes/misc";
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
 import {
 	type NodeData,
@@ -582,10 +581,9 @@ export class GraphModel extends PreviewModel {
 		if (!doc || this.isStandardLibrary(definitionRef)) return false;
 		const only = options.nodeIds && new Set(options.nodeIds);
 		const nodes = only ? doc.nodes.filter((n) => only.has(n.id)) : doc.nodes;
-		// Hidden links are drawn as tags: they don't pull nodes together.
 		const positions = await computeLayout({
 			nodes,
-			edges: doc.edges.filter((e) => !hidesLinks(doc.nodesById.get(e.source))),
+			edges: doc.edges,
 			zones: this.zoneAnalysis(doc),
 			frames: this.frameAnalysis(doc),
 			geometry: (node) =>

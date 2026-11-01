@@ -2,10 +2,11 @@
 // JSON files: checks the WGSL they compile to, lays them out (with the
 // editor's measured layout when a browser is given) and registers them.
 //
-//   bun run stdlib:build <description.ts> [--browser <path>] [--editor <url>] [--dry]
+//   bun run stdlib:build [description.ts] [--browser <path>] [--editor <url>] [--dry]
 //
-// The description's default export is the `GroupSpec`s to build. Without
-// --browser, the editor address to open is printed instead.
+// The description's default export is the `GroupSpec`s to build, every group
+// of groups/ by default. Without --browser, the editor address to open is
+// printed instead.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -332,10 +333,10 @@ if (import.meta.main) {
 			dry: { type: "boolean", default: false },
 		},
 	});
-	const [specPath] = positionals;
-	if (!specPath || !existsSync(specPath)) {
+	const specPath = positionals[0] ?? join(import.meta.dirname, "groups/index.ts");
+	if (!existsSync(specPath)) {
 		console.error(
-			"usage: bun run stdlib:build <description.ts> [--browser <path>] [--editor <url>] [--dry]",
+			"usage: bun run stdlib:build [description.ts] [--browser <path>] [--editor <url>] [--dry]",
 		);
 		process.exit(1);
 	}

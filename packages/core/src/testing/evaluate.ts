@@ -223,6 +223,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		if (!out) throw new Error("no group output");
 		return input(model, inner, out, handleId);
 	}
+	if (type === "reroute") return get("in");
 	const unary = UNARY[type];
 	if (unary) return map(map(get("e"), unary), asKind(outputType));
 	const variadic = (integer ? INT_VARIADIC[type] : undefined) ?? VARIADIC[type];

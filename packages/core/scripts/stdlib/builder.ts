@@ -4,6 +4,7 @@
 import { createHash } from "node:crypto";
 
 import { MATCH, MATCH_SELECTOR, caseHandle } from "../../src/enums";
+import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
 import type { GraphDocument, GraphDocumentEdge, GraphDocumentNode } from "../../src/graph/document";
 import {
 	type ColorDisplay,
@@ -18,8 +19,14 @@ import {
 } from "../../src/types";
 import { ITERATIONS_HANDLE, ITERATION_HANDLE, REPEAT_INPUT, REPEAT_OUTPUT } from "../../src/zones";
 
-/** An output socket of a node in the group being built. */
+/**
+ * An output socket of a node in the group being built. A group input's is
+ * on no node yet (`GROUP_INPUT`): it's linked from the Group Input node of
+ * wherever it's used (see `GroupBuilder.frame`).
+ */
 export type Ref = { readonly node: string; readonly handle: string };
+
+const GROUP_INPUT = "\0group-input";
 /** What an input receives: a link from a socket, or a value stored on the node. */
 export type Operand = Ref | InputValue;
 
@@ -88,16 +95,15 @@ export class GroupBuilder {
 	readonly dependencies = new Set<string>();
 	private readonly inputValues: Record<string, InputValue> = {};
 	private count = 0;
-	readonly inputNode: string;
-	readonly outputNode: string;
+	/** The frames being described, outermost first. */
+	private readonly frames: string[] = [];
+	/** Group Input and Group Output nodes, by side and the top-level frame they're in. */
+	private readonly boundaries = new Map<string, string>();
 
 	constructor(
 		readonly id: string,
 		private readonly resolve: (target: GroupTarget) => ResolvedGroup,
-	) {
-		this.inputNode = this.addNode("group-input", {});
-		this.outputNode = this.addNode("group-output", {});
-	}
+	) {}
 
 	document(): GraphDocument {
 		const defaults = Object.keys(this.inputValues).length > 0 ? this.inputValues : undefined;
@@ -112,9 +118,36 @@ export class GroupBuilder {
 
 	// ── Graph primitives ──────────────────────────────────────────────────
 
-	private addNode(type: string, data: NodeData, group?: GraphDocumentNode["group"]): string {
+	private addNode(
+		type: string,
+		data: NodeData,
+		group?: GraphDocumentNode["group"],
+		frame = this.frames.at(-1),
+	): string {
 		const id = stableId(`${this.id}/node/${String(this.count++)}`);
-		this.nodes.push({ id, type, data, position: { x: 0, y: 0 }, ...(group ? { group } : {}) });
+		this.nodes.push({
+			id,
+			type,
+			data,
+			position: { x: 0, y: 0 },
+			...(group ? { group } : {}),
+			...(frame ? { frame } : {}),
+		});
+		return id;
+	}
+
+	/**
+	 * The Group Input or Group Output node of the top-level frame being
+	 * described (or of none), added the first time it's needed. Each shows
+	 * only its linked sockets.
+	 */
+	private boundary(type: "group-input" | "group-output"): string {
+		const frame = this.frames[0];
+		const key = `${type}/${frame ?? ""}`;
+		const existing = this.boundaries.get(key);
+		if (existing) return existing;
+		const id = this.addNode(type, { hideUnlinked: true }, undefined, frame);
+		this.boundaries.set(key, id);
 		return id;
 	}
 
@@ -127,7 +160,7 @@ export class GroupBuilder {
 	link(source: Ref, target: string, targetHandle: string) {
 		this.edges.push({
 			id: stableId(`${this.id}/edge/${String(this.edges.length)}`),
-			source: source.node,
+			source: source.node === GROUP_INPUT ? this.boundary("group-input") : source.node,
 			sourceHandle: source.handle,
 			target,
 			targetHandle,
@@ -201,7 +234,7 @@ export class GroupBuilder {
 			...(options.display ? { display: options.display } : {}),
 		});
 		if (options.default !== undefined) this.inputValues[id] = options.default;
-		return { node: this.inputNode, handle: id };
+		return { node: GROUP_INPUT, handle: id };
 	}
 
 	/** An enum input choosing among `variants` (`[value, label]`), picking `initial` by default. */
@@ -216,14 +249,42 @@ export class GroupBuilder {
 		const list = variants.map(([value, label]) => ({ value, label }));
 		this.inputs.push({ id, label: options.label ?? key, type: "u32", variants: list });
 		this.inputValues[id] = initial;
-		return { node: this.inputNode, handle: id, variants: list };
+		return { node: GROUP_INPUT, handle: id, variants: list };
 	}
 
 	output(key: string, source: Operand, type: WgslType, options: { label?: string } = {}) {
 		const id = handleId(this.id, "out", key);
 		this.outputKeys.set(key, id);
 		this.outputs.push({ id, label: options.label ?? key, type });
-		this.feed(this.outputNode, id, source);
+		this.feed(this.boundary("group-output"), id, source);
+	}
+
+	// ── Organisation ──────────────────────────────────────────────────────
+
+	/**
+	 * A frame labelled `label` around the nodes `body` adds (nested frames
+	 * included), returning what `body` does. Group inputs used and outputs
+	 * given inside a top-level frame come from Group Input and Group
+	 * Output nodes of its own.
+	 */
+	frame<T>(label: string, options: { note?: string; tint?: FrameTint }, body: () => T): T {
+		const id = this.addNode(LAYOUT_FRAME, { label, ...options });
+		this.frames.push(id);
+		try {
+			return body();
+		} finally {
+			this.frames.pop();
+		}
+	}
+
+	/**
+	 * A reroute named `label` passing `source` on, its links drawn as tags:
+	 * for a value used far from where it's computed.
+	 */
+	wireless(label: string, source: Ref): Ref {
+		const id = this.addNode("reroute", { label, hideLinks: true });
+		this.link(source, id, "in");
+		return { node: id, handle: "out" };
 	}
 
 	// ── Values ────────────────────────────────────────────────────────────
