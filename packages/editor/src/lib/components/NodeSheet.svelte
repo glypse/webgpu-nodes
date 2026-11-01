@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { isZoneNodeType, LAYOUT_FRAME } from "$core";
-	import { Button, Dialog, Input } from "$theme";
+	import { Button, Checkbox, Dialog, Input } from "$theme";
 	import ArrowCounterClockwiseIcon from "phosphor-svelte/lib/ArrowCounterClockwiseIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
@@ -90,6 +90,29 @@
 						</Button>
 					</div>
 				</div>
+				{#if node.type === "reroute"}
+					<label class="flex items-start gap-2">
+						<Checkbox
+							class="mt-0.5"
+							checked={node.data.hideLinks === true}
+							disabled={locked}
+							onCheckedChange={(checked: boolean) =>
+								graph.updateNodeData(
+									node.id,
+									{ hideLinks: checked || undefined },
+									{ retype: false },
+								)}
+						/>
+						<span class="flex flex-col gap-0.5">
+							<span class="text-sm font-medium">Hide links</span>
+							<span class="text-muted-foreground text-xs">
+								Its links are drawn as tags named after it on the inputs they reach.
+								Link it to an input from anywhere by dragging from the input and
+								picking it in the add menu (Layout › Named reroutes).
+							</span>
+						</span>
+					</label>
+				{/if}
 				{#if node.type === LAYOUT_FRAME}
 					<FrameSettings frameId={node.id} {locked} />
 				{/if}

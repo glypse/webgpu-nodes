@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { hidesLinks } from "$core";
 	import { getBezierPath, type EdgeProps } from "@xyflow/svelte";
 
 	import { getDocumentView } from "../document-view";
@@ -57,9 +58,77 @@
 
 	/** Links breaking zone rules are drawn red and ignored by codegen. */
 	const invalid = $derived(graph.isEdgeInvalid(id));
+
+	/** Length of the stubs a hidden link is drawn as, at both its ends. */
+	const STUB = 14;
+
+	/**
+	 * Links out of a named reroute are drawn as stubs, the target's tagged
+	 * with the reroute's name; in full (dashed) while either end is selected.
+	 */
+	const hidden = $derived(hidesLinks(view.document.nodesById.get(source)));
+	const revealed = $derived(
+		(selected ?? false) ||
+			(view.document.nodesById.get(source)?.selected ?? false) ||
+			(view.document.nodesById.get(target)?.selected ?? false),
+	);
+	const tag = $derived(hidden ? graph.nodeLabel(source) : "");
+
+	function selectSource() {
+		view.activate();
+		graph.selectNodes([source]);
+	}
 </script>
 
-{#if !parked}
+{#if !parked && hidden}
+	<g class="group">
+		{#if revealed}
+			<path
+				d={path}
+				fill="none"
+				stroke="var(--color-{sourceType})"
+				stroke-width="1"
+				stroke-dasharray="4 4"
+				class="opacity-50"
+			/>
+		{/if}
+		<path
+			d="M {sourceX} {sourceY} h {STUB}"
+			fill="none"
+			stroke="var(--color-{sourceType})"
+			stroke-width="1"
+		/>
+		<path
+			d="M {targetX - STUB} {targetY} H {targetX}"
+			fill="none"
+			stroke={invalid ? "var(--color-destructive)" : `var(--color-${targetType})`}
+			stroke-width="1"
+		/>
+		<!-- svelte-ignore a11y_click_events_have_key_events -->
+		<text
+			x={targetX - STUB - 3}
+			y={targetY}
+			text-anchor="end"
+			dominant-baseline="central"
+			class="link-tag"
+			role="button"
+			tabindex="-1"
+			onclick={selectSource}
+		>
+			<title>{tag}: click to select the reroute</title>
+			{tag}
+		</text>
+		<path
+			{id}
+			data-link-path
+			d="M {targetX - STUB} {targetY} H {targetX}"
+			fill="none"
+			stroke="transparent"
+			stroke-width="12"
+			class={view.locked ? undefined : "cursor-pointer"}
+		/>
+	</g>
+{:else if !parked}
 	<defs>
 		<linearGradient
 			id="edge-gradient-{id}"

@@ -161,7 +161,20 @@
 	<!-- Just a handle: the output sits on top of the input, so dragging from the
 	     dot starts a new link while links dropped on it reach the input. -->
 	{@const rerouteType = resolvedInputType({ id: "in" })}
-	<div class="reroute" title="Reroute ({rerouteType})">
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="reroute"
+		title="{data.label ?? 'Reroute'} ({rerouteType}): double-click to name it"
+		ondblclick={() => {
+			view.activate();
+			graph.openSheet(id);
+		}}
+	>
+		{#if data.label !== undefined}
+			<span class="reroute__label" class:reroute__label--named={data.hideLinks}>
+				{data.label}
+			</span>
+		{/if}
 		<Handle
 			type="target"
 			position={Position.Left}

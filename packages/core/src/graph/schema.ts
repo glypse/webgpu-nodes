@@ -83,6 +83,7 @@ const NodeDataSchema = v.strictObject({
 	),
 	note: v.optional(v.string()),
 	tint: v.optional(v.picklist(FRAME_TINTS)),
+	hideLinks: v.optional(v.boolean()),
 });
 
 const GraphDocumentNodeSchema = v.object({

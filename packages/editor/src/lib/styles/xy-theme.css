@@ -292,3 +292,22 @@
 	border-color: var(--frame-color);
 	border-style: dashed;
 }
+
+/* A reroute's name, above its dot. */
+.reroute__label {
+	@apply text-muted-foreground pointer-events-none absolute bottom-full left-1/2 mb-0.5 -translate-x-1/2 text-[10px] whitespace-nowrap;
+}
+
+.reroute__label--named {
+	@apply bg-card text-foreground rounded-sm border px-1;
+}
+
+/* The name of the reroute a hidden link comes from, at the input it reaches. */
+.link-tag {
+	@apply fill-foreground cursor-pointer text-[10px];
+	pointer-events: all;
+	paint-order: stroke;
+	stroke: var(--background);
+	stroke-width: 3px;
+	stroke-linejoin: round;
+}

@@ -1,8 +1,17 @@
 import { LAYOUT_FRAME } from "../frames/analysis";
-import type { NodeDescriptor } from "../types";
+import type { NodeData, NodeDescriptor } from "../types";
 import { WGSL_TYPES } from "../types";
 
 // ── Standalone nodes (unique patterns) ───────────────────────────────────────
+
+/**
+ * Whether a node is a reroute whose links out are drawn as tags (see
+ * `NodeData.hideLinks`): a named value used anywhere without a link
+ * across the graph.
+ */
+export function hidesLinks(node: { type?: string; data: NodeData } | undefined): boolean {
+	return node?.type === "reroute" && node.data.hideLinks === true;
+}
 
 /**
  * A bare handle to route links through: forwards whatever it receives,

@@ -43,6 +43,11 @@ export type NodeData = {
 	note?: string;
 	/** A frame's colour; neutral when absent. */
 	tint?: FrameTint;
+	/**
+	 * A reroute's links out are drawn as tags on the inputs they reach,
+	 * named after the reroute, instead of in full.
+	 */
+	hideLinks?: boolean;
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

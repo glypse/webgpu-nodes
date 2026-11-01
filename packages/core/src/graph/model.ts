@@ -11,6 +11,7 @@ import {
 	estimateFrameHeader,
 	estimateNodeGeometry,
 } from "../layout";
+import { hidesLinks } from "../nodes/misc";
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
 import {
 	type NodeData,
@@ -278,6 +279,17 @@ export class GraphModel extends PreviewModel {
 	 */
 	entryHandleFor(entry: AddMenuEntry, pending: PendingConnection): string | undefined {
 		if (entry.kind === "zone") return NEW_ITEM_HANDLE;
+		if (entry.kind === "link") {
+			const link = entry.source && {
+				source: entry.source,
+				sourceHandle: "out",
+				target: pending.nodeId,
+				targetHandle: pending.handleId,
+			};
+			return pending.handleType === "target" && link && this.isValidConnection(link)
+				? "out"
+				: undefined;
+		}
 		if (entry.kind === "node" && entry.type === "node-group") return undefined;
 
 		const fresh = this.freshNodeTypes(entry);
@@ -346,6 +358,17 @@ export class GraphModel extends PreviewModel {
 	): string | undefined {
 		const handle = this.entryHandleFor(entry, pending);
 		const upstream = pending.handleType === "target";
+		// A named reroute is linked to straight away, wherever it is.
+		if (entry.kind === "link") {
+			if (!handle || !entry.source) return undefined;
+			this.connect({
+				source: entry.source,
+				sourceHandle: handle,
+				target: pending.nodeId,
+				targetHandle: pending.handleId,
+			});
+			return entry.source;
+		}
 		// Feeding an input: put the new node's outputs (its right side) at the drop point.
 		const offset = !upstream
 			? 0
@@ -488,6 +511,20 @@ export class GraphModel extends PreviewModel {
 				return entry.type
 					? this.addNode(entry.type, position, entryNodeData(entry.type, entry.data))
 					: undefined;
+			case "link": {
+				const source = entry.source;
+				if (!source || !this.activeDocument.nodesById.has(source)) return undefined;
+				const reroute = this.addNode("reroute", position, defaultDataForType("reroute"));
+				if (reroute) {
+					this.connect({
+						source,
+						sourceHandle: "out",
+						target: reroute,
+						targetHandle: "in",
+					});
+				}
+				return reroute;
+			}
 		}
 	}
 
@@ -542,9 +579,10 @@ export class GraphModel extends PreviewModel {
 		if (!doc || this.isStandardLibrary(definitionRef)) return false;
 		const only = options.nodeIds && new Set(options.nodeIds);
 		const nodes = only ? doc.nodes.filter((n) => only.has(n.id)) : doc.nodes;
+		// Hidden links are drawn as tags: they don't pull nodes together.
 		const positions = await computeLayout({
 			nodes,
-			edges: doc.edges,
+			edges: doc.edges.filter((e) => !hidesLinks(doc.nodesById.get(e.source))),
 			zones: this.zoneAnalysis(doc),
 			frames: this.frameAnalysis(doc),
 			geometry: (node) =>

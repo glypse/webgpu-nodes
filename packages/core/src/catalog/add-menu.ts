@@ -3,6 +3,7 @@ import uFuzzy from "@leeoniya/ufuzzy";
 import { type HydratedGraphDocument, ROOT_ID } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { parseLibraryRef } from "../library";
+import { hidesLinks } from "../nodes/misc";
 import { nodeRegistry } from "../nodes/registry";
 import {
 	type NodeCategory,
@@ -49,11 +50,14 @@ export type AddMenuEntry = {
 	/**
 	 * - `node`: a registered node type (`type`), "node-group" creating a new empty group,
 	 * - `group`: an instance of an existing group definition (`definitionRef`),
-	 * - `zone`: a new repeat zone (input/output pair).
+	 * - `zone`: a new repeat zone (input/output pair),
+	 * - `link`: a link from a reroute of the document whose links are hidden
+	 *   (`source`), or a reroute it feeds.
 	 */
-	kind: "node" | "group" | "zone";
+	kind: "node" | "group" | "zone" | "link";
 	type?: string;
 	definitionRef?: string;
+	source?: string;
 	/** Data the node is created with, over its defaults: a picked type, an enum set. */
 	data?: NodeData;
 	/**
@@ -188,13 +192,18 @@ function groupChoices(definition: HydratedGraphDocument | undefined): EntryOptio
 const headingOf = (category: string): string =>
 	category in CATEGORY_LABELS ? CATEGORY_LABELS[category as NodeCategory] : category;
 
+const NAMED_REROUTES = "Named reroutes";
+
 /**
  * Every entry of the add menu, grouped by heading in menu order: registered
  * nodes and standard-library groups by category, then the user's groups.
  * Developer-tool nodes are only listed with `devTools`.
  */
 export function addMenuEntries(
-	graph: Pick<GraphModel, "library" | "project" | "wouldCreateCycle">,
+	graph: Pick<
+		GraphModel,
+		"library" | "project" | "wouldCreateCycle" | "activeDocument" | "nodeLabel"
+	>,
 	{ devTools = false }: { devTools?: boolean } = {},
 ): AddMenuEntry[] {
 	const entries: AddMenuEntry[] = [
@@ -219,6 +228,21 @@ export function addMenuEntries(
 			kind: "node",
 			type,
 			choices: nodeChoices(descriptor),
+			disabled: false,
+			deletable: false,
+		});
+	}
+	for (const node of graph.activeDocument.nodes) {
+		if (!hidesLinks(node)) continue;
+		entries.push({
+			key: `link:${node.id}`,
+			label: graph.nodeLabel(node.id),
+			aliases: ["Get", "Named reroute"],
+			heading: CATEGORY_LABELS.layout,
+			section: [NAMED_REROUTES],
+			kind: "link",
+			source: node.id,
+			choices: [],
 			disabled: false,
 			deletable: false,
 		});
