@@ -207,39 +207,59 @@
 		if (target?.closest("input, textarea, [contenteditable]")) e.stopPropagation();
 	}
 
-	// ── Duplicate ──────────────────────────────────────────────────────────
-	// Duplicates start where their originals are and follow the pointer until
-	// a click drops them; a right-click (or Escape) takes them back.
+	// ── Grab ───────────────────────────────────────────────────────────────
+	// Nodes grabbed (G, or duplicated with Shift+D) follow the pointer until
+	// a click drops them, in the frame they're dropped on; a right-click (or
+	// Escape) cancels. Grabbed frames bring what they hold.
 	let grab: {
 		ids: string[];
-		originals: string[];
 		from: Map<string, { x: number; y: number }>;
 		start: { x: number; y: number };
+		cancel: () => void;
 	} | null = null;
+
+	function startGrab(ids: string[], cancel: () => void) {
+		const from = new Map(
+			view.document.nodes.filter((n) => ids.includes(n.id)).map((n) => [n.id, n.position]),
+		);
+		if (from.size === 0) return;
+		view.startDrag([...from.keys()]);
+		grab = { ids: [...from.keys()], from, start: screenToFlowPosition(pointer), cancel };
+	}
+
+	function moveSelection() {
+		startGrab(view.selectedNodeIds, () => undefined);
+	}
 
 	function duplicateSelection() {
 		const originals = view.selectedNodeIds;
 		const ids = graph.duplicateNodes(originals);
-		if (ids.length === 0) return;
-		const from = new Map(
-			view.document.nodes.filter((n) => ids.includes(n.id)).map((n) => [n.id, n.position]),
-		);
-		grab = { ids, originals, from, start: screenToFlowPosition(pointer) };
+		startGrab(ids, () => {
+			graph.deleteNodes(ids);
+			graph.selectNodes(originals);
+		});
 	}
 
 	function moveGrab() {
 		if (!grab) return;
 		const at = screenToFlowPosition(pointer);
-		graph.moveNodes(grab.from, { x: at.x - grab.start.x, y: at.y - grab.start.y });
+		const offset = { x: at.x - grab.start.x, y: at.y - grab.start.y };
+		graph.moveNodes(grab.from, offset);
+		const [anchor] = grab.ids;
+		const from = anchor === undefined ? undefined : grab.from.get(anchor);
+		if (anchor !== undefined && from) {
+			view.moveDrag(anchor, { x: from.x + offset.x, y: from.y + offset.y });
+		}
 	}
 
 	function endGrab(cancel: boolean) {
 		if (!grab) return;
 		if (cancel) {
-			graph.deleteNodes(grab.ids);
-			graph.selectNodes(grab.originals);
+			graph.moveNodes(grab.from, { x: 0, y: 0 });
+			view.cancelDrag();
+			grab.cancel();
 		} else {
-			view.dropInFrames(grab.ids);
+			view.endDrag();
 		}
 		grab = null;
 	}
@@ -381,20 +401,15 @@
 			event.preventDefault();
 			if (target) graph.openSheet(target);
 			else graph.sheetNodeId = null;
-		} else if (event.code === "KeyG" && !event.metaKey && !event.ctrlKey && !event.altKey) {
+		} else if (event.code === "KeyG" && !event.shiftKey) {
+			// G grabs, Ctrl/Cmd+G groups and Ctrl/Cmd+Alt+G ungroups, as in Blender.
 			if (isLocked) return;
-			event.preventDefault();
-			const selectedIds = new Set(
-				getNodes()
-					.filter((node) => node.selected)
-					.map((node) => node.id),
-			);
+			const selectedIds = new Set(view.selectedNodeIds);
 			if (selectedIds.size < 1) return;
-			if (event.shiftKey) {
-				graph.ungroupSelection(selectedIds);
-			} else {
-				graph.groupSelection(selectedIds);
-			}
+			event.preventDefault();
+			if (!mod && !event.altKey) moveSelection();
+			else if (mod && event.altKey) graph.ungroupSelection(selectedIds);
+			else if (mod) graph.groupSelection(selectedIds);
 		}
 	}
 </script>
@@ -423,6 +438,7 @@
 	<GraphMenu
 		onadd={(x: number, y: number) => setTimeout(() => openAddMenu(x, y))}
 		onduplicate={duplicateSelection}
+		onmove={moveSelection}
 	>
 		<!-- The flow's id scopes its SVG ids (the background pattern's): areas must not share one. -->
 		<SvelteFlow

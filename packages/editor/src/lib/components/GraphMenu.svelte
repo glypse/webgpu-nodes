@@ -9,12 +9,15 @@
 	let {
 		onadd,
 		onduplicate,
+		onmove,
 		children,
 	}: {
 		/** Open the add menu at a point (client coordinates). */
 		onadd: (x: number, y: number) => void;
 		/** Duplicate the selected nodes. */
 		onduplicate: () => void;
+		/** Grab the selected nodes, to move them with the pointer. */
+		onmove: () => void;
 		/** The area right-clicking opens the menu on. */
 		children: Snippet;
 	} = $props();
@@ -98,6 +101,10 @@
 			<ContextMenu.Shortcut>⌘V</ContextMenu.Shortcut>
 		</ContextMenu.Item>
 		{#if selected.length > 0}
+			<ContextMenu.Item disabled={locked} onSelect={onmove}>
+				Move
+				<ContextMenu.Shortcut>G</ContextMenu.Shortcut>
+			</ContextMenu.Item>
 			<ContextMenu.Item disabled={locked} onSelect={onduplicate}>
 				Duplicate
 				<ContextMenu.Shortcut>⇧D</ContextMenu.Shortcut>
@@ -150,7 +157,7 @@
 				onSelect={() => graph.groupSelection(new Set(selected))}
 			>
 				Group selected
-				<ContextMenu.Shortcut>G</ContextMenu.Shortcut>
+				<ContextMenu.Shortcut>⌘G</ContextMenu.Shortcut>
 			</ContextMenu.Item>
 		{/if}
 	</ContextMenu.Content>

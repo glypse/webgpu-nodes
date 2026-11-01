@@ -240,14 +240,14 @@
 					disabled={!(hasSelection && !graph.isLocked)}
 				>
 					Group selected
-					<Menubar.Shortcut>G</Menubar.Shortcut>
+					<Menubar.Shortcut>⌘G</Menubar.Shortcut>
 				</Menubar.Item>
 				<Menubar.Item
 					onSelect={handleUngroupSelected}
 					disabled={!(hasSelectedGroup && !graph.isLocked)}
 				>
 					Ungroup selected
-					<Menubar.Shortcut>⇧G</Menubar.Shortcut>
+					<Menubar.Shortcut>⌥⌘G</Menubar.Shortcut>
 				</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item

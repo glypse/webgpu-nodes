@@ -107,6 +107,16 @@ export class GraphView implements DocumentView {
 		this.dropFrame = null;
 	}
 
+	/** End the drag where it started, leaving every node in its frame. */
+	cancelDrag() {
+		const drag = this.drag;
+		if (!drag) return;
+		if (drag.inside.size > 0) this.graph.moveNodes(drag.inside, { x: 0, y: 0 });
+		this.drag = null;
+		this.frozenFrames = null;
+		this.dropFrame = null;
+	}
+
 	/** Put nodes in the frames they're on (see `dropTargets`). */
 	dropInFrames(
 		nodeIds: readonly string[],
