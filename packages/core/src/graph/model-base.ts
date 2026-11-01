@@ -536,10 +536,10 @@ export abstract class GraphModelBase {
 					locked: node.group?.locked ?? false,
 				});
 			} else {
-				const desc = nodeRegistry[node.type ?? ""];
+				const desc = nodeRegistry[node.type];
 				labels.push({
 					id: nodeId,
-					label: node.data.label ?? desc?.label ?? node.type ?? "unknown",
+					label: node.data.label ?? desc?.label ?? node.type,
 					locked: false,
 				});
 			}

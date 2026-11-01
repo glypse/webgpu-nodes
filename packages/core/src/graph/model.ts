@@ -11,7 +11,7 @@ import {
 	estimateFrameHeader,
 	estimateNodeGeometry,
 } from "../layout";
-import { defaultDataForType, nodeRegistry } from "../nodes/registry";
+import { type NodeType, defaultDataForType, nodeRegistry } from "../nodes/registry";
 import {
 	type NodeData,
 	type NodeWidget,
@@ -328,22 +328,23 @@ export class GraphModel extends PreviewModel {
 	/** Types a node created from `entry` would have before anything is linked to it. */
 	private freshNodeTypes(entry: AddMenuEntry) {
 		const FRESH_ID = "__fresh_node__";
-		const node: GraphNode =
-			entry.kind === "group" && entry.definitionRef
-				? {
-						id: FRESH_ID,
-						type: "node-group",
-						data: entry.data ?? {},
-						position: { x: 0, y: 0 },
-						group: { definitionRef: entry.definitionRef, locked: true },
-					}
-				: {
-						id: FRESH_ID,
-						type: entry.type ?? "",
-						data: entryNodeData(entry.type ?? "", entry.data),
-						position: { x: 0, y: 0 },
-					};
-		if (node.type !== "node-group" && !nodeRegistry[node.type ?? ""]) return undefined;
+		let node: GraphNode;
+		if (entry.kind === "group" && entry.definitionRef) {
+			node = {
+				id: FRESH_ID,
+				type: "node-group",
+				data: entry.data ?? {},
+				position: { x: 0, y: 0 },
+				group: { definitionRef: entry.definitionRef, locked: true },
+			};
+		} else if (entry.type && nodeRegistry[entry.type]) {
+			node = {
+				id: FRESH_ID,
+				type: entry.type,
+				data: entryNodeData(entry.type, entry.data),
+				position: { x: 0, y: 0 },
+			};
+		} else return undefined;
 		return this.typeResolver.resolveNodeTypesUncached(node, [], node.data, (id) =>
 			id === FRESH_ID ? node : this.resolveNode(id),
 		);
@@ -483,7 +484,7 @@ export class GraphModel extends PreviewModel {
 	 * Returns its id, or undefined if the document is locked.
 	 */
 	addNode(
-		type: string,
+		type: NodeType,
 		position: { x: number; y: number },
 		data: NodeData = defaultDataForType(type),
 	): string | undefined {
@@ -539,7 +540,7 @@ export class GraphModel extends PreviewModel {
 	typeChoice(nodeId: string, path?: readonly string[]): TypeChoice | undefined {
 		const node = this.resolveNode(nodeId);
 		// Group nodes and their boundaries take their types from the group's variables.
-		if (!node || node.type === "node-group" || BOUNDARY_TYPES.has(node.type ?? "")) {
+		if (!node || node.type === "node-group" || BOUNDARY_TYPES.has(node.type)) {
 			return undefined;
 		}
 		const descriptor = this.resolveDescriptor(node);

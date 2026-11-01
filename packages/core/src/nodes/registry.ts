@@ -23,7 +23,7 @@ const groupNode: NodeDescriptor = {
  * Built by hand right now; in the future this could auto-discover
  * exported descriptors from a directory, or accept addon registrations.
  */
-export const nodeRegistry: Record<string, NodeDescriptor> = {
+const DESCRIPTORS = {
 	// Input
 	declare: nodes.declareNode,
 	uv: nodes.uvNode,
@@ -110,9 +110,26 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	// Developer tools
 	"test-invalid-wgsl": nodes.testInvalidWgslNode,
 	"test-runtime-error": nodes.testRuntimeErrorNode,
-};
+} as const satisfies Record<string, NodeDescriptor>;
 
-export const DYNAMIC_NODE_TYPES = ["group-input", "group-output", ...ZONE_NODE_TYPES];
+export const nodeRegistry: Readonly<Record<string, NodeDescriptor>> = DESCRIPTORS;
+
+/** Node types whose descriptor is built from their node, not registered. */
+export const DYNAMIC_NODE_TYPES = ["group-input", "group-output", ...ZONE_NODE_TYPES] as const;
+
+/** The registered node types with their descriptors. */
+export function registeredNodes(): [keyof typeof DESCRIPTORS, NodeDescriptor][] {
+	// Object.entries widens keys to string; these are exactly DESCRIPTORS' own.
+	return Object.entries(DESCRIPTORS) as [keyof typeof DESCRIPTORS, NodeDescriptor][];
+}
+
+/** Every type a node can have. */
+export type NodeType = keyof typeof DESCRIPTORS | (typeof DYNAMIC_NODE_TYPES)[number];
+
+export const NODE_TYPES = [
+	...registeredNodes().map(([type]) => type),
+	...DYNAMIC_NODE_TYPES,
+] satisfies NodeType[];
 
 /** Helper: produce default node data for a registered type. */
 export function defaultDataForType(type: string): NodeData {
@@ -122,12 +139,19 @@ export function defaultDataForType(type: string): NodeData {
 /** Convenience: list all categories and their nodes for an AddNode menu. */
 export function nodesByCategory(): Map<
 	NodeCategory,
-	{ type: string; label: string; category: NodeCategory }[]
+	{ type: NodeType; label: string; category: NodeCategory }[]
 > {
-	const map = new Map<NodeCategory, { type: string; label: string; category: NodeCategory }[]>();
-	for (const [type, desc] of Object.entries(nodeRegistry)) {
+	const map = new Map<
+		NodeCategory,
+		{ type: NodeType; label: string; category: NodeCategory }[]
+	>();
+	for (const [type, desc] of registeredNodes()) {
 		if (desc.hidden) continue;
-		const entry = { type, label: desc.label, category: desc.category };
+		const entry: { type: NodeType; label: string; category: NodeCategory } = {
+			type,
+			label: desc.label,
+			category: desc.category,
+		};
 		const list = map.get(desc.category) ?? [];
 		list.push(entry);
 		map.set(desc.category, list);

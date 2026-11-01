@@ -1,6 +1,5 @@
 <script lang="ts">
 	import { dev } from "$app/env";
-	import { type GraphDocument } from "$core";
 	import {
 		DevTools,
 		Editor,
@@ -142,16 +141,7 @@
 		const files = await pickFiles({ accept: ".json", multiple: true });
 		if (files.length === 0) return;
 		const entries = await Promise.all(
-			files.map(
-				async (file) =>
-					JSON.parse(await file.text()) as {
-						id?: string;
-						name?: string;
-						category?: string;
-						dependencies?: string[];
-						definition?: GraphDocument;
-					},
-			),
+			files.map(async (file): Promise<unknown> => JSON.parse(await file.text())),
 		);
 		const result = await graph.importGroups(entries);
 		if (result.missing.length > 0) {

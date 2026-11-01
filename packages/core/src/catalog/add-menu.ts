@@ -4,7 +4,7 @@ import { type HydratedGraphDocument, ROOT_ID } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { parseLibraryRef } from "../library";
 import { hidesLinks } from "../nodes/misc";
-import { nodeRegistry } from "../nodes/registry";
+import { type NodeType, registeredNodes } from "../nodes/registry";
 import {
 	type NodeCategory,
 	type NodeData,
@@ -55,7 +55,7 @@ export type AddMenuEntry = {
 	 *   (`source`), or a reroute it feeds.
 	 */
 	kind: "node" | "group" | "zone" | "link";
-	type?: string;
+	type?: NodeType;
 	definitionRef?: string;
 	source?: string;
 	/** Data the node is created with, over its defaults: a picked type, an enum set. */
@@ -221,7 +221,7 @@ export function addMenuEntries(
 			deletable: false,
 		},
 	];
-	for (const [type, descriptor] of Object.entries(nodeRegistry)) {
+	for (const [type, descriptor] of registeredNodes()) {
 		if (descriptor.hidden || (descriptor.dev && !devTools)) continue;
 		entries.push({
 			key: `node:${type}`,

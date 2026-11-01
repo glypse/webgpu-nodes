@@ -13,13 +13,13 @@ import {
 } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { type NodeData, WGSL_TYPES, isConnectionCompatible, type WgslType } from "../types";
-import { nodeRegistry } from "./registry";
+import { registeredNodes } from "./registry";
 
 const SKIPPED = new Set(["frag-output", "node-group"]);
 
 /** Every registered node, each setting option, fed by `declare` nodes of each type. */
 function* cases(): Generator<{ name: string; nodes: TestNode[]; edges: TestEdge[] }> {
-	for (const [type, descriptor] of Object.entries(nodeRegistry)) {
+	for (const [type, descriptor] of registeredNodes()) {
 		if (SKIPPED.has(type) || descriptor.dev) continue;
 		const settingVariants: Record<string, string>[] = [{}];
 		for (const setting of descriptor.settings ?? []) {

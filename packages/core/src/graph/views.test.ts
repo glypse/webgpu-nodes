@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { Screen } from "../screen";
 import { type TestEdge, edge } from "../testing/graph";
 import { FLOAT_TYPES } from "../types";
-import { type GraphProject, ROOT_ID } from "./document";
+import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "./document";
 import { GraphModel } from "./model";
 
 const GROUP = "doubler";
@@ -23,7 +23,7 @@ function project(layout?: Screen): GraphProject {
 						data: { types: { declare: "vec3f" } },
 						position: at,
 					},
-					...["g1", "g2"].map((id) => ({
+					...["g1", "g2"].map((id): GraphDocumentNode => ({
 						id,
 						type: "node-group",
 						data: {},

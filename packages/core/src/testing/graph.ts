@@ -8,11 +8,12 @@ import {
 } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import { standardLibrary } from "../library";
+import type { NodeType } from "../nodes/registry";
 import type { NodeData } from "../types";
 
 export type TestNode = {
 	id: string;
-	type: string;
+	type: NodeType;
 	data?: NodeData;
 	group?: GraphDocumentNode["group"];
 	frame?: string;
@@ -35,7 +36,7 @@ export function edge([source, sourceHandle, target, targetHandle]: TestEdge): Gr
 export function rootProject(nodes: TestNode[], edges: TestEdge[]): GraphProject {
 	const docNodes: GraphDocumentNode[] = [
 		{ id: "out", type: "frag-output", data: {}, position: { x: 0, y: 0 } },
-		...nodes.map((n, i) => ({
+		...nodes.map((n, i): GraphDocumentNode => ({
 			id: n.id,
 			type: n.type,
 			data: n.data ?? {},

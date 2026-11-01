@@ -7,6 +7,7 @@ import { MATCH, MATCH_SELECTOR, caseHandle } from "../../src/enums";
 import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
 import { rerouteBranches } from "../../src/graph/branches";
 import type { GraphDocument, GraphDocumentEdge, GraphDocumentNode } from "../../src/graph/document";
+import type { NodeType } from "../../src/nodes/registry";
 import {
 	type ColorDisplay,
 	type EnumVariant,
@@ -128,7 +129,7 @@ export class GroupBuilder {
 	// ── Graph primitives ──────────────────────────────────────────────────
 
 	private addNode(
-		type: string,
+		type: NodeType,
 		data: NodeData,
 		group?: GraphDocumentNode["group"],
 		frame = this.frames.at(-1),
@@ -194,7 +195,7 @@ export class GroupBuilder {
 	 * Declare nodes (f32 unless given as `g.constant`).
 	 */
 	node(
-		type: string,
+		type: NodeType,
 		inputs: Record<string, Operand | Operand[]> = {},
 		options: { output?: string; settings?: Record<string, string>; data?: NodeData } = {},
 	): Ref {
@@ -450,7 +451,7 @@ export class GroupBuilder {
 		const handles = new Map<K, HandleDef>();
 		for (const key of keys) {
 			const [type, initial] = items[key];
-			const handle = {
+			const handle: HandleDef = {
 				id: stableId(`${this.id}/zone/${String(zone)}/${key}`),
 				label: key,
 				type,

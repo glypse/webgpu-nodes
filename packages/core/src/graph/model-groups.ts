@@ -199,22 +199,16 @@ export abstract class GroupModel extends ZoneModel {
 	 * Missing dependencies trigger a console warning but don't block the import.
 	 */
 	async importGroups(
-		jsonFiles: {
-			id?: string;
-			label?: string;
-			category?: string;
-			dependencies?: string[];
-			definition?: GraphDocument;
-		}[],
+		jsonFiles: unknown[],
 	): Promise<{ imported: number; missing: string[]; rejected: string[] }> {
 		const parsed = v.safeParse(GroupFilesSchema, jsonFiles);
 		if (!parsed.success) {
 			console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
-			return {
-				imported: 0,
-				missing: [],
-				rejected: jsonFiles.map((f) => f.id ?? "<unknown>"),
+			const idOf = (file: unknown) => {
+				const id = v.safeParse(v.object({ id: v.string() }), file);
+				return id.success ? id.output.id : "<unknown>";
 			};
+			return { imported: 0, missing: [], rejected: jsonFiles.map(idOf) };
 		}
 
 		const entries = parsed.output;
@@ -271,7 +265,7 @@ export abstract class GroupModel extends ZoneModel {
 		}
 
 		const selectedNodes = this.activeDocument.nodes.filter(
-			(node) => expandedIds.has(node.id) && !UNGROUPABLE_TYPES.has(node.type ?? ""),
+			(node) => expandedIds.has(node.id) && !UNGROUPABLE_TYPES.has(node.type),
 		);
 
 		if (selectedNodes.length === 0 || selectedNodes.every((n) => n.type === "node-group")) {
@@ -465,7 +459,7 @@ export abstract class GroupModel extends ZoneModel {
 		const def = this.project.definitions.get(groupNode.group.definitionRef);
 		if (!def) return [];
 
-		const innerNodes = def.nodes.filter((n) => !BOUNDARY_TYPES.has(n.type ?? ""));
+		const innerNodes = def.nodes.filter((n) => !BOUNDARY_TYPES.has(n.type));
 
 		// Re-center the inner nodes on the group node.
 		const inner = innerNodes.length > 0 ? computeSelectionBounds(innerNodes) : undefined;
@@ -794,9 +788,7 @@ export abstract class GroupModel extends ZoneModel {
 	getPrunableGroups(): { ref: string; label: string; nodeCount: number }[] {
 		return this.getPrunableRefs().map((ref) => {
 			const def = this.project.definitions.get(ref);
-			const nodeCount = def
-				? def.nodes.filter((n) => !BOUNDARY_TYPES.has(n.type ?? "")).length
-				: 0;
+			const nodeCount = def ? def.nodes.filter((n) => !BOUNDARY_TYPES.has(n.type)).length : 0;
 			return { ref, label: def?.label ?? "Group", nodeCount };
 		});
 	}

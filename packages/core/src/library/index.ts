@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { StandardLibraryEntry } from "../graph/document";
+import type { GraphDocument, StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
@@ -56,6 +56,11 @@ export const LibraryFileSchema = v.object({
 	definition: GraphDocumentSchema,
 	widget: v.optional(NodeWidgetSchema),
 });
+
+/** A standard-library file as written. */
+export type LibraryFile = Omit<v.InferInput<typeof LibraryFileSchema>, "definition"> & {
+	definition: GraphDocument;
+};
 
 const files: unknown[] = [
 	aspectUv,

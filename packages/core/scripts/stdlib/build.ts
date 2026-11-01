@@ -13,9 +13,20 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 import { generateShader } from "../../src/codegen";
-import { type GraphDocument, type GraphProject, ROOT_ID } from "../../src/graph/document";
+import {
+	type GraphDocument,
+	type GraphDocumentNode,
+	type GraphProject,
+	ROOT_ID,
+} from "../../src/graph/document";
 import { GraphModel } from "../../src/graph/model";
-import { libraryRef, libraryVersion, parseLibraryRef, standardLibrary } from "../../src/library";
+import {
+	type LibraryFile,
+	libraryRef,
+	libraryVersion,
+	parseLibraryRef,
+	standardLibrary,
+} from "../../src/library";
 import { nagaBin, validateFragment } from "../../src/testing/wgsl";
 import type { GroupHandleDef } from "../../src/types";
 import { GroupBuilder, type GroupSpec, type GroupTarget, type ResolvedGroup } from "./builder";
@@ -133,13 +144,18 @@ export function validateGroups(groups: readonly BuiltGroup[]): string[] {
 	if (!nagaBin)
 		console.warn("naga isn't installed: the generated WGSL is only compiled, not validated");
 	for (const group of groups) {
-		const instance = {
+		const instance: Omit<GraphDocumentNode, "data"> = {
 			id: "g",
 			type: "node-group",
 			position: { x: 0, y: 0 },
 			group: { definitionRef: aliasOf(group), locked: true },
 		};
-		const out = { id: "out", type: "frag-output", data: {}, position: { x: 0, y: 0 } };
+		const out: GraphDocumentNode = {
+			id: "out",
+			type: "frag-output",
+			data: {},
+			position: { x: 0, y: 0 },
+		};
 		const cases: { name: string; root: GraphDocument }[] = [];
 		for (const [key, handle] of group.outputs) {
 			cases.push({
@@ -270,7 +286,7 @@ async function layoutInBrowser(
 // ── Files ────────────────────────────────────────────────────────────────
 
 function writeGroup(group: BuiltGroup) {
-	const file = {
+	const file: LibraryFile = {
 		id: group.spec.id,
 		name: group.spec.name,
 		aliases: group.spec.aliases ?? [],

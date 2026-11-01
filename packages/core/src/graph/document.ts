@@ -1,3 +1,4 @@
+import type { NodeType } from "../nodes/registry";
 import type { Screen } from "../screen/screen";
 import type { GroupHandleDef, InputValue, NodeData, NodeWidget, TypeVariable } from "../types";
 import type { ProjectSettings } from "./settings";
@@ -33,7 +34,7 @@ export type GraphDocument = {
 
 export type GraphDocumentNode = {
 	id: string;
-	type: string;
+	type: NodeType;
 	data: NodeData;
 	position: { x: number; y: number };
 	/**
@@ -78,7 +79,7 @@ export type GraphProject = {
  */
 export type GraphNode = {
 	id: string;
-	type?: string;
+	type: NodeType;
 	data: NodeData;
 	position: { x: number; y: number };
 	/** Present only on group-type nodes. */

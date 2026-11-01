@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { generateShader } from "../codegen";
 import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "../graph/document";
 import { GraphModel } from "../graph/model";
+import type { NodeType } from "../nodes/registry";
 import { edge, type TestEdge } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import type { EnumVariant, NodeData } from "../types";
@@ -14,7 +15,7 @@ const VARIANTS: EnumVariant[] = [
 	{ value: 5, label: "Five" },
 ];
 
-const node = (id: string, type: string, data: NodeData = {}): GraphDocumentNode => ({
+const node = (id: string, type: NodeType, data: NodeData = {}): GraphDocumentNode => ({
 	id,
 	type,
 	data,

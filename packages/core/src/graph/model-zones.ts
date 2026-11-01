@@ -263,14 +263,14 @@ export abstract class ZoneModel extends GraphModelBase {
 	 * Zone nodes always go in pairs: extend a deletion to the partner of every
 	 * deleted zone node, and to the edges connected to those partners.
 	 */
-	expandDeletion<
-		N extends { id: string },
-		E extends { id: string; source: string; target: string },
-	>(nodes: N[], edges: E[]): { nodes: N[]; edges: E[] } {
+	expandDeletion(
+		nodes: readonly { id: string }[],
+		edges: readonly GraphEdge[],
+	): { nodes: { id: string }[]; edges: GraphEdge[] } {
 		const doc = this.activeDocument;
 		const zones = this.activeZones;
 		const nodeIds = new Set(nodes.map((n) => n.id));
-		const extraNodes: N[] = [];
+		const extraNodes: { id: string }[] = [];
 		for (const node of nodes) {
 			const zone = zones.zones.get(zones.zoneOfBoundary.get(node.id) ?? "");
 			if (!zone) continue;
@@ -279,11 +279,11 @@ export abstract class ZoneModel extends GraphModelBase {
 				const partner = doc.nodesById.get(partnerId);
 				if (!partner) continue;
 				nodeIds.add(partnerId);
-				extraNodes.push(partner as unknown as N);
+				extraNodes.push(partner);
 			}
 		}
 		const edgeIds = new Set(edges.map((e) => e.id));
-		const extraEdges = (doc.edges as unknown as E[]).filter(
+		const extraEdges = doc.edges.filter(
 			(e) => !edgeIds.has(e.id) && (nodeIds.has(e.source) || nodeIds.has(e.target)),
 		);
 		return { nodes: [...nodes, ...extraNodes], edges: [...edges, ...extraEdges] };

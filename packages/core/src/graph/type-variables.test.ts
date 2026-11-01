@@ -5,7 +5,7 @@ import { evaluate } from "../testing/evaluate";
 import { type TestEdge, edge } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { FLOAT_TYPES, NUMERIC_TYPES, type WgslType } from "../types";
-import { type GraphProject, ROOT_ID } from "./document";
+import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "./document";
 import { GraphModel } from "./model";
 
 const GROUP = "pairs";
@@ -14,7 +14,7 @@ const U = "u-id";
 
 /** A group adding two `T`s and multiplying two `U`s: two independent pairs. */
 function project(sources: { a?: WgslType; c?: WgslType } = {}): GraphProject {
-	const declare = (id: string, type: WgslType, x: number) => ({
+	const declare = (id: string, type: WgslType, x: number): GraphDocumentNode => ({
 		id,
 		type: "declare",
 		data: { types: { declare: type }, values: { x, y: x + 1, z: x + 2 } },

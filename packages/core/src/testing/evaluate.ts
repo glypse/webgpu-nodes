@@ -139,7 +139,7 @@ export function evaluate(
 	handleId: string,
 	colorSpace: ColorSpace = "srgb",
 ): Value {
-	const frame = {
+	const frame: Frame = {
 		doc: model.root,
 		colorSpace,
 		groupInputs: new Map(),
@@ -208,7 +208,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		if (!doc) throw new Error(`no definition for "${nodeId}"`);
 		const descriptor = model.resolveDescriptor(node);
 		const groupInputs = new Map(descriptor.inputs.map((i) => [i.id, get(i.id)]));
-		const inner = {
+		const inner: Frame = {
 			doc,
 			colorSpace: frame.colorSpace,
 			groupInputs,

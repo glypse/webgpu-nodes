@@ -20,7 +20,7 @@ import { type HandleDef, type NodeData, type NodeDescriptor } from "../types";
 
 export const REPEAT_INPUT = "repeat-input";
 export const REPEAT_OUTPUT = "repeat-output";
-export const ZONE_NODE_TYPES: readonly string[] = [REPEAT_INPUT, REPEAT_OUTPUT];
+export const ZONE_NODE_TYPES = [REPEAT_INPUT, REPEAT_OUTPUT] as const;
 
 /** Repeat Input's iteration count input. */
 export const ITERATIONS_HANDLE = "iterations";

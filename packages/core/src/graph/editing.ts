@@ -70,7 +70,7 @@ export function cloneSubgraph(
 	return {
 		nodes: nodes.map((n) => ({
 			id: remap(n.id),
-			type: n.type ?? "",
+			type: n.type,
 			data: remapZonePairing(n.data, idMap),
 			position: { x: n.position.x + offset.x, y: n.position.y + offset.y },
 			...(n.group ? { group: { ...n.group } } : {}),

@@ -55,7 +55,7 @@ export function resolveDescriptor(
 		return buildMatchDescriptor(doc && enumAt(doc, node.id, MATCH_SELECTOR));
 	}
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- fallback is safe
-	return (nodeRegistry[node.type ?? ""] ?? nodeRegistry.float)!;
+	return (nodeRegistry[node.type] ?? nodeRegistry.float)!;
 }
 
 export function normaliseDocument(doc: GraphDocument): GraphDocument {
@@ -81,7 +81,7 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 const NON_DELETABLE_TYPES = new Set(["frag-output"]);
 
 export function hydrateNode(node: GraphDocumentNode): GraphNode {
-	const base = {
+	const base: GraphNode = {
 		id: node.id,
 		type: node.type,
 		data: node.data,
@@ -164,7 +164,7 @@ export function serialiseNode(node: GraphNode): GraphDocumentNode {
 	const { id, type, data, position, group, frame } = node;
 	return {
 		id,
-		type: type ?? "",
+		type,
 		data,
 		position,
 		...(group ? { group } : {}),

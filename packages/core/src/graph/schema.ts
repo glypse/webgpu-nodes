@@ -3,6 +3,7 @@ import * as v from "valibot";
 import { COLOR_MODES } from "../color/modes";
 import { CURVE_POINT_KINDS } from "../curve";
 import { FRAME_TINTS } from "../frames/analysis";
+import { NODE_TYPES } from "../nodes/registry";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, WGSL_TYPES } from "../types";
 import { ProjectSettingsSchema, defaultSettings } from "./settings";
@@ -88,7 +89,7 @@ const NodeDataSchema = v.strictObject({
 
 const GraphDocumentNodeSchema = v.object({
 	id: v.string(),
-	type: v.string(),
+	type: v.picklist(NODE_TYPES),
 	data: NodeDataSchema,
 	position: PositionSchema,
 	group: v.optional(GroupSchema),

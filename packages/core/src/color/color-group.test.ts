@@ -3,7 +3,13 @@ import { describe, expect, it } from "vitest";
 import { generateShader } from "../codegen";
 import { readComponent } from "../graph/values";
 import { evaluate } from "../testing/evaluate";
-import { libraryEntry, libraryHandle, managerFor, type TestEdge } from "../testing/graph";
+import {
+	libraryEntry,
+	libraryHandle,
+	managerFor,
+	type TestEdge,
+	type TestNode,
+} from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import type { NodeData } from "../types";
 import { type ColorMode, colorToLinear } from "./modes";
@@ -19,7 +25,7 @@ const inputsOf = (mode: ColorMode) =>
 		? COLOR.widget.modes[String(MODES[mode])]?.components
 		: undefined) ?? [];
 
-const color = (data: NodeData = {}) => ({
+const color = (data: NodeData = {}): TestNode => ({
 	id: "c",
 	type: "node-group",
 	data,

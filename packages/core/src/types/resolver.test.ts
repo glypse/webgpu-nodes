@@ -30,16 +30,16 @@ const vec3: NodeDescriptor = {
 };
 
 describe("type families", () => {
-	const node: GraphNode = { id: "n", type: "pair", data: {}, position: { x: 0, y: 0 } };
+	const node: GraphNode = { id: "n", type: "add", data: {}, position: { x: 0, y: 0 } };
 	const nodes = new Map<string, GraphNode>([
 		["n", node],
-		["v", { id: "v", type: "vec3", data: {}, position: { x: 0, y: 0 } }],
+		["v", { id: "v", type: "uv", data: {}, position: { x: 0, y: 0 } }],
 	]);
 	const edges: GraphDocumentEdge[] = [
 		{ id: "e", source: "v", sourceHandle: "v", target: "n", targetHandle: "b" },
 	];
 	const resolver = new TypeResolver(
-		(node) => (node.type === "pair" ? pair : vec3),
+		(node) => (node.id === "n" ? pair : vec3),
 		() => new Map(),
 		(id) => edges.filter((e) => e.target === id),
 	);
