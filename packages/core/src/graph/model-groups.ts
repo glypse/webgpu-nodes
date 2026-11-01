@@ -20,6 +20,7 @@ import {
 	type SocketType,
 	type TypeVariable,
 	type WgslType,
+	type ZoneItem,
 } from "../types";
 import { wouldCreateCycle } from "../zones";
 import {
@@ -1094,6 +1095,24 @@ export abstract class GroupModel extends ZoneModel {
 				side,
 				interfaceOf(def, side).map((h) => (ids.has(h.id) ? { ...h, type: fixed } : h)),
 			);
+		}
+		const typedBy = (item: ZoneItem) =>
+			typeof item.type === "object" && item.type.variable === variableId;
+		if (def.nodes.some((n) => n.data.items?.some(typedBy))) {
+			def.nodes = def.nodes.map((n) =>
+				n.data.items?.some(typedBy)
+					? {
+							...n,
+							data: {
+								...n.data,
+								items: n.data.items.map((i) =>
+									typedBy(i) ? { ...i, type: fixed } : i,
+								),
+							},
+						}
+					: n,
+			);
+			indexDocument(def);
 		}
 		def.typeVariables = def.typeVariables.filter((v) => v.id !== variableId);
 		this.forEachInstance(definitionRef, (node) =>

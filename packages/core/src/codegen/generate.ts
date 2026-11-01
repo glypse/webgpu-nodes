@@ -5,11 +5,11 @@ import type { GraphModel } from "../graph/model";
 import { componentKeys, readComponent } from "../graph/values";
 import type {
 	GroupHandleDef,
-	HandleDef,
 	InputValue,
 	NodeData,
 	TypeBindings,
 	WgslType,
+	ZoneItem,
 } from "../types";
 import {
 	boundType,
@@ -377,8 +377,21 @@ class BodyEmitter {
 		return constantAt(this.enumDocument, node.id, inputId, this.constants);
 	}
 
-	zoneItems(zone: Zone): HandleDef[] {
+	zoneItems(zone: Zone): ZoneItem[] {
 		return zoneItems(this.nodeMap.get(zone.outputId));
+	}
+
+	/** The type each of a zone's items has here, by item id. */
+	zoneItemTypes(zone: Zone): ReadonlyMap<string, WgslType> {
+		const input = this.nodeMap.get(zone.inputId);
+		if (!input) return new Map();
+		const { resolvedOutputs } = this.typeResolver.resolveNodeTypes(
+			input,
+			this.incoming(input.id),
+			this.resolveNode,
+			this.bindings,
+		);
+		return new Map(resolvedOutputs.map((o) => [o.id, o.type]));
 	}
 
 	private get typeResolver() {
@@ -604,7 +617,7 @@ class BodyEmitter {
 	}
 }
 
-function zoneVarNames(zone: Zone, items: HandleDef[]) {
+function zoneVarNames(zone: Zone, items: ZoneItem[]) {
 	const ident = identSuffix(zone.id);
 	return {
 		index: `z_${ident}_i`,
@@ -741,9 +754,12 @@ function emitDocumentBody(
 				: [],
 		);
 
+		const types = emitter.zoneItemTypes(zone);
+		const typeOf = (item: ZoneItem) => types.get(item.id) ?? "f32";
+
 		const setup: string[] = items.map(
 			({ item, state }) =>
-				`var ${state}: ${wgslTypeName(item.type)} = ${emitter.inputExpr(input, item.id, item.type)};`,
+				`var ${state}: ${wgslTypeName(typeOf(item))} = ${emitter.inputExpr(input, item.id, typeOf(item))};`,
 		);
 		const iterations = emitter.inputExpr(input, ITERATIONS_HANDLE, "i32", DEFAULT_ITERATIONS);
 		const max = String(zoneMaxIterations(input));
@@ -760,7 +776,7 @@ function emitDocumentBody(
 		const update = [
 			...items.map(
 				({ item, next }) =>
-					`  let ${next} = ${emitter.inputExpr(output, item.id, item.type)};`,
+					`  let ${next} = ${emitter.inputExpr(output, item.id, typeOf(item))};`,
 			),
 			...items.map(({ state, next }) => `  ${state} = ${next};`),
 			"}",

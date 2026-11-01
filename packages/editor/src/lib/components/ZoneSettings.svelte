@@ -1,8 +1,15 @@
 <script lang="ts">
-	import { DEFAULT_MAX_ITERATIONS, WGSL_TYPES, type WgslType, zoneMaxIterations } from "$core";
-	import { Button, Input, Scrubbable } from "$theme";
+	import {
+		DEFAULT_MAX_ITERATIONS,
+		WGSL_TYPES,
+		type WgslType,
+		type ZoneItem,
+		zoneMaxIterations,
+	} from "$core";
+	import { Button, DropdownMenu, Input, Scrubbable } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
+	import CheckIcon from "phosphor-svelte/lib/CheckIcon";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
@@ -19,6 +26,13 @@
 		inputNode ? zoneMaxIterations(inputNode) : DEFAULT_MAX_ITERATIONS,
 	);
 	const locked = $derived(graph.isLocked);
+	/** The type variables of the group the zone is in, which its items may share. */
+	const variables = $derived(graph.activeDocument.typeVariables);
+
+	function variableOf(item: ZoneItem) {
+		const type = item.type;
+		return typeof type === "string" ? undefined : variables.find((v) => v.id === type.variable);
+	}
 
 	// Local buffer for label inputs: commit on blur so typing doesn't
 	// regenerate the shader on every keystroke.
@@ -73,6 +87,7 @@
 	<div class="flex flex-col gap-1.5">
 		<span class="text-sm font-medium">State items</span>
 		{#each items as item, i (item.id)}
+			{@const shared = variableOf(item)}
 			<div class="flex items-center gap-1">
 				<Input
 					value={labelBuffer[item.id] ?? item.label}
@@ -85,14 +100,37 @@
 				/>
 				<TypePicker
 					types={WGSL_TYPES}
-					value={item.type}
+					value={typeof item.type === "string" ? item.type : undefined}
+					label={shared?.name}
 					disabled={locked}
 					class="w-24 shrink-0"
-					title="Item type"
+					title={shared ? `Shares the type ${shared.name}` : "Item type"}
 					onpick={(type: WgslType) => {
 						graph.setZoneItemType(zoneId, item.id, type);
 					}}
-				/>
+				>
+					{#snippet extra()}
+						{#if variables.length > 0}
+							<DropdownMenu.Label>Shared types</DropdownMenu.Label>
+							{#each variables as variable (variable.id)}
+								<DropdownMenu.Item
+									onSelect={() => {
+										graph.setZoneItemType(zoneId, item.id, {
+											variable: variable.id,
+										});
+									}}
+								>
+									<span class="text-xs">{variable.name}</span>
+									<CheckIcon
+										class="ml-auto {shared?.id === variable.id
+											? ''
+											: 'invisible'}"
+									/>
+								</DropdownMenu.Item>
+							{/each}
+						{/if}
+					{/snippet}
+				</TypePicker>
 				<Button
 					variant="ghost"
 					size="icon-sm"

@@ -1,6 +1,6 @@
 import type { CurvePoint } from "../curve/curve";
 import type { FrameTint } from "../frames/analysis";
-import type { HandleDef } from "./descriptors";
+import type { HandleDef, ZoneItem } from "./descriptors";
 import type { WgslType } from "./values";
 
 /** One component of an input value. */
@@ -26,7 +26,7 @@ export type NodeData = {
 	/** Types the user forced, by type family key. */
 	types?: Record<string, WgslType>;
 	/** A Repeat Output's state items. */
-	items?: HandleDef[];
+	items?: ZoneItem[];
 	/** A Repeat Input's partner. */
 	pairedOutput?: string;
 	/** A Repeat Input's iteration safety cap. */

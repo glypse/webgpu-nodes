@@ -30,6 +30,11 @@ const HandleFields = {
 
 const HandleSchema = v.object({ ...HandleFields, type: v.picklist(WGSL_TYPES) });
 
+const ZoneItemSchema = v.object({
+	...HandleFields,
+	type: v.union([v.picklist(WGSL_TYPES), v.strictObject({ variable: v.string() })]),
+});
+
 const GroupHandleSchema = v.object({
 	...HandleFields,
 	viewer: v.optional(v.literal(true)),
@@ -73,7 +78,7 @@ const NodeDataSchema = v.strictObject({
 	values: v.optional(v.record(v.string(), InputValueSchema)),
 	settings: v.optional(v.record(v.string(), v.string())),
 	types: v.optional(v.record(v.string(), v.picklist(WGSL_TYPES))),
-	items: v.optional(v.array(HandleSchema)),
+	items: v.optional(v.array(ZoneItemSchema)),
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
 	curve: v.optional(v.array(CurvePointSchema)),

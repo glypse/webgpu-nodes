@@ -204,3 +204,90 @@ describe("inferred outputs", () => {
 		expect(handles?.find((h) => h.id === "a")?.type).toEqual({ variable: T });
 	});
 });
+
+describe("zone items typed by a variable", () => {
+	const ZONED = "zoned";
+
+	/** A group whose zone adds A to an item, starting at A, twice: 3 × A, as wide as A. */
+	function zoned(source: WgslType): GraphProject {
+		const at = { x: 0, y: 0 };
+		return {
+			definitions: {
+				[ROOT_ID]: {
+					nodes: [
+						{ id: "out", type: "frag-output", data: {}, position: at },
+						{
+							id: "g",
+							type: "node-group",
+							data: {},
+							position: at,
+							group: { definitionRef: ZONED, locked: false },
+						},
+						{
+							id: "sa",
+							type: "declare",
+							data: { types: { declare: source }, values: { x: 1, y: 2, z: 3 } },
+							position: at,
+						},
+					],
+					edges: (
+						[
+							["sa", "value", "g", "a"],
+							["g", "sum", "out", "color"],
+						] satisfies TestEdge[]
+					).map(edge),
+				},
+				[ZONED]: {
+					label: "Zoned",
+					typeVariables: [{ id: T, name: "T", types: FLOAT_TYPES }],
+					inputs: [{ id: "a", label: "A", type: { variable: T } }],
+					outputs: [{ id: "sum", label: "Sum", type: { variable: T } }],
+					nodes: [
+						{ id: "in", type: "group-input", data: {}, position: at },
+						{
+							id: "ri",
+							type: "repeat-input",
+							data: { pairedOutput: "ro", values: { iterations: 2 } },
+							position: at,
+						},
+						{ id: "add", type: "add", data: {}, position: at },
+						{
+							id: "ro",
+							type: "repeat-output",
+							data: { items: [{ id: "acc", label: "Acc", type: { variable: T } }] },
+							position: at,
+						},
+						{ id: "outs", type: "group-output", data: {}, position: at },
+					],
+					edges: (
+						[
+							["in", "a", "ri", "acc"],
+							["ri", "acc", "add", "operands"],
+							["in", "a", "add", "operands"],
+							["add", "result", "ro", "acc"],
+							["ro", "acc", "outs", "sum"],
+						] satisfies TestEdge[]
+					).map(edge),
+				},
+			},
+		};
+	}
+
+	it("carry the type their variable takes for each group node", () => {
+		const graph = new GraphModel(zoned("vec3f"));
+		expect(evaluate(graph, "g", "sum")).toEqual([3, 6, 9]);
+		graph.enterGroup("g");
+		expect(graph.resolveOutputHandleType("ri", "acc")).toBe("vec3f");
+		expect(graph.resolveOutputHandleType("ro", "acc")).toBe("vec3f");
+		const { shader } = generateShader(graph);
+		expect(shader).toMatch(/var z_\w+: vec3f = /);
+		if (nagaBin) expect(validateFragment(shader)).toBeNull();
+	});
+
+	it("are fixed to their variable's first type when it's removed", () => {
+		const graph = new GraphModel(zoned("vec2f"));
+		graph.removeTypeVariable(ZONED, T);
+		const output = graph.project.definitions.get(ZONED)?.nodesById.get("ro");
+		expect(output?.data.items?.[0]?.type).toBe("f32");
+	});
+});

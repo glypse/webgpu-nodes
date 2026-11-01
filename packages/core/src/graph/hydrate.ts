@@ -41,11 +41,12 @@ export function resolveDescriptor(
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
 	}
-	if (node.type === REPEAT_INPUT) {
-		return buildRepeatInputDescriptor(node, definitions);
-	}
-	if (node.type === REPEAT_OUTPUT) {
-		return buildRepeatOutputDescriptor(node);
+	if (node.type === REPEAT_INPUT || node.type === REPEAT_OUTPUT) {
+		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
+		const variables = doc?.typeVariables ?? [];
+		return node.type === REPEAT_INPUT
+			? buildRepeatInputDescriptor(node, definitions, variables)
+			: buildRepeatOutputDescriptor(node, variables);
 	}
 	if (node.type === CUSTOM_WGSL) {
 		return buildCustomWgslDescriptor(node.data);

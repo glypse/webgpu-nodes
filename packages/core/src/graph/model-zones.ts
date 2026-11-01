@@ -1,4 +1,4 @@
-import { type HandleDef, type WgslType } from "../types";
+import { type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
 	DEFAULT_ITERATIONS,
@@ -58,7 +58,7 @@ export abstract class ZoneModel extends GraphModelBase {
 		if (this.isLocked) return undefined;
 		const inputId = crypto.randomUUID();
 		const outputId = crypto.randomUUID();
-		const item: HandleDef = { id: crypto.randomUUID(), label: "Value", type: "f32" };
+		const item: ZoneItem = { id: crypto.randomUUID(), label: "Value", type: "f32" };
 
 		const nodes: GraphNode[] = [
 			{
@@ -103,12 +103,12 @@ export abstract class ZoneModel extends GraphModelBase {
 		return { input, output };
 	}
 
-	getZoneItems(zoneId: string): HandleDef[] {
+	getZoneItems(zoneId: string): ZoneItem[] {
 		return zoneItems(this.zoneNodes(zoneId)?.output);
 	}
 
 	/** Write a zone's item list (on its output node) and refresh everything derived from it. */
-	protected setZoneItems(zoneId: string, items: HandleDef[]) {
+	protected setZoneItems(zoneId: string, items: ZoneItem[]) {
 		const zone = this.zoneNodes(zoneId);
 		if (!zone || this.isLocked) return;
 		const patches = new Map<string, Record<string, unknown>>([
@@ -147,14 +147,14 @@ export abstract class ZoneModel extends GraphModelBase {
 	}
 
 	/** Append a state item to a zone. Returns the new item. */
-	addZoneItem(zoneId: string, type: WgslType, label?: string): HandleDef | undefined {
+	addZoneItem(zoneId: string, type: ZoneItem["type"], label?: string): ZoneItem | undefined {
 		const zone = this.zoneNodes(zoneId);
 		if (!zone || this.isLocked) return undefined;
 		const items = zoneItems(zone.output);
 		const existing = new Set(items.map((i) => i.label));
 		let name = label ?? "Value";
 		for (let n = 2; existing.has(name); n++) name = `${label ?? "Value"} ${String(n)}`;
-		const item: HandleDef = { id: crypto.randomUUID(), label: name, type };
+		const item: ZoneItem = { id: crypto.randomUUID(), label: name, type };
 		this.setZoneItems(zoneId, [...items, item]);
 		return item;
 	}
@@ -177,7 +177,7 @@ export abstract class ZoneModel extends GraphModelBase {
 	}
 
 	/** Change a state item's type; links that no longer fit are removed. */
-	setZoneItemType(zoneId: string, itemId: string, type: WgslType) {
+	setZoneItemType(zoneId: string, itemId: string, type: ZoneItem["type"]) {
 		const items = this.getZoneItems(zoneId);
 		this.setZoneItems(
 			zoneId,

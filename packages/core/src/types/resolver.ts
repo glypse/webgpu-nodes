@@ -110,6 +110,19 @@ function resolveNodeTypesForNode(
 		}));
 		return { ...resolved, resolvedOutputs };
 	}
+	if (descriptor.category === "zone") {
+		const variables = definitionOf(node.id, env.definitions())?.typeVariables ?? [];
+		if (variables.length > 0)
+			return resolveZoneNodeTypes(
+				descriptor,
+				incoming,
+				nodeData,
+				resolveNode,
+				env,
+				bindings,
+				variables,
+			);
+	}
 	const resolved = resolveRegularNodeTypes(
 		descriptor,
 		incoming,
@@ -119,6 +132,36 @@ function resolveNodeTypesForNode(
 		bindings,
 	);
 	return node.type === "node-group" ? resolveGroupNodeTypes(node, resolved, env) : resolved;
+}
+
+/**
+ * A Repeat Input or Output in a generic group: items typed by a variable
+ * take its bound type, and each item's output carries its input's type.
+ */
+function resolveZoneNodeTypes(
+	descriptor: NodeDescriptor,
+	incoming: GraphDocumentEdge[],
+	nodeData: NodeData,
+	resolveNode: ResolveNode,
+	env: Env,
+	bindings: TypeBindings,
+	variables: readonly TypeVariable[],
+): ResolvedNodeTypes {
+	const bound = completeBindings(variables, bindings);
+	const data = { ...nodeData, types: { ...nodeData.types, ...bound } };
+	const resolved = resolveRegularNodeTypes(
+		descriptor,
+		incoming,
+		data,
+		resolveNode,
+		env,
+		bindings,
+	);
+	const resolvedOutputs = resolved.resolvedOutputs.map((o) => ({
+		...o,
+		type: resolved.inputTypes[o.id] ?? o.type,
+	}));
+	return { ...resolved, resolvedOutputs };
 }
 
 /**

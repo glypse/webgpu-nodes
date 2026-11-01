@@ -1,5 +1,13 @@
 import type { HydratedGraphDocument } from "../graph/document";
-import { type HandleDef, type NodeData, type NodeDescriptor } from "../types";
+import {
+	boundType,
+	type NodeData,
+	type NodeDescriptor,
+	type NodeInputDef,
+	type NodeOutputDef,
+	type TypeVariable,
+	type ZoneItem,
+} from "../types";
 
 //
 // A repeat zone is a pair of nodes, like Blender's geometry-nodes repeat zone:
@@ -45,7 +53,7 @@ export function pairedOutputId(node: MinimalNode): string | undefined {
 }
 
 /** The state items declared on a Repeat Output node. */
-export function zoneItems(outputNode: MinimalNode | undefined): HandleDef[] {
+export function zoneItems(outputNode: MinimalNode | undefined): ZoneItem[] {
 	return outputNode?.data.items ?? [];
 }
 
@@ -68,6 +76,18 @@ function findNode(
 	return undefined;
 }
 
+/** An item's input: a variable's items share its family, which takes the type it's bound to. */
+function itemInput(item: ZoneItem, variables: readonly TypeVariable[]): NodeInputDef {
+	const { id, label, type } = item;
+	if (typeof type === "string") return { id, label, types: [type] };
+	const variable = variables.find((v) => v.id === type.variable);
+	return { id, label, types: variable?.types ?? ["f32"], family: type.variable };
+}
+
+function itemOutput(item: ZoneItem, variables: readonly TypeVariable[]): NodeOutputDef {
+	return { id: item.id, label: item.label, type: boundType(item.type, variables, {}) ?? "f32" };
+}
+
 function zoneDescriptorBase(
 	type: string,
 	label: string,
@@ -85,9 +105,11 @@ function zoneDescriptorBase(
 	};
 }
 
+/** `variables`: the type variables of the document the zone is in. */
 export function buildRepeatInputDescriptor(
 	node: MinimalNode,
 	definitions: Map<string, HydratedGraphDocument>,
+	variables: readonly TypeVariable[] = [],
 ): NodeDescriptor {
 	const items = zoneItems(findNode(pairedOutputId(node), definitions));
 	return {
@@ -98,21 +120,24 @@ export function buildRepeatInputDescriptor(
 		},
 		inputs: [
 			{ id: ITERATIONS_HANDLE, label: "Iterations", types: ["i32"] },
-			...items.map((item) => ({ id: item.id, label: item.label, types: [item.type] })),
+			...items.map((item) => itemInput(item, variables)),
 		],
 		outputs: [
 			{ id: ITERATION_HANDLE, label: "Iteration", type: "i32" },
-			...items.map((item) => ({ id: item.id, label: item.label, type: item.type })),
+			...items.map((item) => itemOutput(item, variables)),
 		],
 	};
 }
 
-export function buildRepeatOutputDescriptor(node: MinimalNode): NodeDescriptor {
+export function buildRepeatOutputDescriptor(
+	node: MinimalNode,
+	variables: readonly TypeVariable[] = [],
+): NodeDescriptor {
 	const items = zoneItems(node);
 	return {
 		...zoneDescriptorBase(REPEAT_OUTPUT, "Repeat Output"),
 		defaultData: { items: [] },
-		inputs: items.map((item) => ({ id: item.id, label: item.label, types: [item.type] })),
-		outputs: items.map((item) => ({ id: item.id, label: item.label, type: item.type })),
+		inputs: items.map((item) => itemInput(item, variables)),
+		outputs: items.map((item) => itemOutput(item, variables)),
 	};
 }
