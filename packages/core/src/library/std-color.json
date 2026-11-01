@@ -12,148 +12,13 @@
 		"OKLch"
 	],
 	"category": "color",
-	"dependencies": ["std-oklch-gamut-map@0b78f74f4db5cf"],
+	"dependencies": ["std-oklch-gamut-map@03aa31e8b4e495"],
 	"definition": {
 		"nodes": [
 			{
 				"id": "d4bc8ed7-c325-4e68-a7cc-08aff506c703",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-							"label": "Mode",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 0,
-									"label": "RGB"
-								},
-								{
-									"value": 1,
-									"label": "HSV"
-								},
-								{
-									"value": 2,
-									"label": "OKLch"
-								}
-							]
-						},
-						{
-							"id": "f4296a19-7484-43db-abdc-ed1105122278",
-							"label": "Red",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 0
-							}
-						},
-						{
-							"id": "24b9682d-af36-4a8a-87b4-23d8a0884f7c",
-							"label": "Green",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 0
-							}
-						},
-						{
-							"id": "83d6f344-6012-46b4-91cc-56751789ece9",
-							"label": "Blue",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 0
-							}
-						},
-						{
-							"id": "a8852628-a111-48c6-8d8c-75fb39ad4a64",
-							"label": "Hue",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 1
-							},
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "e549edf1-560a-4aed-939f-ec279a010e4d",
-							"label": "Saturation",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 1
-							},
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "0e2c98ec-2535-408a-a90d-c3d4dbb6bf48",
-							"label": "Value",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 1
-							},
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "164d7dbd-4ec7-420f-b782-ffb99248907d",
-							"label": "Lightness",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 2
-							},
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "813a05fd-509d-4640-93f4-7f6fd18a8e1a",
-							"label": "Chroma",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 2
-							},
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "affe4d63-5b86-45d9-b4e4-bfef01c4daae",
-							"label": "Hue",
-							"type": "f32",
-							"owner": {
-								"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
-								"value": 2
-							},
-							"min": 0,
-							"max": 360
-						},
-						{
-							"id": "17aa4483-4f30-4e87-952c-168f15afaf44",
-							"label": "Alpha",
-							"type": "f32",
-							"min": 0,
-							"max": 1
-						}
-					],
-					"values": {
-						"985c1767-a923-4a33-9904-8d5ec2f380a1": 1,
-						"f4296a19-7484-43db-abdc-ed1105122278": 0.8,
-						"24b9682d-af36-4a8a-87b4-23d8a0884f7c": 0.8,
-						"83d6f344-6012-46b4-91cc-56751789ece9": 0.8,
-						"a8852628-a111-48c6-8d8c-75fb39ad4a64": 0,
-						"e549edf1-560a-4aed-939f-ec279a010e4d": 0,
-						"0e2c98ec-2535-408a-a90d-c3d4dbb6bf48": 0.9063,
-						"164d7dbd-4ec7-420f-b782-ffb99248907d": 0.9283,
-						"813a05fd-509d-4640-93f4-7f6fd18a8e1a": 0,
-						"affe4d63-5b86-45d9-b4e4-bfef01c4daae": 0,
-						"17aa4483-4f30-4e87-952c-168f15afaf44": 1
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 270
@@ -162,20 +27,7 @@
 			{
 				"id": "bb881e13-3fac-410a-ae1d-5d1e6f45f1f5",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "7ff3db69-bbdd-46db-90ed-df0607b66d61",
-							"label": "Color",
-							"type": "vec3f"
-						},
-						{
-							"id": "0d0145bc-b33a-4aae-8014-4e12fdd83d94",
-							"label": "RGBA",
-							"type": "vec4f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 5393,
 					"y": 32
@@ -513,7 +365,7 @@
 					"y": 619
 				},
 				"group": {
-					"definitionRef": "std-oklch-gamut-map@0b78f74f4db5cf",
+					"definitionRef": "std-oklch-gamut-map@03aa31e8b4e495",
 					"locked": true
 				}
 			},
@@ -877,6 +729,152 @@
 				"sourceHandle": "value",
 				"target": "bb881e13-3fac-410a-ae1d-5d1e6f45f1f5",
 				"targetHandle": "0d0145bc-b33a-4aae-8014-4e12fdd83d94"
+			}
+		],
+		"inputs": [
+			{
+				"id": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+				"label": "Mode",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 0,
+						"label": "RGB"
+					},
+					{
+						"value": 1,
+						"label": "HSV"
+					},
+					{
+						"value": 2,
+						"label": "OKLch"
+					}
+				]
+			},
+			{
+				"id": "f4296a19-7484-43db-abdc-ed1105122278",
+				"label": "Red",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 0
+				}
+			},
+			{
+				"id": "24b9682d-af36-4a8a-87b4-23d8a0884f7c",
+				"label": "Green",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 0
+				}
+			},
+			{
+				"id": "83d6f344-6012-46b4-91cc-56751789ece9",
+				"label": "Blue",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 0
+				}
+			},
+			{
+				"id": "a8852628-a111-48c6-8d8c-75fb39ad4a64",
+				"label": "Hue",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 1
+				},
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "e549edf1-560a-4aed-939f-ec279a010e4d",
+				"label": "Saturation",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 1
+				},
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "0e2c98ec-2535-408a-a90d-c3d4dbb6bf48",
+				"label": "Value",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 1
+				},
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "164d7dbd-4ec7-420f-b782-ffb99248907d",
+				"label": "Lightness",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 2
+				},
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "813a05fd-509d-4640-93f4-7f6fd18a8e1a",
+				"label": "Chroma",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 2
+				},
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "affe4d63-5b86-45d9-b4e4-bfef01c4daae",
+				"label": "Hue",
+				"type": "f32",
+				"owner": {
+					"enumId": "985c1767-a923-4a33-9904-8d5ec2f380a1",
+					"value": 2
+				},
+				"min": 0,
+				"max": 360
+			},
+			{
+				"id": "17aa4483-4f30-4e87-952c-168f15afaf44",
+				"label": "Alpha",
+				"type": "f32",
+				"min": 0,
+				"max": 1
+			}
+		],
+		"defaults": {
+			"985c1767-a923-4a33-9904-8d5ec2f380a1": 1,
+			"f4296a19-7484-43db-abdc-ed1105122278": 0.8,
+			"24b9682d-af36-4a8a-87b4-23d8a0884f7c": 0.8,
+			"83d6f344-6012-46b4-91cc-56751789ece9": 0.8,
+			"a8852628-a111-48c6-8d8c-75fb39ad4a64": 0,
+			"e549edf1-560a-4aed-939f-ec279a010e4d": 0,
+			"0e2c98ec-2535-408a-a90d-c3d4dbb6bf48": 0.9063,
+			"164d7dbd-4ec7-420f-b782-ffb99248907d": 0.9283,
+			"813a05fd-509d-4640-93f4-7f6fd18a8e1a": 0,
+			"affe4d63-5b86-45d9-b4e4-bfef01c4daae": 0,
+			"17aa4483-4f30-4e87-952c-168f15afaf44": 1
+		},
+		"outputs": [
+			{
+				"id": "7ff3db69-bbdd-46db-90ed-df0607b66d61",
+				"label": "Color",
+				"type": "vec3f"
+			},
+			{
+				"id": "0d0145bc-b33a-4aae-8014-4e12fdd83d94",
+				"label": "RGBA",
+				"type": "vec4f"
 			}
 		]
 	},

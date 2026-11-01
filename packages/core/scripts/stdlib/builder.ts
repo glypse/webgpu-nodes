@@ -100,16 +100,14 @@ export class GroupBuilder {
 	}
 
 	document(): GraphDocument {
-		const nodes = this.nodes.map((n) => {
-			if (n.id === this.inputNode) {
-				const values =
-					Object.keys(this.inputValues).length > 0 ? this.inputValues : undefined;
-				return { ...n, data: { handles: this.inputs, ...(values ? { values } : {}) } };
-			}
-			if (n.id === this.outputNode) return { ...n, data: { handles: this.outputs } };
-			return n;
-		});
-		return { nodes, edges: this.edges };
+		const defaults = Object.keys(this.inputValues).length > 0 ? this.inputValues : undefined;
+		return {
+			nodes: this.nodes,
+			edges: this.edges,
+			inputs: this.inputs,
+			outputs: this.outputs,
+			...(defaults ? { defaults } : {}),
+		};
 	}
 
 	// ── Graph primitives ──────────────────────────────────────────────────

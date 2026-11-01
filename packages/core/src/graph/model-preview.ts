@@ -1,7 +1,6 @@
 import { nodeRegistry } from "../nodes/registry";
 import { type GroupHandleDef, isConnectionCompatible } from "../types";
-import type { GraphEdge, GraphNode, HydratedGraphDocument } from "./document";
-import { handlesOf } from "./editing";
+import type { GraphEdge, HydratedGraphDocument } from "./document";
 import { FrameModel } from "./model-frames";
 
 const FRAG_OUTPUT = "frag-output";
@@ -50,11 +49,11 @@ export abstract class PreviewModel extends FrameModel {
 		const kept = new Set<string>();
 		let source: Source = { node: nodeId, handle: output.id };
 		for (const { definition, node: instance } of levels) {
-			const groupOutput = definition.nodes.find((n) => n.type === "group-output");
+			const groupOutput = this.viewerOf(definition).node;
 			if (!groupOutput) return false;
-			const viewer = this.ensureViewer(definition, groupOutput);
+			const viewer = this.ensureViewer(definition);
 			kept.add(viewer.id);
-			this.linkInto(definition, source, { node: groupOutput.id, handle: viewer.id });
+			this.linkInto(definition, source, { node: groupOutput, handle: viewer.id });
 			source = { node: instance.id, handle: viewer.id };
 		}
 		this.linkInto(this.root, source, { node: frag.id, handle: fragInput.id });
@@ -63,19 +62,22 @@ export abstract class PreviewModel extends FrameModel {
 		return true;
 	}
 
-	/** Where a group's viewer output is fed from inside, if it has one. */
+	/**
+	 * A group's viewer output, if it has one, and the Group Output node it's
+	 * fed on: the one it's linked on, or the first.
+	 */
 	private viewerOf(definition: HydratedGraphDocument): { node?: string; handle?: string } {
-		const groupOutput = definition.nodes.find((n) => n.type === "group-output");
-		return { node: groupOutput?.id, handle: handlesOf(groupOutput).find((h) => h.viewer)?.id };
+		const handle = definition.outputs.find((h) => h.viewer)?.id;
+		const outputs = definition.nodes.filter((n) => n.type === "group-output");
+		const linked = outputs.find((n) =>
+			definition.edgesByTarget.get(n.id)?.some((e) => e.targetHandle === handle),
+		);
+		return { node: (linked ?? outputs[0])?.id, handle };
 	}
 
 	/** A group's viewer output, added if it has none. */
-	private ensureViewer(
-		definition: HydratedGraphDocument,
-		groupOutput: GraphNode,
-	): GroupHandleDef {
-		const handles = handlesOf(groupOutput);
-		const existing = handles.find((h) => h.viewer);
+	private ensureViewer(definition: HydratedGraphDocument): GroupHandleDef {
+		const existing = definition.outputs.find((h) => h.viewer);
 		if (existing) return existing;
 		const viewer: GroupHandleDef = {
 			id: crypto.randomUUID(),
@@ -83,13 +85,7 @@ export abstract class PreviewModel extends FrameModel {
 			type: { inferred: true },
 			viewer: true,
 		};
-		this.setContent(definition, {
-			nodes: definition.nodes.map((n) =>
-				n.id === groupOutput.id
-					? { ...n, data: { ...n.data, handles: [...handles, viewer] } }
-					: n,
-			),
-		});
+		this.setInterface(definition, "output", [...definition.outputs, viewer]);
 		return viewer;
 	}
 
@@ -116,16 +112,13 @@ export abstract class PreviewModel extends FrameModel {
 	private removeViewersBut(kept: ReadonlySet<string>) {
 		for (const [ref, definition] of this.project.definitions) {
 			if (this.isStandardLibrary(ref)) continue;
-			for (const node of definition.nodes) {
-				if (node.type !== "group-output") continue;
-				const stale = handlesOf(node).filter((h) => h.viewer && !kept.has(h.id));
-				if (stale.length > 0) {
-					this.removeHandles(
-						ref,
-						node.id,
-						stale.map((h) => h.id),
-					);
-				}
+			const stale = definition.outputs.filter((h) => h.viewer && !kept.has(h.id));
+			if (stale.length > 0) {
+				this.removeHandles(
+					ref,
+					"output",
+					stale.map((h) => h.id),
+				);
 			}
 		}
 	}

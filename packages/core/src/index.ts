@@ -16,7 +16,7 @@ export * from "./graph/schema";
 export * from "./graph/settings";
 export * from "./screen";
 export * from "./graph/history";
-export { handlesOf } from "./graph/editing";
+export { type GroupSide, interfaceOf, sideOf } from "./graph/editing";
 export * from "./graph/values";
 export * from "./graph/model-base";
 export * from "./graph/model-zones";

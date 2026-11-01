@@ -30,6 +30,9 @@
 
 	const selected = $derived(view.selectedNodeIds);
 	const locked = $derived(view.locked);
+	const allUnlinkedHidden = $derived(
+		selected.every((id) => view.document.nodesById.get(id)?.data.hideUnlinked === true),
+	);
 	const inFrame = $derived.by(() => {
 		const { frameOf } = graph.frameAnalysis(view.document);
 		return selected.some((id) => frameOf.has(id));
@@ -84,6 +87,13 @@
 			<ContextMenu.Item disabled={locked} onSelect={onduplicate}>
 				Duplicate
 				<ContextMenu.Shortcut>⇧D</ContextMenu.Shortcut>
+			</ContextMenu.Item>
+			<ContextMenu.Item
+				disabled={locked}
+				onSelect={() => graph.toggleUnlinkedSockets(selected)}
+			>
+				{allUnlinkedHidden ? "Show all sockets" : "Hide unlinked sockets"}
+				<ContextMenu.Shortcut>⌃H</ContextMenu.Shortcut>
 			</ContextMenu.Item>
 			<ContextMenu.Separator />
 			<ContextMenu.Item

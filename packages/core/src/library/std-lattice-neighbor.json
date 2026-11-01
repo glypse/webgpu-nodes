@@ -5,55 +5,13 @@
 	"category": "texture",
 	"section": ["Helpers"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-dimension-mask@0acfbe5f0d377e"],
+	"dependencies": ["std-dimension-mask@1dfb9036300c90"],
 	"definition": {
 		"nodes": [
 			{
 				"id": "76825773-0ee1-492f-a06a-8ca54feb7c5c",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "1543f486-024a-4fa0-a52f-c14c0da205a0",
-							"label": "Index",
-							"type": "i32"
-						},
-						{
-							"id": "f173b957-e0d0-48ed-b5d0-d21d41f29df9",
-							"label": "Dimensions",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 1,
-									"label": "1D"
-								},
-								{
-									"value": 2,
-									"label": "2D"
-								},
-								{
-									"value": 3,
-									"label": "3D"
-								},
-								{
-									"value": 4,
-									"label": "4D"
-								}
-							]
-						},
-						{
-							"id": "d038f73a-8ff8-461a-8bd6-1c8f6b3afc99",
-							"label": "Radius",
-							"type": "i32",
-							"min": 0
-						}
-					],
-					"values": {
-						"1543f486-024a-4fa0-a52f-c14c0da205a0": 0,
-						"f173b957-e0d0-48ed-b5d0-d21d41f29df9": 2,
-						"d038f73a-8ff8-461a-8bd6-1c8f6b3afc99": 1
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 53
@@ -62,20 +20,7 @@
 			{
 				"id": "a9d08880-b5bc-4ff4-bd3c-afe09bd21ff4",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "082bca83-75ce-4140-9659-29af474f1b1c",
-							"label": "Offset",
-							"type": "vec4f"
-						},
-						{
-							"id": "25b7c047-341e-44de-83fa-ca3b463d84ed",
-							"label": "Count",
-							"type": "i32"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 2959,
 					"y": 399
@@ -216,7 +161,7 @@
 					"y": 0
 				},
 				"group": {
-					"definitionRef": "std-dimension-mask@0acfbe5f0d377e",
+					"definitionRef": "std-dimension-mask@1dfb9036300c90",
 					"locked": true
 				}
 			},
@@ -458,6 +403,59 @@
 				"sourceHandle": "result",
 				"target": "a9d08880-b5bc-4ff4-bd3c-afe09bd21ff4",
 				"targetHandle": "25b7c047-341e-44de-83fa-ca3b463d84ed"
+			}
+		],
+		"inputs": [
+			{
+				"id": "1543f486-024a-4fa0-a52f-c14c0da205a0",
+				"label": "Index",
+				"type": "i32"
+			},
+			{
+				"id": "f173b957-e0d0-48ed-b5d0-d21d41f29df9",
+				"label": "Dimensions",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 1,
+						"label": "1D"
+					},
+					{
+						"value": 2,
+						"label": "2D"
+					},
+					{
+						"value": 3,
+						"label": "3D"
+					},
+					{
+						"value": 4,
+						"label": "4D"
+					}
+				]
+			},
+			{
+				"id": "d038f73a-8ff8-461a-8bd6-1c8f6b3afc99",
+				"label": "Radius",
+				"type": "i32",
+				"min": 0
+			}
+		],
+		"defaults": {
+			"1543f486-024a-4fa0-a52f-c14c0da205a0": 0,
+			"f173b957-e0d0-48ed-b5d0-d21d41f29df9": 2,
+			"d038f73a-8ff8-461a-8bd6-1c8f6b3afc99": 1
+		},
+		"outputs": [
+			{
+				"id": "082bca83-75ce-4140-9659-29af474f1b1c",
+				"label": "Offset",
+				"type": "vec4f"
+			},
+			{
+				"id": "25b7c047-341e-44de-83fa-ca3b463d84ed",
+				"label": "Count",
+				"type": "i32"
 			}
 		]
 	}

@@ -44,21 +44,14 @@ function project(
 				edges: [["g", "result", "out", "color"] satisfies TestEdge, ...rootEdges].map(edge),
 			},
 			def: {
+				inputs: [
+					{ id: "mode", label: "Mode", type: "u32", variants: VARIANTS },
+					{ id: "x", label: "X", type: "f32", owner: { enumId: "mode", value: 2 } },
+				],
+				outputs: [{ id: "result", label: "Result", type: "f32" }],
 				nodes: [
-					node("in", "group-input", {
-						handles: [
-							{ id: "mode", label: "Mode", type: "u32", variants: VARIANTS },
-							{
-								id: "x",
-								label: "X",
-								type: "f32",
-								owner: { enumId: "mode", value: 2 },
-							},
-						],
-					}),
-					node("go", "group-output", {
-						handles: [{ id: "result", label: "Result", type: "f32" }],
-					}),
+					node("in", "group-input"),
+					node("go", "group-output"),
 					node("m", "match"),
 					node("one", "declare", { values: { x: 1 } }),
 					node("t", "time"),
@@ -128,10 +121,10 @@ describe("Match node", () => {
 				.map((e) => e.targetHandle);
 		const [zero, two] = VARIANTS;
 		if (!zero || !two) throw new Error("unreachable");
-		graph.setHandleVariants("def", "in", "mode", [{ ...two, label: "Deux" }, zero]);
+		graph.setHandleVariants("def", "mode", [{ ...two, label: "Deux" }, zero]);
 		expect(caseIds(graph)).toEqual(["selector:enum", "case-2:Deux", "case-0:Zero"]);
 		expect(links()).toEqual(["selector", "case-0", "case-2"]);
-		graph.setHandleVariants("def", "in", "mode", undefined);
+		graph.setHandleVariants("def", "mode", undefined);
 		expect(caseIds(graph)).toEqual(["selector:enum"]);
 		expect(links()).toEqual(["selector"]);
 	});
@@ -154,20 +147,17 @@ describe("Match node", () => {
 
 	it("adds inputs to a variant after its enum's, nested enums included", () => {
 		const graph = new GraphModel(project({ values: { mode: 2 } }));
-		const top = graph.addHandle("in", "f32");
-		const sub = graph.addHandle("in", "u32", {
+		const top = graph.addHandle("def", "input", "f32");
+		const sub = graph.addHandle("def", "input", "u32", {
 			variants: [
 				{ value: 0, label: "A" },
 				{ value: 1, label: "B" },
 			],
 			owner: { enumId: "mode", value: 2 },
 		});
-		const z = sub && graph.addHandle("in", "f32", { owner: { enumId: sub.id, value: 1 } });
-		const ids = () =>
-			graph.project.definitions
-				.get("def")
-				?.nodesById.get("in")
-				?.data.handles?.map((h) => h.id);
+		const z =
+			sub && graph.addHandle("def", "input", "f32", { owner: { enumId: sub.id, value: 1 } });
+		const ids = () => graph.project.definitions.get("def")?.inputs.map((h) => h.id);
 		expect(ids()).toEqual(["mode", "x", sub?.id, z?.id, top?.id]);
 		expect([...graph.hiddenInputs("g")]).toEqual([z?.id]);
 		graph.setInputValue("g", "mode", 0);
@@ -175,28 +165,28 @@ describe("Match node", () => {
 
 		// Removing a variant, or an enum, removes the inputs under it.
 		if (!sub?.variants) throw new Error("unreachable");
-		graph.setHandleVariants("def", "in", sub.id, sub.variants.slice(0, 1));
+		graph.setHandleVariants("def", sub.id, sub.variants.slice(0, 1));
 		expect(ids()).toEqual(["mode", "x", sub.id, top?.id]);
-		graph.removeHandle("def", "in", "mode");
+		graph.removeHandle("def", "input", "mode");
 		expect(ids()).toEqual([top?.id]);
 	});
 
 	it("lets inputs never shown together share a label", () => {
 		const graph = new GraphModel(project());
-		const y = graph.addHandle("in", "f32", { owner: { enumId: "mode", value: 5 } });
-		expect(y && graph.setHandleLabel("def", "in", y.id, "X")).toBe(true);
-		expect(graph.setHandleLabel("def", "in", "mode", "X")).toBe(false);
+		const y = graph.addHandle("def", "input", "f32", { owner: { enumId: "mode", value: 5 } });
+		expect(y && graph.setHandleLabel("def", "input", y.id, "X")).toBe(true);
+		expect(graph.setHandleLabel("def", "input", "mode", "X")).toBe(false);
 	});
 
-	it("replaces the group input node when removing or renaming a handle", () => {
+	it("replaces the group's inputs when removing or renaming one", () => {
 		const graph = new GraphModel(project());
-		const inputNode = () => graph.project.definitions.get("def")?.nodesById.get("in");
-		const before = inputNode();
-		graph.setHandleLabel("def", "in", "x", "Renamed");
-		graph.removeHandle("def", "in", "x");
-		expect(inputNode()).not.toBe(before);
-		expect(before?.data.handles?.map((h) => h.label)).toEqual(["Mode", "X"]);
-		expect(inputNode()?.data.handles?.map((h) => h.id)).toEqual(["mode"]);
+		const inputs = () => graph.project.definitions.get("def")?.inputs;
+		const before = inputs();
+		graph.setHandleLabel("def", "input", "x", "Renamed");
+		graph.removeHandle("def", "input", "x");
+		expect(inputs()).not.toBe(before);
+		expect(before?.map((h) => h.label)).toEqual(["Mode", "X"]);
+		expect(inputs()?.map((h) => h.id)).toEqual(["mode"]);
 	});
 
 	it("has a type picker, with or without an enum linked", () => {

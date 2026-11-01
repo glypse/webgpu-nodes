@@ -99,7 +99,7 @@ function resolveNodeTypesForNode(
 			bound,
 		);
 		const variables = def?.typeVariables ?? [];
-		const resolvedOutputs = (nodeData.handles ?? []).map((h) => ({
+		const resolvedOutputs = (def?.inputs ?? []).map((h) => ({
 			id: h.id,
 			label: h.label,
 			type: boundType(h.type, variables, bound) ?? "f32",
@@ -136,24 +136,37 @@ function resolveGroupNodeTypes(
 		bindings[variable.id] =
 			type && variable.types.includes(type) ? type : (variable.types[0] ?? "f32");
 	}
-	const output = def.nodes.find((n) => n.type === "group-output");
-	const handles = output?.data.handles ?? [];
-	const inner =
-		output && handles.some((h) => typeof h.type === "object" && "inferred" in h.type)
-			? resolveNodeTypesForNode(
-					output,
-					env.resolveDescriptor(output),
-					def.edgesByTarget.get(output.id) ?? [],
-					output.data,
-					(id) => def.nodesById.get(id),
-					env,
-					bindings,
-				)
-			: undefined;
-	const resolvedOutputs = handles.map((h) => ({
+	// An inferred output takes the type of what reaches it, on the Group
+	// Output node it's linked on.
+	const outputs = def.nodes.filter((n) => n.type === "group-output");
+	const inferable = def.outputs.some((h) => typeof h.type === "object" && "inferred" in h.type);
+	const innerTypes = new Map<GraphNode, Record<string, WgslType>>();
+	const innerType = (handleId: string): WgslType | undefined => {
+		if (!inferable) return undefined;
+		const output =
+			outputs.find((n) =>
+				def.edgesByTarget.get(n.id)?.some((e) => e.targetHandle === handleId),
+			) ?? outputs[0];
+		if (!output) return undefined;
+		let types = innerTypes.get(output);
+		if (!types) {
+			types = resolveNodeTypesForNode(
+				output,
+				env.resolveDescriptor(output),
+				def.edgesByTarget.get(output.id) ?? [],
+				output.data,
+				(id) => def.nodesById.get(id),
+				env,
+				bindings,
+			).inputTypes;
+			innerTypes.set(output, types);
+		}
+		return types[handleId];
+	};
+	const resolvedOutputs = def.outputs.map((h) => ({
 		id: h.id,
 		label: h.label,
-		type: boundType(h.type, def.typeVariables, bindings) ?? inner?.inputTypes[h.id] ?? "f32",
+		type: boundType(h.type, def.typeVariables, bindings) ?? innerType(h.id) ?? "f32",
 	}));
 	return { ...resolved, resolvedOutputs, bindings };
 }

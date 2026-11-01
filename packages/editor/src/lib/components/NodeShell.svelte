@@ -1,18 +1,21 @@
 <script lang="ts">
 	import {
 		inputControl,
+		interfaceOf,
 		type InputValue,
 		isZoneNodeType,
 		NEW_ITEM_HANDLE,
 		type NodeData,
 		type NodeSetting,
 		settingValue as storedSetting,
+		sideOf,
 		typeKind,
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
 	import { Button, Select } from "$theme";
 	import { Handle, Position, useNodeConnections, useUpdateNodeInternals } from "@xyflow/svelte";
+	import EyeSlashIcon from "phosphor-svelte/lib/EyeSlashIcon";
 	import FadersIcon from "phosphor-svelte/lib/FadersIcon";
 	import LockSimpleIcon from "phosphor-svelte/lib/LockSimpleIcon";
 	import TreeViewIcon from "phosphor-svelte/lib/TreeViewIcon";
@@ -52,17 +55,38 @@
 			: `Saved with an older version of ${outdated?.label ?? "this group"}, which isn't available: the latest version is used instead, so its links may not match.`,
 	);
 
+	const connections = useNodeConnections({ handleType: "target" });
+	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
+	const outgoing = useNodeConnections({ handleType: "source" });
+	const linkedOutputs = $derived(new Set(outgoing.current.map((c) => c.sourceHandle)));
+
+	/** On a Group Output: the outputs linked on another Group Output node. */
+	const linkedElsewhere = $derived.by(() => {
+		if (nodeType !== "group-output") return new Set<string>();
+		const doc = view.document;
+		return new Set(
+			doc.nodes
+				.filter((n) => n.type === "group-output" && n.id !== id)
+				.flatMap((n) => (doc.edgesByTarget.get(n.id) ?? []).map((e) => e.targetHandle)),
+		);
+	});
+
+	/** Only the linked sockets are shown (Ctrl+H). */
+	const onlyLinked = $derived(data.hideUnlinked === true);
 	const hiddenInputs = $derived(graph.hiddenInputs(id));
 	const inputs = $derived(
-		graph.resolveNodeInputs(id, view.path).filter((i) => !hiddenInputs.has(i.id)),
+		graph
+			.resolveNodeInputs(id, view.path)
+			.filter((i) => !hiddenInputs.has(i.id) && (!onlyLinked || connectedHandles.has(i.id))),
 	);
-	const outputs = $derived(graph.resolveNodeOutputs(id, view.path));
+	const outputs = $derived(
+		graph
+			.resolveNodeOutputs(id, view.path)
+			.filter((o) => !onlyLinked || linkedOutputs.has(o.id)),
+	);
 	const label = $derived(graph.nodeLabel(id));
 
 	const nodeLabels = $derived(graph.resolveNodeLabels(id));
-
-	const connections = useNodeConnections({ handleType: "target" });
-	const connectedHandles = $derived(new Set(connections.current.map((c) => c.targetHandle)));
 
 	// Svelte Flow measures a node's handles only when the node is resized, so
 	// a handle swapped for another in place (an enum showing another variant's
@@ -96,10 +120,11 @@
 	 * a fixed type (its shared type, or "inferred"), by handle id.
 	 */
 	const sharedTypes: Record<string, string> = $derived.by(() => {
-		if (nodeType !== "group-input" && nodeType !== "group-output") return {};
+		const side = sideOf({ type: nodeType });
+		if (!side) return {};
 		const variables = view.document.typeVariables;
 		return Object.fromEntries(
-			(data.handles ?? []).flatMap((handle) => {
+			interfaceOf(view.document, side).flatMap((handle) => {
 				const type = handle.type;
 				if (typeof type === "string") return [];
 				if ("inferred" in type) return [[handle.id, "inferred"]];
@@ -149,7 +174,7 @@
 	}
 
 	function addHandle(type: WgslType) {
-		graph.addHandle(id, type);
+		graph.addBoundaryHandle(id, type);
 	}
 </script>
 
@@ -197,6 +222,21 @@
 		<div class="flex items-center justify-between gap-2">
 			<span class="truncate">{label}</span>
 			<div class="flex shrink-0 items-center gap-1">
+				{#if onlyLinked}
+					<Button
+						variant="ghost"
+						type="button"
+						size="icon-xs"
+						title="Unlinked sockets hidden: show them (Ctrl+H)"
+						disabled={isLocked}
+						onclick={() => {
+							view.activate();
+							graph.toggleUnlinkedSockets([id]);
+						}}
+					>
+						<EyeSlashIcon />
+					</Button>
+				{/if}
 				{#if outdated}
 					<span class="text-amber-500" title={outdatedMessage}>
 						<WarningIcon class="size-4" weight="fill" />
@@ -324,11 +364,11 @@
 				</div>
 			{/each}
 
-			{#if nodeType === "group-input" && !isLocked}
+			{#if nodeType === "group-input" && !isLocked && !onlyLinked}
 				{@render addHandleButton()}
 			{/if}
 
-			{#if zoneId && !isLocked}
+			{#if zoneId && !isLocked && !onlyLinked}
 				<!-- Virtual socket: drag from here to create a state item typed after the target. -->
 				<div class="node-shell__row node-shell__row--right">
 					<span class="node-shell__handle-label opacity-60">new item</span>
@@ -390,6 +430,13 @@
 								>{inputLabel}: {effectiveType}</span
 							>
 						</div>
+					{:else if linkedElsewhere.has(inputDef.id)}
+						<span
+							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs opacity-60"
+							title="Linked on another Group Output node"
+						>
+							{inputLabel}: {effectiveType} (elsewhere)
+						</span>
 					{:else if connected}
 						<span
 							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
@@ -425,11 +472,11 @@
 				</div>
 			{/each}
 
-			{#if nodeType === "group-output" && !isLocked}
+			{#if nodeType === "group-output" && !isLocked && !onlyLinked}
 				{@render addHandleButton()}
 			{/if}
 
-			{#if zoneId && !isLocked}
+			{#if zoneId && !isLocked && !onlyLinked}
 				<!-- Virtual socket: drop a link here to create a state item typed after its source. -->
 				<div class="node-shell__row">
 					<Handle

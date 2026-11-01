@@ -160,8 +160,6 @@ function nodeChoices(descriptor: NodeDescriptor): EntryOption[][] {
 /** A group's type variables and enum inputs (those always shown). */
 function groupChoices(definition: HydratedGraphDocument | undefined): EntryOption[][] {
 	if (!definition) return [];
-	const input = definition.nodes.find((n) => n.type === "group-input");
-	const handles = input?.data.handles ?? [];
 	return choiceOptions([
 		...definition.typeVariables.map((variable) => ({
 			label: variable.name,
@@ -172,9 +170,9 @@ function groupChoices(definition: HydratedGraphDocument | undefined): EntryOptio
 				isDefault: false,
 			})),
 		})),
-		...handles.flatMap(({ id, label, variants, owner }) => {
+		...definition.inputs.flatMap(({ id, label, variants, owner }) => {
 			if (!variants || owner) return [];
-			const defaultValue = enumValue(input?.data.values?.[id], variants);
+			const defaultValue = enumValue(definition.defaults[id], variants);
 			return [
 				{
 					label,
@@ -202,7 +200,12 @@ const NAMED_REROUTES = "Named reroutes";
 export function addMenuEntries(
 	graph: Pick<
 		GraphModel,
-		"library" | "project" | "wouldCreateCycle" | "activeDocument" | "nodeLabel"
+		| "library"
+		| "project"
+		| "wouldCreateCycle"
+		| "activeDocument"
+		| "activeDefinitionRef"
+		| "nodeLabel"
 	>,
 	{ devTools = false }: { devTools?: boolean } = {},
 ): AddMenuEntry[] {
@@ -231,6 +234,25 @@ export function addMenuEntries(
 			disabled: false,
 			deletable: false,
 		});
+	}
+	// More of a group's boundary nodes, to take or give its values where they're used.
+	if (graph.activeDefinitionRef !== ROOT_ID) {
+		for (const [type, label, heading, aliases] of [
+			["group-input", "Group Input", CATEGORY_LABELS.input, ["Parameters", "Arguments"]],
+			["group-output", "Group Output", CATEGORY_LABELS.misc, ["Result", "Return"]],
+		] as const) {
+			entries.push({
+				key: `node:${type}`,
+				label,
+				aliases,
+				heading,
+				kind: "node",
+				type,
+				choices: [],
+				disabled: false,
+				deletable: false,
+			});
+		}
 	}
 	for (const node of graph.activeDocument.nodes) {
 		if (!hidesLinks(node)) continue;

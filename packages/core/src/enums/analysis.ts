@@ -1,5 +1,5 @@
 import type { GraphDocumentEdge } from "../graph/document";
-import type { EnumVariant, NodeData } from "../types";
+import type { EnumVariant, GroupHandleDef, NodeData } from "../types";
 
 export const MATCH = "match";
 export const MATCH_SELECTOR = "selector";
@@ -24,6 +24,8 @@ export function nextVariantValue(variants: readonly EnumVariant[]): number {
 export type EnumDocument = {
 	nodesById: ReadonlyMap<string, { type?: string; data: NodeData }>;
 	edgesByTarget: ReadonlyMap<string, readonly GraphDocumentEdge[]>;
+	/** The inputs of the group the document is, which its Group Input nodes show. */
+	inputs: readonly GroupHandleDef[];
 };
 
 /** Node types forwarding one input's value unchanged, by that input's id. */
@@ -44,7 +46,7 @@ export function enumOfOutput(
 ): readonly EnumVariant[] | undefined {
 	const node = doc.nodesById.get(nodeId);
 	if (node?.type === "group-input") {
-		return node.data.handles?.find((h) => h.id === handleId)?.variants;
+		return doc.inputs.find((h) => h.id === handleId)?.variants;
 	}
 	const through = PASS_THROUGH[node?.type ?? ""];
 	return through ? enumAt(doc, nodeId, through) : undefined;

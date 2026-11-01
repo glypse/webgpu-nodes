@@ -6,148 +6,19 @@
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-noise-coordinates@0ce00dc844ae9e",
-		"std-dimension-mask@0acfbe5f0d377e",
-		"std-lattice-neighbor@1bde4f63543504",
-		"std-voronoi-point@0d8c27d851dfca",
-		"std-voronoi-distance@0a97cd0eff146e",
-		"std-hash@1547f98ac887b6"
+		"std-noise-coordinates@144ff9922ad8e8",
+		"std-dimension-mask@1dfb9036300c90",
+		"std-lattice-neighbor@0016ea85eb051f",
+		"std-voronoi-point@0a57f1f215dd94",
+		"std-voronoi-distance@056024b800e85c",
+		"std-hash@173fe967101a4d"
 	],
 	"definition": {
 		"nodes": [
 			{
 				"id": "a7750851-f72f-4e05-ad62-80851cf4a4c4",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
-							"label": "Dimensions",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 1,
-									"label": "1D"
-								},
-								{
-									"value": 2,
-									"label": "2D"
-								},
-								{
-									"value": 3,
-									"label": "3D"
-								},
-								{
-									"value": 4,
-									"label": "4D"
-								}
-							]
-						},
-						{
-							"id": "095df742-6409-4621-bb07-2c937e289b2a",
-							"label": "W",
-							"type": "f32",
-							"owner": {
-								"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
-								"value": 1
-							}
-						},
-						{
-							"id": "d9b01b3a-ec04-4711-a02b-7f9e232a05b1",
-							"label": "Vector",
-							"type": "vec2f",
-							"owner": {
-								"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
-								"value": 2
-							}
-						},
-						{
-							"id": "80b2fe3b-3b7a-4e41-8332-5e3c747bef5a",
-							"label": "Vector",
-							"type": "vec3f",
-							"owner": {
-								"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
-								"value": 3
-							}
-						},
-						{
-							"id": "16db8dc0-2749-4165-b9e0-74f70fd7b41a",
-							"label": "Vector",
-							"type": "vec4f",
-							"owner": {
-								"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
-								"value": 4
-							}
-						},
-						{
-							"id": "1b9e5dd5-9a6b-4e21-bd59-e90e3410cfe7",
-							"label": "Scale",
-							"type": "f32"
-						},
-						{
-							"id": "98c2c612-18f1-4710-9f2c-717dd0c60243",
-							"label": "Randomness",
-							"type": "f32",
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "8e56eb3b-e58b-4dc9-bc6a-9d5c502eae46",
-							"label": "Smoothness",
-							"type": "f32",
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "6642321a-1046-4f5c-85e9-3a5a66a1608b",
-							"label": "Metric",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 0,
-									"label": "Euclidean"
-								},
-								{
-									"value": 1,
-									"label": "Manhattan"
-								},
-								{
-									"value": 2,
-									"label": "Chebyshev"
-								},
-								{
-									"value": 3,
-									"label": "Minkowski"
-								}
-							]
-						},
-						{
-							"id": "226d802b-ab41-4eca-bdf6-54ecd518e455",
-							"label": "Exponent",
-							"type": "f32",
-							"owner": {
-								"enumId": "6642321a-1046-4f5c-85e9-3a5a66a1608b",
-								"value": 3
-							},
-							"min": 0,
-							"max": 32
-						},
-						{
-							"id": "e1d7cf33-7332-460e-9d70-423124c97d5b",
-							"label": "Seed",
-							"type": "i32"
-						}
-					],
-					"values": {
-						"d0967e38-ae60-4927-b2db-dcecb63ad1b9": 2,
-						"1b9e5dd5-9a6b-4e21-bd59-e90e3410cfe7": 5,
-						"98c2c612-18f1-4710-9f2c-717dd0c60243": 1,
-						"8e56eb3b-e58b-4dc9-bc6a-9d5c502eae46": 1,
-						"6642321a-1046-4f5c-85e9-3a5a66a1608b": 0,
-						"226d802b-ab41-4eca-bdf6-54ecd518e455": 0.5,
-						"e1d7cf33-7332-460e-9d70-423124c97d5b": 0
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 4631
@@ -156,75 +27,7 @@
 			{
 				"id": "96939af9-eb84-40dd-8348-7886152031fa",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "68d63316-390f-430b-a664-d0dfdeacb576",
-							"label": "Distance",
-							"type": "f32"
-						},
-						{
-							"id": "d3662c11-9f2a-4eeb-93dd-6b16d74a85af",
-							"label": "Color",
-							"type": "vec3f"
-						},
-						{
-							"id": "77a6b4a7-4eb6-47ac-ae53-d5a00d604cb6",
-							"label": "Position",
-							"type": "vec4f"
-						},
-						{
-							"id": "b4a6c7c3-1bed-4e0e-8dad-2b1e0f1cb7a4",
-							"label": "Cell",
-							"type": "vec4f"
-						},
-						{
-							"id": "b2b839db-21f1-4e32-a6cd-fca66c920fe3",
-							"label": "F2 Distance",
-							"type": "f32"
-						},
-						{
-							"id": "aa897501-e2bb-49ab-99c1-82180b60dc8f",
-							"label": "F2 Color",
-							"type": "vec3f"
-						},
-						{
-							"id": "bca84cd2-a5fb-4a3c-87d1-fc4cce86ede2",
-							"label": "F2 Position",
-							"type": "vec4f"
-						},
-						{
-							"id": "a91d7bc3-1a8b-4a6a-a76b-d0624abd3d6c",
-							"label": "Smooth Distance",
-							"type": "f32"
-						},
-						{
-							"id": "6c503001-b43d-4f92-b3bf-706d9cdbc89d",
-							"label": "Smooth Color",
-							"type": "vec3f"
-						},
-						{
-							"id": "2179ab1c-85c3-4c3b-81a1-0b3b3eb2ead0",
-							"label": "Smooth Position",
-							"type": "vec4f"
-						},
-						{
-							"id": "602a6d44-2016-4eaf-a813-20022ff3e543",
-							"label": "Distance to Edge",
-							"type": "f32"
-						},
-						{
-							"id": "2698aae2-a176-4bf6-84a2-990faa7f6a80",
-							"label": "F2 Distance to Edge",
-							"type": "f32"
-						},
-						{
-							"id": "90397f74-6541-4d70-931f-13dde18bd4e1",
-							"label": "Radius",
-							"type": "f32"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 11325,
 					"y": 598
@@ -239,7 +42,7 @@
 					"y": 4561
 				},
 				"group": {
-					"definitionRef": "std-noise-coordinates@0ce00dc844ae9e",
+					"definitionRef": "std-noise-coordinates@144ff9922ad8e8",
 					"locked": true
 				}
 			},
@@ -355,7 +158,7 @@
 					"y": 5899
 				},
 				"group": {
-					"definitionRef": "std-dimension-mask@0acfbe5f0d377e",
+					"definitionRef": "std-dimension-mask@1dfb9036300c90",
 					"locked": true
 				}
 			},
@@ -372,7 +175,7 @@
 					"y": 1873
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -450,7 +253,7 @@
 					"y": 3257
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -463,7 +266,7 @@
 					"y": 2547
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0d8c27d851dfca",
+					"definitionRef": "std-voronoi-point@0a57f1f215dd94",
 					"locked": true
 				}
 			},
@@ -476,7 +279,7 @@
 					"y": 1452
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0a97cd0eff146e",
+					"definitionRef": "std-voronoi-distance@056024b800e85c",
 					"locked": true
 				}
 			},
@@ -605,7 +408,7 @@
 					"y": 528
 				},
 				"group": {
-					"definitionRef": "std-hash@1547f98ac887b6",
+					"definitionRef": "std-hash@173fe967101a4d",
 					"locked": true
 				}
 			},
@@ -658,7 +461,7 @@
 					"y": 6099
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -712,7 +515,7 @@
 					"y": 6187
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -725,7 +528,7 @@
 					"y": 6247
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0d8c27d851dfca",
+					"definitionRef": "std-voronoi-point@0a57f1f215dd94",
 					"locked": true
 				}
 			},
@@ -983,7 +786,7 @@
 					"y": 7502
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -1033,7 +836,7 @@
 					"y": 7362
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -1080,7 +883,7 @@
 					"y": 7897
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0d8c27d851dfca",
+					"definitionRef": "std-voronoi-point@0a57f1f215dd94",
 					"locked": true
 				}
 			},
@@ -1159,7 +962,7 @@
 					"y": 4335
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -1219,7 +1022,7 @@
 					"y": 4684
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1bde4f63543504",
+					"definitionRef": "std-lattice-neighbor@0016ea85eb051f",
 					"locked": true
 				}
 			},
@@ -1232,7 +1035,7 @@
 					"y": 5390
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0d8c27d851dfca",
+					"definitionRef": "std-voronoi-point@0a57f1f215dd94",
 					"locked": true
 				}
 			},
@@ -1245,7 +1048,7 @@
 					"y": 4834
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0a97cd0eff146e",
+					"definitionRef": "std-voronoi-distance@056024b800e85c",
 					"locked": true
 				}
 			},
@@ -1489,7 +1292,7 @@
 					"y": 4662
 				},
 				"group": {
-					"definitionRef": "std-hash@1547f98ac887b6",
+					"definitionRef": "std-hash@173fe967101a4d",
 					"locked": true
 				}
 			},
@@ -1572,7 +1375,7 @@
 					"y": 212
 				},
 				"group": {
-					"definitionRef": "std-hash@1547f98ac887b6",
+					"definitionRef": "std-hash@173fe967101a4d",
 					"locked": true
 				}
 			},
@@ -3464,6 +3267,201 @@
 				"sourceHandle": "result",
 				"target": "96939af9-eb84-40dd-8348-7886152031fa",
 				"targetHandle": "90397f74-6541-4d70-931f-13dde18bd4e1"
+			}
+		],
+		"inputs": [
+			{
+				"id": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
+				"label": "Dimensions",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 1,
+						"label": "1D"
+					},
+					{
+						"value": 2,
+						"label": "2D"
+					},
+					{
+						"value": 3,
+						"label": "3D"
+					},
+					{
+						"value": 4,
+						"label": "4D"
+					}
+				]
+			},
+			{
+				"id": "095df742-6409-4621-bb07-2c937e289b2a",
+				"label": "W",
+				"type": "f32",
+				"owner": {
+					"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
+					"value": 1
+				}
+			},
+			{
+				"id": "d9b01b3a-ec04-4711-a02b-7f9e232a05b1",
+				"label": "Vector",
+				"type": "vec2f",
+				"owner": {
+					"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
+					"value": 2
+				}
+			},
+			{
+				"id": "80b2fe3b-3b7a-4e41-8332-5e3c747bef5a",
+				"label": "Vector",
+				"type": "vec3f",
+				"owner": {
+					"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
+					"value": 3
+				}
+			},
+			{
+				"id": "16db8dc0-2749-4165-b9e0-74f70fd7b41a",
+				"label": "Vector",
+				"type": "vec4f",
+				"owner": {
+					"enumId": "d0967e38-ae60-4927-b2db-dcecb63ad1b9",
+					"value": 4
+				}
+			},
+			{
+				"id": "1b9e5dd5-9a6b-4e21-bd59-e90e3410cfe7",
+				"label": "Scale",
+				"type": "f32"
+			},
+			{
+				"id": "98c2c612-18f1-4710-9f2c-717dd0c60243",
+				"label": "Randomness",
+				"type": "f32",
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "8e56eb3b-e58b-4dc9-bc6a-9d5c502eae46",
+				"label": "Smoothness",
+				"type": "f32",
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "6642321a-1046-4f5c-85e9-3a5a66a1608b",
+				"label": "Metric",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 0,
+						"label": "Euclidean"
+					},
+					{
+						"value": 1,
+						"label": "Manhattan"
+					},
+					{
+						"value": 2,
+						"label": "Chebyshev"
+					},
+					{
+						"value": 3,
+						"label": "Minkowski"
+					}
+				]
+			},
+			{
+				"id": "226d802b-ab41-4eca-bdf6-54ecd518e455",
+				"label": "Exponent",
+				"type": "f32",
+				"owner": {
+					"enumId": "6642321a-1046-4f5c-85e9-3a5a66a1608b",
+					"value": 3
+				},
+				"min": 0,
+				"max": 32
+			},
+			{
+				"id": "e1d7cf33-7332-460e-9d70-423124c97d5b",
+				"label": "Seed",
+				"type": "i32"
+			}
+		],
+		"defaults": {
+			"d0967e38-ae60-4927-b2db-dcecb63ad1b9": 2,
+			"1b9e5dd5-9a6b-4e21-bd59-e90e3410cfe7": 5,
+			"98c2c612-18f1-4710-9f2c-717dd0c60243": 1,
+			"8e56eb3b-e58b-4dc9-bc6a-9d5c502eae46": 1,
+			"6642321a-1046-4f5c-85e9-3a5a66a1608b": 0,
+			"226d802b-ab41-4eca-bdf6-54ecd518e455": 0.5,
+			"e1d7cf33-7332-460e-9d70-423124c97d5b": 0
+		},
+		"outputs": [
+			{
+				"id": "68d63316-390f-430b-a664-d0dfdeacb576",
+				"label": "Distance",
+				"type": "f32"
+			},
+			{
+				"id": "d3662c11-9f2a-4eeb-93dd-6b16d74a85af",
+				"label": "Color",
+				"type": "vec3f"
+			},
+			{
+				"id": "77a6b4a7-4eb6-47ac-ae53-d5a00d604cb6",
+				"label": "Position",
+				"type": "vec4f"
+			},
+			{
+				"id": "b4a6c7c3-1bed-4e0e-8dad-2b1e0f1cb7a4",
+				"label": "Cell",
+				"type": "vec4f"
+			},
+			{
+				"id": "b2b839db-21f1-4e32-a6cd-fca66c920fe3",
+				"label": "F2 Distance",
+				"type": "f32"
+			},
+			{
+				"id": "aa897501-e2bb-49ab-99c1-82180b60dc8f",
+				"label": "F2 Color",
+				"type": "vec3f"
+			},
+			{
+				"id": "bca84cd2-a5fb-4a3c-87d1-fc4cce86ede2",
+				"label": "F2 Position",
+				"type": "vec4f"
+			},
+			{
+				"id": "a91d7bc3-1a8b-4a6a-a76b-d0624abd3d6c",
+				"label": "Smooth Distance",
+				"type": "f32"
+			},
+			{
+				"id": "6c503001-b43d-4f92-b3bf-706d9cdbc89d",
+				"label": "Smooth Color",
+				"type": "vec3f"
+			},
+			{
+				"id": "2179ab1c-85c3-4c3b-81a1-0b3b3eb2ead0",
+				"label": "Smooth Position",
+				"type": "vec4f"
+			},
+			{
+				"id": "602a6d44-2016-4eaf-a813-20022ff3e543",
+				"label": "Distance to Edge",
+				"type": "f32"
+			},
+			{
+				"id": "2698aae2-a176-4bf6-84a2-990faa7f6a80",
+				"label": "F2 Distance to Edge",
+				"type": "f32"
+			},
+			{
+				"id": "90397f74-6541-4d70-931f-13dde18bd4e1",
+				"label": "Radius",
+				"type": "f32"
 			}
 		]
 	}

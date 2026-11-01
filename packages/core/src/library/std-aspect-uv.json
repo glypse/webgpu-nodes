@@ -9,34 +9,7 @@
 			{
 				"id": "e69d45fb-e792-400b-bda9-66f12708f22d",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "dd28d166-7063-4f62-948e-d789d2d72ee9",
-							"label": "Coordinates",
-							"type": "vec2f"
-						},
-						{
-							"id": "b7e3e56c-c83d-4048-83f0-fe500a970344",
-							"label": "Mode",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 0,
-									"label": "Contain (Fit)"
-								},
-								{
-									"value": 1,
-									"label": "Cover (Fill)"
-								},
-								{
-									"value": 2,
-									"label": "Stretch"
-								}
-							]
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 1883,
 					"y": 129
@@ -45,15 +18,7 @@
 			{
 				"id": "66350082-71ab-4510-a7ab-6f9d09d16b10",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "6d21b187-e48e-4cdd-91e3-c41a9abe3fe5",
-							"label": "Coordinates",
-							"type": "vec2f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 2684,
 					"y": 49
@@ -131,7 +96,7 @@
 				"type": "declare",
 				"data": {
 					"values": {
-						"x": 0.000001
+						"x": 1e-6
 					}
 				},
 				"position": {
@@ -454,6 +419,39 @@
 				"sourceHandle": "result",
 				"target": "66350082-71ab-4510-a7ab-6f9d09d16b10",
 				"targetHandle": "6d21b187-e48e-4cdd-91e3-c41a9abe3fe5"
+			}
+		],
+		"inputs": [
+			{
+				"id": "dd28d166-7063-4f62-948e-d789d2d72ee9",
+				"label": "Coordinates",
+				"type": "vec2f"
+			},
+			{
+				"id": "b7e3e56c-c83d-4048-83f0-fe500a970344",
+				"label": "Mode",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 0,
+						"label": "Contain (Fit)"
+					},
+					{
+						"value": 1,
+						"label": "Cover (Fill)"
+					},
+					{
+						"value": 2,
+						"label": "Stretch"
+					}
+				]
+			}
+		],
+		"outputs": [
+			{
+				"id": "6d21b187-e48e-4cdd-91e3-c41a9abe3fe5",
+				"label": "Coordinates",
+				"type": "vec2f"
 			}
 		]
 	}

@@ -39,7 +39,9 @@ import {
 	computeSelectionBounds,
 	deduplicateBySource,
 	groupRefsOf,
-	handlesOf,
+	interfaceOf,
+	sideOf,
+	type GroupSide,
 	rewireIncomingGroup,
 	rewireOutgoingGroup,
 } from "./editing";
@@ -357,6 +359,8 @@ export abstract class GroupModel extends ZoneModel {
 			],
 			edges: [...internal, ...allInnerEdges],
 			label: this.nextGroupLabel(),
+			inputs: groupInputNode.handles,
+			outputs: groupOutputNode.handles,
 		};
 
 		this.setDefinitions([[definitionRef, this.hydrate(definition)]]);
@@ -461,8 +465,6 @@ export abstract class GroupModel extends ZoneModel {
 		const def = this.project.definitions.get(groupNode.group.definitionRef);
 		if (!def) return [];
 
-		const inputNode = def.nodes.find((n) => n.type === "group-input");
-		const outputNode = def.nodes.find((n) => n.type === "group-output");
 		const innerNodes = def.nodes.filter((n) => !BOUNDARY_TYPES.has(n.type ?? ""));
 
 		// Re-center the inner nodes on the group node.
@@ -487,7 +489,7 @@ export abstract class GroupModel extends ZoneModel {
 
 		// group-input handle -> inner target. Splice: outer source -> inner target.
 		for (const innerEdge of def.edges) {
-			if (innerEdge.source !== inputNode?.id) continue;
+			if (sideOf(def.nodesById.get(innerEdge.source)) !== "input") continue;
 			const feed = incomingOuter.find((e) => e.targetHandle === innerEdge.sourceHandle);
 			if (!feed) continue; // handle not wired from outside - drop
 			boundaryEdges.push({
@@ -501,7 +503,7 @@ export abstract class GroupModel extends ZoneModel {
 
 		// inner source -> group-output handle. Splice: inner source -> outer target(s).
 		for (const innerEdge of def.edges) {
-			if (innerEdge.target !== outputNode?.id) continue;
+			if (sideOf(def.nodesById.get(innerEdge.target)) !== "output") continue;
 			const consumers = outgoingOuter.filter(
 				(e) => e.sourceHandle === innerEdge.targetHandle,
 			);
@@ -569,6 +571,9 @@ export abstract class GroupModel extends ZoneModel {
 					edges: clone.edges,
 					label: this.uniqueCopyLabel(sourceDef.label),
 					typeVariables: structuredClone(sourceDef.typeVariables),
+					inputs: structuredClone(sourceDef.inputs),
+					outputs: structuredClone(sourceDef.outputs),
+					defaults: structuredClone(sourceDef.defaults),
 				}),
 			],
 		]);
@@ -659,13 +664,13 @@ export abstract class GroupModel extends ZoneModel {
 				{
 					id: inputNodeId,
 					type: "group-input",
-					data: { handles: [inputHandle] },
+					data: {},
 					position: { x: -200, y: 0 },
 				},
 				{
 					id: outputNodeId,
 					type: "group-output",
-					data: { handles: [outputHandle] },
+					data: {},
 					position: { x: 200, y: 0 },
 				},
 			],
@@ -679,6 +684,8 @@ export abstract class GroupModel extends ZoneModel {
 				},
 			],
 			label: this.nextGroupLabel(),
+			inputs: [inputHandle],
+			outputs: [outputHandle],
 		};
 
 		this.setDefinitions([[definitionRef, this.hydrate(definition)]]);
@@ -810,41 +817,33 @@ export abstract class GroupModel extends ZoneModel {
 		return removed;
 	}
 
-	/** Update the label of a handle on a group-input or group-output node inside a definition.
-	 *  Rejects the change if another handle on the same boundary node already has that label.
-	 *  Returns true if the label was updated, false if rejected. */
+	/**
+	 * Rename an input or output of a group. Rejected (returning false) when
+	 * another of the same side has that label, unless the two are never shown
+	 * together (inputs of different variants).
+	 */
 	setHandleLabel(
 		definitionRef: string,
-		handleNodeId: string,
+		side: GroupSide,
 		handleId: string,
 		label: string,
 	): boolean {
 		const def = this.project.definitions.get(definitionRef);
-		if (!def) return false;
-		const handleNode = def.nodesById.get(handleNodeId);
-		if (!handleNode) return false;
-		const handles = handleNode.data.handles;
-		if (!handles) return false;
+		const handles = interfaceOf(def, side);
 		const handle = handles.find((h) => h.id === handleId);
-		if (!handle) return false;
-
 		const trimmed = label.trim();
-		if (!trimmed) return false;
+		if (!def || !handle || !trimmed) return false;
 
 		// Two inputs shown on the same group node can't share a label.
-		const apart = (h: GroupHandleDef) =>
-			handleNode.type === "group-input" && shownApart(handles, handle, h);
+		const apart = (h: GroupHandleDef) => side === "input" && shownApart(handles, handle, h);
 		if (handles.some((h) => h.id !== handleId && h.label === trimmed && !apart(h))) {
 			return false;
 		}
-
-		const data = {
-			...handleNode.data,
-			handles: handles.map((h) => (h.id === handleId ? { ...h, label: trimmed } : h)),
-		};
-		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
-		});
+		this.setInterface(
+			def,
+			side,
+			handles.map((h) => (h.id === handleId ? { ...h, label: trimmed } : h)),
+		);
 		return true;
 	}
 
@@ -862,18 +861,14 @@ export abstract class GroupModel extends ZoneModel {
 		const node = this.resolveNode(nodeId);
 		if (!node) return { inputs, outputs };
 
-		if (node.type === "group-input") {
-			for (const h of handlesOf(node)) outputs[h.id] = h.label;
-		} else if (node.type === "group-output") {
-			for (const h of handlesOf(node)) inputs[h.id] = h.label;
+		const side = sideOf(node);
+		if (side) {
+			const labels = side === "input" ? outputs : inputs;
+			for (const h of interfaceOf(this.documentOf(nodeId), side)) labels[h.id] = h.label;
 		} else if (node.type === "node-group" && node.group) {
 			const def = this.project.definitions.get(node.group.definitionRef);
-			if (def) {
-				const inputNode = def.nodes.find((n) => n.type === "group-input");
-				const outputNode = def.nodes.find((n) => n.type === "group-output");
-				for (const h of handlesOf(inputNode)) inputs[h.id] = h.label;
-				for (const h of handlesOf(outputNode)) outputs[h.id] = h.label;
-			}
+			for (const h of def?.inputs ?? []) inputs[h.id] = h.label;
+			for (const h of def?.outputs ?? []) outputs[h.id] = h.label;
 		}
 
 		return { inputs, outputs };
@@ -897,27 +892,26 @@ export abstract class GroupModel extends ZoneModel {
 		const def = node?.group && this.project.definitions.get(node.group.definitionRef);
 		const doc = this.documentOf(nodeId);
 		if (node?.type !== "node-group" || !def || !doc) return new Set();
-		const input = def.nodes.find((n) => n.type === "group-input");
-		return hiddenByVariant(handlesOf(input), this.instanceEnumValues(node));
+		return hiddenByVariant(def.inputs, this.instanceEnumValues(node));
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
 
 	/**
-	 * Add a handle to a group-input / group-output node, in any document. A
-	 * group input can be an enum (`variants`), or belong to a variant
-	 * (`owner`): it then comes after the inputs already under that enum.
+	 * Add an input or output to a group. An input can be an enum
+	 * (`variants`), or belong to a variant (`owner`): it then comes after the
+	 * inputs already under that enum.
 	 */
 	addHandle(
-		nodeId: string,
+		definitionRef: string,
+		side: GroupSide,
 		type: SocketType,
 		{ variants, owner }: { variants?: EnumVariant[]; owner?: InputOwner } = {},
 	): GroupHandleDef | undefined {
-		const doc = this.documentOf(nodeId);
-		const node = doc?.nodesById.get(nodeId);
-		if (!doc || !node || !BOUNDARY_TYPES.has(node.type ?? "")) return undefined;
-		const handles = handlesOf(node);
-		const isInput = node.type === "group-input";
+		const def = this.project.definitions.get(definitionRef);
+		if (!def || definitionRef === ROOT_ID) return undefined;
+		const handles = interfaceOf(def, side);
+		const isInput = side === "input";
 		const prefix = variants ? "Enum" : isInput ? "Input" : "Output";
 		const labels = new Set(handles.map((h) => h.label));
 		let n = 1;
@@ -939,38 +933,44 @@ export abstract class GroupModel extends ZoneModel {
 			);
 			at = last + 1;
 		}
-		const data = { ...node.data, handles: handles.toSpliced(at, 0, handle) };
-		this.setContent(doc, {
-			nodes: doc.nodes.map((other) => (other.id === nodeId ? { ...other, data } : other)),
-		});
+		this.setInterface(def, side, handles.toSpliced(at, 0, handle));
 		this.rebuildTypeCache();
 		return handle;
 	}
 
-	/** Edit a vec3f / vec4f group input as a colour, or as numbers with `undefined`. */
-	setHandleDisplay(
+	/** Add an input or output to the group a boundary node is in (see `addHandle`). */
+	addBoundaryHandle(nodeId: string, type: SocketType): GroupHandleDef | undefined {
+		const side = sideOf(this.resolveNode(nodeId));
+		const ref = this.definitionRefOf(nodeId);
+		return side && ref ? this.addHandle(ref, side, type) : undefined;
+	}
+
+	/** Replace one input or output of a group through `update`. */
+	private updateHandle(
 		definitionRef: string,
-		handleNodeId: string,
+		side: GroupSide,
 		handleId: string,
-		display: ColorDisplay | undefined,
-	) {
+		update: (handle: GroupHandleDef) => GroupHandleDef,
+	): boolean {
 		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		const handles = handleNode?.data.handles;
-		if (!def || handleNode?.type !== "group-input" || !handles) return;
-		const data = {
-			...handleNode.data,
-			handles: handles.map((h) => {
-				if (h.id !== handleId) return h;
-				const rest = { ...h };
-				delete rest.display;
-				return display ? { ...rest, display } : rest;
-			}),
-		};
-		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		const handles = interfaceOf(def, side);
+		if (!def || !handles.some((h) => h.id === handleId)) return false;
+		this.setInterface(
+			def,
+			side,
+			handles.map((h) => (h.id === handleId ? update(h) : h)),
+		);
+		return true;
+	}
+
+	/** Edit a vec3f / vec4f group input as a colour, or as numbers with `undefined`. */
+	setHandleDisplay(definitionRef: string, handleId: string, display: ColorDisplay | undefined) {
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			const rest = { ...h };
+			delete rest.display;
+			return display ? { ...rest, display } : rest;
 		});
-		this.rebuildTypeCache();
+		if (changed) this.rebuildTypeCache();
 	}
 
 	/**
@@ -979,69 +979,41 @@ export abstract class GroupModel extends ZoneModel {
 	 */
 	setHandleRange(
 		definitionRef: string,
-		handleNodeId: string,
 		handleId: string,
 		{ min, max }: { min?: number | undefined; max?: number | undefined },
 	) {
-		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		const handles = handleNode?.data.handles;
-		if (!def || handleNode?.type !== "group-input" || !handles) return;
-		const data = {
-			...handleNode.data,
-			handles: handles.map((h) => {
-				if (h.id !== handleId) return h;
-				const rest = { ...h };
-				delete rest.min;
-				delete rest.max;
-				return {
-					...rest,
-					...(min === undefined ? {} : { min }),
-					...(max === undefined ? {} : { max }),
-				};
-			}),
-		};
-		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			const rest = { ...h };
+			delete rest.min;
+			delete rest.max;
+			return {
+				...rest,
+				...(min === undefined ? {} : { min }),
+				...(max === undefined ? {} : { max }),
+			};
 		});
-		this.rebuildTypeCache();
+		if (changed) this.rebuildTypeCache();
 	}
 
 	/**
 	 * Set the value a group input has on group nodes until they're edited
 	 * (`undefined` goes back to zero, or an enum's first variant).
 	 */
-	setHandleDefault(
-		definitionRef: string,
-		handleNodeId: string,
-		handleId: string,
-		value: InputValue | undefined,
-	) {
+	setHandleDefault(definitionRef: string, handleId: string, value: InputValue | undefined) {
 		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		if (!def || handleNode?.type !== "group-input") return;
-		const data = {
-			...handleNode.data,
-			values: withEntry(handleNode.data.values, handleId, value),
-		};
-		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
-		});
+		if (!def) return;
+		def.defaults = withEntry(def.defaults, handleId, value) ?? {};
 	}
 
 	/**
-	 * Change the type of a handle on a group-input / group-output node. Links
-	 * that no longer fit (inside the definition, and on every instance of the
-	 * group) are removed.
+	 * Change the type of a group's input or output. Links that no longer fit
+	 * (inside the definition, and on every instance of the group) are removed.
 	 */
-	setHandleType(definitionRef: string, handleNodeId: string, handleId: string, type: SocketType) {
+	setHandleType(definitionRef: string, side: GroupSide, handleId: string, type: SocketType) {
 		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		const handles = handleNode?.data.handles;
-		if (!def || !handleNode || !handles?.some((h) => h.id === handleId)) return;
-		if (handleNode.type === "group-input" && typeof type === "object" && "inferred" in type) {
-			return;
-		}
+		const handles = interfaceOf(def, side);
+		if (!def || !handles.some((h) => h.id === handleId)) return;
+		if (side === "input" && typeof type === "object" && "inferred" in type) return;
 
 		// Only a u32 can be an enum; the inputs of a former enum's variants
 		// take its place.
@@ -1058,12 +1030,11 @@ export abstract class GroupModel extends ZoneModel {
 			delete next.owner;
 			return enumOwner ? { ...next, owner: enumOwner } : next;
 		};
-		const data = {
-			...handleNode.data,
-			handles: handles.map((h) => (h.id === handleId ? retyped(h) : promoted(h))),
-		};
-		def.nodes = def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n));
-		indexDocument(def);
+		this.setInterface(
+			def,
+			side,
+			handles.map((h) => (h.id === handleId ? retyped(h) : promoted(h))),
+		);
 		this.rebuildTypeCache();
 		this.dropUnfitLinks(definitionRef, new Set([handleId]));
 	}
@@ -1125,12 +1096,13 @@ export abstract class GroupModel extends ZoneModel {
 		if (!def || !variable) return;
 		const fixed = variable.types[0] ?? "f32";
 		const ids = this.handlesOfVariable(def, variableId);
-		def.nodes = def.nodes.map((n) => {
-			if (!BOUNDARY_TYPES.has(n.type ?? "")) return n;
-			const handles = handlesOf(n).map((h) => (ids.has(h.id) ? { ...h, type: fixed } : h));
-			return { ...n, data: { ...n.data, handles } };
-		});
-		indexDocument(def);
+		for (const side of ["input", "output"] as const) {
+			this.setInterface(
+				def,
+				side,
+				interfaceOf(def, side).map((h) => (ids.has(h.id) ? { ...h, type: fixed } : h)),
+			);
+		}
 		def.typeVariables = def.typeVariables.filter((v) => v.id !== variableId);
 		this.forEachInstance(definitionRef, (node) =>
 			node.data.types?.[variableId]
@@ -1178,9 +1150,8 @@ export abstract class GroupModel extends ZoneModel {
 			lookup,
 			bindings,
 		);
-		const inputs = def.nodes.find((n) => n.type === "group-input");
 		return def.typeVariables.map((variable) => {
-			const inferable = handlesOf(inputs).some(
+			const inferable = def.inputs.some(
 				(h) =>
 					typeof h.type === "object" &&
 					"variable" in h.type &&
@@ -1204,12 +1175,10 @@ export abstract class GroupModel extends ZoneModel {
 		this.updateNodeData(nodeId, { types: withEntry(node.data.types, variableId, type) });
 	}
 
-	/** The handles of a definition's boundary nodes typed by a variable. */
+	/** The inputs and outputs of a group typed by a variable. */
 	private handlesOfVariable(def: HydratedGraphDocument, variableId: string): Set<string> {
 		return new Set(
-			def.nodes
-				.filter((n) => BOUNDARY_TYPES.has(n.type ?? ""))
-				.flatMap(handlesOf)
+			[...def.inputs, ...def.outputs]
 				.filter(
 					(h) =>
 						typeof h.type === "object" &&
@@ -1280,27 +1249,17 @@ export abstract class GroupModel extends ZoneModel {
 	 */
 	setHandleVariants(
 		definitionRef: string,
-		handleNodeId: string,
 		handleId: string,
 		variants: EnumVariant[] | undefined,
 	) {
-		if (variants) this.setHandleType(definitionRef, handleNodeId, handleId, "u32");
-		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		const handles = handleNode?.data.handles;
-		if (!def || handleNode?.type !== "group-input" || !handles) return;
-		const data = {
-			...handleNode.data,
-			handles: handles.map((h) => {
-				if (h.id !== handleId) return h;
-				const rest = { ...h };
-				delete rest.variants;
-				return variants ? { ...rest, variants } : rest;
-			}),
-		};
-		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
+		if (variants) this.setHandleType(definitionRef, "input", handleId, "u32");
+		const handles = this.project.definitions.get(definitionRef)?.inputs ?? [];
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			const rest = { ...h };
+			delete rest.variants;
+			return variants ? { ...rest, variants } : rest;
 		});
+		if (!changed) return;
 		this.rebuildTypeCache();
 
 		// The inputs of removed variants go with them.
@@ -1310,45 +1269,45 @@ export abstract class GroupModel extends ZoneModel {
 		);
 		this.removeHandles(
 			definitionRef,
-			handleNodeId,
+			"input",
 			orphans.map((h) => h.id),
 		);
 	}
 
 	/**
-	 * Remove a handle from a group-input/group-output node and delete all
-	 * connected edges. Removing an enum removes its variants' inputs too.
+	 * Remove an input or output of a group, with its links. Removing an enum
+	 * removes its variants' inputs too.
 	 */
-	removeHandle(definitionRef: string, handleNodeId: string, handleId: string) {
-		const handles = this.project.definitions.get(definitionRef)?.nodesById.get(handleNodeId)
-			?.data.handles;
-		if (!handles?.some((h) => h.id === handleId)) return;
+	removeHandle(definitionRef: string, side: GroupSide, handleId: string) {
+		const handles = interfaceOf(this.project.definitions.get(definitionRef), side);
+		if (!handles.some((h) => h.id === handleId)) return;
 		const under = handles.filter((h) => isUnder(handles, h, { enumId: handleId }));
-		this.removeHandles(definitionRef, handleNodeId, [handleId, ...under.map((h) => h.id)]);
+		this.removeHandles(definitionRef, side, [handleId, ...under.map((h) => h.id)]);
 	}
 
-	protected removeHandles(definitionRef: string, handleNodeId: string, ids: readonly string[]) {
+	protected removeHandles(definitionRef: string, side: GroupSide, ids: readonly string[]) {
 		const def = this.project.definitions.get(definitionRef);
-		const handleNode = def?.nodesById.get(handleNodeId);
-		if (!def || !handleNode || ids.length === 0) return;
+		if (!def || ids.length === 0) return;
 		const removed = new Set(ids);
-		const values = Object.entries(handleNode.data.values ?? {}).filter(
-			([id]) => !removed.has(id),
+		this.setInterface(
+			def,
+			side,
+			interfaceOf(def, side).filter((h) => !removed.has(h.id)),
 		);
-		const data = {
-			...handleNode.data,
-			handles: handlesOf(handleNode).filter((h) => !removed.has(h.id)),
-			values: values.length > 0 ? Object.fromEntries(values) : undefined,
-		};
+		if (side === "input") {
+			def.defaults = Object.fromEntries(
+				Object.entries(def.defaults).filter(([id]) => !removed.has(id)),
+			);
+		}
 
-		// Remove all internal edges connected to these handles on this node
+		// The links to them on every boundary node of that side.
+		const boundary = (id: string) => sideOf(def.nodesById.get(id)) === side;
 		this.setContent(def, {
-			nodes: def.nodes.map((n) => (n.id === handleNodeId ? { ...n, data } : n)),
 			edges: def.edges.filter(
 				(e) =>
 					!(
-						(e.source === handleNodeId && removed.has(e.sourceHandle)) ||
-						(e.target === handleNodeId && removed.has(e.targetHandle))
+						(boundary(e.source) && removed.has(e.sourceHandle)) ||
+						(boundary(e.target) && removed.has(e.targetHandle))
 					),
 			),
 		});

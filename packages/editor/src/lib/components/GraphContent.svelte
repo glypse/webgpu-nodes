@@ -346,6 +346,12 @@
 			graph.removeFromFrame(view.selectedNodeIds);
 			return;
 		}
+		// Ctrl even on a Mac, where Cmd+H hides the app.
+		if (key === "h" && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
+			event.preventDefault();
+			graph.toggleUnlinkedSockets(view.selectedNodeIds);
+			return;
+		}
 		if (key === "r" && !mod && !event.altKey && !event.shiftKey) {
 			event.preventDefault();
 			graph.resetNodes(view.selectedNodeIds);

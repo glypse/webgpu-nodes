@@ -215,7 +215,11 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			computed: new Map(),
 			bindings: resolved.bindings ?? {},
 		};
-		const out = doc.nodes.find((n) => n.type === "group-output");
+		const outputs = doc.nodes.filter((n) => n.type === "group-output");
+		const out =
+			outputs.find((n) =>
+				doc.edgesByTarget.get(n.id)?.some((e) => e.targetHandle === handleId),
+			) ?? outputs[0];
 		if (!out) throw new Error("no group output");
 		return input(model, inner, out, handleId);
 	}

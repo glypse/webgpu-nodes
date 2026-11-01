@@ -10,9 +10,22 @@ import type {
 /** Node types delimiting a group's subgraph. */
 export const BOUNDARY_TYPES: ReadonlySet<string> = new Set(["group-input", "group-output"]);
 
-/** The handles declared on a group boundary node. */
-export function handlesOf(node: { data: NodeData } | undefined): GroupHandleDef[] {
-	return node?.data.handles ?? [];
+/** The side of a group's interface: its inputs, or its outputs. */
+export type GroupSide = "input" | "output";
+
+/** The side of a group's interface a boundary node shows, if it's one. */
+export function sideOf(node: { type?: string } | undefined): GroupSide | undefined {
+	if (node?.type === "group-input") return "input";
+	if (node?.type === "group-output") return "output";
+	return undefined;
+}
+
+/** A group's inputs or outputs. */
+export function interfaceOf(
+	doc: Pick<HydratedGraphDocument, "inputs" | "outputs"> | undefined,
+	side: GroupSide,
+): GroupHandleDef[] {
+	return (side === "input" ? doc?.inputs : doc?.outputs) ?? [];
 }
 
 /** Definitions referenced by the group nodes of a document. */
@@ -139,6 +152,7 @@ export function deduplicateBySource(edgesToGroup: GraphDocumentEdge[]): GraphDoc
 
 export type BoundaryBuildResult = {
 	node: GraphDocumentNode;
+	handles: GroupHandleDef[];
 	handleFor: Map<GraphDocumentEdge[], GroupHandleDef>;
 };
 
@@ -173,9 +187,10 @@ export function buildBoundaryNode(
 		node: {
 			id: crypto.randomUUID(),
 			type: nodeType,
-			data: { handles },
+			data: {},
 			position,
 		},
+		handles,
 		handleFor,
 	};
 }

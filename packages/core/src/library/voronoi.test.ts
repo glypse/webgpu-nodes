@@ -131,8 +131,7 @@ const VECTOR_LABELS = ["W", "Vector", "Vector", "Vector"];
 
 /** The id of the coordinates input of `dimensions` on a noise group. */
 function coordinatesInput(entry: typeof VORONOI, dimensions: number): string {
-	const node = entry.definition.nodes.find((n) => n.type === "group-input");
-	const handle = node?.data.handles?.find(
+	const handle = entry.definition.inputs?.find(
 		(h) => h.label === VECTOR_LABELS[dimensions - 1] && h.owner?.value === dimensions,
 	);
 	if (!handle) throw new Error(`no ${String(dimensions)}D coordinates`);

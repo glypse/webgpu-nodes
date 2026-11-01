@@ -11,36 +11,7 @@
 			{
 				"id": "796f492e-d386-4546-a205-8091270f35f9",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "7a1c809e-957c-41ac-bca8-4a6725f7bc97",
-							"label": "Dimensions",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 1,
-									"label": "1D"
-								},
-								{
-									"value": 2,
-									"label": "2D"
-								},
-								{
-									"value": 3,
-									"label": "3D"
-								},
-								{
-									"value": 4,
-									"label": "4D"
-								}
-							]
-						}
-					],
-					"values": {
-						"7a1c809e-957c-41ac-bca8-4a6725f7bc97": 2
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 64
@@ -49,15 +20,7 @@
 			{
 				"id": "64c21dfa-dc37-4199-890b-913a10629acd",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5",
-							"label": "Mask",
-							"type": "vec4f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 520,
 					"y": 32
@@ -117,6 +80,41 @@
 				"sourceHandle": "result",
 				"target": "64c21dfa-dc37-4199-890b-913a10629acd",
 				"targetHandle": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5"
+			}
+		],
+		"inputs": [
+			{
+				"id": "7a1c809e-957c-41ac-bca8-4a6725f7bc97",
+				"label": "Dimensions",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 1,
+						"label": "1D"
+					},
+					{
+						"value": 2,
+						"label": "2D"
+					},
+					{
+						"value": 3,
+						"label": "3D"
+					},
+					{
+						"value": 4,
+						"label": "4D"
+					}
+				]
+			}
+		],
+		"defaults": {
+			"7a1c809e-957c-41ac-bca8-4a6725f7bc97": 2
+		},
+		"outputs": [
+			{
+				"id": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5",
+				"label": "Mask",
+				"type": "vec4f"
 			}
 		]
 	}

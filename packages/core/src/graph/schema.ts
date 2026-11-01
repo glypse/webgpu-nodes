@@ -72,7 +72,6 @@ const NodeDataSchema = v.strictObject({
 	values: v.optional(v.record(v.string(), InputValueSchema)),
 	settings: v.optional(v.record(v.string(), v.string())),
 	types: v.optional(v.record(v.string(), v.picklist(WGSL_TYPES))),
-	handles: v.optional(v.array(GroupHandleSchema)),
 	items: v.optional(v.array(HandleSchema)),
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
@@ -84,6 +83,7 @@ const NodeDataSchema = v.strictObject({
 	note: v.optional(v.string()),
 	tint: v.optional(v.picklist(FRAME_TINTS)),
 	hideLinks: v.optional(v.boolean()),
+	hideUnlinked: v.optional(v.boolean()),
 });
 
 const GraphDocumentNodeSchema = v.object({
@@ -110,6 +110,9 @@ export const GraphDocumentSchema = v.object({
 	locked: v.optional(v.boolean()),
 	viewport: v.optional(ViewportSchema),
 	typeVariables: v.optional(v.array(TypeVariableSchema)),
+	inputs: v.optional(v.array(GroupHandleSchema)),
+	outputs: v.optional(v.array(GroupHandleSchema)),
+	defaults: v.optional(v.record(v.string(), InputValueSchema)),
 });
 
 export const GraphProjectSchema = v.object({

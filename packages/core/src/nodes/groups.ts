@@ -52,7 +52,7 @@ export function buildGroupInputDescriptor(
 			label: h.label,
 			type: defaultType(h, variables),
 		})),
-		defaultData: { handles: [] },
+		defaultData: {},
 		wgsl: () => {
 			throw new Error("unreachable");
 		},
@@ -70,7 +70,7 @@ export function buildGroupOutputDescriptor(
 		hidden: true,
 		inputs: handles.map((h) => ({ id: h.id, label: h.label, ...socketTypes(h, variables) })),
 		outputs: [],
-		defaultData: { handles: [] },
+		defaultData: {},
 		wgsl: () => {
 			throw new Error("unreachable");
 		},
@@ -126,19 +126,13 @@ export function buildGroupDescriptor(
 		};
 	}
 
-	const inputNode = definition.nodes.find((n) => n.type === "group-input");
-	const outputNode = definition.nodes.find((n) => n.type === "group-output");
 	const fallbacks = fallbackHandleIds(definition, definitions);
+	const handles = { inputs: definition.inputs, outputs: definition.outputs };
 
-	const handles = {
-		inputs: inputNode?.data.handles ?? [],
-		outputs: outputNode?.data.handles ?? [],
-	};
-
-	// The group input's values are what instances hold until they're edited.
+	// The group's defaults are what instances hold until they're edited.
 	const values: Record<string, InputValue> = {};
 	for (const h of handles.inputs) {
-		const stored = inputNode?.data.values?.[h.id];
+		const stored = definition.defaults[h.id];
 		const value = h.variants ? enumValue(stored, h.variants) : stored;
 		if (value !== undefined) values[h.id] = value;
 	}

@@ -11,41 +11,7 @@
 			{
 				"id": "3b6331b8-3129-4beb-afb5-45c89f8441cc",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "1c82359b-524f-4185-845a-56920e40928b",
-							"label": "Octave",
-							"type": "i32"
-						},
-						{
-							"id": "d3ac13af-dd5e-45f6-ae91-0f6c31962f3b",
-							"label": "Detail",
-							"type": "f32",
-							"min": 0,
-							"max": 15
-						},
-						{
-							"id": "0d6cef27-2f8a-43f7-9f42-7636d90aba45",
-							"label": "Roughness",
-							"type": "f32",
-							"min": 0,
-							"max": 1
-						},
-						{
-							"id": "e1f75a26-b7ec-4a67-99ed-d463c13bddd8",
-							"label": "Lacunarity",
-							"type": "f32",
-							"min": 0
-						}
-					],
-					"values": {
-						"1c82359b-524f-4185-845a-56920e40928b": 0,
-						"d3ac13af-dd5e-45f6-ae91-0f6c31962f3b": 0,
-						"0d6cef27-2f8a-43f7-9f42-7636d90aba45": 0.5,
-						"e1f75a26-b7ec-4a67-99ed-d463c13bddd8": 2
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 337
@@ -54,25 +20,7 @@
 			{
 				"id": "a2696f73-d8c5-4bc7-b5ea-0e33c4bf03cd",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "c839fe46-3203-4387-a6af-1ed4997d769e",
-							"label": "Scale",
-							"type": "f32"
-						},
-						{
-							"id": "864aff8d-c613-405b-a6fb-987c8eefe81e",
-							"label": "Amplitude",
-							"type": "f32"
-						},
-						{
-							"id": "d77337cd-d811-492c-90d2-5f00c8a35204",
-							"label": "Octaves",
-							"type": "i32"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 1642,
 					"y": 524
@@ -366,6 +314,56 @@
 				"sourceHandle": "result",
 				"target": "a2696f73-d8c5-4bc7-b5ea-0e33c4bf03cd",
 				"targetHandle": "d77337cd-d811-492c-90d2-5f00c8a35204"
+			}
+		],
+		"inputs": [
+			{
+				"id": "1c82359b-524f-4185-845a-56920e40928b",
+				"label": "Octave",
+				"type": "i32"
+			},
+			{
+				"id": "d3ac13af-dd5e-45f6-ae91-0f6c31962f3b",
+				"label": "Detail",
+				"type": "f32",
+				"min": 0,
+				"max": 15
+			},
+			{
+				"id": "0d6cef27-2f8a-43f7-9f42-7636d90aba45",
+				"label": "Roughness",
+				"type": "f32",
+				"min": 0,
+				"max": 1
+			},
+			{
+				"id": "e1f75a26-b7ec-4a67-99ed-d463c13bddd8",
+				"label": "Lacunarity",
+				"type": "f32",
+				"min": 0
+			}
+		],
+		"defaults": {
+			"1c82359b-524f-4185-845a-56920e40928b": 0,
+			"d3ac13af-dd5e-45f6-ae91-0f6c31962f3b": 0,
+			"0d6cef27-2f8a-43f7-9f42-7636d90aba45": 0.5,
+			"e1f75a26-b7ec-4a67-99ed-d463c13bddd8": 2
+		},
+		"outputs": [
+			{
+				"id": "c839fe46-3203-4387-a6af-1ed4997d769e",
+				"label": "Scale",
+				"type": "f32"
+			},
+			{
+				"id": "864aff8d-c613-405b-a6fb-987c8eefe81e",
+				"label": "Amplitude",
+				"type": "f32"
+			},
+			{
+				"id": "d77337cd-d811-492c-90d2-5f00c8a35204",
+				"label": "Octaves",
+				"type": "i32"
 			}
 		]
 	}

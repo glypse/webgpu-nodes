@@ -9,15 +9,7 @@
 			{
 				"id": "c3c59519-f2ad-46ba-a6b1-62d4579ccf2f",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "aa14649e-52cd-4d40-92d6-0d0087dea328",
-							"label": "XYZ",
-							"type": "vec3f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 513
@@ -26,15 +18,7 @@
 			{
 				"id": "bbef7488-7697-468d-ae54-2da1c0e4ee70",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "a9a23302-f04a-4f0c-b1c4-cdd8a110447b",
-							"label": "OKLab",
-							"type": "vec3f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 2159,
 					"y": 285
@@ -360,6 +344,20 @@
 				"sourceHandle": "value",
 				"target": "bbef7488-7697-468d-ae54-2da1c0e4ee70",
 				"targetHandle": "a9a23302-f04a-4f0c-b1c4-cdd8a110447b"
+			}
+		],
+		"inputs": [
+			{
+				"id": "aa14649e-52cd-4d40-92d6-0d0087dea328",
+				"label": "XYZ",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "a9a23302-f04a-4f0c-b1c4-cdd8a110447b",
+				"label": "OKLab",
+				"type": "vec3f"
 			}
 		]
 	}

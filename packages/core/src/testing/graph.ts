@@ -68,8 +68,8 @@ export function libraryHandle(
 	boundary: "group-input" | "group-output",
 	label: string,
 ): string {
-	const node = entry.definition.nodes.find((n) => n.type === boundary);
-	const handle = node?.data.handles?.find((h) => h.label === label);
+	const handles = boundary === "group-input" ? entry.definition.inputs : entry.definition.outputs;
+	const handle = handles?.find((h) => h.label === label);
 	if (!handle) throw new Error(`no ${boundary} handle "${label}" in "${entry.id}"`);
 	return handle.id;
 }

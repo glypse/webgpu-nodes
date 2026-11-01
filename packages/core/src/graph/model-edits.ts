@@ -7,7 +7,7 @@ import type {
 	GraphNode,
 	HydratedGraphDocument,
 } from "./document";
-import { cloneSubgraph } from "./editing";
+import { BOUNDARY_TYPES, cloneSubgraph } from "./editing";
 import { hydrateNode, serialiseEdge, serialiseNode } from "./hydrate";
 import { CustomWgslModel } from "./model-custom";
 
@@ -15,6 +15,8 @@ import { CustomWgslModel } from "./model-custom";
 export type NodeClipboard = {
 	nodes: GraphDocumentNode[];
 	edges: GraphDocumentEdge[];
+	/** The document they were copied from. */
+	from: string;
 };
 
 export type Connection = {
@@ -37,9 +39,8 @@ export abstract class EditModel extends CustomWgslModel {
 
 	/**
 	 * Copy nodes of the active document, frames with what they hold and a
-	 * zone's boundaries always together.
-	 * Nodes a document has exactly one of (its output, a group's boundaries)
-	 * are left out. Undefined when nothing can be copied.
+	 * zone's boundaries always together. The fragment output, which a
+	 * document has one of, is left out. Undefined when nothing can be copied.
 	 */
 	copyNodes(nodeIds: Iterable<string>): NodeClipboard | undefined {
 		const doc = this.activeDocument;
@@ -48,6 +49,7 @@ export abstract class EditModel extends CustomWgslModel {
 		if (nodes.length === 0) return undefined;
 		const kept = new Set(nodes.map((n) => n.id));
 		return {
+			from: this.activeDefinitionRef,
 			nodes: nodes.map((n) => structuredClone(serialiseNode(n))),
 			edges: doc.edges
 				.filter((e) => kept.has(e.source) && kept.has(e.target))
@@ -59,15 +61,20 @@ export abstract class EditModel extends CustomWgslModel {
 	 * Add copies of clipboard nodes to the active document, selected (and the
 	 * rest deselected), their top-left corner at `position` or where they were
 	 * copied from. Group nodes of a group that's gone, or that would contain
-	 * itself, are skipped. Returns the new ids.
+	 * itself, are skipped, and so are boundary nodes of another group.
+	 * Returns the new ids.
 	 */
 	pasteNodes(clipboard: NodeClipboard, position?: Point): string[] {
 		if (this.isLocked) return [];
+		// A group's boundary nodes show its own inputs and outputs: they're
+		// only pasted back into it.
+		const home = clipboard.from === this.activeDefinitionRef;
 		const nodes = clipboard.nodes.filter(
 			(n) =>
-				!n.group ||
-				(this.project.definitions.has(n.group.definitionRef) &&
-					!this.wouldCreateCycle(n.group.definitionRef)),
+				(home || !BOUNDARY_TYPES.has(n.type)) &&
+				(!n.group ||
+					(this.project.definitions.has(n.group.definitionRef) &&
+						!this.wouldCreateCycle(n.group.definitionRef))),
 		);
 		if (nodes.length === 0) return [];
 		const offset = position
@@ -248,6 +255,19 @@ export abstract class EditModel extends CustomWgslModel {
 		if (patches.size === 0) return;
 		this.patchNodeData(patches);
 		this.rebuildTypeCache();
+	}
+
+	/**
+	 * Show only the linked sockets of nodes, or all of them again when every
+	 * one of them already shows only those.
+	 */
+	toggleUnlinkedSockets(nodeIds: Iterable<string>) {
+		if (this.isLocked) return;
+		const nodes = [...nodeIds].flatMap((id) => this.activeDocument.nodesById.get(id) ?? []);
+		const hide = nodes.some((n) => n.data.hideUnlinked !== true);
+		this.patchNodeData(
+			new Map(nodes.map((n) => [n.id, { ...n.data, hideUnlinked: hide || undefined }])),
+		);
 	}
 
 	/** The label a node has unless the user gives it one. */

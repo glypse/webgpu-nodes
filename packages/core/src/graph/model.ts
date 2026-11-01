@@ -215,9 +215,12 @@ export class GraphModel extends PreviewModel {
 					(i) => i.id === connection.targetHandle,
 				)?.variadic === true
 			: false;
+		// A group's output is linked on one of its Group Output nodes at a time.
+		const output = targetNode?.type === "group-output";
 		const replaced = (e: GraphEdge) =>
-			e.target === connection.target &&
 			e.targetHandle === connection.targetHandle &&
+			(e.target === connection.target ||
+				(output && doc.nodesById.get(e.target)?.type === "group-output")) &&
 			(!variadic ||
 				(e.source === connection.source && e.sourceHandle === connection.sourceHandle));
 		const edge: GraphEdge = { id: crypto.randomUUID(), ...connection };
@@ -617,15 +620,22 @@ export class GraphModel extends PreviewModel {
 		const descriptor = this.resolveDescriptor(node);
 		const linked = new Set((doc.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle));
 		const hidden = this.hiddenInputs(node.id);
+		const linkedOut = new Set(
+			(doc.edgesBySource.get(node.id) ?? []).map((e) => e.sourceHandle),
+		);
+		const shown = (id: string, linkedTo: ReadonlySet<string>) =>
+			node.data.hideUnlinked !== true || linkedTo.has(id);
 		return {
 			header:
 				(descriptor.settings?.length ?? 0) +
 				(this.typeChoice(node.id) ? 1 : 0) +
 				this.variableChoices(node.id).filter((c) => c.variable.types.length > 1).length,
-			outputs: this.resolveNodeOutputs(node.id).map((o) => o.id),
+			outputs: this.resolveNodeOutputs(node.id)
+				.map((o) => o.id)
+				.filter((id) => shown(id, linkedOut)),
 			widget: descriptor.widget ? WIDGET_ROWS[descriptor.widget.kind] : 0,
 			inputs: this.resolveNodeInputs(node.id)
-				.filter((i) => !hidden.has(i.id))
+				.filter((i) => !hidden.has(i.id) && shown(i.id, linked))
 				.map((i) => ({
 					id: i.id,
 					editor: !linked.has(i.id) && !i.fallback && !i.variadic,

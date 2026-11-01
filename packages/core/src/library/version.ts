@@ -26,6 +26,9 @@ export function libraryVersion(definition: GraphDocument): string {
 			nodes: definition.nodes.map(({ id, type, data, group }) => ({ id, type, data, group })),
 			edges: definition.edges,
 			typeVariables: definition.typeVariables,
+			inputs: definition.inputs,
+			outputs: definition.outputs,
+			defaults: definition.defaults,
 		}),
 	);
 }

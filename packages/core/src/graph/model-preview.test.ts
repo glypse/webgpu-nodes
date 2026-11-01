@@ -27,8 +27,7 @@ function grouped() {
 }
 
 function viewersOf(graph: GraphModel, ref: string) {
-	const output = graph.project.definitions.get(ref)?.nodes.find((n) => n.type === "group-output");
-	return (output?.data.handles ?? []).filter((h) => h.viewer);
+	return (graph.project.definitions.get(ref)?.outputs ?? []).filter((h) => h.viewer);
 }
 
 describe("GraphModel previewNode", () => {

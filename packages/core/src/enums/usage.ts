@@ -16,15 +16,14 @@ export function groupConstants(
 	constants: ReadonlyMap<string, number> = new Map(),
 ): Map<string, number> {
 	const definition = node.group && definitions.get(node.group.definitionRef);
-	const input = definition?.nodes.find((n) => n.type === "group-input");
 	const linked = new Set((doc.edgesByTarget.get(node.id) ?? []).map((e) => e.targetHandle));
 	const values = new Map<string, number>();
-	for (const handle of input?.data.handles ?? []) {
+	for (const handle of definition?.inputs ?? []) {
 		if (!handle.variants) continue;
 		const value = linked.has(handle.id)
 			? constantAt(doc, node.id, handle.id, constants)
 			: enumValue(
-					node.data.values?.[handle.id] ?? input?.data.values?.[handle.id],
+					node.data.values?.[handle.id] ?? definition?.defaults[handle.id],
 					handle.variants,
 				);
 		if (value !== undefined) values.set(handle.id, value);

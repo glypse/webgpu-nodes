@@ -11,25 +11,17 @@
 	],
 	"category": "color",
 	"dependencies": [
-		"std-oklch-to-oklab@115633a275b19b",
-		"std-oklab-to-linear-rgb@15fc7634215b1f",
-		"std-linear-rgb-to-oklab@0315ad15e24cb7",
-		"std-in-display-gamut@166ac80597a9f1"
+		"std-oklch-to-oklab@03a255722e5123",
+		"std-oklab-to-linear-rgb@0c09da78c859fa",
+		"std-linear-rgb-to-oklab@1725e68fe7d502",
+		"std-in-display-gamut@08f3a271063dc1"
 	],
 	"definition": {
 		"nodes": [
 			{
 				"id": "807ef144-4fbb-43e3-97e1-e961ac44b8fa",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "ac4c4351-9541-4b00-8bff-cbff3141caf9",
-							"label": "OKLch",
-							"type": "vec3f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 396
@@ -38,15 +30,7 @@
 			{
 				"id": "31485d87-6afd-471d-a17c-d5c674288e9d",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "11bb329b-3fb4-4434-9d84-2fd90cf52c8a",
-							"label": "Linear RGB",
-							"type": "vec3f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 5552,
 					"y": 40
@@ -70,7 +54,7 @@
 					"y": 332
 				},
 				"group": {
-					"definitionRef": "std-oklch-to-oklab@115633a275b19b",
+					"definitionRef": "std-oklch-to-oklab@03a255722e5123",
 					"locked": true
 				}
 			},
@@ -83,7 +67,7 @@
 					"y": 448
 				},
 				"group": {
-					"definitionRef": "std-oklab-to-linear-rgb@15fc7634215b1f",
+					"definitionRef": "std-oklab-to-linear-rgb@0c09da78c859fa",
 					"locked": true
 				}
 			},
@@ -109,7 +93,7 @@
 					"y": 270
 				},
 				"group": {
-					"definitionRef": "std-linear-rgb-to-oklab@0315ad15e24cb7",
+					"definitionRef": "std-linear-rgb-to-oklab@1725e68fe7d502",
 					"locked": true
 				}
 			},
@@ -246,7 +230,7 @@
 					"y": 1348
 				},
 				"group": {
-					"definitionRef": "std-oklch-to-oklab@115633a275b19b",
+					"definitionRef": "std-oklch-to-oklab@03a255722e5123",
 					"locked": true
 				}
 			},
@@ -259,7 +243,7 @@
 					"y": 1320
 				},
 				"group": {
-					"definitionRef": "std-oklab-to-linear-rgb@15fc7634215b1f",
+					"definitionRef": "std-oklab-to-linear-rgb@0c09da78c859fa",
 					"locked": true
 				}
 			},
@@ -272,7 +256,7 @@
 					"y": 1292
 				},
 				"group": {
-					"definitionRef": "std-in-display-gamut@166ac80597a9f1",
+					"definitionRef": "std-in-display-gamut@08f3a271063dc1",
 					"locked": true
 				}
 			},
@@ -298,7 +282,7 @@
 					"y": 1441
 				},
 				"group": {
-					"definitionRef": "std-linear-rgb-to-oklab@0315ad15e24cb7",
+					"definitionRef": "std-linear-rgb-to-oklab@1725e68fe7d502",
 					"locked": true
 				}
 			},
@@ -471,7 +455,7 @@
 					"y": 603
 				},
 				"group": {
-					"definitionRef": "std-oklch-to-oklab@115633a275b19b",
+					"definitionRef": "std-oklch-to-oklab@03a255722e5123",
 					"locked": true
 				}
 			},
@@ -484,7 +468,7 @@
 					"y": 575
 				},
 				"group": {
-					"definitionRef": "std-oklab-to-linear-rgb@15fc7634215b1f",
+					"definitionRef": "std-oklab-to-linear-rgb@0c09da78c859fa",
 					"locked": true
 				}
 			},
@@ -1037,6 +1021,20 @@
 				"sourceHandle": "result",
 				"target": "31485d87-6afd-471d-a17c-d5c674288e9d",
 				"targetHandle": "11bb329b-3fb4-4434-9d84-2fd90cf52c8a"
+			}
+		],
+		"inputs": [
+			{
+				"id": "ac4c4351-9541-4b00-8bff-cbff3141caf9",
+				"label": "OKLch",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "11bb329b-3fb4-4434-9d84-2fd90cf52c8a",
+				"label": "Linear RGB",
+				"type": "vec3f"
 			}
 		]
 	}

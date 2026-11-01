@@ -47,34 +47,22 @@ function project(sources: { a?: WgslType; c?: WgslType } = {}): GraphProject {
 					{ id: T, name: "T", types: FLOAT_TYPES },
 					{ id: U, name: "U", types: NUMERIC_TYPES },
 				],
+				inputs: [
+					{ id: "a", label: "A", type: { variable: T } },
+					{ id: "b", label: "B", type: { variable: T } },
+					{ id: "c", label: "C", type: { variable: U } },
+					{ id: "d", label: "D", type: { variable: U } },
+				],
+				defaults: { b: 10, d: 2 },
+				outputs: [
+					{ id: "sum", label: "Sum", type: { variable: T } },
+					{ id: "product", label: "Product", type: { variable: U } },
+				],
 				nodes: [
-					{
-						id: "in",
-						type: "group-input",
-						data: {
-							handles: [
-								{ id: "a", label: "A", type: { variable: T } },
-								{ id: "b", label: "B", type: { variable: T } },
-								{ id: "c", label: "C", type: { variable: U } },
-								{ id: "d", label: "D", type: { variable: U } },
-							],
-							values: { b: 10, d: 2 },
-						},
-						position: at,
-					},
+					{ id: "in", type: "group-input", data: {}, position: at },
 					{ id: "add", type: "add", data: {}, position: at },
 					{ id: "mul", type: "mul", data: {}, position: at },
-					{
-						id: "outs",
-						type: "group-output",
-						data: {
-							handles: [
-								{ id: "sum", label: "Sum", type: { variable: T } },
-								{ id: "product", label: "Product", type: { variable: U } },
-							],
-						},
-						position: at,
-					},
+					{ id: "outs", type: "group-output", data: {}, position: at },
 				],
 				edges: (
 					[
@@ -159,7 +147,7 @@ describe("type variables", () => {
 	it("fix their sockets to their first type when removed", () => {
 		const graph = new GraphModel(project({ a: "vec3f" }));
 		graph.removeTypeVariable(GROUP, T);
-		const handles = graph.project.definitions.get(GROUP)?.nodesById.get("in")?.data.handles;
+		const handles = graph.project.definitions.get(GROUP)?.inputs;
 		expect(handles?.find((h) => h.id === "a")?.type).toBe("f32");
 		expect(graph.variableChoices("g").map((c) => c.variable.name)).toEqual(["U"]);
 	});
@@ -188,7 +176,7 @@ describe("type variables", () => {
 
 describe("inferred outputs", () => {
 	const infer = (graph: GraphModel) => {
-		graph.setHandleType(GROUP, "outs", "sum", { inferred: true });
+		graph.setHandleType(GROUP, "output", "sum", { inferred: true });
 	};
 
 	it("carry whatever reaches them inside, per group node", () => {
@@ -211,8 +199,8 @@ describe("inferred outputs", () => {
 
 	it("are only for outputs", () => {
 		const graph = new GraphModel(project());
-		graph.setHandleType(GROUP, "in", "a", { inferred: true });
-		const handles = graph.project.definitions.get(GROUP)?.nodesById.get("in")?.data.handles;
+		graph.setHandleType(GROUP, "input", "a", { inferred: true });
+		const handles = graph.project.definitions.get(GROUP)?.inputs;
 		expect(handles?.find((h) => h.id === "a")?.type).toEqual({ variable: T });
 	});
 });

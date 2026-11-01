@@ -36,20 +36,12 @@ function project(layout?: Screen): GraphProject {
 			[GROUP]: {
 				label: "Doubler",
 				typeVariables: [{ id: T, name: "T", types: FLOAT_TYPES }],
+				inputs: [{ id: "a", label: "A", type: { variable: T } }],
+				outputs: [{ id: "sum", label: "Sum", type: { variable: T } }],
 				nodes: [
-					{
-						id: "in",
-						type: "group-input",
-						data: { handles: [{ id: "a", label: "A", type: { variable: T } }] },
-						position: at,
-					},
+					{ id: "in", type: "group-input", data: {}, position: at },
 					{ id: "add", type: "add", data: {}, position: at },
-					{
-						id: "outs",
-						type: "group-output",
-						data: { handles: [{ id: "sum", label: "Sum", type: { variable: T } }] },
-						position: at,
-					},
+					{ id: "outs", type: "group-output", data: {}, position: at },
 				],
 				edges: (
 					[

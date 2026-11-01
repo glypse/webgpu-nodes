@@ -1,6 +1,6 @@
 import type { CurvePoint } from "../curve/curve";
 import type { FrameTint } from "../frames/analysis";
-import type { GroupHandleDef, HandleDef } from "./descriptors";
+import type { HandleDef } from "./descriptors";
 import type { WgslType } from "./values";
 
 /** One component of an input value. */
@@ -25,8 +25,6 @@ export type NodeData = {
 	settings?: Record<string, string>;
 	/** Types the user forced, by type family key. */
 	types?: Record<string, WgslType>;
-	/** A group boundary node's handles. */
-	handles?: GroupHandleDef[];
 	/** A Repeat Output's state items. */
 	items?: HandleDef[];
 	/** A Repeat Input's partner. */
@@ -48,6 +46,8 @@ export type NodeData = {
 	 * named after the reroute, instead of in full.
 	 */
 	hideLinks?: boolean;
+	/** Only the node's linked sockets are shown. */
+	hideUnlinked?: boolean;
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

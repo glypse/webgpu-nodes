@@ -11,23 +11,7 @@
 			{
 				"id": "1894bc23-65c0-40b4-a0b8-77546d4d4de7",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "4de0afc6-7aba-4846-b22f-152e825964c3",
-							"label": "Value",
-							"type": "vec4i"
-						},
-						{
-							"id": "57df1ede-3658-49de-ab04-8eb051ac6f5d",
-							"label": "Seed",
-							"type": "i32"
-						}
-					],
-					"values": {
-						"57df1ede-3658-49de-ab04-8eb051ac6f5d": 0
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 887
@@ -36,15 +20,7 @@
 			{
 				"id": "91231015-4a23-467e-b429-d5b3341f5565",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "5ba21c73-6e6c-4a11-8432-3bdde0dda177",
-							"label": "Hash",
-							"type": "vec4f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 7447,
 					"y": 32
@@ -762,6 +738,28 @@
 				"sourceHandle": "result",
 				"target": "91231015-4a23-467e-b429-d5b3341f5565",
 				"targetHandle": "5ba21c73-6e6c-4a11-8432-3bdde0dda177"
+			}
+		],
+		"inputs": [
+			{
+				"id": "4de0afc6-7aba-4846-b22f-152e825964c3",
+				"label": "Value",
+				"type": "vec4i"
+			},
+			{
+				"id": "57df1ede-3658-49de-ab04-8eb051ac6f5d",
+				"label": "Seed",
+				"type": "i32"
+			}
+		],
+		"defaults": {
+			"57df1ede-3658-49de-ab04-8eb051ac6f5d": 0
+		},
+		"outputs": [
+			{
+				"id": "5ba21c73-6e6c-4a11-8432-3bdde0dda177",
+				"label": "Hash",
+				"type": "vec4f"
 			}
 		]
 	}

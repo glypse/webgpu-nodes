@@ -184,17 +184,24 @@ function sanitizeIdent(id: string): string {
 // ── Hashing ──────────────────────────────────────────────────────────────────
 
 function stripLabels(data: NodeData): NodeData {
-	return {
-		...data,
-		label: undefined,
-		...(data.handles
-			? { handles: data.handles.map(({ id, type }) => ({ id, type, label: "" })) }
-			: {}),
-	};
+	return { ...data, label: undefined };
 }
 
-function hashDoc(doc: { nodes: GraphNode[]; edges: GraphEdge[] }) {
+type HashedDocument = {
+	nodes: GraphNode[];
+	edges: GraphEdge[];
+	inputs?: readonly GroupHandleDef[];
+	outputs?: readonly GroupHandleDef[];
+	defaults?: Record<string, InputValue>;
+};
+
+function hashDoc(doc: HashedDocument) {
+	const handles = (list: readonly GroupHandleDef[] = []) =>
+		list.map(({ id, type, variants }) => ({ id, type, variants }));
 	return {
+		inputs: handles(doc.inputs),
+		outputs: handles(doc.outputs),
+		defaults: doc.defaults,
 		nodes: doc.nodes.map((n) => ({ id: n.id, type: n.type, data: stripLabels(n.data) })),
 		edges: doc.edges.map((e) => ({
 			source: e.source,
@@ -212,9 +219,7 @@ function hashDoc(doc: { nodes: GraphNode[]; edges: GraphEdge[] }) {
  * Changes to disconnected nodes or unused group definitions won't change
  * this hash, avoiding unnecessary shader regeneration.
  */
-export function reachableShaderHash(project: {
-	definitions: Map<string, { nodes: GraphNode[]; edges: GraphEdge[] }>;
-}): string {
+export function reachableShaderHash(project: { definitions: Map<string, HashedDocument> }): string {
 	const root = project.definitions.get(ROOT_ID);
 	if (!root) return "";
 
@@ -321,9 +326,12 @@ class BodyEmitter {
 	/** The output handles of each node something reads. */
 	private readHandles = new Map<string, Set<string>>();
 
+	/** The inputs of the group the document is. */
+	private inputs: readonly GroupHandleDef[];
+
 	constructor(
 		private state: ShaderState,
-		doc: { nodes: GraphNode[] },
+		doc: { nodes: GraphNode[]; inputs?: readonly GroupHandleDef[] },
 		edges: GraphEdge[],
 		readonly zones: ZoneAnalysis,
 		/** Group-input handles the calling group node left unlinked (absent values). */
@@ -338,6 +346,7 @@ class BodyEmitter {
 		readonly liveItems: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
+		this.inputs = doc.inputs ?? [];
 		for (const edge of edges) {
 			const list = this.incomingByTarget.get(edge.target) ?? [];
 			list.push(edge);
@@ -360,7 +369,11 @@ class BodyEmitter {
 	}
 
 	private get enumDocument(): EnumDocument {
-		return { nodesById: this.nodeMap, edgesByTarget: this.incomingByTarget };
+		return {
+			nodesById: this.nodeMap,
+			edgesByTarget: this.incomingByTarget,
+			inputs: this.inputs,
+		};
 	}
 
 	constantOf(node: GraphNode, inputId: string): number | undefined {
@@ -611,7 +624,7 @@ function zoneVarNames(zone: Zone, items: HandleDef[]) {
  */
 function emitDocumentBody(
 	state: ShaderState,
-	doc: { nodes: GraphNode[]; edges: GraphEdge[] },
+	doc: { nodes: GraphNode[]; edges: GraphEdge[]; inputs?: readonly GroupHandleDef[] },
 	seedType: string,
 	absentInputs: ReadonlySet<string> = new Set(),
 	constants: ReadonlyMap<string, number> = new Map(),
@@ -629,7 +642,7 @@ function emitDocumentBody(
 	for (const e of validEdges)
 		edgesByTarget.set(e.target, [...(edgesByTarget.get(e.target) ?? []), e]);
 	const usedEdges = liveEdges(
-		{ nodesById: nodeMap, edgesByTarget },
+		{ nodesById: nodeMap, edgesByTarget, inputs: doc.inputs ?? [] },
 		validEdges,
 		constants,
 	).filter(
@@ -749,10 +762,14 @@ function emitGroupFunction(
 	const variables = definition.typeVariables;
 	const bindings = completeBindings(variables, given);
 
-	const groupInputNode = definition.nodes.find((n) => n.type === "group-input");
-	const inputHandles = groupInputNode?.data.handles ?? [];
-	const groupOutputNode = definition.nodes.find((n) => n.type === "group-output");
-	const outputHandles = groupOutputNode?.data.handles ?? [];
+	const inputHandles = definition.inputs;
+	const outputHandles = definition.outputs;
+	// Each output is computed by the Group Output node it's linked on, if any.
+	const groupOutputs = definition.nodes.filter((n) => n.type === "group-output");
+	const outputNodeOf = (h: GroupHandleDef) =>
+		groupOutputs.find((n) =>
+			definition.edgesByTarget.get(n.id)?.some((e) => e.targetHandle === h.id),
+		) ?? groupOutputs[0];
 
 	// One function per combination of absent fallback inputs, enum values,
 	// variables' types and outputs read, so each only contains what it uses.
@@ -805,24 +822,26 @@ function emitGroupFunction(
 
 	// Struct fields follow the handle types; whatever feeds them is converted
 	// on the way in, exactly like any other typed input.
-	const outputTypes = groupOutputNode
-		? state.graph.typeResolver.resolveNodeTypes(
-				groupOutputNode,
-				definition.edgesByTarget.get(groupOutputNode.id) ?? [],
-				(id) => state.graph.resolveNode(id),
-				bindings,
-			).inputTypes
-		: {};
+	const outputTypes = (node: GraphNode | undefined) =>
+		node
+			? state.graph.typeResolver.resolveNodeTypes(
+					node,
+					definition.edgesByTarget.get(node.id) ?? [],
+					(id) => state.graph.resolveNode(id),
+					bindings,
+				).inputTypes
+			: {};
 	const outputType = (h: GroupHandleDef): WgslType =>
-		boundType(h.type, variables, bindings) ?? outputTypes[h.id] ?? "f32";
+		boundType(h.type, variables, bindings) ?? outputTypes(outputNodeOf(h))[h.id] ?? "f32";
 	const inputType = (h: GroupHandleDef): WgslType =>
 		boundType(h.type, variables, bindings) ?? "f32";
 	// Outputs the caller doesn't read keep their struct field, zeroed.
-	const fieldValues = outputHandles.map((h) =>
-		groupOutputNode && readHandles.has(h.id)
-			? body.inputExpr(groupOutputNode, h.id, outputType(h))
-			: WGSL_DEFAULTS[outputType(h)],
-	);
+	const fieldValues = outputHandles.map((h) => {
+		const node = outputNodeOf(h);
+		return node && readHandles.has(h.id)
+			? body.inputExpr(node, h.id, outputType(h))
+			: WGSL_DEFAULTS[outputType(h)];
+	});
 	const structFields = outputHandles
 		.map((h) => `  ${sanitizeIdent(h.id)}: ${wgslTypeName(outputType(h))},`)
 		.join("\n");

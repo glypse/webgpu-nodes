@@ -50,6 +50,10 @@ The editor window is tiled by areas, after Blender's screens: `packages/core/src
 
 A repeat zone is a `repeat-input` / `repeat-output` node pair: the output owns the state items (`data.items`), the input points at it (`data.pairedOutput`). Zone membership, nesting and invalid links are never stored: `analyzeZones` (`packages/core/src/zones/analysis.ts`) derives them from the links (Blender's rules) and is the single source of truth for codegen, the bubble rendering and red links. Use `GraphModel.zoneAnalysis(doc)` (memoised on the nodes/edges arrays) rather than re-deriving them.
 
+## Group interface
+
+A group's inputs, outputs and input defaults live on its definition (`inputs`, `outputs`, `defaults`), edited by side (`GroupSide`); its Group Input and Group Output nodes are views of them, any number of each. An output is linked on one Group Output node at a time (`connect` enforces it), and codegen reads each output from the node it's linked on.
+
 ## Frames
 
 A frame is a `layout-frame` node: its header (label and note) is the SvelteFlow node, and its box is drawn under the nodes. Membership is stored on each node (`frame`, the id of the frame it's directly in); nesting, contents and boxes are derived (`analyzeFrames`, `GraphModel.frameAnalysis(doc)`, `frameRects`), never stored. Frames compute nothing; the layout lays each out as a block around its nodes, giving way to zones it would cut through.

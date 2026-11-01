@@ -11,72 +11,7 @@
 			{
 				"id": "47b462b1-dfbd-4f94-b035-d51af34de1eb",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
-							"label": "Dimensions",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 1,
-									"label": "1D"
-								},
-								{
-									"value": 2,
-									"label": "2D"
-								},
-								{
-									"value": 3,
-									"label": "3D"
-								},
-								{
-									"value": 4,
-									"label": "4D"
-								}
-							]
-						},
-						{
-							"id": "4cd343a3-b9ae-4cae-bfb8-2f74ed5310e3",
-							"label": "W",
-							"type": "f32",
-							"owner": {
-								"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
-								"value": 1
-							}
-						},
-						{
-							"id": "cc6b0d4f-ef1b-4aab-92d8-11b233563149",
-							"label": "Vector",
-							"type": "vec2f",
-							"owner": {
-								"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
-								"value": 2
-							}
-						},
-						{
-							"id": "7174062a-e353-4507-b5aa-41dbfa3518d7",
-							"label": "Vector",
-							"type": "vec3f",
-							"owner": {
-								"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
-								"value": 3
-							}
-						},
-						{
-							"id": "d2975767-5c31-4338-8829-ac1c7024be4e",
-							"label": "Vector",
-							"type": "vec4f",
-							"owner": {
-								"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
-								"value": 4
-							}
-						}
-					],
-					"values": {
-						"6ca3ac45-3195-4c6d-a02c-f6948766f5f0": 2
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 279,
 					"y": 273
@@ -85,15 +20,7 @@
 			{
 				"id": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "63e24765-ffbb-4ea2-801a-d216aa80057a",
-							"label": "Coordinates",
-							"type": "vec4f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 1369,
 					"y": 172
@@ -297,6 +224,77 @@
 				"sourceHandle": "result",
 				"target": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
 				"targetHandle": "63e24765-ffbb-4ea2-801a-d216aa80057a"
+			}
+		],
+		"inputs": [
+			{
+				"id": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
+				"label": "Dimensions",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 1,
+						"label": "1D"
+					},
+					{
+						"value": 2,
+						"label": "2D"
+					},
+					{
+						"value": 3,
+						"label": "3D"
+					},
+					{
+						"value": 4,
+						"label": "4D"
+					}
+				]
+			},
+			{
+				"id": "4cd343a3-b9ae-4cae-bfb8-2f74ed5310e3",
+				"label": "W",
+				"type": "f32",
+				"owner": {
+					"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
+					"value": 1
+				}
+			},
+			{
+				"id": "cc6b0d4f-ef1b-4aab-92d8-11b233563149",
+				"label": "Vector",
+				"type": "vec2f",
+				"owner": {
+					"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
+					"value": 2
+				}
+			},
+			{
+				"id": "7174062a-e353-4507-b5aa-41dbfa3518d7",
+				"label": "Vector",
+				"type": "vec3f",
+				"owner": {
+					"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
+					"value": 3
+				}
+			},
+			{
+				"id": "d2975767-5c31-4338-8829-ac1c7024be4e",
+				"label": "Vector",
+				"type": "vec4f",
+				"owner": {
+					"enumId": "6ca3ac45-3195-4c6d-a02c-f6948766f5f0",
+					"value": 4
+				}
+			}
+		],
+		"defaults": {
+			"6ca3ac45-3195-4c6d-a02c-f6948766f5f0": 2
+		},
+		"outputs": [
+			{
+				"id": "63e24765-ffbb-4ea2-801a-d216aa80057a",
+				"label": "Coordinates",
+				"type": "vec4f"
 			}
 		]
 	}

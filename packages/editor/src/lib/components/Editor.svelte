@@ -28,6 +28,10 @@
 			doc.edges,
 			doc.label,
 			doc.locked,
+			doc.typeVariables,
+			doc.inputs,
+			doc.outputs,
+			doc.defaults,
 		]);
 		if (tracked.length === 0) return;
 		tracked.push(graph.settings);

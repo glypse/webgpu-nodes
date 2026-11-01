@@ -20,6 +20,7 @@ import {
 	setAreaEditor,
 } from "../screen/screen";
 import {
+	type GroupHandleDef,
 	type InputValue,
 	type NodeData,
 	type NodeDescriptor,
@@ -46,6 +47,7 @@ import {
 	type StandardLibraryEntry,
 	createPlainDocument,
 } from "./document";
+import { type GroupSide } from "./editing";
 import { type HistoryCounts } from "./history";
 import {
 	hydrateDocument,
@@ -303,6 +305,12 @@ export abstract class GraphModelBase {
 		this.setScreen(this.screen);
 	}
 
+	/** Replace a group's inputs or outputs (see `GraphDocument.inputs`). */
+	protected setInterface(doc: HydratedGraphDocument, side: GroupSide, handles: GroupHandleDef[]) {
+		if (side === "input") doc.inputs = handles;
+		else doc.outputs = handles;
+	}
+
 	protected setContent(
 		doc: HydratedGraphDocument,
 		content: { nodes?: GraphNode[]; edges?: GraphEdge[] },
@@ -338,6 +346,14 @@ export abstract class GraphModelBase {
 	 * Find all edges targeting a node across the entire project.
 	 * Used by TypeResolver for recursive type inference.
 	 */
+	/** The key of the document a node is in, if any. */
+	definitionRefOf(nodeId: string): string | undefined {
+		for (const [ref, doc] of this.project.definitions) {
+			if (doc.nodesById.has(nodeId)) return ref;
+		}
+		return undefined;
+	}
+
 	protected getIncomingEdges(nodeId: string): GraphEdge[] {
 		for (const def of this.project.definitions.values()) {
 			const edges = def.edgesByTarget.get(nodeId) ?? [];

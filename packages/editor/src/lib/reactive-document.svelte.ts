@@ -1,6 +1,8 @@
 import {
 	type GraphEdge,
 	type GraphNode,
+	type GroupHandleDef,
+	type InputValue,
 	type HydratedGraphDocument,
 	type TypeVariable,
 	type Viewport,
@@ -22,7 +24,8 @@ import {
  *
  * **Why `$state` for label/locked/viewport?** These change infrequently and
  * the UI needs granular reactivity (e.g. showing a lock icon).
- * `typeVariables` is `$state.raw` like the arrays: the model only replaces it.
+ * `typeVariables` and a group's interface (`inputs`, `outputs`, `defaults`)
+ * are `$state.raw` like the arrays: the model only replaces them.
  *
  * **Indexed Maps** (`nodesById`, `edgesBySource`, `edgesByTarget`) are plain
  * Maps rebuilt by the model (`indexDocument`) after every array reassignment,
@@ -45,4 +48,7 @@ export class ReactiveGraphDocument implements HydratedGraphDocument {
 	locked = $state<boolean>(false);
 	viewport = $state<Viewport | undefined>(undefined);
 	typeVariables = $state.raw<TypeVariable[]>([]);
+	inputs = $state.raw<GroupHandleDef[]>([]);
+	outputs = $state.raw<GroupHandleDef[]>([]);
+	defaults = $state.raw<Record<string, InputValue>>({});
 }

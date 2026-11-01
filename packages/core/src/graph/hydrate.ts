@@ -33,11 +33,10 @@ export function resolveDescriptor(
 	definitions: Map<string, HydratedGraphDocument>,
 ): NodeDescriptor {
 	if (node.type === "group-input" || node.type === "group-output") {
-		const variables =
-			[...definitions.values()].find((d) => d.nodesById.has(node.id))?.typeVariables ?? [];
-		const build =
-			node.type === "group-input" ? buildGroupInputDescriptor : buildGroupOutputDescriptor;
-		return build(node.data.handles ?? [], variables);
+		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
+		return node.type === "group-input"
+			? buildGroupInputDescriptor(doc?.inputs ?? [], doc?.typeVariables ?? [])
+			: buildGroupOutputDescriptor(doc?.outputs ?? [], doc?.typeVariables ?? []);
 	}
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
@@ -73,10 +72,13 @@ export function normaliseDocument(doc: GraphDocument): GraphDocument {
 	const result: GraphDocument = { nodes, edges: doc.edges, label: doc.label, locked: doc.locked };
 	if (doc.viewport) result.viewport = doc.viewport;
 	if (doc.typeVariables?.length) result.typeVariables = doc.typeVariables;
+	if (doc.inputs?.length) result.inputs = doc.inputs;
+	if (doc.outputs?.length) result.outputs = doc.outputs;
+	if (doc.defaults && Object.keys(doc.defaults).length > 0) result.defaults = doc.defaults;
 	return result;
 }
 
-const NON_DELETABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
+const NON_DELETABLE_TYPES = new Set(["frag-output"]);
 
 export function hydrateNode(node: GraphDocumentNode): GraphNode {
 	const base = {
@@ -140,6 +142,9 @@ export function hydrateDocument(
 	doc.locked = normalised.locked ?? false;
 	doc.viewport = normalised.viewport;
 	doc.typeVariables = normalised.typeVariables ?? [];
+	doc.inputs = normalised.inputs ?? [];
+	doc.outputs = normalised.outputs ?? [];
+	doc.defaults = normalised.defaults ?? {};
 	return doc;
 }
 
@@ -177,7 +182,15 @@ export function serialiseEdge(edge: GraphDocumentEdge): GraphDocumentEdge {
 export function serialiseDocument(
 	doc: Pick<
 		HydratedGraphDocument,
-		"nodes" | "edges" | "label" | "locked" | "viewport" | "typeVariables"
+		| "nodes"
+		| "edges"
+		| "label"
+		| "locked"
+		| "viewport"
+		| "typeVariables"
+		| "inputs"
+		| "outputs"
+		| "defaults"
 	>,
 	{ viewport = false }: { viewport?: boolean } = {},
 ): GraphDocument {
@@ -188,5 +201,8 @@ export function serialiseDocument(
 		locked: doc.locked,
 		...(viewport && doc.viewport ? { viewport: doc.viewport } : {}),
 		...(doc.typeVariables.length > 0 ? { typeVariables: doc.typeVariables } : {}),
+		...(doc.inputs.length > 0 ? { inputs: doc.inputs } : {}),
+		...(doc.outputs.length > 0 ? { outputs: doc.outputs } : {}),
+		...(Object.keys(doc.defaults).length > 0 ? { defaults: doc.defaults } : {}),
 	};
 }

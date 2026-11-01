@@ -3,21 +3,13 @@
 	"name": "Linear RGB to OKLch",
 	"aliases": ["sRGB to OKLch", "RGB to OKLch", "Color Space Conversion", "Perceptual Color"],
 	"category": "color",
-	"dependencies": ["std-linear-rgb-to-oklab@0315ad15e24cb7", "std-oklab-to-oklch@02cc69e98e06f4"],
+	"dependencies": ["std-linear-rgb-to-oklab@1725e68fe7d502", "std-oklab-to-oklch@10ea526cf67dc8"],
 	"definition": {
 		"nodes": [
 			{
 				"id": "d43013a7-f373-496a-8a0e-a5958bfc1104",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "35293765-80e5-428e-970e-0908448784c5",
-							"label": "Linear RGB",
-							"type": "vec3f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 92
@@ -26,15 +18,7 @@
 			{
 				"id": "f2e5685c-ecfa-4424-b66a-e617385f5f09",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "729b6352-8b15-4156-998f-03a661f49ae2",
-							"label": "OKLch",
-							"type": "vec3f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 780,
 					"y": 32
@@ -49,7 +33,7 @@
 					"y": 28
 				},
 				"group": {
-					"definitionRef": "std-linear-rgb-to-oklab@0315ad15e24cb7",
+					"definitionRef": "std-linear-rgb-to-oklab@1725e68fe7d502",
 					"locked": true
 				}
 			},
@@ -62,7 +46,7 @@
 					"y": 0
 				},
 				"group": {
-					"definitionRef": "std-oklab-to-oklch@02cc69e98e06f4",
+					"definitionRef": "std-oklab-to-oklch@10ea526cf67dc8",
 					"locked": true
 				}
 			}
@@ -88,6 +72,20 @@
 				"sourceHandle": "4e4ff9f1-f41a-4202-8299-8001b5a809bb",
 				"target": "f2e5685c-ecfa-4424-b66a-e617385f5f09",
 				"targetHandle": "729b6352-8b15-4156-998f-03a661f49ae2"
+			}
+		],
+		"inputs": [
+			{
+				"id": "35293765-80e5-428e-970e-0908448784c5",
+				"label": "Linear RGB",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "729b6352-8b15-4156-998f-03a661f49ae2",
+				"label": "OKLch",
+				"type": "vec3f"
 			}
 		]
 	}

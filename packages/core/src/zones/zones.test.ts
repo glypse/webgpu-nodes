@@ -291,19 +291,11 @@ describe("repeat zone codegen", () => {
 		);
 		project.definitions.def = {
 			label: "Looping group",
+			inputs: [{ id: "seed", label: "seed", type: "f32" }],
+			outputs: [{ id: "res", label: "res", type: "vec4f" }],
 			nodes: [
-				{
-					id: "gi",
-					type: "group-input",
-					data: { handles: [{ id: "seed", label: "seed", type: "f32" }] },
-					position: { x: 0, y: 0 },
-				},
-				{
-					id: "go",
-					type: "group-output",
-					data: { handles: [{ id: "res", label: "res", type: "vec4f" }] },
-					position: { x: 0, y: 0 },
-				},
+				{ id: "gi", type: "group-input", data: {}, position: { x: 0, y: 0 } },
+				{ id: "go", type: "group-output", data: {}, position: { x: 0, y: 0 } },
 				...zone("gz", [ACC]).map((n) => ({
 					...n,
 					data: n.data ?? {},
@@ -359,24 +351,14 @@ describe("repeat zone codegen", () => {
 		);
 		project.definitions.def = {
 			label: "Two outputs",
+			inputs: [{ id: "x", label: "x", type: "f32" }],
+			outputs: [
+				{ id: "cheap", label: "cheap", type: "f32" },
+				{ id: "costly", label: "costly", type: "f32" },
+			],
 			nodes: [
-				{
-					id: "gi",
-					type: "group-input",
-					data: { handles: [{ id: "x", label: "x", type: "f32" }] },
-					position: { x: 0, y: 0 },
-				},
-				{
-					id: "go",
-					type: "group-output",
-					data: {
-						handles: [
-							{ id: "cheap", label: "cheap", type: "f32" },
-							{ id: "costly", label: "costly", type: "f32" },
-						],
-					},
-					position: { x: 0, y: 0 },
-				},
+				{ id: "gi", type: "group-input", data: {}, position: { x: 0, y: 0 } },
+				{ id: "go", type: "group-output", data: {}, position: { x: 0, y: 0 } },
 				...zone("gz", [ACC]).map((n) => ({
 					...n,
 					data: n.data ?? {},

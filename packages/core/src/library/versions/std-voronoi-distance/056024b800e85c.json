@@ -16,58 +16,7 @@
 			{
 				"id": "8934e406-13ea-40a8-8617-4caeb3f27a58",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "ed685ddd-96dc-4012-8acc-4935af81eedc",
-							"label": "A",
-							"type": "vec4f"
-						},
-						{
-							"id": "68b74085-c1db-4f4c-b4cd-54ca6a29d9b3",
-							"label": "B",
-							"type": "vec4f"
-						},
-						{
-							"id": "20cf09de-613e-4412-a230-cd29cdbbcfac",
-							"label": "Metric",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 0,
-									"label": "Euclidean"
-								},
-								{
-									"value": 1,
-									"label": "Manhattan"
-								},
-								{
-									"value": 2,
-									"label": "Chebyshev"
-								},
-								{
-									"value": 3,
-									"label": "Minkowski"
-								}
-							]
-						},
-						{
-							"id": "da3cb2fc-9aef-460d-8fa1-3a767da7782b",
-							"label": "Exponent",
-							"type": "f32",
-							"owner": {
-								"enumId": "20cf09de-613e-4412-a230-cd29cdbbcfac",
-								"value": 3
-							},
-							"min": 0,
-							"max": 32
-						}
-					],
-					"values": {
-						"20cf09de-613e-4412-a230-cd29cdbbcfac": 0,
-						"da3cb2fc-9aef-460d-8fa1-3a767da7782b": 0.5
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 600
@@ -76,15 +25,7 @@
 			{
 				"id": "a386507d-937a-4c06-98ac-c9b509e2fab6",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "271aa96d-a644-4ef0-b141-3bb46fdc8351",
-							"label": "Distance",
-							"type": "f32"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 1943,
 					"y": 32
@@ -356,6 +297,63 @@
 				"sourceHandle": "result",
 				"target": "a386507d-937a-4c06-98ac-c9b509e2fab6",
 				"targetHandle": "271aa96d-a644-4ef0-b141-3bb46fdc8351"
+			}
+		],
+		"inputs": [
+			{
+				"id": "ed685ddd-96dc-4012-8acc-4935af81eedc",
+				"label": "A",
+				"type": "vec4f"
+			},
+			{
+				"id": "68b74085-c1db-4f4c-b4cd-54ca6a29d9b3",
+				"label": "B",
+				"type": "vec4f"
+			},
+			{
+				"id": "20cf09de-613e-4412-a230-cd29cdbbcfac",
+				"label": "Metric",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 0,
+						"label": "Euclidean"
+					},
+					{
+						"value": 1,
+						"label": "Manhattan"
+					},
+					{
+						"value": 2,
+						"label": "Chebyshev"
+					},
+					{
+						"value": 3,
+						"label": "Minkowski"
+					}
+				]
+			},
+			{
+				"id": "da3cb2fc-9aef-460d-8fa1-3a767da7782b",
+				"label": "Exponent",
+				"type": "f32",
+				"owner": {
+					"enumId": "20cf09de-613e-4412-a230-cd29cdbbcfac",
+					"value": 3
+				},
+				"min": 0,
+				"max": 32
+			}
+		],
+		"defaults": {
+			"20cf09de-613e-4412-a230-cd29cdbbcfac": 0,
+			"da3cb2fc-9aef-460d-8fa1-3a767da7782b": 0.5
+		},
+		"outputs": [
+			{
+				"id": "271aa96d-a644-4ef0-b141-3bb46fdc8351",
+				"label": "Distance",
+				"type": "f32"
 			}
 		]
 	}

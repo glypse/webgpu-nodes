@@ -5,64 +5,13 @@
 	"category": "texture",
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-dimension-mask@0acfbe5f0d377e", "std-hash@1547f98ac887b6"],
+	"dependencies": ["std-dimension-mask@1dfb9036300c90", "std-hash@173fe967101a4d"],
 	"definition": {
 		"nodes": [
 			{
 				"id": "186b24bd-04e4-4524-9317-c237c2cdd621",
 				"type": "group-input",
-				"data": {
-					"handles": [
-						{
-							"id": "49edf500-c93a-4ba0-bebf-ab844b41df33",
-							"label": "Cell",
-							"type": "vec4f"
-						},
-						{
-							"id": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
-							"label": "Offset",
-							"type": "vec4f"
-						},
-						{
-							"id": "baaa207e-4d38-472a-909c-fc453335e8c1",
-							"label": "Randomness",
-							"type": "f32"
-						},
-						{
-							"id": "37f38414-06e2-4832-8b0f-a4ba7e7cac1a",
-							"label": "Seed",
-							"type": "i32"
-						},
-						{
-							"id": "9ebec6e6-b8d4-47c3-a0f3-551c0427db28",
-							"label": "Dimensions",
-							"type": "u32",
-							"variants": [
-								{
-									"value": 1,
-									"label": "1D"
-								},
-								{
-									"value": 2,
-									"label": "2D"
-								},
-								{
-									"value": 3,
-									"label": "3D"
-								},
-								{
-									"value": 4,
-									"label": "4D"
-								}
-							]
-						}
-					],
-					"values": {
-						"baaa207e-4d38-472a-909c-fc453335e8c1": 1,
-						"37f38414-06e2-4832-8b0f-a4ba7e7cac1a": 0,
-						"9ebec6e6-b8d4-47c3-a0f3-551c0427db28": 2
-					}
-				},
+				"data": {},
 				"position": {
 					"x": 0,
 					"y": 231
@@ -71,20 +20,7 @@
 			{
 				"id": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
 				"type": "group-output",
-				"data": {
-					"handles": [
-						{
-							"id": "d555ec1a-297d-42af-901e-d6ad9ec77da3",
-							"label": "Point",
-							"type": "vec4f"
-						},
-						{
-							"id": "0375221a-046e-414c-b880-c5e7898e3986",
-							"label": "Neighbor Cell",
-							"type": "vec4f"
-						}
-					]
-				},
+				"data": {},
 				"position": {
 					"x": 1338,
 					"y": 4
@@ -108,7 +44,7 @@
 					"y": 384
 				},
 				"group": {
-					"definitionRef": "std-dimension-mask@0acfbe5f0d377e",
+					"definitionRef": "std-dimension-mask@1dfb9036300c90",
 					"locked": true
 				}
 			},
@@ -121,7 +57,7 @@
 					"y": 178
 				},
 				"group": {
-					"definitionRef": "std-hash@1547f98ac887b6",
+					"definitionRef": "std-hash@173fe967101a4d",
 					"locked": true
 				}
 			},
@@ -228,6 +164,68 @@
 				"sourceHandle": "result",
 				"target": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
 				"targetHandle": "0375221a-046e-414c-b880-c5e7898e3986"
+			}
+		],
+		"inputs": [
+			{
+				"id": "49edf500-c93a-4ba0-bebf-ab844b41df33",
+				"label": "Cell",
+				"type": "vec4f"
+			},
+			{
+				"id": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+				"label": "Offset",
+				"type": "vec4f"
+			},
+			{
+				"id": "baaa207e-4d38-472a-909c-fc453335e8c1",
+				"label": "Randomness",
+				"type": "f32"
+			},
+			{
+				"id": "37f38414-06e2-4832-8b0f-a4ba7e7cac1a",
+				"label": "Seed",
+				"type": "i32"
+			},
+			{
+				"id": "9ebec6e6-b8d4-47c3-a0f3-551c0427db28",
+				"label": "Dimensions",
+				"type": "u32",
+				"variants": [
+					{
+						"value": 1,
+						"label": "1D"
+					},
+					{
+						"value": 2,
+						"label": "2D"
+					},
+					{
+						"value": 3,
+						"label": "3D"
+					},
+					{
+						"value": 4,
+						"label": "4D"
+					}
+				]
+			}
+		],
+		"defaults": {
+			"baaa207e-4d38-472a-909c-fc453335e8c1": 1,
+			"37f38414-06e2-4832-8b0f-a4ba7e7cac1a": 0,
+			"9ebec6e6-b8d4-47c3-a0f3-551c0427db28": 2
+		},
+		"outputs": [
+			{
+				"id": "d555ec1a-297d-42af-901e-d6ad9ec77da3",
+				"label": "Point",
+				"type": "vec4f"
+			},
+			{
+				"id": "0375221a-046e-414c-b880-c5e7898e3986",
+				"label": "Neighbor Cell",
+				"type": "vec4f"
 			}
 		]
 	}

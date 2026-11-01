@@ -232,7 +232,7 @@ describe("group handle types", () => {
 		const ref = group?.group?.definitionRef ?? "";
 		const inner = graph.project.definitions.get(ref);
 		const input = inner?.nodes.find((n) => n.type === "group-input");
-		const handle = (input?.data.handles as { id: string }[] | undefined)?.[0];
+		const handle = inner?.inputs[0];
 		if (!groupId || !input || !handle) throw new Error("group not created");
 
 		graph.root.edges = [
@@ -245,12 +245,12 @@ describe("group handle types", () => {
 				targetHandle: handle.id,
 			},
 		];
-		graph.setHandleType(ref, input.id, handle.id, "vec2f");
+		graph.setHandleType(ref, "input", handle.id, "vec2f");
 		expect(graph.root.edges.some((e) => e.id === "feed")).toBe(true);
 		// The inner pass-through goes to an f32 output: a vec2f no longer fits it.
-		expect(inner?.edges.some((e) => e.source === input.id)).toBe(false);
+		expect(inner.edges.some((e) => e.source === input.id)).toBe(false);
 
-		graph.setHandleType(ref, input.id, handle.id, "f32");
+		graph.setHandleType(ref, "input", handle.id, "f32");
 		expect(graph.root.edges.some((e) => e.id === "feed")).toBe(false);
 		expect(graph.resolveNodeOutputs(input.id)[0]?.type).toBe("f32");
 	});
@@ -297,11 +297,11 @@ describe("node data edits", () => {
 
 	it("adds handles to group boundary nodes only", () => {
 		const graph = managerFor([{ id: "s", type: "sin" }], []);
-		expect(graph.addHandle("s", "f32")).toBeUndefined();
+		expect(graph.addBoundaryHandle("s", "f32")).toBeUndefined();
 		const groupId = graph.createGroup({ x: 0, y: 0 });
 		graph.enterGroup(groupId ?? "");
 		const input = graph.activeDocument.nodes.find((n) => n.type === "group-input");
-		const handle = graph.addHandle(input?.id ?? "", "vec3f");
+		const handle = graph.addBoundaryHandle(input?.id ?? "", "vec3f");
 		expect(handle?.label).toBe("Input 2");
 		expect(graph.resolveNodeOutputs(input?.id ?? "").map((o) => o.type)).toEqual([
 			"f32",
@@ -347,8 +347,7 @@ describe("standard-library versions", () => {
 			protected override loadArchivedVersion = (ref: string) => {
 				requested.push(ref);
 				const definition = structuredClone(aspectUv.definition);
-				const output = definition.nodes.find((n) => n.type === "group-output");
-				output?.data.handles?.push({ id: "extra", label: "Extra", type: "f32" });
+				definition.outputs?.push({ id: "extra", label: "Extra", type: "f32" });
 				return Promise.resolve({ ...aspectUv, ref, version: "0000000000old", definition });
 			};
 		}

@@ -11,8 +11,8 @@ type Vec3 = [number, number, number];
 
 /** The only handle of a standard-library converter's group input or output. */
 function handleOf(id: string, boundary: "group-input" | "group-output"): string {
-	const node = libraryEntry(id).definition.nodes.find((n) => n.type === boundary);
-	return node?.data.handles?.[0]?.id ?? "";
+	const { inputs, outputs } = libraryEntry(id).definition;
+	return (boundary === "group-input" ? inputs : outputs)?.[0]?.id ?? "";
 }
 
 const instance = (id: string, nodeId: string, data: NodeData = {}): TestNode => ({
@@ -110,9 +110,7 @@ describe("colour space groups", () => {
 			"std-oklch-to-linear-rgb",
 		]) {
 			const entry = libraryEntry(id);
-			const out =
-				entry.definition.nodes.find((n) => n.type === "group-output")?.data.handles?.[0]
-					?.id ?? "";
+			const out = entry.definition.outputs?.[0]?.id ?? "";
 			const graph = managerFor(
 				[
 					{

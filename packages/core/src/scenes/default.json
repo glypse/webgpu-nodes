@@ -141,15 +141,7 @@
 				{
 					"id": "482205d6-da51-4ed2-8dcb-a8ff311f7f05",
 					"type": "group-input",
-					"data": {
-						"handles": [
-							{
-								"id": "7389a29e-504e-4de9-8556-1e92d7ebbc9b",
-								"label": "UV",
-								"type": "vec2f"
-							}
-						]
-					},
+					"data": {},
 					"position": {
 						"x": -1435.934213960039,
 						"y": 21.692345376622143
@@ -158,15 +150,7 @@
 				{
 					"id": "034b9f1e-2fb7-42e0-8de4-839c1b906c00",
 					"type": "group-output",
-					"data": {
-						"handles": [
-							{
-								"id": "2731f43e-0283-4838-883f-cc955b8e57bd",
-								"label": "Aspect corrected UV",
-								"type": "vec2f"
-							}
-						]
-					},
+					"data": {},
 					"position": {
 						"x": -926.3385672508089,
 						"y": -136.61105779876715
@@ -297,7 +281,21 @@
 				}
 			],
 			"label": "Aspect corrected contained UV",
-			"locked": false
+			"locked": false,
+			"inputs": [
+				{
+					"id": "7389a29e-504e-4de9-8556-1e92d7ebbc9b",
+					"label": "UV",
+					"type": "vec2f"
+				}
+			],
+			"outputs": [
+				{
+					"id": "2731f43e-0283-4838-883f-cc955b8e57bd",
+					"label": "Aspect corrected UV",
+					"type": "vec2f"
+				}
+			]
 		},
 		"2d168e0b-d132-419d-9c5a-84cd72cd0c35": {
 			"nodes": [
@@ -349,7 +347,7 @@
 						"y": 857.429345305031
 					},
 					"group": {
-						"definitionRef": "std-remap@0b5541582e564f",
+						"definitionRef": "std-remap@0105dffc98ef77",
 						"locked": true
 					}
 				},
@@ -370,7 +368,7 @@
 						"y": 257.57262414098403
 					},
 					"group": {
-						"definitionRef": "std-remap@0b5541582e564f",
+						"definitionRef": "std-remap@0105dffc98ef77",
 						"locked": true
 					}
 				},
@@ -424,35 +422,7 @@
 				{
 					"id": "c7ee4e4a-f01f-491c-8b7b-c2e2c1337d43",
 					"type": "group-input",
-					"data": {
-						"handles": [
-							{
-								"id": "69962416-05cf-4d5c-8918-7281f7edde0e",
-								"label": "Edge width",
-								"type": "f32"
-							},
-							{
-								"id": "60107066-b776-44c4-8059-d21497daa031",
-								"label": "Shift",
-								"type": "f32"
-							},
-							{
-								"id": "67535449-2468-46dd-bccd-35ba11d7e443",
-								"label": "Speed",
-								"type": "f32"
-							},
-							{
-								"id": "3ef75105-bab7-4eb9-b516-79a9968c4257",
-								"label": "UV",
-								"type": "vec2f"
-							}
-						],
-						"values": {
-							"67535449-2468-46dd-bccd-35ba11d7e443": 0,
-							"20dce2eb-42de-49dd-abd9-7daa44f2b549": 0,
-							"3ef75105-bab7-4eb9-b516-79a9968c4257": 0
-						}
-					},
+					"data": {},
 					"position": {
 						"x": -2723.9413906001914,
 						"y": 594.6658515184466
@@ -461,15 +431,7 @@
 				{
 					"id": "ac83fb3a-bcfe-4767-8397-021bf1aa3909",
 					"type": "group-output",
-					"data": {
-						"handles": [
-							{
-								"id": "bec5efe7-66fb-46d1-93b0-f2c3b649b7bd",
-								"label": "Output",
-								"type": "f32"
-							}
-						]
-					},
+					"data": {},
 					"position": {
 						"x": -254.20964437427529,
 						"y": 634.015587117399
@@ -604,7 +566,41 @@
 				}
 			],
 			"label": "Sizing circle",
-			"locked": false
+			"locked": false,
+			"inputs": [
+				{
+					"id": "69962416-05cf-4d5c-8918-7281f7edde0e",
+					"label": "Edge width",
+					"type": "f32"
+				},
+				{
+					"id": "60107066-b776-44c4-8059-d21497daa031",
+					"label": "Shift",
+					"type": "f32"
+				},
+				{
+					"id": "67535449-2468-46dd-bccd-35ba11d7e443",
+					"label": "Speed",
+					"type": "f32"
+				},
+				{
+					"id": "3ef75105-bab7-4eb9-b516-79a9968c4257",
+					"label": "UV",
+					"type": "vec2f"
+				}
+			],
+			"defaults": {
+				"67535449-2468-46dd-bccd-35ba11d7e443": 0,
+				"20dce2eb-42de-49dd-abd9-7daa44f2b549": 0,
+				"3ef75105-bab7-4eb9-b516-79a9968c4257": 0
+			},
+			"outputs": [
+				{
+					"id": "bec5efe7-66fb-46d1-93b0-f2c3b649b7bd",
+					"label": "Output",
+					"type": "f32"
+				}
+			]
 		},
 		"__root__": {
 			"nodes": [

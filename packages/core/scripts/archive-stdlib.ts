@@ -1,12 +1,27 @@
 // Archives the current version of every standard-library file, then lists
 // the archive in versions/index.ts. Run after changing a library file.
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { libraryRef, standardLibrary } from "../src/library";
+import { ARCHIVED_VERSIONS_ENABLED, libraryRef, standardLibrary } from "../src/library";
 
 const libraryDir = join(import.meta.dirname, "../src/library");
 const versionsDir = join(libraryDir, "versions");
+
+// Until old versions are loaded (out of alpha), nothing keeps them: the
+// archive holds the current versions only.
+if (!(ARCHIVED_VERSIONS_ENABLED as boolean)) {
+	const current = new Set(standardLibrary.map((e) => join(e.id, `${e.version}.json`)));
+	for (const id of readdirSync(versionsDir, { withFileTypes: true })) {
+		if (!id.isDirectory()) continue;
+		for (const file of readdirSync(join(versionsDir, id.name))) {
+			if (!current.has(join(id.name, file))) rmSync(join(versionsDir, id.name, file));
+		}
+		if (readdirSync(join(versionsDir, id.name)).length === 0) {
+			rmSync(join(versionsDir, id.name), { recursive: true });
+		}
+	}
+}
 
 for (const entry of standardLibrary) {
 	const dir = join(versionsDir, entry.id);

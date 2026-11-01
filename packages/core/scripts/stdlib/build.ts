@@ -16,6 +16,7 @@ import { type GraphDocument, type GraphProject, ROOT_ID } from "../../src/graph/
 import { GraphModel } from "../../src/graph/model";
 import { libraryRef, libraryVersion, parseLibraryRef, standardLibrary } from "../../src/library";
 import { nagaBin, validateFragment } from "../../src/testing/wgsl";
+import type { GroupHandleDef } from "../../src/types";
 import { GroupBuilder, type GroupSpec, type GroupTarget, type ResolvedGroup } from "./builder";
 
 const coreDir = join(import.meta.dirname, "../..");
@@ -41,13 +42,12 @@ export function buildGroups(specs: readonly GroupSpec[]): BuiltGroup[] {
 		if (spec) return build(spec);
 		const entry = standardLibrary.find((e) => e.id === target);
 		if (!entry) throw new Error(`no standard-library entry "${target}"`);
-		const handles = (type: string) =>
-			new Map(
-				(entry.definition.nodes.find((n) => n.type === type)?.data.handles ?? []).map(
-					(h) => [h.label, h.id],
-				),
-			);
-		return { ref: entry.ref, inputs: handles("group-input"), outputs: handles("group-output") };
+		const handles = (list: GroupHandleDef[] = []) => new Map(list.map((h) => [h.label, h.id]));
+		return {
+			ref: entry.ref,
+			inputs: handles(entry.definition.inputs),
+			outputs: handles(entry.definition.outputs),
+		};
 	};
 
 	const build = (spec: GroupSpec): BuiltGroup => {

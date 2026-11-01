@@ -1,5 +1,5 @@
 import type { Screen } from "../screen/screen";
-import type { NodeData, NodeWidget, TypeVariable } from "../types";
+import type { GroupHandleDef, InputValue, NodeData, NodeWidget, TypeVariable } from "../types";
 import type { ProjectSettings } from "./settings";
 
 /** A document's camera: pan offset and zoom. */
@@ -23,6 +23,12 @@ export type GraphDocument = {
 	viewport?: Viewport;
 	/** Types the group's sockets share, each group node deciding which (see `SocketType`). */
 	typeVariables?: TypeVariable[];
+	/** A group's inputs, which its Group Input nodes show. */
+	inputs?: GroupHandleDef[];
+	/** A group's outputs, which its Group Output nodes take. */
+	outputs?: GroupHandleDef[];
+	/** What a group's inputs hold on group nodes until edited, by input id. */
+	defaults?: Record<string, InputValue>;
 };
 
 export type GraphDocumentNode = {
@@ -110,6 +116,9 @@ export type HydratedGraphDocument = {
 	locked: boolean;
 	viewport: Viewport | undefined;
 	typeVariables: TypeVariable[];
+	inputs: GroupHandleDef[];
+	outputs: GroupHandleDef[];
+	defaults: Record<string, InputValue>;
 	/** A widget a standard-library group's nodes draw (see `StandardLibraryEntry.widget`). */
 	widget?: NodeWidget;
 };
@@ -126,6 +135,9 @@ export function createPlainDocument(): HydratedGraphDocument {
 		locked: false,
 		viewport: undefined,
 		typeVariables: [],
+		inputs: [],
+		outputs: [],
+		defaults: {},
 	};
 }
 

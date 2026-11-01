@@ -6,7 +6,7 @@
 		type EnumVariant,
 		groupInputDef,
 		type GroupHandleDef,
-		handlesOf,
+		type GroupSide,
 		inputControl,
 		type InputControl,
 		type InputOwner,
@@ -45,9 +45,7 @@
 		definitionRef ? graph.project.definitions.get(definitionRef) : undefined,
 	);
 	const locked = $derived(sheetGroupNode?.group?.locked ?? true);
-	const inputNode = $derived(definition?.nodes.find((n) => n.type === "group-input"));
-	const outputNode = $derived(definition?.nodes.find((n) => n.type === "group-output"));
-	const inputHandles = $derived(handlesOf(inputNode));
+	const inputHandles = $derived(definition?.inputs ?? []);
 	const variables = $derived(definition?.typeVariables ?? []);
 
 	/** The type a handle has where nothing decides it (see `boundType`). */
@@ -80,18 +78,18 @@
 		return typeof handle.type === "object" && "inferred" in handle.type;
 	}
 
-	function setSocketType(nodeId: string, handle: GroupHandleDef, type: SocketType) {
-		if (definitionRef) graph.setHandleType(definitionRef, nodeId, handle.id, type);
+	function setSocketType(side: GroupSide, handle: GroupHandleDef, type: SocketType) {
+		if (definitionRef) graph.setHandleType(definitionRef, side, handle.id, type);
 	}
 
 	/** Share a new variable from the socket, allowing the types of its kind. */
-	function shareNew(nodeId: string, handle: GroupHandleDef) {
+	function shareNew(side: GroupSide, handle: GroupHandleDef) {
 		if (!definitionRef) return;
 		const kind = TYPE_SETS.slice(0, 4).find((set) => set.types.includes(typeOf(handle)));
 		const variable = graph.addTypeVariable(definitionRef, kind?.types ?? FLOAT_TYPES);
-		if (variable) setSocketType(nodeId, handle, { variable: variable.id });
+		if (variable) setSocketType(side, handle, { variable: variable.id });
 	}
-	const outputHandles = $derived(handlesOf(outputNode));
+	const outputHandles = $derived(definition?.outputs ?? []);
 
 	/** The inputs directly under a variant, or under none. */
 	function inputsUnder(owner: InputOwner | undefined): GroupHandleDef[] {
@@ -108,8 +106,8 @@
 	];
 
 	function addInput(type: WgslType, owner: InputOwner | undefined, enumInput = false) {
-		if (!inputNode) return;
-		graph.addHandle(inputNode.id, type, {
+		if (!definitionRef) return;
+		graph.addHandle(definitionRef, "input", type, {
 			...(owner ? { owner } : {}),
 			...(enumInput ? { variants: NEW_ENUM } : {}),
 		});
@@ -151,13 +149,13 @@
 		}
 	}
 
-	function commitHandleLabel(nodeId: string, handleId: string) {
+	function commitHandleLabel(side: GroupSide, handleId: string) {
 		const value = handleLabelBuffer[handleId] ?? "";
 		if (!definitionRef || !value.trim()) return;
-		if (!graph.setHandleLabel(definitionRef, nodeId, handleId, value)) {
+		if (!graph.setHandleLabel(definitionRef, side, handleId, value)) {
 			// Revert buffer to the stored label so the input reflects the actual value
-			const labels = graph.resolveNodeLabels(nodeId);
-			const stored = labels.outputs[handleId] ?? labels.inputs[handleId];
+			const handles = side === "input" ? inputHandles : outputHandles;
+			const stored = handles.find((h) => h.id === handleId)?.label;
 			if (stored) handleLabelBuffer[handleId] = stored;
 		}
 	}
@@ -174,9 +172,7 @@
 	}
 
 	function setVariants(handle: GroupHandleDef, variants: EnumVariant[] | undefined) {
-		if (definitionRef && inputNode) {
-			graph.setHandleVariants(definitionRef, inputNode.id, handle.id, variants);
-		}
+		if (definitionRef) graph.setHandleVariants(definitionRef, handle.id, variants);
 	}
 
 	function addVariant(handle: GroupHandleDef) {
@@ -198,7 +194,7 @@
 	}
 </script>
 
-{#snippet handleRow(handle: GroupHandleDef, nodeId: string, removable: boolean)}
+{#snippet handleRow(handle: GroupHandleDef, side: GroupSide, removable: boolean)}
 	<div class="flex items-center gap-2">
 		{#if handle.variants}
 			<span
@@ -216,14 +212,13 @@
 				disabled={locked}
 				class="w-20 shrink-0"
 				title={shared ? `Shares the type ${shared.name}` : "Value type"}
-				onpick={(type: WgslType) => setSocketType(nodeId, handle, type)}
+				onpick={(type: WgslType) => setSocketType(side, handle, type)}
 			>
 				{#snippet extra()}
 					<DropdownMenu.Label>Shared types</DropdownMenu.Label>
 					{#each variables as variable (variable.id)}
 						<DropdownMenu.Item
-							onSelect={() =>
-								setSocketType(nodeId, handle, { variable: variable.id })}
+							onSelect={() => setSocketType(side, handle, { variable: variable.id })}
 						>
 							<span class="text-xs">{variable.name}</span>
 							<span class="text-muted-foreground ml-auto text-xs">
@@ -232,13 +227,13 @@
 							<CheckIcon class={shared?.id === variable.id ? "" : "invisible"} />
 						</DropdownMenu.Item>
 					{/each}
-					<DropdownMenu.Item onSelect={() => shareNew(nodeId, handle)}>
+					<DropdownMenu.Item onSelect={() => shareNew(side, handle)}>
 						New shared type
 					</DropdownMenu.Item>
-					{#if nodeId === outputNode?.id}
+					{#if side === "output"}
 						<DropdownMenu.Separator />
 						<DropdownMenu.Item
-							onSelect={() => setSocketType(nodeId, handle, { inferred: true })}
+							onSelect={() => setSocketType(side, handle, { inferred: true })}
 						>
 							Inferred
 							<span class="text-muted-foreground ml-auto text-xs"
@@ -256,10 +251,10 @@
 			oninput={(e: Event) => {
 				handleLabelBuffer[handle.id] = inputValue(e);
 			}}
-			onblur={() => commitHandleLabel(nodeId, handle.id)}
+			onblur={() => commitHandleLabel(side, handle.id)}
 			onkeydown={handleEnterBlur}
 		/>
-		{#if nodeId === inputNode?.id}
+		{#if side === "input"}
 			<Button
 				variant="ghost"
 				size="icon-sm"
@@ -280,7 +275,7 @@
 				title="Remove"
 				disabled={!removable}
 				onclick={() => {
-					if (definitionRef) graph.removeHandle(definitionRef, nodeId, handle.id);
+					if (definitionRef) graph.removeHandle(definitionRef, side, handle.id);
 				}}
 			>
 				<TrashIcon />
@@ -296,12 +291,12 @@
 			<InputEditor
 				control={defaultControl(handle)}
 				type={typeOf(handle)}
-				value={inputNode?.data.values?.[handle.id]}
+				value={definition?.defaults[handle.id]}
 				disabled={locked}
 				name="group-default-{handle.id}"
 				onchange={(value: InputValue) => {
-					if (definitionRef && inputNode) {
-						graph.setHandleDefault(definitionRef, inputNode.id, handle.id, value);
+					if (definitionRef) {
+						graph.setHandleDefault(definitionRef, handle.id, value);
 					}
 				}}
 			/>
@@ -313,8 +308,8 @@
 				{#each ["min", "max"] as const as bound (bound)}
 					{@const current = handle[bound]}
 					{@const setBound = (value: number | undefined) => {
-						if (!definitionRef || !inputNode) return;
-						graph.setHandleRange(definitionRef, inputNode.id, handle.id, {
+						if (!definitionRef) return;
+						graph.setHandleRange(definitionRef, handle.id, {
 							min: handle.min,
 							max: handle.max,
 							[bound]: value,
@@ -374,10 +369,9 @@
 					value={handle.display ?? "numbers"}
 					disabled={locked}
 					onValueChange={(next: string) => {
-						if (definitionRef && inputNode) {
+						if (definitionRef) {
 							graph.setHandleDisplay(
 								definitionRef,
-								inputNode.id,
 								handle.id,
 								COLOR_DISPLAYS.find((d) => d === next),
 							);
@@ -409,20 +403,20 @@
 	/>
 {/snippet}
 
-{#snippet inputList(nodeId: string, owner: InputOwner | undefined)}
+{#snippet inputList(side: GroupSide, owner: InputOwner | undefined)}
 	{#each inputsUnder(owner) as handle (handle.id)}
-		{@render handleRow(handle, nodeId, true)}
+		{@render handleRow(handle, side, true)}
 		{#if expanded[handle.id]}
 			{@render inputDetails(handle)}
 		{/if}
 		{#if handle.variants}
-			{@render variantTree(handle, nodeId)}
+			{@render variantTree(handle, side)}
 		{/if}
 	{/each}
 {/snippet}
 
 <!-- Each variant with the inputs group nodes show while it's picked. -->
-{#snippet variantTree(handle: GroupHandleDef, nodeId: string)}
+{#snippet variantTree(handle: GroupHandleDef, side: GroupSide)}
 	{@const variants = handle.variants ?? []}
 	<div class="border-border ml-2 flex flex-col gap-2 border-l pl-3">
 		{#each variants as variant, i (variant.value)}
@@ -480,7 +474,7 @@
 					{/if}
 				</div>
 				<div class="flex flex-col gap-1.5 pl-3">
-					{@render inputList(nodeId, { enumId: handle.id, value: variant.value })}
+					{@render inputList(side, { enumId: handle.id, value: variant.value })}
 					{#if !locked}
 						{@render addInputPicker({ enumId: handle.id, value: variant.value })}
 					{/if}
@@ -597,34 +591,31 @@
 			</div>
 		{/if}
 
-		{#if inputNode}
-			{@const nodeId = inputNode.id}
+		{#if definitionRef}
+			{@const ref = definitionRef}
 			<div class="flex flex-col gap-1.5">
 				<span class="text-sm font-medium">Inputs</span>
-				{@render inputList(nodeId, undefined)}
+				{@render inputList("input", undefined)}
 				{#if !locked}
 					{@render addInputPicker(undefined)}
 				{/if}
 			</div>
-		{/if}
 
-		{#if outputNode}
-			{@const nodeId = outputNode.id}
 			<div class="flex flex-col gap-1.5">
 				<span class="text-sm font-medium">Outputs</span>
 				{#each outputHandles as handle (handle.id)}
-					{@render handleRow(handle, nodeId, outputHandles.length > 1)}
+					{@render handleRow(handle, "output", outputHandles.length > 1)}
 				{/each}
 				{#if !locked}
 					<TypePicker
 						types={WGSL_TYPES}
 						label="Add output"
 						title="Add an output"
-						onpick={(type: WgslType) => graph.addHandle(nodeId, type)}
+						onpick={(type: WgslType) => graph.addHandle(ref, "output", type)}
 					>
 						{#snippet extra()}
 							<DropdownMenu.Item
-								onSelect={() => graph.addHandle(nodeId, { inferred: true })}
+								onSelect={() => graph.addHandle(ref, "output", { inferred: true })}
 							>
 								Inferred
 								<span class="text-muted-foreground ml-auto text-xs">
