@@ -56,8 +56,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklch-to-linear-rgb/1d22bdba2a195d.json").then((m) => m.default),
 	"std-oklab-to-linear-rgb@0c09da78c859fa": () =>
 		import("./std-oklab-to-linear-rgb/0c09da78c859fa.json").then((m) => m.default),
-	"std-fractal-voronoi@0e857cbe504401": () =>
-		import("./std-fractal-voronoi/0e857cbe504401.json").then((m) => m.default),
-	"std-fractal-octave@1cd055afa56769": () =>
-		import("./std-fractal-octave/1cd055afa56769.json").then((m) => m.default),
+	"std-fractal-voronoi@0f8fcf7ded9000": () =>
+		import("./std-fractal-voronoi/0f8fcf7ded9000.json").then((m) => m.default),
+	"std-fractal-octave@18f11aa710fb7f": () =>
+		import("./std-fractal-octave/18f11aa710fb7f.json").then((m) => m.default),
 };

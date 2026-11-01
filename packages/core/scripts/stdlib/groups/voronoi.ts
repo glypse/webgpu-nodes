@@ -11,6 +11,9 @@ const METRICS = [
 ] as const;
 const MINKOWSKI = 3;
 
+/** The weight under which the octaves left of a fractal noise are dropped. */
+const INAUDIBLE = 1 / 4096;
+
 /** XORed into the seed for the cells' colours, so they don't follow their points. */
 const COLOR_SALT = 1540483477;
 
@@ -747,15 +750,36 @@ const fractalOctave: GroupSpec = {
 			min: 0,
 		});
 		const octave = g.toFloat(iteration);
-		// The octave past Detail's whole part counts for its fraction.
-		const weight = g.clamp(g.add(g.sub(detail, octave), 1), 0, 1);
-		g.output("scale", g.pow(lacunarity, octave), "f32", { label: "Scale" });
-		g.output("amplitude", g.mul(g.pow(roughness, octave), weight), "f32", {
-			label: "Amplitude",
-		});
-		g.output("octaves", g.add(g.toInt(g.ceil(detail)), g.constant("i32", 1)), "i32", {
-			label: "Octaves",
-		});
+		g.frame(
+			"Octave",
+			{
+				note: "Its scale and weight; the octave past Detail's\nwhole part counts for its fraction.",
+			},
+			() => {
+				const weight = g.clamp(g.add(g.sub(detail, octave), 1), 0, 1);
+				g.output("scale", g.pow(lacunarity, octave), "f32", { label: "Scale" });
+				g.output("amplitude", g.mul(g.pow(roughness, octave), weight), "f32", {
+					label: "Amplitude",
+				});
+			},
+		);
+		g.frame(
+			"Octaves",
+			{
+				note: "Detail's, stopping early once the weights of all the octaves left\n(at most Roughness^n / (1 - Roughness)) add up to under 1/4096.",
+			},
+			() => {
+				const detailed = g.add(g.toInt(g.ceil(detail)), g.constant("i32", 1));
+				const r = g.max(roughness, 0.000001);
+				const needed = g.toInt(
+					g.max(g.ceil(g.div(g.log(g.mul(g.sub(1, r), INAUDIBLE)), g.log(r))), 1),
+				);
+				const fading = g.compare(roughness, "<", 1);
+				g.output("octaves", g.select(fading, detailed, g.min(detailed, needed)), "i32", {
+					label: "Octaves",
+				});
+			},
+		);
 	},
 };
 

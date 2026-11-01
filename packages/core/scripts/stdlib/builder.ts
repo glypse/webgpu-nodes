@@ -353,6 +353,7 @@ export class GroupBuilder {
 	fract = (e: Operand) => this.node("fract", { e });
 	abs = (e: Operand) => this.node("abs", { e });
 	sqrt = (e: Operand) => this.node("sqrt", { e });
+	log = (e: Operand) => this.node("log", { e });
 	negate = (e: Operand) => this.node("negate", { e });
 	mix = (a: Operand, b: Operand, t: Operand) => this.node("mix", { e1: a, e2: b, e3: t });
 	clamp = (e: Operand, low: Operand, high: Operand) => this.node("clamp", { e, low, high });
