@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 
 import { MATCH, MATCH_SELECTOR, caseHandle } from "../../src/enums";
 import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
+import { rerouteBranches } from "../../src/graph/branches";
 import type { GraphDocument, GraphDocumentEdge, GraphDocumentNode } from "../../src/graph/document";
 import {
 	type ColorDisplay,
@@ -105,11 +106,19 @@ export class GroupBuilder {
 		private readonly resolve: (target: GroupTarget) => ResolvedGroup,
 	) {}
 
+	/** The group described, each output linked to several inputs split at a reroute. */
 	document(): GraphDocument {
 		const defaults = Object.keys(this.inputValues).length > 0 ? this.inputValues : undefined;
+		const { reroutes, links, moved } = rerouteBranches(
+			this.nodes,
+			this.edges,
+			() => true,
+			(key) => stableId(`${this.id}/branch/${key}`),
+		);
+		const movedById = new Map(moved.map((e) => [e.id, e]));
 		return {
-			nodes: this.nodes,
-			edges: this.edges,
+			nodes: [...this.nodes, ...reroutes],
+			edges: [...this.edges.map((e) => movedById.get(e.id) ?? e), ...links],
 			inputs: this.inputs,
 			outputs: this.outputs,
 			...(defaults ? { defaults } : {}),

@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-dimension-mask@0420ec82eb2601", "std-hash@019d6613a7682f"],
+	"dependencies": ["std-dimension-mask@0420ec82eb2601", "std-hash@1c1cbaaae6dd7d"],
 	"definition": {
 		"nodes": [
 			{
@@ -13,7 +13,7 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 270,
+					"x": 372,
 					"y": 0
 				}
 			},
@@ -33,8 +33,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 540,
-					"y": 384
+					"x": 372,
+					"y": 395
 				},
 				"group": {
 					"definitionRef": "std-dimension-mask@0420ec82eb2601",
@@ -46,11 +46,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 540,
+					"x": 740,
 					"y": 178
 				},
 				"group": {
-					"definitionRef": "std-hash@019d6613a7682f",
+					"definitionRef": "std-hash@1c1cbaaae6dd7d",
 					"locked": true
 				}
 			},
@@ -59,7 +59,7 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 806,
+					"x": 1007,
 					"y": 240
 				}
 			},
@@ -68,7 +68,7 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 1071,
+					"x": 1272,
 					"y": 116
 				}
 			},
@@ -79,8 +79,26 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1338,
+					"x": 1539,
 					"y": 4
+				}
+			},
+			{
+				"id": "4ca16480-9503-4250-9e38-c94c75b8464c",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 268,
+					"y": 158
+				}
+			},
+			{
+				"id": "990b4ca0-b210-4ec7-8184-052fcf67483f",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 632,
+					"y": 96
 				}
 			}
 		],
@@ -94,8 +112,8 @@
 			},
 			{
 				"id": "d1416b65-21c4-4faf-8d2c-3a4e22d0da25",
-				"source": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
-				"sourceHandle": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+				"source": "4ca16480-9503-4250-9e38-c94c75b8464c",
+				"sourceHandle": "out",
 				"target": "186b24bd-04e4-4524-9317-c237c2cdd621",
 				"targetHandle": "operands"
 			},
@@ -108,8 +126,8 @@
 			},
 			{
 				"id": "2f6bef68-6bb1-48eb-b5ab-2c5bd206b58a",
-				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
-				"sourceHandle": "result",
+				"source": "990b4ca0-b210-4ec7-8184-052fcf67483f",
+				"sourceHandle": "out",
 				"target": "e5ebcda5-3d8a-4a66-b828-411d1908241b",
 				"targetHandle": "4de0afc6-7aba-4846-b22f-152e825964c3"
 			},
@@ -143,8 +161,8 @@
 			},
 			{
 				"id": "a7b50400-caa8-4162-a4bc-846acf424c83",
-				"source": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
-				"sourceHandle": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+				"source": "4ca16480-9503-4250-9e38-c94c75b8464c",
+				"sourceHandle": "out",
 				"target": "7cf30943-f33a-44f6-8019-3e0e9814733d",
 				"targetHandle": "operands"
 			},
@@ -164,10 +182,24 @@
 			},
 			{
 				"id": "66062d14-ac79-4e2d-abf1-82e190c5783d",
-				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
-				"sourceHandle": "result",
+				"source": "990b4ca0-b210-4ec7-8184-052fcf67483f",
+				"sourceHandle": "out",
 				"target": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
 				"targetHandle": "0375221a-046e-414c-b880-c5e7898e3986"
+			},
+			{
+				"id": "29210b52-d895-4ab2-94e6-927d62f3d1ca",
+				"source": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
+				"sourceHandle": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
+				"target": "4ca16480-9503-4250-9e38-c94c75b8464c",
+				"targetHandle": "in"
+			},
+			{
+				"id": "6a96907a-af91-4d76-92be-f35ba1ca30ad",
+				"source": "186b24bd-04e4-4524-9317-c237c2cdd621",
+				"sourceHandle": "result",
+				"target": "990b4ca0-b210-4ec7-8184-052fcf67483f",
+				"targetHandle": "in"
 			}
 		],
 		"inputs": [

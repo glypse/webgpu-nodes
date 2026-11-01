@@ -22,6 +22,7 @@ import {
 	withDefaults,
 } from "../types";
 import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
+import { rerouteBranches } from "./branches";
 import {
 	type GraphEdge,
 	type GraphNode,
@@ -31,7 +32,7 @@ import {
 } from "./document";
 import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
-import { indexDocument, serialiseDocument } from "./hydrate";
+import { hydrateNode, indexDocument, serialiseDocument } from "./hydrate";
 import { emptyProject, withEntry } from "./model-base";
 import { PreviewModel } from "./model-preview";
 import { ZONE_SPACING } from "./model-zones";
@@ -580,7 +581,10 @@ export class GraphModel extends PreviewModel {
 		const doc = this.project.definitions.get(definitionRef);
 		if (!doc || this.isStandardLibrary(definitionRef)) return false;
 		const only = options.nodeIds && new Set(options.nodeIds);
-		const nodes = only ? doc.nodes.filter((n) => only.has(n.id)) : doc.nodes;
+		const branched = this.rerouteBranches(doc, only);
+		const nodes = only
+			? doc.nodes.filter((n) => only.has(n.id) || branched.has(n.id))
+			: doc.nodes;
 		const positions = await computeLayout({
 			nodes,
 			edges: doc.edges,
@@ -590,10 +594,31 @@ export class GraphModel extends PreviewModel {
 				options.measure?.(definitionRef, node) ??
 				(node.type === LAYOUT_FRAME
 					? estimateFrameHeader(this.nodeLabel(node.id), node.data.note)
-					: estimateNodeGeometry(this.nodeRows(doc, node))),
+					: node.type === "reroute"
+						? REROUTE_GEOMETRY
+						: estimateNodeGeometry(this.nodeRows(doc, node))),
 			spacing: options.spacing,
 		});
-		return this.applyPositions(doc, positions);
+		return this.applyPositions(doc, positions) || branched.size > 0;
+	}
+
+	/** Split each branching output among `only` (all if absent) at a reroute; returns those added. */
+	private rerouteBranches(doc: HydratedGraphDocument, only?: ReadonlySet<string>): Set<string> {
+		const { reroutes, links, moved } = rerouteBranches(
+			doc.nodes,
+			doc.edges,
+			(id) => !only || only.has(id),
+			() => crypto.randomUUID(),
+			this.zoneAnalysis(doc).invalidEdges,
+		);
+		if (reroutes.length === 0) return new Set();
+		const movedById = new Map(moved.map((e) => [e.id, e]));
+		this.setContent(doc, {
+			nodes: [...doc.nodes, ...reroutes.map(hydrateNode)],
+			edges: [...doc.edges.map((e) => movedById.get(e.id) ?? e), ...links],
+		});
+		this.rebuildTypeCache();
+		return new Set(reroutes.map((n) => n.id));
 	}
 
 	/** Lay out the selected nodes of the document in view, among themselves. */
@@ -682,6 +707,14 @@ export type PendingConnection = {
 function entryNodeData(type: string, data: NodeData | undefined): NodeData {
 	return withDefaults(data ?? {}, defaultDataForType(type));
 }
+
+/** A reroute as drawn: a dot, both its handles at its centre. */
+const REROUTE_GEOMETRY: NodeGeometry = {
+	width: 18,
+	height: 18,
+	inputs: new Map([["in", 9]]),
+	outputs: new Map([["out", 9]]),
+};
 
 /** Approximate rendered node width, for placing nodes next to a drop point. */
 const NODE_WIDTH = 180;

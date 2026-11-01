@@ -94,4 +94,36 @@ describe("GraphModel layout", () => {
 		expect(x(zoneId)).toBeLessThan(x("body"));
 		expect(x("body")).toBeLessThan(x(outputId));
 	});
+
+	it("splits each output linked to several inputs at a reroute, once", async () => {
+		const graph = managerFor(
+			[
+				{ id: "t", type: "time" },
+				{ id: "a", type: "sin" },
+				{ id: "b", type: "cos" },
+				{ id: "c", type: "add" },
+			],
+			[
+				["t", "time", "a", "e"],
+				["t", "time", "b", "e"],
+				["a", "result", "c", "operands"],
+				["b", "result", "c", "operands"],
+				["c", "result", "out", "color"],
+			],
+		);
+		await graph.layoutDocument();
+		const fromTime = graph.root.edgesBySource.get("t") ?? [];
+		expect(fromTime).toHaveLength(1);
+		const reroute = fromTime[0]?.target ?? "";
+		expect(graph.root.nodesById.get(reroute)?.type).toBe("reroute");
+		expect(
+			graph.root.edgesBySource
+				.get(reroute)
+				?.map((e) => e.target)
+				.sort(),
+		).toEqual(["a", "b"]);
+		const count = graph.root.nodes.length;
+		await graph.layoutDocument();
+		expect(graph.root.nodes).toHaveLength(count);
+	});
 });
