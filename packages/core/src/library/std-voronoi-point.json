@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-dimension-mask@0420ec82eb2601", "std-hash@1c1cbaaae6dd7d"],
+	"dependencies": ["std-hash@1b6519412c054e"],
 	"definition": {
 		"nodes": [
 			{
@@ -13,8 +13,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 372,
-					"y": 0
+					"x": 370,
+					"y": 148
 				}
 			},
 			{
@@ -25,20 +25,16 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 231
+					"y": 415
 				}
 			},
 			{
 				"id": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
-				"type": "node-group",
+				"type": "to-int",
 				"data": {},
 				"position": {
-					"x": 372,
-					"y": 395
-				},
-				"group": {
-					"definitionRef": "std-dimension-mask@0420ec82eb2601",
-					"locked": true
+					"x": 735,
+					"y": 112
 				}
 			},
 			{
@@ -46,11 +42,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 740,
-					"y": 178
+					"x": 1008,
+					"y": 326
 				},
 				"group": {
-					"definitionRef": "std-hash@1c1cbaaae6dd7d",
+					"definitionRef": "std-hash@1b6519412c054e",
 					"locked": true
 				}
 			},
@@ -59,8 +55,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 1007,
-					"y": 240
+					"x": 1272,
+					"y": 334
 				}
 			},
 			{
@@ -68,8 +64,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 1272,
-					"y": 116
+					"x": 1538,
+					"y": 182
 				}
 			},
 			{
@@ -79,8 +75,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1539,
-					"y": 4
+					"x": 1809,
+					"y": 0
 				}
 			},
 			{
@@ -88,8 +84,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 268,
-					"y": 158
+					"x": 270,
+					"y": 306
 				}
 			},
 			{
@@ -97,8 +93,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 632,
-					"y": 96
+					"x": 630,
+					"y": 244
 				}
 			}
 		],
@@ -119,15 +115,15 @@
 			},
 			{
 				"id": "2747dab6-ee9d-49e9-be8f-b4d291122116",
-				"source": "ada0978c-3052-427c-a1f8-b4f10a2b6329",
-				"sourceHandle": "9ebec6e6-b8d4-47c3-a0f3-551c0427db28",
+				"source": "990b4ca0-b210-4ec7-8184-052fcf67483f",
+				"sourceHandle": "out",
 				"target": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
-				"targetHandle": "7a1c809e-957c-41ac-bca8-4a6725f7bc97"
+				"targetHandle": "e"
 			},
 			{
 				"id": "2f6bef68-6bb1-48eb-b5ab-2c5bd206b58a",
-				"source": "990b4ca0-b210-4ec7-8184-052fcf67483f",
-				"sourceHandle": "out",
+				"source": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
+				"sourceHandle": "result",
 				"target": "e5ebcda5-3d8a-4a66-b828-411d1908241b",
 				"targetHandle": "4de0afc6-7aba-4846-b22f-152e825964c3"
 			},
@@ -154,34 +150,27 @@
 			},
 			{
 				"id": "fd1abdfd-827b-49a4-84f0-1958ccbbd2d5",
-				"source": "9ed74532-6fb8-4b1e-be7b-f55a6119a3c1",
-				"sourceHandle": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5",
-				"target": "cefe941d-f459-4dde-98b9-78462e2e7616",
-				"targetHandle": "operands"
-			},
-			{
-				"id": "a7b50400-caa8-4162-a4bc-846acf424c83",
 				"source": "4ca16480-9503-4250-9e38-c94c75b8464c",
 				"sourceHandle": "out",
 				"target": "7cf30943-f33a-44f6-8019-3e0e9814733d",
 				"targetHandle": "operands"
 			},
 			{
-				"id": "e38ae523-668d-42f6-917b-616120585ea0",
+				"id": "a7b50400-caa8-4162-a4bc-846acf424c83",
 				"source": "cefe941d-f459-4dde-98b9-78462e2e7616",
 				"sourceHandle": "result",
 				"target": "7cf30943-f33a-44f6-8019-3e0e9814733d",
 				"targetHandle": "operands"
 			},
 			{
-				"id": "0432c918-4fa0-4646-a040-d2634296b90d",
+				"id": "e38ae523-668d-42f6-917b-616120585ea0",
 				"source": "7cf30943-f33a-44f6-8019-3e0e9814733d",
 				"sourceHandle": "result",
 				"target": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
 				"targetHandle": "d555ec1a-297d-42af-901e-d6ad9ec77da3"
 			},
 			{
-				"id": "66062d14-ac79-4e2d-abf1-82e190c5783d",
+				"id": "0432c918-4fa0-4646-a040-d2634296b90d",
 				"source": "990b4ca0-b210-4ec7-8184-052fcf67483f",
 				"sourceHandle": "out",
 				"target": "b9ae6d7e-7124-4e96-95c3-0e661256682c",
@@ -206,12 +195,16 @@
 			{
 				"id": "49edf500-c93a-4ba0-bebf-ab844b41df33",
 				"label": "Cell",
-				"type": "vec4f"
+				"type": {
+					"variable": "90d136c2-1acf-428d-a260-cf86f2168ca4"
+				}
 			},
 			{
 				"id": "46097e43-ed66-4731-b30e-0b6248dcfd9a",
 				"label": "Offset",
-				"type": "vec4f"
+				"type": {
+					"variable": "90d136c2-1acf-428d-a260-cf86f2168ca4"
+				}
 			},
 			{
 				"id": "baaa207e-4d38-472a-909c-fc453335e8c1",
@@ -222,47 +215,34 @@
 				"id": "37f38414-06e2-4832-8b0f-a4ba7e7cac1a",
 				"label": "Seed",
 				"type": "i32"
-			},
-			{
-				"id": "9ebec6e6-b8d4-47c3-a0f3-551c0427db28",
-				"label": "Dimensions",
-				"type": "u32",
-				"variants": [
-					{
-						"value": 1,
-						"label": "1D"
-					},
-					{
-						"value": 2,
-						"label": "2D"
-					},
-					{
-						"value": 3,
-						"label": "3D"
-					},
-					{
-						"value": 4,
-						"label": "4D"
-					}
-				]
 			}
 		],
 		"outputs": [
 			{
 				"id": "d555ec1a-297d-42af-901e-d6ad9ec77da3",
 				"label": "Point",
-				"type": "vec4f"
+				"type": {
+					"variable": "90d136c2-1acf-428d-a260-cf86f2168ca4"
+				}
 			},
 			{
 				"id": "0375221a-046e-414c-b880-c5e7898e3986",
 				"label": "Neighbor Cell",
-				"type": "vec4f"
+				"type": {
+					"variable": "90d136c2-1acf-428d-a260-cf86f2168ca4"
+				}
 			}
 		],
 		"defaults": {
 			"baaa207e-4d38-472a-909c-fc453335e8c1": 1,
-			"37f38414-06e2-4832-8b0f-a4ba7e7cac1a": 0,
-			"9ebec6e6-b8d4-47c3-a0f3-551c0427db28": 2
-		}
+			"37f38414-06e2-4832-8b0f-a4ba7e7cac1a": 0
+		},
+		"typeVariables": [
+			{
+				"id": "90d136c2-1acf-428d-a260-cf86f2168ca4",
+				"name": "T",
+				"types": ["vec2f", "vec3f", "vec4f", "f32"]
+			}
+		]
 	}
 }

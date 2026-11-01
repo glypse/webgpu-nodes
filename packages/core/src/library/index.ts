@@ -5,7 +5,7 @@ import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
-import dimensionMask from "./std-dimension-mask.json";
+import componentSum from "./std-component-sum.json";
 import fractalOctave from "./std-fractal-octave.json";
 import fractalVoronoi from "./std-fractal-voronoi.json";
 import hash from "./std-hash.json";
@@ -14,6 +14,7 @@ import latticeNeighbor from "./std-lattice-neighbor.json";
 import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
 import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
+import maxComponent from "./std-max-component.json";
 import noiseCoordinates from "./std-noise-coordinates.json";
 import oklabToLinearRgb from "./std-oklab-to-linear-rgb.json";
 import oklabToOklch from "./std-oklab-to-oklch.json";
@@ -21,6 +22,7 @@ import oklabToXyz from "./std-oklab-to-xyz.json";
 import oklchGamutMap from "./std-oklch-gamut-map.json";
 import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
+import padVector from "./std-pad-vector.json";
 import remap from "./std-remap.json";
 import voronoiBisector from "./std-voronoi-bisector.json";
 import voronoiDistance from "./std-voronoi-distance.json";
@@ -80,7 +82,6 @@ const files: unknown[] = [
 	oklchToLinearRgb,
 	inDisplayGamut,
 	oklchGamutMap,
-	dimensionMask,
 	noiseCoordinates,
 	hash,
 	latticeNeighbor,
@@ -94,6 +95,9 @@ const files: unknown[] = [
 	voronoiRadius,
 	voronoiSmooth,
 	voronoiBisector,
+	padVector,
+	componentSum,
+	maxComponent,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

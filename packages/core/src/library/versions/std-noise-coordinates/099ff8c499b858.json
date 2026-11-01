@@ -1,0 +1,101 @@
+{
+	"id": "std-noise-coordinates",
+	"name": "Noise Coordinates",
+	"aliases": ["Texture Coordinates", "Noise Vector"],
+	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "47b462b1-dfbd-4f94-b035-d51af34de1eb",
+				"type": "uv",
+				"data": {},
+				"position": {
+					"x": 0,
+					"y": 193
+				}
+			},
+			{
+				"id": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
+				"type": "fallback",
+				"data": {},
+				"position": {
+					"x": 265,
+					"y": 0
+				}
+			},
+			{
+				"id": "eb1aab08-3af8-47b1-badf-ebfce5b55e98",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 64
+				}
+			},
+			{
+				"id": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 525,
+					"y": 32
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "7f5386d7-cdb5-4e45-b374-434c8c3aee71",
+				"source": "eb1aab08-3af8-47b1-badf-ebfce5b55e98",
+				"sourceHandle": "7a476d9f-cfe9-4bdd-b8fd-45ac6be9d835",
+				"target": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
+				"targetHandle": "value"
+			},
+			{
+				"id": "1f5ae834-5deb-46fb-ad7b-dd2e1dba58d2",
+				"source": "47b462b1-dfbd-4f94-b035-d51af34de1eb",
+				"sourceHandle": "uv",
+				"target": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
+				"targetHandle": "default"
+			},
+			{
+				"id": "f5c80ddc-b2c0-4d85-bd5a-701e9789c552",
+				"source": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
+				"sourceHandle": "result",
+				"target": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088",
+				"targetHandle": "63e24765-ffbb-4ea2-801a-d216aa80057a"
+			}
+		],
+		"inputs": [
+			{
+				"id": "7a476d9f-cfe9-4bdd-b8fd-45ac6be9d835",
+				"label": "Vector",
+				"type": {
+					"variable": "fd03b706-f2ed-470f-a57c-9a3482ca072f"
+				}
+			}
+		],
+		"outputs": [
+			{
+				"id": "63e24765-ffbb-4ea2-801a-d216aa80057a",
+				"label": "Coordinates",
+				"type": {
+					"variable": "fd03b706-f2ed-470f-a57c-9a3482ca072f"
+				}
+			}
+		],
+		"typeVariables": [
+			{
+				"id": "fd03b706-f2ed-470f-a57c-9a3482ca072f",
+				"name": "T",
+				"types": ["vec2f", "vec3f", "vec4f", "f32"]
+			}
+		]
+	}
+}

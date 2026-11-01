@@ -7,8 +7,12 @@ import {
 	typeKind,
 	VEC_TYPES,
 	WGSL_TYPES,
+	type WgslType,
 } from "../types";
 import { binaryNode, unaryFn } from "./builders";
+
+/** Measurable as WGSL's `length` and `distance` measure them: a scalar as its absolute value. */
+const MEASURED_TYPES: readonly WgslType[] = [...FLOAT_VEC_TYPES, "f32"];
 
 // Vector
 export const dotNode: NodeDescriptor = {
@@ -22,7 +26,7 @@ export const dotNode: NodeDescriptor = {
 };
 export const distanceNode: NodeDescriptor = {
 	...binaryNode("distance", "Distance", (a, b) => `distance(${a}, ${b})`, {
-		types: FLOAT_VEC_TYPES,
+		types: MEASURED_TYPES,
 		ids: ["e1", "e2"],
 		category: "vector",
 	}),
@@ -34,7 +38,7 @@ export const lengthNode: NodeDescriptor = {
 	label: "Length",
 	aliases: ["Magnitude", "Norm", "Vector Math"],
 	category: "vector",
-	inputs: [{ id: "e1", label: "e1", types: FLOAT_VEC_TYPES }],
+	inputs: [{ id: "e1", label: "e1", types: MEASURED_TYPES }],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { values: { e1: 0 } },
 	resolveOutputType: () => "f32",

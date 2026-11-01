@@ -1,0 +1,183 @@
+{
+	"id": "std-component-sum",
+	"name": "Component Sum",
+	"aliases": ["Sum Components", "Add Components", "Horizontal Add", "Manhattan Length"],
+	"category": "vector",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "ceec5187-3fc2-4a91-a6eb-e9d967db53c1",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": 1
+					}
+				},
+				"position": {
+					"x": 365,
+					"y": 178
+				}
+			},
+			{
+				"id": "2fd81f03-8327-4e2a-9f7c-b2e9aaa68d4c",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 98
+				}
+			},
+			{
+				"id": "8771cbe8-f546-48bd-af48-d909e5b6f922",
+				"type": "component-count",
+				"data": {},
+				"position": {
+					"x": 627,
+					"y": 0
+				}
+			},
+			{
+				"id": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"type": "match",
+				"data": {
+					"types": {
+						"f32,vec2f,vec3f,vec4f,i32,vec2i,vec3i,vec4i,u32,vec2u,vec3u,vec4u,bool,vec2b,vec3b,vec4b": "f32"
+					}
+				},
+				"position": {
+					"x": 890,
+					"y": 6
+				}
+			},
+			{
+				"id": "4ef0ff1f-de78-4efa-8b23-3cb883cb27d0",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 1150,
+					"y": 38
+				}
+			},
+			{
+				"id": "fb5ff13e-daa0-4d2e-ab84-1de2db1ed558",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 158
+				}
+			},
+			{
+				"id": "df4df5f2-c817-4aee-ba49-b9c259d9e96d",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 708,
+					"y": 242
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "3c16d59b-de05-404f-8f1b-d5602f18e41a",
+				"source": "fb5ff13e-daa0-4d2e-ab84-1de2db1ed558",
+				"sourceHandle": "out",
+				"target": "ceec5187-3fc2-4a91-a6eb-e9d967db53c1",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "fce0b596-6392-419b-a845-731863691f0f",
+				"source": "fb5ff13e-daa0-4d2e-ab84-1de2db1ed558",
+				"sourceHandle": "out",
+				"target": "8771cbe8-f546-48bd-af48-d909e5b6f922",
+				"targetHandle": "value"
+			},
+			{
+				"id": "a6ecbeac-028e-4382-aaf2-f54d43e26be0",
+				"source": "8771cbe8-f546-48bd-af48-d909e5b6f922",
+				"sourceHandle": "count",
+				"target": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"targetHandle": "selector"
+			},
+			{
+				"id": "da7d497e-dae2-4246-9f2d-d283b27396c0",
+				"source": "fb5ff13e-daa0-4d2e-ab84-1de2db1ed558",
+				"sourceHandle": "out",
+				"target": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"targetHandle": "case-1"
+			},
+			{
+				"id": "bc86784d-7c19-4479-a6e8-04a221fe87f8",
+				"source": "df4df5f2-c817-4aee-ba49-b9c259d9e96d",
+				"sourceHandle": "out",
+				"target": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"targetHandle": "case-2"
+			},
+			{
+				"id": "abbf2c65-d3ee-4d1f-ab95-aba8a78c5647",
+				"source": "df4df5f2-c817-4aee-ba49-b9c259d9e96d",
+				"sourceHandle": "out",
+				"target": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"targetHandle": "case-3"
+			},
+			{
+				"id": "d8804bde-9f46-4296-b292-661c9d5ca54a",
+				"source": "df4df5f2-c817-4aee-ba49-b9c259d9e96d",
+				"sourceHandle": "out",
+				"target": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"targetHandle": "case-4"
+			},
+			{
+				"id": "3c8ca244-1844-4475-a36a-401de150a3e2",
+				"source": "5467317a-b6bd-4a1d-a8b0-2388b7fa1b81",
+				"sourceHandle": "result",
+				"target": "4ef0ff1f-de78-4efa-8b23-3cb883cb27d0",
+				"targetHandle": "65886007-d50c-4193-bfba-1f07ed200d36"
+			},
+			{
+				"id": "a73d4ba9-2d7f-47a4-9ec8-75f1f4587cab",
+				"source": "2fd81f03-8327-4e2a-9f7c-b2e9aaa68d4c",
+				"sourceHandle": "057032dd-a989-4617-a3be-7aff2e16b578",
+				"target": "fb5ff13e-daa0-4d2e-ab84-1de2db1ed558",
+				"targetHandle": "in"
+			},
+			{
+				"id": "5c333b96-bc61-4fb2-ae9f-ca3ff5c90fcb",
+				"source": "ceec5187-3fc2-4a91-a6eb-e9d967db53c1",
+				"sourceHandle": "result",
+				"target": "df4df5f2-c817-4aee-ba49-b9c259d9e96d",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "057032dd-a989-4617-a3be-7aff2e16b578",
+				"label": "Vector",
+				"type": {
+					"variable": "7ee4fede-e67f-485e-a10b-6cf3024621f8"
+				}
+			}
+		],
+		"outputs": [
+			{
+				"id": "65886007-d50c-4193-bfba-1f07ed200d36",
+				"label": "Sum",
+				"type": "f32"
+			}
+		],
+		"typeVariables": [
+			{
+				"id": "7ee4fede-e67f-485e-a10b-6cf3024621f8",
+				"name": "T",
+				"types": ["vec3f", "vec2f", "vec4f", "f32"]
+			}
+		]
+	}
+}

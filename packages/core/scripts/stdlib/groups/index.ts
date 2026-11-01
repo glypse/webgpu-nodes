@@ -3,6 +3,7 @@
 import type { GroupSpec } from "../builder";
 import color from "./color";
 import coordinates from "./coordinates";
-import voronoi from "./voronoi";
+import noise from "./noise";
+import vector from "./vector";
 
-export default [...coordinates, ...color, ...voronoi] satisfies GroupSpec[];
+export default [...coordinates, ...color, ...vector, ...noise] satisfies GroupSpec[];

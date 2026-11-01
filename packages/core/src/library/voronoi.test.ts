@@ -47,6 +47,31 @@ function neighbors(dimensions: number, radius: number): number[][] {
 
 type Params = { scale: number; randomness: number; smoothness: number; seed: number };
 
+const EXPONENT = 1.7;
+/** Blender's distance metrics, by Metric's values. */
+const METRICS: ((d: number[]) => number)[] = [
+	(d) => Math.hypot(...d),
+	(d) => d.reduce((sum, n) => sum + Math.abs(n), 0),
+	(d) => Math.max(...d.map(Math.abs)),
+	(d) => d.reduce((sum, n) => sum + Math.abs(n) ** EXPONENT, 0) ** (1 / EXPONENT),
+];
+
+/** The closest two points' distances at `coordinates`, in `metric`. */
+function nearest(coordinates: number[], p: Params, metric: (d: number[]) => number) {
+	const dims = coordinates.length;
+	const position = scaled(coordinates, p.scale);
+	const cell = position.map(Math.floor);
+	const local = sub(position, cell);
+	const pad = (v: number[]) => [...v, ...Array<number>(4 - dims).fill(0)];
+	const distances = neighbors(dims, 1)
+		.map((offset) => {
+			const jitter = hash(pad(add(cell, offset)), p.seed).slice(0, dims);
+			return metric(sub(add(offset, scaled(jitter, p.randomness)), local));
+		})
+		.toSorted((a, b) => a - b);
+	return { f1: distances[0] ?? 0, f2: distances[1] ?? 0 };
+}
+
 /** Blender's Voronoi features at `coordinates` (Euclidean), every output at once. */
 function reference(coordinates: number[], p: Params) {
 	const dims = coordinates.length;
@@ -241,6 +266,20 @@ describe("Voronoi Texture", () => {
 			expect(at("Smooth Distance")[0]).toBeCloseTo(expected.smoothDistance, 5);
 			expectClose(at("Smooth Color"), expected.smoothColor);
 		});
+	});
+
+	it.each([1, 2, 3])("finds the closest two points in metric %i", (metric) => {
+		for (const coordinates of POINTS) {
+			const expected = nearest(
+				coordinates,
+				PARAMS,
+				METRICS[metric] ?? ((d) => Math.hypot(...d)),
+			);
+			const inputs = { ...INPUTS, Metric: metric, Exponent: EXPONENT };
+			const at = (output: string) => sample(VORONOI, coordinates, inputs, output)[0];
+			expect(at("Distance")).toBeCloseTo(expected.f1, 5);
+			expect(at("F2 Distance")).toBeCloseTo(expected.f2, 5);
+		}
 	});
 
 	it("gives F1 for the smooth outputs without smoothness", () => {

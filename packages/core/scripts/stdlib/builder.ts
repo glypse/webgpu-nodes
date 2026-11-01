@@ -20,7 +20,6 @@ import {
 	type EnumVariant,
 	familyKey,
 	type GroupHandleDef,
-	type HandleDef,
 	type InputValue,
 	type NodeData,
 	type NodeWidget,
@@ -28,6 +27,7 @@ import {
 	type TypeVariable,
 	WGSL_TYPES,
 	type WgslType,
+	type ZoneItem,
 } from "../../src/types";
 import { ITERATION_HANDLE, ITERATIONS_HANDLE, REPEAT_INPUT, REPEAT_OUTPUT } from "../../src/zones";
 
@@ -41,6 +41,12 @@ export type Ref = { readonly node: string; readonly handle: string };
 const GROUP_INPUT = "\0group-input";
 /** What an input receives: a link from a socket, or a value stored on the node. */
 export type Operand = Ref | InputValue;
+
+/** The type of a group's type variable, as its sockets and zone items take it. */
+export type VariableType = { readonly variable: string };
+
+/** A zone item's type: a fixed one, or a type variable's. */
+export type ItemType = ZoneItem["type"];
 
 /** An enum input of the group being built. */
 export type EnumRef = Ref & { readonly variants: readonly EnumVariant[] };
@@ -58,6 +64,14 @@ export type GroupSpec = {
 	/** The widget its nodes draw, given the handle id of each input by key. */
 	widget?: (input: (key: string) => string) => NodeWidget;
 };
+
+/**
+ * Where a helper group is listed: in the add menu's Helpers section of its
+ * category (under `path`), and after the main search results.
+ */
+export function helpers(...path: string[]): Pick<GroupSpec, "section" | "searchSection"> {
+	return { section: ["Helpers", ...path], searchSection: "Helpers" };
+}
 
 /** A group another one calls: one described in the same run, or a library entry by id. */
 export type GroupTarget = GroupSpec | string;
@@ -244,8 +258,11 @@ export class GroupBuilder {
 	// ── Boundary ──────────────────────────────────────────────────────────
 
 	/** A type the sockets typed with it share, decided per group node among `types`. */
-	typeVariable(key: string, name: string, types: readonly WgslType[]): SocketType {
+	typeVariable(key: string, name: string, types: readonly WgslType[]): VariableType {
 		const id = stableId(`${this.id}/type/${key}`);
+		if (this.typeVariables.some((v) => v.id === id)) {
+			throw new Error(`${this.id}: type variable "${key}" declared twice`);
+		}
 		this.typeVariables.push({ id, name, types });
 		return { variable: id };
 	}
@@ -477,7 +494,7 @@ export class GroupBuilder {
 	 */
 	repeat<K extends string>(
 		iterations: Operand,
-		items: Record<K, readonly [WgslType, Operand]>,
+		items: Record<K, readonly [ItemType, Operand]>,
 		body: (iteration: Ref, state: Record<K, Ref>) => Record<K, Operand>,
 	): Record<K, Ref> {
 		const zone = this.count;
@@ -485,10 +502,10 @@ export class GroupBuilder {
 		const inputId = this.addNode(REPEAT_INPUT, { pairedOutput: outputId });
 		this.feed(inputId, ITERATIONS_HANDLE, iterations);
 		const keys = Object.keys(items) as K[];
-		const handles = new Map<K, HandleDef>();
+		const handles = new Map<K, ZoneItem>();
 		for (const key of keys) {
 			const [type, initial] = items[key];
-			const handle: HandleDef = {
+			const handle: ZoneItem = {
 				id: stableId(`${this.id}/zone/${String(zone)}/${key}`),
 				label: key,
 				type,
