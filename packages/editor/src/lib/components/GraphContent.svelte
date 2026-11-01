@@ -440,7 +440,6 @@
 			proOptions={{ hideAttribution: !devTools.enabled }}
 			nodesDraggable={!isLocked}
 			nodesConnectable={!isLocked}
-			elementsSelectable={!isLocked}
 			deleteKey={null}
 			isValidConnection={(connection) => graph.isValidConnection(connection)}
 			onmove={(_event, viewport) => {
