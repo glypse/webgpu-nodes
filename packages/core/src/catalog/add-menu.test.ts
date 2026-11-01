@@ -7,6 +7,7 @@ import {
 	addMenuEntries,
 	groupByHeading,
 	groupResults,
+	highlightParts,
 	searchEntries,
 } from "./add-menu";
 
@@ -65,6 +66,71 @@ describe("add menu entries", () => {
 	});
 });
 
+describe("fuzzy search", () => {
+	const graph = managerFor([], []);
+	const entries = addMenuEntries(graph);
+	const labels = (query: string) => searchEntries(entries, query).map((r) => r.entry.label);
+
+	it("finds names holding the query's letters in order", () => {
+		expect(labels("smstp")).toContain("Smoothstep");
+		expect(labels("vor tex")).toContain("Voronoi Texture");
+		expect(labels("smoth")).toContain("Smoothstep");
+		expect(labels("multipyl")).toContain("Multiply");
+		expect(labels("smoothstep")[0]).toBe("Smoothstep");
+	});
+
+	it("finds variants by their configuration, and creates them so", () => {
+		const [first] = searchEntries(entries, "value vec2i");
+		if (!first) throw new Error("no result");
+		expect(first.entry.label).toBe("Declare vec2i");
+		expect(first.alias).toBe("Value");
+		const declare = graph.addMenuEntry(first.entry, { x: 0, y: 0 }) ?? "";
+		expect(graph.resolveNodeOutputType(declare)).toBe("vec2i");
+
+		expect(first.aliasRanges).toEqual([0, 5]);
+		expect(highlightParts(first.entry.label, first.labelRanges)).toEqual([
+			{ text: "Declare ", matched: false },
+			{ text: "vec2i", matched: true },
+		]);
+
+		expect(labels("declare")).not.toContain("Declare f32");
+		expect(labels("compare less")).toContain("Compare Less Than");
+		expect(labels("add vec2f")[0]).toBe("Add vec2f");
+		expect(labels("add 2")).toEqual(expect.arrayContaining(["Add vec2f", "Add vec2i"]));
+		const [addVec3] = searchEntries(entries, "add vec3f");
+		if (!addVec3) throw new Error("no result");
+		const add = graph.addMenuEntry(addVec3.entry, { x: 0, y: 0 }) ?? "";
+		expect(graph.typeChoice(add)?.forced).toBe("vec3f");
+	});
+
+	it("picks several options at once", () => {
+		const [first] = searchEntries(entries, "vorn man 3");
+		if (!first) throw new Error("no result");
+		expect(first.entry.label).toBe("Fractal Voronoi 3D Manhattan");
+		const voronoi = graph.addMenuEntry(first.entry, { x: 0, y: 0 }) ?? "";
+		const values = Object.values(graph.root.nodesById.get(voronoi)?.data.values ?? {});
+		expect(values.toSorted()).toEqual([1, 3]);
+		expect(labels("value vec2i 3d")).not.toContain("Declare vec2i 3D");
+	});
+
+	it("only picks options the query matches letters of", () => {
+		const results = searchEntries(entries, "fractal voronoi", () => false);
+		expect(results.map((r) => r.entry.label)).toContain("Fractal Voronoi");
+		expect(labels("fractal voronoi")).not.toContain("Fractal Voronoi Euclidean");
+		expect(searchEntries(entries, "vorn man 3", () => false)).toEqual([]);
+	});
+
+	it("lists a variant creating what its entry does once, by the variant's name", () => {
+		const results = searchEntries(entries, "less than");
+		const compares = results.filter((r) => r.entry.type === "compare");
+		expect(compares.map((r) => [r.entry.label, r.alias])).toEqual([
+			["Compare Less Than", undefined],
+			["Compare Less Than or Equal", undefined],
+		]);
+		expect(labels("voronoi texture 3d")).toContain("Voronoi Texture 3D");
+	});
+});
+
 describe("adding from a dropped link", () => {
 	const keysFor = (graph: ReturnType<typeof managerFor>, pending: PendingConnection) =>
 		graph.connectableEntries(addMenuEntries(graph), pending).map((e) => e.key);
@@ -119,9 +185,9 @@ describe("adding from a dropped link", () => {
 		const fromTime: PendingConnection = { nodeId: "t", handleId: "time", handleType: "source" };
 		const entries = graph.connectableEntries(addMenuEntries(graph), fromTime);
 		const declares = entries.filter((e) => e.type === "declare");
-		expect(declares.map((e) => e.forcedType)).toEqual(["vec2f", "vec3f", "vec4f"]);
+		expect(declares.map((e) => e.data?.types?.declare)).toEqual(["vec2f", "vec3f", "vec4f"]);
 
-		const vec3 = declares.find((e) => e.forcedType === "vec3f");
+		const vec3 = declares.find((e) => e.data?.types?.declare === "vec3f");
 		if (!vec3) throw new Error("missing Declare vec3f");
 		const declare = graph.addMenuEntryConnected(vec3, { x: 0, y: 0 }, fromTime) ?? "";
 		expect(graph.resolveNodeOutputType(declare)).toBe("vec3f");
@@ -141,7 +207,9 @@ describe("adding from a dropped link", () => {
 		const [first] = searchEntries(entries, "combine vector");
 		expect(first?.entry.label).toBe("Declare vec4f");
 		expect(first?.alias).toBe("Combine Vector");
-		expect(searchEntries(entries, "vec4").map((r) => r.entry.label)).toEqual(["Declare vec4f"]);
+		const vec4 = searchEntries(entries, "vec4").map((r) => r.entry.label);
+		expect(vec4).toContain("Declare vec4f");
+		expect(vec4).not.toContain("Declare vec3f");
 		expect(searchEntries(entries, "rgba").map((r) => r.entry.label)).toContain("Color");
 	});
 

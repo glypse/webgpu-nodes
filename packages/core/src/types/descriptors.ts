@@ -326,3 +326,19 @@ export type NodeDescriptor = {
 	 *  The `let ` / `var ` prefix is the node's own choice. */
 	wgsl: (ctx: WgslCtx) => string[];
 };
+
+/**
+ * The types a node's type picker offers and the key its pick is stored
+ * under in `NodeData.types`: its `typeFamily`, or else its primary input's
+ * types, inferred from links until one is picked. Undefined without a choice.
+ */
+export function pickableTypes(
+	descriptor: NodeDescriptor,
+): { key: string; types: readonly WgslType[]; inferable: boolean } | undefined {
+	const family = descriptor.typeFamily;
+	if (family) return family.types.length < 2 ? undefined : { ...family, inferable: false };
+	const primary =
+		descriptor.inputs.find((i) => i.id === descriptor.primaryInput) ?? descriptor.inputs[0];
+	if (!primary || primary.types.length < 2) return undefined;
+	return { key: familyKey(primary.types), types: primary.types, inferable: true };
+}

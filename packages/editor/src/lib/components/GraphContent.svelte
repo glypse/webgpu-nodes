@@ -170,6 +170,12 @@
 		return graph.connectableEntries(entries, pending);
 	});
 
+	const addMenuAccepts = $derived.by(() => {
+		const pending = addMenuAt.pending;
+		if (!pending) return undefined;
+		return (entry: AddMenuEntry) => graph.entryHandleFor(entry, pending) !== undefined;
+	});
+
 	const addMenuPlaceholder = $derived.by(() => {
 		const pending = addMenuAt.pending;
 		if (!pending) return "Search nodes…";
@@ -390,6 +396,7 @@
 		disabled={isLocked}
 		entries={addEntries}
 		placeholder={addMenuPlaceholder}
+		accepts={addMenuAccepts}
 		onpick={pickAddEntry}
 		ondelete={deleteGroupEntry}
 	/>

@@ -15,6 +15,7 @@ import {
 	type InputOwner,
 	type GroupHandleDef,
 	type InputValue,
+	type NodeData,
 	type SocketType,
 	type TypeVariable,
 	type WgslType,
@@ -575,7 +576,11 @@ export abstract class GroupModel extends ZoneModel {
 	 * User-created definitions are shared across all instances (unlocked).
 	 * Returns undefined if the addition would create a circular reference.
 	 */
-	addFromLibrary(definitionRef: string, position: { x: number; y: number }): string | undefined {
+	addFromLibrary(
+		definitionRef: string,
+		position: { x: number; y: number },
+		data: NodeData = {},
+	): string | undefined {
 		const sourceDef = this.project.definitions.get(definitionRef);
 		if (!sourceDef) {
 			console.warn(`[graph] addFromLibrary: unknown definition "${definitionRef}"`);
@@ -595,7 +600,7 @@ export abstract class GroupModel extends ZoneModel {
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
 			type: "node-group",
-			data: {},
+			data,
 			position,
 			group: { definitionRef, locked: isLocked },
 		};

@@ -2,8 +2,10 @@
 	import {
 		type AddMenuEntry,
 		type MenuSection,
+		type SearchResult,
 		groupByHeading,
 		groupResults,
+		highlightParts,
 		searchEntries,
 	} from "$core";
 	import { Button, ContextMenu } from "$theme";
@@ -15,6 +17,7 @@
 		entries,
 		disabled = false,
 		placeholder = "Search…",
+		accepts,
 		onpick,
 		ondelete,
 	}: {
@@ -25,6 +28,8 @@
 		/** Prevent the menu from opening (e.g. in a locked group). */
 		disabled?: boolean;
 		placeholder?: string;
+		/** Whether search may offer an entry with options picked (see `searchEntries`). */
+		accepts?: (entry: AddMenuEntry) => boolean;
 		onpick: (entry: AddMenuEntry) => void;
 		ondelete?: (entry: AddMenuEntry) => void;
 	} = $props();
@@ -33,7 +38,7 @@
 	let query = $state("");
 
 	const groups = $derived(groupByHeading(entries));
-	const results = $derived(searchEntries(entries, query));
+	const results = $derived(searchEntries(entries, query, accepts));
 	const resultGroups = $derived(groupResults(results));
 	const searching = $derived(query.trim() !== "");
 
@@ -85,7 +90,14 @@
 	{/each}
 {/snippet}
 
-{#snippet entryItem(entry: AddMenuEntry, withHeading: boolean, alias?: string)}
+{#snippet highlighted(text: string, ranges: number[])}
+	{#each highlightParts(text, ranges) as part, i (i)}
+		{#if part.matched}<span class="text-foreground font-semibold">{part.text}</span
+			>{:else}{part.text}{/if}
+	{/each}
+{/snippet}
+
+{#snippet entryItem(entry: AddMenuEntry, withHeading: boolean, result?: SearchResult)}
 	<ContextMenu.Item
 		disabled={entry.disabled}
 		onSelect={() => {
@@ -93,8 +105,10 @@
 		}}
 	>
 		<span class={withHeading ? "shrink-0" : "truncate"}>
-			{entry.label}
-			{#if alias}<span class="text-muted-foreground">({alias})</span>{/if}
+			{@render highlighted(entry.label, result?.labelRanges ?? [])}
+			{#if result?.alias}<span class="text-muted-foreground"
+					>({@render highlighted(result.alias, result.aliasRanges)})</span
+				>{/if}
 		</span>
 		{#if withHeading}
 			<span class="text-muted-foreground ml-auto min-w-0 truncate pl-2 text-xs">
@@ -153,8 +167,8 @@
 						<ContextMenu.Separator />
 						<ContextMenu.Label>{group.section}</ContextMenu.Label>
 					{/if}
-					{#each group.results as { entry, alias } (entry.key)}
-						{@render entryItem(entry, true, alias)}
+					{#each group.results as result (result.entry.key)}
+						{@render entryItem(result.entry, true, result)}
 					{/each}
 				{:else}
 					<div class="text-muted-foreground px-2 py-1.5 text-sm">No matching node.</div>

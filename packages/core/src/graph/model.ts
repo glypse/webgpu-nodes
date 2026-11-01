@@ -1,6 +1,6 @@
 import * as v from "valibot";
 
-import type { AddMenuEntry } from "../catalog/add-menu";
+import { type AddMenuEntry, withOptions } from "../catalog/add-menu";
 import { MATCH, MATCH_SELECTOR, enumOfOutput } from "../enums";
 import {
 	type LayoutSpacing,
@@ -14,9 +14,10 @@ import {
 	type NodeData,
 	type NodeWidget,
 	type WgslType,
-	familyKey,
 	isConnectionCompatible,
+	pickableTypes,
 	typeKind,
+	withDefaults,
 } from "../types";
 import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
 import {
@@ -228,7 +229,8 @@ export class GraphModel extends PreviewModel {
 	 * with a handle of exactly the dragged type, e.g. "Declare vec3f" to feed
 	 * a vec3f input, or "Declare vec2f" … "Declare vec4f" to take an f32. A
 	 * variant of the dragged type itself would only pass the value through,
-	 * so it isn't offered.
+	 * so it isn't offered. Options picked in search are checked against the
+	 * link separately (see `entryHandleFor`).
 	 */
 	connectableEntries(
 		entries: readonly AddMenuEntry[],
@@ -238,17 +240,20 @@ export class GraphModel extends PreviewModel {
 		const value = fromOutput
 			? this.resolveOutputHandleType(pending.nodeId, pending.handleId)
 			: this.resolveInputType(pending.nodeId, pending.handleId);
-		const variantsOf = (entry: AddMenuEntry): AddMenuEntry[] => {
+		const typedOf = (entry: AddMenuEntry): AddMenuEntry[] => {
 			const family =
 				entry.kind === "node" ? nodeRegistry[entry.type ?? ""]?.typeFamily : undefined;
 			if (!family) return [];
+			const others = entry.choices.filter((choice) =>
+				choice.every((o) => o.data.types?.[family.key] === undefined),
+			);
 			return family.types.flatMap((type) => {
 				if (fromOutput && type === value) return [];
 				const variant = {
-					...entry,
-					key: `${entry.key}:${type}`,
-					label: `${entry.label} ${type}`,
-					forcedType: type,
+					...withOptions(entry, [
+						{ label: type, data: { types: { [family.key]: type } }, isDefault: false },
+					]),
+					choices: others,
 				};
 				const fresh = this.freshNodeTypes(variant);
 				const exact = fromOutput
@@ -258,8 +263,8 @@ export class GraphModel extends PreviewModel {
 			});
 		};
 		return entries.flatMap((entry) => {
-			const variants = variantsOf(entry);
-			if (variants.length > 0) return variants;
+			const typed = typedOf(entry);
+			if (typed.length > 0) return typed;
 			return this.entryHandleFor(entry, pending) === undefined ? [] : [entry];
 		});
 	}
@@ -311,14 +316,14 @@ export class GraphModel extends PreviewModel {
 				? {
 						id: FRESH_ID,
 						type: "node-group",
-						data: {},
+						data: entry.data ?? {},
 						position: { x: 0, y: 0 },
 						group: { definitionRef: entry.definitionRef, locked: true },
 					}
 				: {
 						id: FRESH_ID,
 						type: entry.type ?? "",
-						data: entryNodeData(entry.type ?? "", entry.forcedType),
+						data: entryNodeData(entry.type ?? "", entry.data),
 						position: { x: 0, y: 0 },
 					};
 		if (node.type !== "node-group" && !nodeRegistry[node.type ?? ""]) return undefined;
@@ -474,16 +479,12 @@ export class GraphModel extends PreviewModel {
 				return this.createRepeatZone(position);
 			case "group":
 				return entry.definitionRef
-					? this.addFromLibrary(entry.definitionRef, position)
+					? this.addFromLibrary(entry.definitionRef, position, entry.data)
 					: undefined;
 			case "node":
 				if (entry.type === "node-group") return this.createGroup(position);
 				return entry.type
-					? this.addNode(
-							entry.type,
-							position,
-							entryNodeData(entry.type, entry.forcedType),
-						)
+					? this.addNode(entry.type, position, entryNodeData(entry.type, entry.data))
 					: undefined;
 		}
 	}
@@ -500,16 +501,15 @@ export class GraphModel extends PreviewModel {
 			return undefined;
 		}
 		const descriptor = this.resolveDescriptor(node);
+		const pickable = pickableTypes(descriptor);
+		if (!pickable) return undefined;
 		const primary =
 			descriptor.inputs.find((i) => i.id === descriptor.primaryInput) ?? descriptor.inputs[0];
-		const family = descriptor.typeFamily;
-		const types = family?.types ?? primary?.types ?? [];
-		if (types.length < 2) return undefined;
 		return {
-			types,
-			inferable: !family && types.length > 1,
-			forced: node.data.types?.[family?.key ?? familyKey(types)],
-			inferred: family
+			types: pickable.types,
+			inferable: pickable.inferable,
+			forced: node.data.types?.[pickable.key],
+			inferred: !pickable.inferable
 				? this.resolveNodeOutputType(nodeId, path)
 				: primary
 					? this.resolveInferredInputType(nodeId, primary.id, path)
@@ -520,10 +520,10 @@ export class GraphModel extends PreviewModel {
 	/** Force a node's type (see `typeChoice`), or go back to inference with `undefined`. */
 	setNodeType(nodeId: string, type: WgslType | undefined) {
 		const node = this.resolveNode(nodeId);
-		const choice = this.typeChoice(nodeId);
-		if (!node || !choice) return;
-		const key = this.resolveDescriptor(node).typeFamily?.key ?? familyKey(choice.types);
-		this.updateNodeData(nodeId, { types: withEntry(node.data.types, key, type) });
+		if (!node || !this.typeChoice(nodeId)) return;
+		const pickable = pickableTypes(this.resolveDescriptor(node));
+		if (!pickable) return;
+		this.updateNodeData(nodeId, { types: withEntry(node.data.types, pickable.key, type) });
 	}
 
 	// ── Layout ──────────────────────────────────────────────────────────────────
@@ -627,12 +627,9 @@ export type PendingConnection = {
 	handleType: "source" | "target";
 };
 
-/** Default data of a node of `type`, with `forcedType` picked in its type picker. */
-function entryNodeData(type: string, forcedType: WgslType | undefined): NodeData {
-	const data = defaultDataForType(type);
-	const family = nodeRegistry[type]?.typeFamily;
-	if (!forcedType || !family) return data;
-	return { ...data, types: withEntry(data.types, family.key, forcedType) };
+/** Default data of a node of `type`, with an add menu entry's `data` over it. */
+function entryNodeData(type: string, data: NodeData | undefined): NodeData {
+	return withDefaults(data ?? {}, defaultDataForType(type));
 }
 
 /** Approximate rendered node width, for placing nodes next to a drop point. */
