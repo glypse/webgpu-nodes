@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { FLOAT_TYPES, type NodeDescriptor } from ".";
 import type { GraphDocumentEdge, GraphNode } from "../graph/document";

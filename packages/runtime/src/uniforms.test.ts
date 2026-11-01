@@ -1,5 +1,6 @@
+import { describe, expect, it } from "bun:test";
+
 import { buildProgram } from "$core";
-import { describe, expect, it } from "vitest";
 
 import { packBlock } from "./uniforms";
 

@@ -1,6 +1,7 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import type { PendingConnection } from "../graph/model";
+import { containing } from "../testing/expect";
 import { managerFor } from "../testing/graph";
 import {
 	CATEGORY_LABELS,
@@ -96,7 +97,7 @@ describe("fuzzy search", () => {
 		expect(labels("declare")).not.toContain("Declare f32");
 		expect(labels("compare less")).toContain("Compare Less Than");
 		expect(labels("add vec2f")[0]).toBe("Add vec2f");
-		expect(labels("add 2")).toEqual(expect.arrayContaining(["Add vec2f", "Add vec2i"]));
+		expect(labels("add 2")).toContainValues(["Add vec2f", "Add vec2i"]);
 		const [addVec3] = searchEntries(entries, "add vec3f");
 		if (!addVec3) throw new Error("no result");
 		const add = graph.addMenuEntry(addVec3.entry, { x: 0, y: 0 }) ?? "";
@@ -139,7 +140,7 @@ describe("adding from a dropped link", () => {
 		const graph = managerFor([{ id: "uv", type: "uv" }], []);
 		const fromUv: PendingConnection = { nodeId: "uv", handleId: "uv", handleType: "source" };
 		const keys = keysFor(graph, fromUv);
-		expect(keys).toEqual(expect.arrayContaining(["node:sin", "node:cross", "zone:repeat"]));
+		expect(keys).toContainValues(["node:sin", "node:cross", "zone:repeat"]);
 		// Declare takes scalars only; a fresh empty group has nothing to plug into.
 		expect(keys.some((k) => k.startsWith("node:declare"))).toBe(false);
 		expect(keys).not.toContain("node:node-group");
@@ -155,7 +156,7 @@ describe("adding from a dropped link", () => {
 			handleType: "target",
 		};
 		const keys = keysFor(graph, toIterations);
-		expect(keys).toEqual(expect.arrayContaining(["node:time", "node:dot", "node:add"]));
+		expect(keys).toContainValues(["node:time", "node:dot", "node:add"]);
 		expect(keys).not.toContain("node:uv");
 		expect(keys).not.toContain("node:cross");
 	});
@@ -176,7 +177,7 @@ describe("adding from a dropped link", () => {
 		const declare = graph.addMenuEntryConnected(vec4, { x: 0, y: 0 }, toColor) ?? "";
 		expect(graph.resolveNodeOutputType(declare)).toBe("vec4f");
 		expect(graph.root.edges).toContainEqual(
-			expect.objectContaining({ source: declare, target: "out", targetHandle: "color" }),
+			containing({ source: declare, target: "out", targetHandle: "color" }),
 		);
 	});
 
@@ -192,7 +193,7 @@ describe("adding from a dropped link", () => {
 		const declare = graph.addMenuEntryConnected(vec3, { x: 0, y: 0 }, fromTime) ?? "";
 		expect(graph.resolveNodeOutputType(declare)).toBe("vec3f");
 		expect(graph.root.edges).toContainEqual(
-			expect.objectContaining({ source: "t", target: declare, targetHandle: "x" }),
+			containing({ source: "t", target: declare, targetHandle: "x" }),
 		);
 	});
 
@@ -231,7 +232,7 @@ describe("adding from a dropped link", () => {
 		const fromTime: PendingConnection = { nodeId: "t", handleId: "time", handleType: "source" };
 		const sin = graph.addMenuEntryConnected(sinEntry, { x: 0, y: 0 }, fromTime);
 		expect(graph.root.edges).toContainEqual(
-			expect.objectContaining({ source: "t", target: sin, targetHandle: "e" }),
+			containing({ source: "t", target: sin, targetHandle: "e" }),
 		);
 
 		// Upstream of the output: a zone whose output gets a new item feeding it.
@@ -329,8 +330,10 @@ describe("add menu sections", () => {
 		const groups = groupResults(searchEntries(entries, "voronoi"));
 		expect(groups.map((g) => g.section)).toEqual([undefined, "Helpers"]);
 		expect(groups[0]?.results.map((r) => r.entry.label)).toEqual(["Fractal Voronoi"]);
-		expect(groups[1]?.results.map((r) => r.entry.label)).toEqual(
-			expect.arrayContaining(["Voronoi Texture", "Voronoi Point", "Voronoi Distance"]),
-		);
+		expect(groups[1]?.results.map((r) => r.entry.label)).toContainValues([
+			"Voronoi Texture",
+			"Voronoi Point",
+			"Voronoi Distance",
+		]);
 	});
 });

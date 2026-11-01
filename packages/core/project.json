@@ -24,7 +24,7 @@
 		"test": {
 			"executor": "nx:run-commands",
 			"options": {
-				"command": "bun --bun vitest run",
+				"command": "bun test --parallel --conditions=development",
 				"cwd": "{projectRoot}"
 			}
 		},

@@ -1,8 +1,8 @@
+import { describe, expect, it } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import * as v from "valibot";
-import { describe, expect, it } from "vitest";
 
 import {
 	ARCHIVED_VERSIONS_ENABLED,

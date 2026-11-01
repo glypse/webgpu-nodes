@@ -1,0 +1,3 @@
+[test]
+pathIgnorePatterns = ["dist/**"]
+preload = ["./test.preload.ts"]

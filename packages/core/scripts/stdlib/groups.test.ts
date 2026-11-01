@@ -1,8 +1,8 @@
+import { describe, expect, it } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import * as v from "valibot";
-import { describe, expect, it } from "vitest";
 
 import type { GraphDocument } from "../../src/graph/document";
 import { LibraryFileSchema } from "../../src/library";
@@ -24,9 +24,9 @@ describe("standard-library descriptions", () => {
 				LibraryFileSchema,
 				JSON.parse(readFileSync(join(libraryDir, `${group.spec.id}.json`), "utf8")),
 			);
-			expect(unplaced(file.definition)).toEqual(unplaced(group.definition));
-			expect(file.dependencies).toEqual(group.dependencies);
-			expect(file.widget).toEqual(group.widget);
+			expect(unplaced(group.definition)).toEqual(unplaced(file.definition));
+			expect(group.dependencies).toEqual(file.dependencies);
+			expect(group.widget).toEqual(file.widget);
 		});
 	}
 });

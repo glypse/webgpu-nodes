@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { evaluate } from "../testing/evaluate";
 import { libraryEntry, libraryHandle, managerFor } from "../testing/graph";

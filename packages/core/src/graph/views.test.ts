@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import type { Screen } from "../screen";
 import { type TestEdge, edge } from "../testing/graph";

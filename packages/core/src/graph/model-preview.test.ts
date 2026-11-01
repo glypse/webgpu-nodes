@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
+import { containing } from "../testing/expect";
 import { managerFor } from "../testing/graph";
 import type { GraphModel } from "./model";
 
@@ -41,9 +42,7 @@ describe("GraphModel previewNode", () => {
 		);
 		expect(graph.previewNode("a")).toBe(true);
 		expect(graph.previewNode("b")).toBe(true);
-		expect(linksIntoOutput(graph)).toEqual([
-			expect.objectContaining({ source: "b", sourceHandle: "result" }),
-		]);
+		expect(linksIntoOutput(graph)).toMatchObject([{ source: "b", sourceHandle: "result" }]);
 	});
 
 	it("goes to the next output when the node is already previewed", () => {
@@ -67,10 +66,10 @@ describe("GraphModel previewNode", () => {
 		if (!viewer) throw new Error("no viewer output");
 		const definition = graph.project.definitions.get(ref);
 		expect(definition?.edges).toContainEqual(
-			expect.objectContaining({ source: "a", targetHandle: viewer.id }),
+			containing({ source: "a", targetHandle: viewer.id }),
 		);
-		expect(linksIntoOutput(graph)).toEqual([
-			expect.objectContaining({ source: groupId, sourceHandle: viewer.id }),
+		expect(linksIntoOutput(graph)).toMatchObject([
+			{ source: groupId, sourceHandle: viewer.id },
 		]);
 
 		// Another node of the group reuses the viewer output.
@@ -88,7 +87,7 @@ describe("GraphModel previewNode", () => {
 		expect(graph.root.edges.some((e) => e.source === groupId && e.target === "out")).toBe(
 			false,
 		);
-		expect(linksIntoOutput(graph)).toEqual([expect.objectContaining({ source: "c" })]);
+		expect(linksIntoOutput(graph)).toMatchObject([{ source: "c" }]);
 	});
 
 	it("leaves nodes without outputs alone", () => {

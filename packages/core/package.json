@@ -33,8 +33,6 @@
 		"eslint": "catalog:",
 		"globals": "catalog:",
 		"typescript": "catalog:",
-		"typescript-eslint": "catalog:",
-		"vite": "catalog:",
-		"vitest": "catalog:"
+		"typescript-eslint": "catalog:"
 	}
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
 import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "../graph/document";
@@ -156,20 +156,20 @@ describe("Match node", () => {
 			],
 			owner: { enumId: "mode", value: 2 },
 		});
-		const z =
-			sub && graph.addHandle("def", "input", "f32", { owner: { enumId: sub.id, value: 1 } });
+		if (!top || !sub?.variants) throw new Error("unreachable");
+		const z = graph.addHandle("def", "input", "f32", { owner: { enumId: sub.id, value: 1 } });
+		if (!z) throw new Error("unreachable");
 		const ids = () => graph.project.definitions.get("def")?.inputs.map((h) => h.id);
-		expect(ids()).toEqual(["mode", "x", sub?.id, z?.id, top?.id]);
-		expect([...graph.hiddenInputs("g")]).toEqual([z?.id]);
+		expect(ids()).toEqual(["mode", "x", sub.id, z.id, top.id]);
+		expect([...graph.hiddenInputs("g")]).toEqual([z.id]);
 		graph.setInputValue("g", "mode", 0);
-		expect([...graph.hiddenInputs("g")]).toEqual(["x", sub?.id, z?.id]);
+		expect([...graph.hiddenInputs("g")]).toEqual(["x", sub.id, z.id]);
 
 		// Removing a variant, or an enum, removes the inputs under it.
-		if (!sub?.variants) throw new Error("unreachable");
 		graph.setHandleVariants("def", sub.id, sub.variants.slice(0, 1));
-		expect(ids()).toEqual(["mode", "x", sub.id, top?.id]);
+		expect(ids()).toEqual(["mode", "x", sub.id, top.id]);
 		graph.removeHandle("def", "input", "mode");
-		expect(ids()).toEqual([top?.id]);
+		expect(ids()).toEqual([top.id]);
 	});
 
 	it("lets inputs never shown together share a label", () => {

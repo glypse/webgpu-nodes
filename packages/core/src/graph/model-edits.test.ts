@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
+import { containing } from "../testing/expect";
 import { managerFor } from "../testing/graph";
 import { pairedOutputId } from "../zones";
 
@@ -34,9 +35,7 @@ describe("GraphModel copy and paste", () => {
 		]);
 		expect(copies.every((n) => n?.selected)).toBe(true);
 		expect(graph.selectedNodeIds).toEqual(ids);
-		expect(graph.root.edges).toContainEqual(
-			expect.objectContaining({ source: ids[0], target: ids[1] }),
-		);
+		expect(graph.root.edges).toContainEqual(containing({ source: ids[0], target: ids[1] }));
 	});
 
 	it("never copies a document's output", () => {
@@ -73,13 +72,8 @@ describe("GraphModel delete and dissolve", () => {
 	it("dissolves nodes, linking what fed them to what they fed", () => {
 		const graph = chain();
 		expect(graph.dissolveNodes(["b"])).toBe(true);
-		expect(graph.root.edges).toEqual([
-			expect.objectContaining({
-				source: "a",
-				sourceHandle: "result",
-				target: "c",
-				targetHandle: "e",
-			}),
+		expect(graph.root.edges).toMatchObject([
+			{ source: "a", sourceHandle: "result", target: "c", targetHandle: "e" },
 		]);
 	});
 
@@ -98,9 +92,7 @@ describe("GraphModel delete and dissolve", () => {
 			],
 		);
 		graph.dissolveNodes(["b", "c"]);
-		expect(graph.root.edges).toEqual([
-			expect.objectContaining({ source: "a", target: "d", targetHandle: "e" }),
-		]);
+		expect(graph.root.edges).toMatchObject([{ source: "a", target: "d", targetHandle: "e" }]);
 	});
 });
 
@@ -118,11 +110,11 @@ describe("GraphModel reroutes", () => {
 		const graph = chain();
 		const [id] = graph.rerouteEdges([{ edgeId: "a.result->b.e", position: { x: 50, y: 60 } }]);
 		expect(graph.root.nodesById.get(id ?? "")?.position).toEqual({ x: 50, y: 60 });
-		expect(graph.root.edges).toEqual(
-			expect.arrayContaining([
-				expect.objectContaining({ source: "a", sourceHandle: "result", target: id }),
-				expect.objectContaining({ source: id, target: "b", targetHandle: "e" }),
-			]),
+		expect(graph.root.edges).toContainEqual(
+			containing({ source: "a", sourceHandle: "result", target: id }),
+		);
+		expect(graph.root.edges).toContainEqual(
+			containing({ source: id, target: "b", targetHandle: "e" }),
 		);
 		expect(graph.root.edges.some((e) => e.id === "a.result->b.e")).toBe(false);
 	});

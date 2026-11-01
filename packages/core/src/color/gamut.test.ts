@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
 import type { ColorSpace } from "../graph/settings";
@@ -30,6 +30,8 @@ const OKLCH = 2;
 const SAMPLES: V[] = [0.15, 0.35, 0.55, 0.75, 0.92].flatMap((l) =>
 	[0.05, 0.12, 0.22, 0.32].flatMap((c) => [0, 72, 144, 216, 288].map((h): V => [l, c, h])),
 );
+/** Mapping every sample builds and evaluates a graph: seconds, more alongside other test files. */
+const SAMPLING_TIMEOUT = 20_000;
 
 const inGamut = (lch: V) => oklabToLinear(oklchToOklab(lch)).every((n) => n >= 0 && n <= 1);
 /** The CSS reference, in linear sRGB. */
@@ -60,17 +62,21 @@ describe("OKLch gamut mapping", () => {
 		expect(SAMPLES.filter((s) => !inGamut(s)).length).toBeGreaterThan(50);
 	});
 
-	it("maps colours into sRGB as CSS Color 4 does", () => {
-		for (const lch of SAMPLES) {
-			const ours = gamutMap(lch);
-			for (const n of ours) {
-				expect(n).toBeGreaterThanOrEqual(0);
-				expect(n).toBeLessThanOrEqual(1);
+	it(
+		"maps colours into sRGB as CSS Color 4 does",
+		() => {
+			for (const lch of SAMPLES) {
+				const ours = gamutMap(lch);
+				for (const n of ours) {
+					expect(n).toBeGreaterThanOrEqual(0);
+					expect(n).toBeLessThanOrEqual(1);
+				}
+				// CSS stops its search 1e-4 of chroma short; a JND is 0.02.
+				expect(distance(ours, reference(lch))).toBeLessThan(2e-4);
 			}
-			// CSS stops its search 1e-4 of chroma short; a JND is 0.02.
-			expect(distance(ours, reference(lch))).toBeLessThan(2e-4);
-		}
-	});
+		},
+		SAMPLING_TIMEOUT,
+	);
 
 	it("leaves colours in gamut as they are", () => {
 		for (const lch of SAMPLES.filter(inGamut)) {
@@ -81,20 +87,24 @@ describe("OKLch gamut mapping", () => {
 		}
 	});
 
-	it("maps colours into Display P3 as CSS Color 4 does when drawn to it", () => {
-		const inP3 = (lch: V) => linearToP3(oklabToLinear(oklchToOklab(lch)));
-		expect(
-			SAMPLES.filter((s) => !inGamut(s) && inP3(s).every((n) => n >= 0 && n <= 1)),
-		).not.toHaveLength(0);
-		for (const lch of SAMPLES) {
-			const ours = gamutMap(lch, "display-p3");
-			for (const n of linearToP3(ours)) {
-				expect(n).toBeGreaterThanOrEqual(-1e-6);
-				expect(n).toBeLessThanOrEqual(1 + 1e-6);
+	it(
+		"maps colours into Display P3 as CSS Color 4 does when drawn to it",
+		() => {
+			const inP3 = (lch: V) => linearToP3(oklabToLinear(oklchToOklab(lch)));
+			expect(
+				SAMPLES.filter((s) => !inGamut(s) && inP3(s).every((n) => n >= 0 && n <= 1)),
+			).not.toHaveLength(0);
+			for (const lch of SAMPLES) {
+				const ours = gamutMap(lch, "display-p3");
+				for (const n of linearToP3(ours)) {
+					expect(n).toBeGreaterThanOrEqual(-1e-6);
+					expect(n).toBeLessThanOrEqual(1 + 1e-6);
+				}
+				expect(distance(ours, reference(lch, "display-p3"))).toBeLessThan(2e-4);
 			}
-			expect(distance(ours, reference(lch, "display-p3"))).toBeLessThan(2e-4);
-		}
-	});
+		},
+		SAMPLING_TIMEOUT,
+	);
 
 	it("keeps colours past sRGB but within Display P3 as they are", () => {
 		const lch: V = [0.7015, 0.1559, 203.59];

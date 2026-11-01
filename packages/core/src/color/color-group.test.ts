@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
 import { readComponent } from "../graph/values";
@@ -86,7 +86,7 @@ describe("Color group", () => {
 			const node = graph.root.nodesById.get("c");
 			return node && graph.resolveDescriptor(node).widget;
 		};
-		expect(widget()).toEqual(expect.objectContaining({ kind: "color", mode: MODE }));
+		expect(widget()).toMatchObject({ kind: "color", mode: MODE });
 		graph.deepClone("c");
 		expect(widget()).toBeUndefined();
 	});

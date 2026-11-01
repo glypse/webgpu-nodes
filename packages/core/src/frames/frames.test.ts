@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { managerFor, shaderFor } from "../testing/graph";
 import { LAYOUT_FRAME, analyzeFrames } from "./analysis";

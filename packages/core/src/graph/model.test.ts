@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
 import { libraryRef } from "../library";
+import { containing } from "../testing/expect";
 import {
 	libraryEntry,
 	libraryHandle,
@@ -51,7 +52,7 @@ describe("GraphModel zones", () => {
 		const { graph, zoneId, outputId, item } = setup();
 		expect(graph.activeZones.zones.get(zoneId)?.outputId).toBe(outputId);
 		expect(graph.root.edges).toContainEqual(
-			expect.objectContaining({ source: zoneId, target: outputId, targetHandle: item.id }),
+			containing({ source: zoneId, target: outputId, targetHandle: item.id }),
 		);
 		expect(graph.resolveNodeOutputs(zoneId).map((o) => o.type)).toEqual(["i32", "f32"]);
 	});
@@ -74,7 +75,7 @@ describe("GraphModel zones", () => {
 		const created = items[items.length - 1];
 		expect(created?.type).toBe("vec2f");
 		expect(graph.root.edges).toContainEqual(
-			expect.objectContaining({ source: "uv", target: zoneId, targetHandle: created?.id }),
+			containing({ source: "uv", target: zoneId, targetHandle: created?.id }),
 		);
 	});
 

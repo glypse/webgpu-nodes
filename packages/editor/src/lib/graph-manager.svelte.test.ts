@@ -1,5 +1,6 @@
+import { describe, expect, it } from "bun:test";
+
 import { flushSync } from "svelte";
-import { describe, expect, it } from "vitest";
 
 import { GraphManager } from "./graph-manager.svelte";
 
