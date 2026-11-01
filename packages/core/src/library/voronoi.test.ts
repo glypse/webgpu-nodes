@@ -98,12 +98,17 @@ function reference(coordinates: number[], p: Params) {
 		}
 	}
 
-	/** The distance to the closest bisector of `point` and another point. */
-	const edgeOf = (point: number[]) => {
+	/**
+	 * The distance to the closest bisector of `point` (in the cell `around`)
+	 * and another point. Blender looks at the points around the position's
+	 * cell, so its edges jump at cell lines; the groups look around the
+	 * point's own.
+	 */
+	const edgeOf = (point: number[], around: number[]) => {
 		const from = sub(point, local);
 		let edge = 1e10;
-		for (const offset of neighbors(dims, 1)) {
-			const toPoint = sub(pointAt(offset), local);
+		for (const offset of neighbors(dims, 2)) {
+			const toPoint = sub(pointAt(add(around, offset)), local);
 			const across = sub(toPoint, from);
 			if (dot(across, across) > 0.0001) {
 				const normal = scaled(across, 1 / Math.sqrt(dot(across, across)));
@@ -146,8 +151,8 @@ function reference(coordinates: number[], p: Params) {
 		f2Color: colorAt(o2),
 		smoothDistance: smooth,
 		smoothColor,
-		edge: edgeOf(p1),
-		f2Edge: edgeOf(p2),
+		edge: edgeOf(p1, o1),
+		f2Edge: edgeOf(p2, o2),
 		radius: distance(nearest, p1) / 2,
 	};
 }
@@ -280,6 +285,14 @@ describe("Voronoi Texture", () => {
 			expect(at("Distance")).toBeCloseTo(expected.f1, 5);
 			expect(at("F2 Distance")).toBeCloseTo(expected.f2, 5);
 		}
+	});
+
+	it("keeps the distance to edge continuous across cell lines", () => {
+		// A cell line inside one Voronoi cell, where Manhattan edges used to jump.
+		const inputs = { ...INPUTS, Metric: 1 };
+		const at = (x: number) =>
+			sample(VORONOI, [x, 8.032667], inputs, "Distance to Edge")[0] ?? 0;
+		expect(Math.abs(at(6 - 1e-5) - at(6 + 1e-5))).toBeLessThan(1e-3);
 	});
 
 	it("gives F1 for the smooth outputs without smoothness", () => {

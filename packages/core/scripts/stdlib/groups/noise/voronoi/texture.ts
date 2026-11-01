@@ -83,6 +83,7 @@ export const voronoiTexture: GroupSpec = {
 				const f1Point = g.wireless("F1 Point", nearest["f1-point"]);
 				const f1Offset = g.wireless("F1 Offset", nearest["f1-offset"]);
 				const f2Point = g.wireless("F2 Point", nearest["f2-point"]);
+				const f2Offset = g.wireless("F2 Offset", nearest["f2-offset"]);
 				const f1Color = g.wireless("F1 Color", colorOf(f1Offset));
 				const f1Position = g.wireless("F1 Position", positionOf(f1Point));
 				g.output("distance", nearest["f1-distance"], "f32", { label: "Distance" });
@@ -90,12 +91,13 @@ export const voronoiTexture: GroupSpec = {
 				g.output("position", f1Position, t, { label: "Position" });
 				g.output("cell", g.add(cell, f1Offset), t, { label: "Cell" });
 				g.output("f2-distance", nearest["f2-distance"], "f32", { label: "F2 Distance" });
-				g.output("f2-color", colorOf(nearest["f2-offset"]), "vec3f", { label: "F2 Color" });
+				g.output("f2-color", colorOf(f2Offset), "vec3f", { label: "F2 Color" });
 				g.output("f2-position", positionOf(f2Point), t, { label: "F2 Position" });
 				return {
 					f1Point,
 					f1Offset,
 					f2Point,
+					f2Offset,
 					f1Color,
 					f1Position,
 					f1: nearest["f1-distance"],
@@ -141,7 +143,9 @@ export const voronoiTexture: GroupSpec = {
 				metric,
 				exponent,
 				"f1-point": nearest.f1Point,
+				"f1-offset": nearest.f1Offset,
 				"f2-point": nearest.f2Point,
+				"f2-offset": nearest.f2Offset,
 			});
 			g.output("edge", edges.edge, "f32", { label: "Distance to Edge" });
 			g.output("f2-edge", edges["f2-edge"], "f32", { label: "F2 Distance to Edge" });

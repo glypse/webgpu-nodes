@@ -34,8 +34,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-voronoi-radius/02232c18bc6868.json").then((m) => m.default),
 	"std-aspect-uv@1b256db7053e2f": () =>
 		import("./std-aspect-uv/1b256db7053e2f.json").then((m) => m.default),
-	"std-voronoi-edges@1340fff51f0971": () =>
-		import("./std-voronoi-edges/1340fff51f0971.json").then((m) => m.default),
+	"std-voronoi-edges@1ad79f4231c545": () =>
+		import("./std-voronoi-edges/1ad79f4231c545.json").then((m) => m.default),
 	"std-color@1c6bb6de3a1d20": () =>
 		import("./std-color/1c6bb6de3a1d20.json").then((m) => m.default),
 	"std-oklab-to-oklch@19b14b1b258cc5": () =>
@@ -54,14 +54,14 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-component-sum/19655c913fca94.json").then((m) => m.default),
 	"std-remap@18bb11b8c3230a": () =>
 		import("./std-remap/18bb11b8c3230a.json").then((m) => m.default),
-	"std-voronoi-texture@070a433865eb06": () =>
-		import("./std-voronoi-texture/070a433865eb06.json").then((m) => m.default),
+	"std-voronoi-texture@14125cf8ec73fb": () =>
+		import("./std-voronoi-texture/14125cf8ec73fb.json").then((m) => m.default),
 	"std-oklch-to-linear-rgb@120e0313543487": () =>
 		import("./std-oklch-to-linear-rgb/120e0313543487.json").then((m) => m.default),
 	"std-oklab-to-linear-rgb@0deeb5e1a34c78": () =>
 		import("./std-oklab-to-linear-rgb/0deeb5e1a34c78.json").then((m) => m.default),
-	"std-fractal-voronoi@1a2f3086f6e29d": () =>
-		import("./std-fractal-voronoi/1a2f3086f6e29d.json").then((m) => m.default),
+	"std-fractal-voronoi@1135d32564ba39": () =>
+		import("./std-fractal-voronoi/1135d32564ba39.json").then((m) => m.default),
 	"std-fractal-octave@18f11aa710fb7f": () =>
 		import("./std-fractal-octave/18f11aa710fb7f.json").then((m) => m.default),
 };

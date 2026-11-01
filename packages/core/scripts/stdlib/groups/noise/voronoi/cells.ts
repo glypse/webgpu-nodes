@@ -148,46 +148,57 @@ export const voronoiEdges: GroupSpec = {
 	build: (g) => {
 		const inputs = cellInputs(g);
 		const { metric, exponent } = metricInputs(g);
-		const { t, local } = inputs;
+		const { t, cell, local } = inputs;
 		const f1Point = g.input("f1-point", t, { label: "F1 Point" });
+		const f1Offset = g.input("f1-offset", t, { label: "F1 Offset" });
 		const f2Point = g.input("f2-point", t, { label: "F2 Point" });
-		const { neighbors, neighborPoint } = lattice(g, inputs);
-		const toClosest = g.sub(f1Point, local);
-		const toSecond = g.sub(f2Point, local);
-		const edges = g.frame(
-			"Closest bisectors",
+		const f2Offset = g.input("f2-offset", t, { label: "F2 Offset" });
+		const { neighbors, pointAt } = lattice(g, inputs);
+		/**
+		 * The distance to the closest bisector of `point` (in the cell
+		 * `offset` away) and the points of the 5×5(×5×5) cells around its
+		 * own: looking around the position's cell instead would see other
+		 * points across each cell line, and the edges would jump there.
+		 */
+		const closestBisector = (point: Ref, offset: Ref) => {
+			const from = g.sub(point, local);
+			return g.repeat(neighbors(2), { Distance: ["f32", 1e10] }, (iteration, s) => {
+				const neighbor = g.call<"offset">(latticeNeighbor, {
+					index: iteration,
+					cell,
+					radius: 2,
+				}).offset;
+				const toPoint = g.sub(pointAt(g.add(offset, neighbor)), local);
+				const distinct = g.compare(g.length(g.sub(toPoint, from)), ">", 0.01);
+				const d = g.call<"distance">(voronoiBisector, {
+					a: from,
+					b: toPoint,
+					metric,
+					exponent,
+				}).distance;
+				return { Distance: g.select(distinct, s.Distance, g.min(s.Distance, d)) };
+			}).Distance;
+		};
+		g.frame(
+			"F1",
 			{
-				note: "The distance to the bisector of the F1 (or F2) point and each\nother point, in the metric: the edges of its cell. F2's include\nF1's bisector, from its far side.",
+				note: "The bisectors of the F1 point and the points around it,\nin the metric: the edges of its cell.",
 			},
-			() =>
-				g.repeat(
-					neighbors(1),
-					{ "Edge Distance": ["f32", 1e10], "F2 Edge Distance": ["f32", 1e10] },
-					(iteration, s) => {
-						const toPoint = g.sub(neighborPoint(iteration).point, local);
-						const toBisector = (from: Ref, current: Ref) => {
-							const distinct = g.compare(g.length(g.sub(toPoint, from)), ">", 0.01);
-							const d = g.call<"distance">(voronoiBisector, {
-								a: from,
-								b: toPoint,
-								metric,
-								exponent,
-							}).distance;
-							return g.select(distinct, current, g.min(current, d));
-						};
-						return {
-							"Edge Distance": g.frame("F1", {}, () =>
-								toBisector(toClosest, s["Edge Distance"]),
-							),
-							"F2 Edge Distance": g.frame("F2", {}, () =>
-								toBisector(toSecond, s["F2 Edge Distance"]),
-							),
-						};
-					},
-				),
+			() => {
+				g.output("edge", closestBisector(f1Point, f1Offset), "f32", {
+					label: "Distance to Edge",
+				});
+			},
 		);
-		g.output("edge", edges["Edge Distance"], "f32", { label: "Distance to Edge" });
-		g.output("f2-edge", edges["F2 Edge Distance"], "f32", { label: "F2 Distance to Edge" });
+		g.frame(
+			"F2",
+			{ note: "The same around the F2 point, F1's bisector included\nfrom its far side." },
+			() => {
+				g.output("f2-edge", closestBisector(f2Point, f2Offset), "f32", {
+					label: "F2 Distance to Edge",
+				});
+			},
+		);
 	},
 };
 
