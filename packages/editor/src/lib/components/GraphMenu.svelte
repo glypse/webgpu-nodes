@@ -30,6 +30,20 @@
 
 	const selected = $derived(view.selectedNodeIds);
 	const locked = $derived(view.locked);
+	const reroutes = $derived(
+		selected.flatMap((id) => {
+			const node = view.document.nodesById.get(id);
+			return node?.type === "reroute" ? [node] : [];
+		}),
+	);
+
+	/** A reroute whose links get hidden is named by its tags: an unnamed one asks for a name. */
+	function toggleHiddenLinks() {
+		graph.toggleHiddenLinks(selected);
+		const unnamed = reroutes.find((n) => n.data.label === undefined);
+		if (unnamed && graph.resolveNode(unnamed.id)?.data.hideLinks) graph.openSheet(unnamed.id);
+	}
+
 	const allUnlinkedHidden = $derived(
 		selected.every((id) => view.document.nodesById.get(id)?.data.hideUnlinked === true),
 	);
@@ -88,6 +102,11 @@
 				Duplicate
 				<ContextMenu.Shortcut>⇧D</ContextMenu.Shortcut>
 			</ContextMenu.Item>
+			{#if reroutes.length > 0}
+				<ContextMenu.Item disabled={locked} onSelect={toggleHiddenLinks}>
+					{reroutes.every((n) => n.data.hideLinks === true) ? "Show links" : "Hide links"}
+				</ContextMenu.Item>
+			{/if}
 			<ContextMenu.Item
 				disabled={locked}
 				onSelect={() => graph.toggleUnlinkedSockets(selected)}

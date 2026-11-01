@@ -270,6 +270,22 @@ export abstract class EditModel extends CustomWgslModel {
 		);
 	}
 
+	/**
+	 * Hide the links out of reroutes (see `NodeData.hideLinks`), or show
+	 * them again when every one of them already hides them.
+	 */
+	toggleHiddenLinks(nodeIds: Iterable<string>) {
+		if (this.isLocked) return;
+		const reroutes = [...nodeIds].flatMap((id) => {
+			const node = this.activeDocument.nodesById.get(id);
+			return node?.type === "reroute" ? [node] : [];
+		});
+		const hide = reroutes.some((n) => n.data.hideLinks !== true);
+		this.patchNodeData(
+			new Map(reroutes.map((n) => [n.id, { ...n.data, hideLinks: hide || undefined }])),
+		);
+	}
+
 	/** The label a node has unless the user gives it one. */
 	defaultNodeLabel(nodeId: string): string {
 		const node = this.resolveNode(nodeId);

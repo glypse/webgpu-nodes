@@ -59,19 +59,34 @@
 	/** Links breaking zone rules are drawn red and ignored by codegen. */
 	const invalid = $derived(graph.isEdgeInvalid(id));
 
-	/** Length of the stubs a hidden link is drawn as, at both its ends. */
+	/** Length of the dashed stubs a hidden link is drawn as, at both its ends. */
 	const STUB = 14;
+	/** Vertical distance between the tags of hidden links reaching one input. */
+	const TAG_STEP = 12;
 
 	/**
-	 * Links out of a named reroute are drawn as stubs, the target's tagged
-	 * with the reroute's name; in full (dashed) while either end is selected.
+	 * Links out of a named reroute are drawn as dashed stubs, the target's
+	 * tagged with the reroute's name; in full while hovered or while either
+	 * end is selected.
 	 */
 	const hidden = $derived(hidesLinks(view.document.nodesById.get(source)));
+	let hovered = $state(false);
 	const revealed = $derived(
-		(selected ?? false) ||
+		hovered ||
+			(selected ?? false) ||
 			(view.document.nodesById.get(source)?.selected ?? false) ||
 			(view.document.nodesById.get(target)?.selected ?? false),
 	);
+	/** Hidden links into one (variadic) input fan their tags out around it. */
+	const tagOffset = $derived.by(() => {
+		if (!hidden) return 0;
+		const doc = view.document;
+		const siblings = (doc.edgesByTarget.get(target) ?? []).filter(
+			(e) => e.targetHandle === targetHandleId && hidesLinks(doc.nodesById.get(e.source)),
+		);
+		const index = siblings.findIndex((e) => e.id === id);
+		return (index - (siblings.length - 1) / 2) * TAG_STEP;
+	});
 	const tag = $derived(hidden ? graph.nodeLabel(source) : "");
 
 	function selectSource() {
@@ -81,7 +96,13 @@
 </script>
 
 {#if !parked && hidden}
-	<g class="group">
+	{@const tagY = targetY + tagOffset}
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<g
+		class="group"
+		onpointerenter={() => (hovered = true)}
+		onpointerleave={() => (hovered = false)}
+	>
 		{#if revealed}
 			<path
 				d={path}
@@ -89,7 +110,7 @@
 				stroke="var(--color-{sourceType})"
 				stroke-width="1"
 				stroke-dasharray="4 4"
-				class="opacity-50"
+				class="pointer-events-none opacity-50"
 			/>
 		{/if}
 		<path
@@ -97,17 +118,19 @@
 			fill="none"
 			stroke="var(--color-{sourceType})"
 			stroke-width="1"
+			stroke-dasharray="3 2"
 		/>
 		<path
-			d="M {targetX - STUB} {targetY} H {targetX}"
+			d="M {targetX - STUB} {tagY} H {targetX - 4} L {targetX} {targetY}"
 			fill="none"
 			stroke={invalid ? "var(--color-destructive)" : `var(--color-${targetType})`}
 			stroke-width="1"
+			stroke-dasharray="3 2"
 		/>
 		<!-- svelte-ignore a11y_click_events_have_key_events -->
 		<text
 			x={targetX - STUB - 3}
-			y={targetY}
+			y={tagY}
 			text-anchor="end"
 			dominant-baseline="central"
 			class="link-tag"
@@ -121,7 +144,7 @@
 		<path
 			{id}
 			data-link-path
-			d="M {targetX - STUB} {targetY} H {targetX}"
+			d="M {targetX - STUB} {tagY} H {targetX - 4} L {targetX} {targetY}"
 			fill="none"
 			stroke="transparent"
 			stroke-width="12"
