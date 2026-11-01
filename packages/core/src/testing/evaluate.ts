@@ -78,6 +78,8 @@ const UNARY: Record<string, (n: number) => number> = {
 	floor: Math.floor,
 	ceil: Math.ceil,
 	sqrt: Math.sqrt,
+	log: Math.log,
+	exp: Math.exp,
 	negate: (n) => -n,
 	"to-float": (n) => n,
 };

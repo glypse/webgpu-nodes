@@ -30,6 +30,14 @@ export const sqrtNode: NodeDescriptor = {
 	...unaryFn("sqrt", "Square Root", "sqrt"),
 	aliases: ["sqrt", "Root"],
 };
+export const logNode: NodeDescriptor = {
+	...unaryFn("log", "Logarithm", "log"),
+	aliases: ["ln", "Natural Logarithm", "log"],
+};
+export const expNode: NodeDescriptor = {
+	...unaryFn("exp", "Exponential", "exp"),
+	aliases: ["exp", "e^x", "Natural Exponent"],
+};
 
 // Math — unary (any number)
 export const absNode: NodeDescriptor = {

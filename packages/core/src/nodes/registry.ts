@@ -58,6 +58,8 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	fract: nodes.fractNode,
 	round: nodes.roundNode,
 	sign: nodes.signNode,
+	log: nodes.logNode,
+	exp: nodes.expNode,
 	sqrt: nodes.sqrtNode,
 
 	// Vector
