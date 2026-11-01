@@ -1,7 +1,7 @@
-// Conventions shared by noise textures: a Dimensions enum picking the inputs
-// the coordinates come from, and fractal (fBm) octaves.
-import type { WgslType } from "../../src/types";
-import type { EnumRef, GroupBuilder, Operand, Ref } from "./builder";
+// Conventions shared by noise textures: coordinates whose type decides the
+// noise's dimensions, and fractal (fBm) octaves.
+import type { SocketType, WgslType } from "../../src/types";
+import type { GroupBuilder, Operand, Ref } from "./builder";
 
 export const DIMENSIONS = [
 	[1, "1D"],
@@ -10,28 +10,21 @@ export const DIMENSIONS = [
 	[4, "4D"],
 ] as const;
 
-export type DimensionInputs = {
-	dimensions: EnumRef;
-	w: Ref;
-	vector2: Ref;
-	vector3: Ref;
-	vector4: Ref;
-};
+/**
+ * The types noise coordinates take, one per dimension count: 2D first, the
+ * type they have when nothing decides it (unlinked, they're the UV).
+ */
+const COORDINATE_TYPES: readonly WgslType[] = ["vec2f", "vec3f", "vec4f", "f32"];
+
+export type CoordinatesInput = { t: SocketType; vector: Ref };
 
 /**
- * A noise's Dimensions enum and the coordinates input of each dimension,
- * keyed as `std-noise-coordinates` takes them, so they can be passed on.
+ * A noise's coordinates input, keyed as `std-noise-coordinates` takes it so
+ * it can be passed on, and its type, which decides the noise's dimensions.
  */
-export function dimensionInputs(g: GroupBuilder, initial = 2): DimensionInputs {
-	const dimensions = g.enum("dimensions", DIMENSIONS, initial, { label: "Dimensions" });
-	const owned = (value: number) => ({ owner: { enum: dimensions, value } });
-	return {
-		dimensions,
-		w: g.input("w", "f32", { label: "W", ...owned(1) }),
-		vector2: g.input("vector2", "vec2f", { label: "Vector", ...owned(2) }),
-		vector3: g.input("vector3", "vec3f", { label: "Vector", ...owned(3) }),
-		vector4: g.input("vector4", "vec4f", { label: "Vector", ...owned(4) }),
-	};
+export function coordinatesInput(g: GroupBuilder): CoordinatesInput {
+	const t = g.typeVariable("t", "T", COORDINATE_TYPES);
+	return { t, vector: g.input("vector", t, { label: "Vector" }) };
 }
 
 export type FractalInputs = { detail: Operand; roughness: Operand; lacunarity: Operand };

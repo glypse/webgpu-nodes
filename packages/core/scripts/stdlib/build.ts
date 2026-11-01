@@ -133,10 +133,10 @@ function projectOf(groups: readonly BuiltGroup[], root: GraphDocument): GraphPro
 	return { definitions };
 }
 
-/** Every combination of the values of `enums`. */
-function combinations(enums: Map<string, number[]>): Record<string, number>[] {
-	let result: Record<string, number>[] = [{}];
-	for (const [id, values] of enums) {
+/** Every combination of the values of `choices`, by key. */
+function combinations<T>(choices: ReadonlyMap<string, readonly T[]>): Record<string, T>[] {
+	let result: Record<string, T>[] = [{}];
+	for (const [id, values] of choices) {
 		result = result.flatMap((combo) => values.map((value) => ({ ...combo, [id]: value })));
 	}
 	return result;
@@ -144,7 +144,8 @@ function combinations(enums: Map<string, number[]>): Record<string, number>[] {
 
 /**
  * Compile a node of each group, reading each output alone and all of them
- * at once with every combination of enum values, and validate the WGSL.
+ * at once with every combination of enum values and variables' types, and
+ * validate the WGSL.
  */
 export function validateGroups(groups: readonly BuiltGroup[]): string[] {
 	const errors: string[] = [];
@@ -181,12 +182,18 @@ export function validateGroups(groups: readonly BuiltGroup[]): string[] {
 				},
 			});
 		}
-		for (const values of combinations(group.enums)) {
+		const variables = new Map(
+			(group.definition.typeVariables ?? []).map((v) => [v.id, v.types]),
+		);
+		const typings = combinations(variables);
+		for (const [values, types] of combinations(group.enums).flatMap((values) =>
+			typings.map((types) => [values, types] as const),
+		)) {
 			cases.push({
-				name: `every output, enums ${JSON.stringify(Object.values(values))}`,
+				name: `every output, enums ${JSON.stringify(Object.values(values))}, types ${JSON.stringify(Object.values(types))}`,
 				root: {
 					nodes: [
-						{ ...instance, data: { values } },
+						{ ...instance, data: { values, types } },
 						{ id: "sum", type: "add", data: {}, position: { x: 0, y: 0 } },
 						out,
 					],

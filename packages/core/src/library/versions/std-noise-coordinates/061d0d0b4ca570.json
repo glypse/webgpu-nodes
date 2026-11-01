@@ -1,0 +1,186 @@
+{
+	"id": "std-noise-coordinates",
+	"name": "Noise Coordinates",
+	"aliases": ["Texture Coordinates", "Noise Vector"],
+	"category": "texture",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
+	"dependencies": ["std-dimension-mask@0420ec82eb2601"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "47b462b1-dfbd-4f94-b035-d51af34de1eb",
+				"type": "component-count",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 28
+				}
+			},
+			{
+				"id": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 92
+				}
+			},
+			{
+				"id": "eb1aab08-3af8-47b1-badf-ebfce5b55e98",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 520,
+					"y": 0
+				},
+				"group": {
+					"definitionRef": "std-dimension-mask@0420ec82eb2601",
+					"locked": true
+				}
+			},
+			{
+				"id": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088",
+				"type": "layout-frame",
+				"data": {
+					"label": "Padding",
+					"note": "In 4D, zero past the coordinates' own components,\nwhatever the UV or a scalar spreads into."
+				},
+				"position": {
+					"x": 785,
+					"y": 23
+				}
+			},
+			{
+				"id": "3092c6ac-e5f1-45d2-bf1e-3ad693683a53",
+				"type": "uv",
+				"data": {},
+				"position": {
+					"x": 809,
+					"y": 233
+				},
+				"frame": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088"
+			},
+			{
+				"id": "cd6bc07a-b652-4e53-a027-419c2e78a034",
+				"type": "fallback",
+				"data": {},
+				"position": {
+					"x": 1009,
+					"y": 141
+				},
+				"frame": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088"
+			},
+			{
+				"id": "f7b4972b-2090-4f59-84c7-498d4cdc595b",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 809,
+					"y": 116
+				},
+				"frame": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088"
+			},
+			{
+				"id": "01ac11e3-6d24-48aa-b787-2d9100aa6436",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 1209,
+					"y": 113
+				},
+				"frame": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088"
+			},
+			{
+				"id": "18dc375f-5e75-4951-a5ef-f709c9a7ba5f",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 1409,
+					"y": 145
+				},
+				"frame": "99ed4a1e-1f43-40e0-9428-2cbe7f22a088"
+			}
+		],
+		"edges": [
+			{
+				"id": "7f5386d7-cdb5-4e45-b374-434c8c3aee71",
+				"source": "ae05d435-ceae-4d89-a054-4ace4da9d8ce",
+				"sourceHandle": "7a476d9f-cfe9-4bdd-b8fd-45ac6be9d835",
+				"target": "47b462b1-dfbd-4f94-b035-d51af34de1eb",
+				"targetHandle": "value"
+			},
+			{
+				"id": "1f5ae834-5deb-46fb-ad7b-dd2e1dba58d2",
+				"source": "47b462b1-dfbd-4f94-b035-d51af34de1eb",
+				"sourceHandle": "count",
+				"target": "eb1aab08-3af8-47b1-badf-ebfce5b55e98",
+				"targetHandle": "7a1c809e-957c-41ac-bca8-4a6725f7bc97"
+			},
+			{
+				"id": "f5c80ddc-b2c0-4d85-bd5a-701e9789c552",
+				"source": "f7b4972b-2090-4f59-84c7-498d4cdc595b",
+				"sourceHandle": "7a476d9f-cfe9-4bdd-b8fd-45ac6be9d835",
+				"target": "cd6bc07a-b652-4e53-a027-419c2e78a034",
+				"targetHandle": "value"
+			},
+			{
+				"id": "89f5101a-2c26-43a1-95ac-3dca0ad7444e",
+				"source": "3092c6ac-e5f1-45d2-bf1e-3ad693683a53",
+				"sourceHandle": "uv",
+				"target": "cd6bc07a-b652-4e53-a027-419c2e78a034",
+				"targetHandle": "default"
+			},
+			{
+				"id": "99ccb136-05d6-4234-a1e7-3bcf107a7430",
+				"source": "cd6bc07a-b652-4e53-a027-419c2e78a034",
+				"sourceHandle": "result",
+				"target": "01ac11e3-6d24-48aa-b787-2d9100aa6436",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "91be1c2d-6e9e-4be6-8736-d7903657f8ab",
+				"source": "eb1aab08-3af8-47b1-badf-ebfce5b55e98",
+				"sourceHandle": "623c5fcf-09b5-4b8b-9aa8-b6d9583384f5",
+				"target": "01ac11e3-6d24-48aa-b787-2d9100aa6436",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "62881237-d676-4343-b28e-a3236e59e1ed",
+				"source": "01ac11e3-6d24-48aa-b787-2d9100aa6436",
+				"sourceHandle": "result",
+				"target": "18dc375f-5e75-4951-a5ef-f709c9a7ba5f",
+				"targetHandle": "63e24765-ffbb-4ea2-801a-d216aa80057a"
+			}
+		],
+		"inputs": [
+			{
+				"id": "7a476d9f-cfe9-4bdd-b8fd-45ac6be9d835",
+				"label": "Vector",
+				"type": {
+					"variable": "fd03b706-f2ed-470f-a57c-9a3482ca072f"
+				}
+			}
+		],
+		"outputs": [
+			{
+				"id": "63e24765-ffbb-4ea2-801a-d216aa80057a",
+				"label": "Coordinates",
+				"type": "vec4f"
+			}
+		],
+		"typeVariables": [
+			{
+				"id": "fd03b706-f2ed-470f-a57c-9a3482ca072f",
+				"name": "T",
+				"types": ["vec2f", "vec3f", "vec4f", "f32"]
+			}
+		]
+	}
+}

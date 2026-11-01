@@ -3,7 +3,14 @@
 // truth: a description only produces them (see build.ts).
 import { createHash } from "node:crypto";
 
-import { caseHandle, MATCH, MATCH_SELECTOR } from "../../src/enums";
+import {
+	caseHandle,
+	COMPONENT_COUNT,
+	COMPONENT_COUNT_INPUT,
+	COMPONENT_COUNTS,
+	MATCH,
+	MATCH_SELECTOR,
+} from "../../src/enums";
 import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
 import { rerouteBranches } from "../../src/graph/branches";
 import type { GraphDocument, GraphDocumentEdge, GraphDocumentNode } from "../../src/graph/document";
@@ -349,6 +356,12 @@ export class GroupBuilder {
 			w: this.out(ref, "w"),
 		};
 	};
+
+	/** How many components `v`'s type has, as an enum known while compiling. */
+	componentCount = (v: Operand): EnumRef => ({
+		...this.node(COMPONENT_COUNT, { [COMPONENT_COUNT_INPUT]: v }, { output: "count" }),
+		variants: COMPONENT_COUNTS,
+	});
 
 	uv = (): Ref => this.node("uv", {}, { output: "uv" });
 	resolution = (): Ref => this.node("resolution", {}, { output: "resolution" });

@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { evaluate } from "../testing/evaluate";
 import { libraryEntry, libraryHandle, managerFor } from "../testing/graph";
-import type { InputValue } from "../types";
+import type { InputValue, WgslType } from "../types";
 
 // The Voronoi groups against a direct port of Blender's Voronoi texture
 // (intern/cycles/kernel/svm/voronoi.h), hashing cells as the groups do.
@@ -127,15 +127,13 @@ function reference(coordinates: number[], p: Params) {
 	};
 }
 
-const VECTOR_LABELS = ["W", "Vector", "Vector", "Vector"];
+const COORDINATE_TYPES: WgslType[] = ["f32", "vec2f", "vec3f", "vec4f"];
 
-/** The id of the coordinates input of `dimensions` on a noise group. */
-function coordinatesInput(entry: typeof VORONOI, dimensions: number): string {
-	const handle = entry.definition.inputs?.find(
-		(h) => h.label === VECTOR_LABELS[dimensions - 1] && h.owner?.value === dimensions,
-	);
-	if (!handle) throw new Error(`no ${String(dimensions)}D coordinates`);
-	return handle.id;
+/** The type variable a noise group's coordinates take: it decides its dimensions. */
+function coordinatesType(entry: typeof VORONOI): string {
+	const variable = entry.definition.typeVariables?.[0];
+	if (!variable) throw new Error(`${entry.id} has no coordinates type`);
+	return variable.id;
 }
 
 function sample(
@@ -153,9 +151,10 @@ function sample(
 				type: "node-group",
 				group: { definitionRef: entry.ref, locked: true },
 				data: {
+					types: { [coordinatesType(entry)]: COORDINATE_TYPES[dims - 1] ?? "vec2f" },
 					values: {
-						[libraryHandle(entry, "group-input", "Dimensions")]: dims,
-						[coordinatesInput(entry, dims)]: dims === 1 ? x : { x, y, z, w },
+						[libraryHandle(entry, "group-input", "Vector")]:
+							dims === 1 ? x : { x, y, z, w },
 						...Object.fromEntries(
 							Object.entries(values).map(([label, v]) => [
 								libraryHandle(entry, "group-input", label),

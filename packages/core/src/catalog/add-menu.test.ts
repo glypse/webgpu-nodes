@@ -105,12 +105,13 @@ describe("fuzzy search", () => {
 	});
 
 	it("picks several options at once", () => {
-		const [first] = searchEntries(entries, "vorn man 3");
+		const [first] = searchEntries(entries, "vorn man vec3");
 		if (!first) throw new Error("no result");
-		expect(first.entry.label).toBe("Fractal Voronoi 3D Manhattan");
+		expect(first.entry.label).toBe("Fractal Voronoi vec3f Manhattan");
 		const voronoi = graph.addMenuEntry(first.entry, { x: 0, y: 0 }) ?? "";
-		const values = Object.values(graph.root.nodesById.get(voronoi)?.data.values ?? {});
-		expect(values.toSorted()).toEqual([1, 3]);
+		const data = graph.root.nodesById.get(voronoi)?.data;
+		expect(Object.values(data?.values ?? {})).toEqual([1]);
+		expect(Object.values(data?.types ?? {})).toEqual(["vec3f"]);
 		expect(labels("value vec2i 3d")).not.toContain("Declare vec2i 3D");
 	});
 
@@ -118,7 +119,7 @@ describe("fuzzy search", () => {
 		const results = searchEntries(entries, "fractal voronoi", () => false);
 		expect(results.map((r) => r.entry.label)).toContain("Fractal Voronoi");
 		expect(labels("fractal voronoi")).not.toContain("Fractal Voronoi Euclidean");
-		expect(searchEntries(entries, "vorn man 3", () => false)).toEqual([]);
+		expect(searchEntries(entries, "vorn man vec3", () => false)).toEqual([]);
 	});
 
 	it("lists a variant creating what its entry does once, by the variant's name", () => {
@@ -128,7 +129,7 @@ describe("fuzzy search", () => {
 			["Compare Less Than", undefined],
 			["Compare Less Than or Equal", undefined],
 		]);
-		expect(labels("voronoi texture 3d")).toContain("Voronoi Texture 3D");
+		expect(labels("voronoi texture vec3f")).toContain("Voronoi Texture vec3f");
 	});
 });
 

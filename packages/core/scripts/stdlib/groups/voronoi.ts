@@ -1,7 +1,7 @@
 // Voronoi Texture and Fractal Voronoi, after Blender's (cycles/kernel/svm/voronoi.h),
 // and the helper groups they're made of.
 import type { EnumRef, GroupBuilder, GroupSpec, Ref } from "../builder";
-import { dimensionInputs, DIMENSIONS, fractal, fractalInputs } from "../noise";
+import { coordinatesInput, DIMENSIONS, fractal, fractalInputs } from "../noise";
 
 const METRICS = [
 	[0, "Euclidean"],
@@ -49,19 +49,18 @@ const noiseCoordinates: GroupSpec = {
 	category: "texture",
 	...HELPERS,
 	build: (g) => {
-		const { dimensions, w, vector2, vector3, vector4 } = dimensionInputs(g);
-		const uv = g.uv();
-		const coordinates = g.match(
-			dimensions,
+		const { vector } = coordinatesInput(g);
+		const { mask } = g.call<"mask">(dimensionMask, { dimensions: g.componentCount(vector) });
+		g.frame(
+			"Padding",
 			{
-				1: g.vec("vec4f", g.fallback(w, g.split(uv).x), 0, 0, 0),
-				2: g.fallback(vector2, uv),
-				3: g.fallback(vector3, uv),
-				4: g.fallback(vector4, uv),
+				note: "In 4D, zero past the coordinates' own components,\nwhatever the UV or a scalar spreads into.",
 			},
-			"vec4f",
+			() => {
+				const coordinates = g.mul(g.fallback(vector, g.uv()), mask);
+				g.output("coordinates", coordinates, "vec4f", { label: "Coordinates" });
+			},
 		);
-		g.output("coordinates", coordinates, "vec4f", { label: "Coordinates" });
 	},
 };
 
@@ -551,9 +550,12 @@ const voronoiSmooth: GroupSpec = {
 	},
 };
 
-/** Voronoi's inputs, keyed as `std-voronoi-texture` takes them. */
+/**
+ * Voronoi's inputs, keyed as `std-voronoi-texture` takes them, and the type
+ * of its coordinates (`t`).
+ */
 function voronoiInputs(g: GroupBuilder) {
-	const dims = dimensionInputs(g);
+	const { t, vector } = coordinatesInput(g);
 	const scale = g.input("scale", "f32", { label: "Scale", default: 5 });
 	const randomness = g.input("randomness", "f32", {
 		label: "Randomness",
@@ -569,7 +571,7 @@ function voronoiInputs(g: GroupBuilder) {
 	});
 	const { metric, exponent } = metricInputs(g);
 	const seed = g.input("seed", "i32", { label: "Seed", default: 0 });
-	return { ...dims, scale, randomness, smoothness, metric, exponent, seed };
+	return { t, vector, scale, randomness, smoothness, metric, exponent, seed };
 }
 
 const voronoiTexture: GroupSpec = {
@@ -579,25 +581,20 @@ const voronoiTexture: GroupSpec = {
 	category: "texture",
 	...VORONOI_HELPERS,
 	build: (g) => {
-		const inputs = voronoiInputs(g);
-		const { dimensions, w, vector2, vector3, vector4, scale, metric, exponent, seed } = inputs;
+		const { t, ...inputs } = voronoiInputs(g);
+		const { vector, scale, metric, exponent, seed } = inputs;
 
-		const { cell, local, randomness, smoothness, colorSeed } = g.frame(
+		const { dimensions, cell, local, randomness, smoothness, colorSeed } = g.frame(
 			"Lattice",
 			{
-				note: "Space is cut into cells of side 1 / Scale, each holding one point\nmoved at random by up to Randomness.",
+				note: "Space is cut into cells of side 1 / Scale, each holding one point\nmoved at random by up to Randomness, in as many dimensions\nas Vector has components.",
 			},
 			() => {
-				const { coordinates } = g.call<"coordinates">(noiseCoordinates, {
-					dimensions,
-					w,
-					vector2,
-					vector3,
-					vector4,
-				});
+				const { coordinates } = g.call<"coordinates">(noiseCoordinates, { vector });
 				const position = g.mul(coordinates, scale);
 				const floor = g.floor(position);
 				return {
+					dimensions: g.wireless("Dimensions", g.componentCount(vector)),
 					cell: g.wireless("Cell", floor),
 					local: g.wireless("Local Position", g.sub(position, floor)),
 					randomness: g.wireless("Randomness", g.clamp(inputs.randomness, 0, 1)),
@@ -630,11 +627,11 @@ const voronoiTexture: GroupSpec = {
 				const f1Position = g.wireless("F1 Position", positionOf(f1Point));
 				g.output("distance", nearest["f1-distance"], "f32", { label: "Distance" });
 				g.output("color", f1Color, "vec3f", { label: "Color" });
-				g.output("position", f1Position, "vec4f", { label: "Position" });
-				g.output("cell", g.add(cell, f1Offset), "vec4f", { label: "Cell" });
+				g.output("position", f1Position, t, { label: "Position" });
+				g.output("cell", g.add(cell, f1Offset), t, { label: "Cell" });
 				g.output("f2-distance", nearest["f2-distance"], "f32", { label: "F2 Distance" });
 				g.output("f2-color", colorOf(nearest["f2-offset"]), "vec3f", { label: "F2 Color" });
-				g.output("f2-position", positionOf(f2Point), "vec4f", { label: "F2 Position" });
+				g.output("f2-position", positionOf(f2Point), t, { label: "F2 Position" });
 				return {
 					f1Point,
 					f1Offset,
@@ -677,7 +674,7 @@ const voronoiTexture: GroupSpec = {
 				g.output(
 					"smooth-position",
 					g.select(smoothed, nearest.f1Position, positionOf(g.mul(smooth.point, mask))),
-					"vec4f",
+					t,
 					{ label: "Smooth Position" },
 				);
 			},
@@ -789,10 +786,10 @@ const fractalVoronoi: GroupSpec = {
 	aliases: ["Voronoi fBm", "Voronoi FBM", "Fractal Worley", "Voronoi Texture", "Cellular fBm"],
 	category: "texture",
 	build: (g) => {
-		const inputs = voronoiInputs(g);
+		const { t, ...inputs } = voronoiInputs(g);
 		const octaves = fractalInputs(g);
 		const normalize = g.input("normalize", "bool", { label: "Normalize", default: false });
-		const { dimensions, metric, exponent } = inputs;
+		const { metric, exponent } = inputs;
 
 		const { reach, farthest } = g.frame(
 			"Reach",
@@ -800,7 +797,9 @@ const fractalVoronoi: GroupSpec = {
 			() => {
 				const randomness = g.clamp(inputs.randomness, 0, 1);
 				const reach = g.wireless("Reach", g.add(0.5, g.mul(0.5, randomness)));
-				const { mask } = g.call<"mask">(dimensionMask, { dimensions });
+				const { mask } = g.call<"mask">(dimensionMask, {
+					dimensions: g.componentCount(inputs.vector),
+				});
 				const farthest = g.named(
 					"Max Distance",
 					g.call<"distance">(voronoiDistance, {
@@ -892,7 +891,7 @@ const fractalVoronoi: GroupSpec = {
 				label: "Distance",
 			});
 			g.output("color", normalized(sum.Color, total), "vec3f", { label: "Color" });
-			g.output("position", sum.Position, "vec4f", { label: "Position" });
+			g.output("position", sum.Position, t, { label: "Position" });
 		});
 		g.frame("F2", {}, () => {
 			g.output(
@@ -906,7 +905,7 @@ const fractalVoronoi: GroupSpec = {
 			g.output("f2-color", normalized(sum["F2 Color"], total), "vec3f", {
 				label: "F2 Color",
 			});
-			g.output("f2-position", sum["F2 Position"], "vec4f", { label: "F2 Position" });
+			g.output("f2-position", sum["F2 Position"], t, { label: "F2 Position" });
 		});
 		g.frame("Smooth F1", {}, () => {
 			g.output("smooth-distance", normalized(sum["Smooth Distance"], distanceRange), "f32", {
@@ -915,7 +914,7 @@ const fractalVoronoi: GroupSpec = {
 			g.output("smooth-color", normalized(sum["Smooth Color"], total), "vec3f", {
 				label: "Smooth Color",
 			});
-			g.output("smooth-position", sum["Smooth Position"], "vec4f", {
+			g.output("smooth-position", sum["Smooth Position"], t, {
 				label: "Smooth Position",
 			});
 		});
@@ -930,7 +929,7 @@ const fractalVoronoi: GroupSpec = {
 		});
 		g.frame("First octave", { note: "Not fractal: the first octave's." }, () => {
 			const first = g.call<"cell" | "radius">(voronoiTexture, inputs);
-			g.output("cell", first.cell, "vec4f", { label: "Cell" });
+			g.output("cell", first.cell, t, { label: "Cell" });
 			g.output("radius", first.radius, "f32", { label: "Radius" });
 		});
 	},
