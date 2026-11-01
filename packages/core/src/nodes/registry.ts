@@ -1,4 +1,5 @@
 import * as nodes from ".";
+import { COMPONENT_COUNT } from "../enums/analysis";
 import { LAYOUT_FRAME } from "../frames/analysis";
 import type { NodeCategory, NodeData, NodeDescriptor } from "../types";
 import { ZONE_NODE_TYPES } from "../zones";
@@ -70,6 +71,7 @@ const DESCRIPTORS = {
 	cross: nodes.crossNode,
 	reflect: nodes.reflectNode,
 	"separate-vector": nodes.separateVectorNode,
+	[COMPONENT_COUNT]: nodes.componentCountNode,
 
 	// Logic
 	compare: nodes.compareNode,

@@ -6,7 +6,7 @@ import { GraphModel } from "../graph/model";
 import type { NodeType } from "../nodes/registry";
 import { edge, type TestEdge } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
-import type { EnumVariant, NodeData } from "../types";
+import type { EnumVariant, NodeData, WgslType } from "../types";
 import { caseHandle } from "./analysis";
 
 const VARIANTS: EnumVariant[] = [
@@ -197,5 +197,93 @@ describe("Match node", () => {
 			definitions: { [ROOT_ID]: { nodes: [node("m", "match")], edges: [] } },
 		});
 		expect(lone.typeChoice("m")?.types.length).toBeGreaterThan(1);
+	});
+});
+
+describe("Component Count node", () => {
+	/**
+	 * A group generic over its "v" input's width, picking by its component
+	 * count one of four constants (`c1`…`c4`). Its instance is fed a `type`.
+	 */
+	function generic(type: WgslType): GraphProject {
+		return {
+			definitions: {
+				[ROOT_ID]: {
+					nodes: [
+						node("out", "frag-output"),
+						node("src", "declare", { types: { declare: type } }),
+						{
+							...node("g", "node-group"),
+							group: { definitionRef: "def", locked: false },
+						},
+					],
+					edges: (
+						[
+							["src", "value", "g", "v"],
+							["g", "result", "out", "color"],
+						] satisfies TestEdge[]
+					).map(edge),
+				},
+				def: {
+					typeVariables: [
+						{ id: "t", name: "T", types: ["f32", "vec2f", "vec3f", "vec4f"] },
+					],
+					inputs: [{ id: "v", label: "V", type: { variable: "t" } }],
+					outputs: [{ id: "result", label: "Result", type: "f32" }],
+					nodes: [
+						node("in", "group-input"),
+						node("go", "group-output"),
+						node("count", "component-count"),
+						node("m", "match"),
+						...[1, 2, 3, 4].map((n) =>
+							node(`c${String(n)}`, "declare", { values: { x: n } }),
+						),
+					],
+					edges: (
+						[
+							["in", "v", "count", "value"],
+							["count", "count", "m", "selector"],
+							...[1, 2, 3, 4].map(
+								(n) =>
+									[
+										`c${String(n)}`,
+										"value",
+										"m",
+										caseHandle(n),
+									] satisfies TestEdge,
+							),
+							["m", "result", "go", "result"],
+						] satisfies TestEdge[]
+					).map(edge),
+				},
+			},
+		};
+	}
+
+	it("is an enum of widths a Match node can branch on", () => {
+		const graph = new GraphModel(generic("vec2f"));
+		expect(caseIds(graph)).toEqual([
+			"selector:enum",
+			"case-1:Scalar",
+			"case-2:Vector 2",
+			"case-3:Vector 3",
+			"case-4:Vector 4",
+		]);
+		graph.enterGroup("g");
+		const link = { target: "m", targetHandle: "selector", sourceHandle: "count" };
+		expect(graph.isValidConnection({ ...link, source: "count" })).toBe(true);
+	});
+
+	it("is known while compiling, from the type its input takes in each instance", () => {
+		for (const [type, picked] of [
+			["f32", 1],
+			["vec3f", 3],
+			["vec4f", 4],
+		] as const) {
+			const { shader } = generateShader(new GraphModel(generic(type)));
+			expect(shader).toContain(`let v_m = v_c${String(picked)};`);
+			expect(shader).not.toContain(`v_c${String(picked === 1 ? 2 : 1)} =`);
+			if (nagaBin) expect(validateFragment(shader)).toBeNull();
+		}
 	});
 });

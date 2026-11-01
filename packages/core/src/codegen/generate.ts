@@ -369,6 +369,7 @@ class BodyEmitter {
 			nodesById: this.nodeMap,
 			edgesByTarget: this.incomingByTarget,
 			inputs: this.inputs,
+			inputType: inputTypeIn(this.state, this.nodeMap, this.incomingByTarget, this.bindings),
 		};
 	}
 
@@ -613,6 +614,25 @@ function zoneVarNames(zone: Zone, items: HandleDef[]) {
 	};
 }
 
+/** The type an input of a node of a document resolves to, its variables taking `bindings`. */
+function inputTypeIn(
+	state: ShaderState,
+	nodeMap: ReadonlyMap<string, GraphNode>,
+	edgesByTarget: ReadonlyMap<string, GraphEdge[]>,
+	bindings: TypeBindings,
+): NonNullable<EnumDocument["inputType"]> {
+	return (nodeId, inputId) => {
+		const node = nodeMap.get(nodeId);
+		if (!node) return undefined;
+		return state.graph.typeResolver.resolveNodeTypes(
+			node,
+			edgesByTarget.get(nodeId) ?? [],
+			(id) => state.graph.resolveNode(id),
+			bindings,
+		).inputTypes[inputId];
+	};
+}
+
 /**
  * Emit the nodes of a document needed to compute `seedType` nodes.
  *
@@ -643,7 +663,12 @@ function emitDocumentBody(
 	for (const e of validEdges)
 		edgesByTarget.set(e.target, [...(edgesByTarget.get(e.target) ?? []), e]);
 	const usedEdges = liveEdges(
-		{ nodesById: nodeMap, edgesByTarget, inputs: doc.inputs ?? [] },
+		{
+			nodesById: nodeMap,
+			edgesByTarget,
+			inputs: doc.inputs ?? [],
+			inputType: inputTypeIn(state, nodeMap, edgesByTarget, bindings),
+		},
 		validEdges,
 		constants,
 	).filter(

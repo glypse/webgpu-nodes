@@ -1,5 +1,13 @@
+import { COMPONENT_COUNT, COMPONENT_COUNT_INPUT } from "../enums";
 import type { NodeDescriptor } from "../types";
-import { FLOAT_VEC_TYPES, makeType, typeComponents, typeKind, VEC_TYPES } from "../types";
+import {
+	FLOAT_VEC_TYPES,
+	makeType,
+	typeComponents,
+	typeKind,
+	VEC_TYPES,
+	WGSL_TYPES,
+} from "../types";
 import { binaryNode, unaryFn } from "./builders";
 
 // Vector
@@ -53,6 +61,26 @@ export const reflectNode: NodeDescriptor = {
 		category: "vector",
 	}),
 	aliases: ["Reflection", "Vector Math"],
+};
+
+/**
+ * How many components its input's type has, known while compiling: an enum
+ * a Match node or a group's enum input can branch on, so a group generic
+ * over vector widths can take each width's path.
+ */
+export const componentCountNode: NodeDescriptor = {
+	type: COMPONENT_COUNT,
+	label: "Component Count",
+	aliases: ["Dimensions", "Vector Size", "Vector Width", "Length of Type"],
+	category: "vector",
+	inputs: [{ id: COMPONENT_COUNT_INPUT, label: "value", types: WGSL_TYPES }],
+	outputs: [{ id: "count", label: "count", type: "u32" }],
+	staticOutputTypes: true,
+	defaultData: {},
+	wgsl: (ctx) => {
+		const type = ctx.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32";
+		return [`let ${ctx.varName} = ${String(typeComponents(type))}u;`];
+	},
 };
 
 const SEPARATE_COMPONENTS = ["x", "y", "z", "w"];

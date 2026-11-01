@@ -1,8 +1,25 @@
 import type { GraphDocumentEdge } from "../graph/document";
-import type { EnumVariant, GroupHandleDef, NodeData } from "../types";
+import {
+	type EnumVariant,
+	type GroupHandleDef,
+	type NodeData,
+	typeComponents,
+	type WgslType,
+} from "../types";
 
 export const MATCH = "match";
 export const MATCH_SELECTOR = "selector";
+
+export const COMPONENT_COUNT = "component-count";
+export const COMPONENT_COUNT_INPUT = "value";
+
+/** The enum a Component Count node's output carries: one variant per width. */
+export const COMPONENT_COUNTS: readonly EnumVariant[] = [
+	{ value: 1, label: "Scalar" },
+	{ value: 2, label: "Vector 2" },
+	{ value: 3, label: "Vector 3" },
+	{ value: 4, label: "Vector 4" },
+];
 
 const CASE_PREFIX = "case-";
 
@@ -26,6 +43,11 @@ export type EnumDocument = {
 	edgesByTarget: ReadonlyMap<string, readonly GraphDocumentEdge[]>;
 	/** The inputs of the group the document is, which its Group Input nodes show. */
 	inputs: readonly GroupHandleDef[];
+	/**
+	 * The type an input of a node resolves to, for values computed from
+	 * types (Component Count). Without it those values aren't known.
+	 */
+	inputType?: (nodeId: string, inputId: string) => WgslType | undefined;
 };
 
 /** Node types forwarding one input's value unchanged, by that input's id. */
@@ -36,8 +58,9 @@ function feed(doc: EnumDocument, nodeId: string, inputId: string) {
 }
 
 /**
- * The enum an output carries: that of a group input's enum handle, through
- * nodes passing values unchanged. Undefined for any other value.
+ * The enum an output carries: that of a group input's enum handle or a
+ * Component Count node, through nodes passing values unchanged. Undefined
+ * for any other value.
  */
 export function enumOfOutput(
 	doc: EnumDocument,
@@ -48,6 +71,7 @@ export function enumOfOutput(
 	if (node?.type === "group-input") {
 		return doc.inputs.find((h) => h.id === handleId)?.variants;
 	}
+	if (node?.type === COMPONENT_COUNT) return COMPONENT_COUNTS;
 	const through = PASS_THROUGH[node?.type ?? ""];
 	return through ? enumAt(doc, nodeId, through) : undefined;
 }
@@ -64,7 +88,8 @@ export function enumAt(
 
 /**
  * The value an input has while compiling, when it comes from a group input
- * whose value is known: `constants` holds those, by handle id.
+ * whose value is known (`constants` holds those, by handle id) or from a
+ * Component Count node.
  */
 export function constantAt(
 	doc: EnumDocument,
@@ -76,6 +101,10 @@ export function constantAt(
 	if (!edge) return undefined;
 	const source = doc.nodesById.get(edge.source);
 	if (source?.type === "group-input") return constants.get(edge.sourceHandle);
+	if (source?.type === COMPONENT_COUNT) {
+		const type = doc.inputType?.(edge.source, COMPONENT_COUNT_INPUT);
+		return type && typeComponents(type);
+	}
 	const through = PASS_THROUGH[source?.type ?? ""];
 	return through ? constantAt(doc, edge.source, through, constants) : undefined;
 }
