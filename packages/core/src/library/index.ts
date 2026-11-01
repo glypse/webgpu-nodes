@@ -21,6 +21,7 @@ import oklchGamutMap from "./std-oklch-gamut-map.json";
 import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
 import remap from "./std-remap.json";
+import voronoiBisector from "./std-voronoi-bisector.json";
 import voronoiDistance from "./std-voronoi-distance.json";
 import voronoiEdges from "./std-voronoi-edges.json";
 import voronoiNearest from "./std-voronoi-nearest.json";
@@ -85,6 +86,7 @@ const files: unknown[] = [
 	voronoiEdges,
 	voronoiRadius,
 	voronoiSmooth,
+	voronoiBisector,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

@@ -7,7 +7,7 @@
 		"std-dimension-mask@0420ec82eb2601",
 		"std-voronoi-distance@1b3c043441e876",
 		"std-fractal-octave@1cd055afa56769",
-		"std-voronoi-texture@1c0e5b4a0a2e5e"
+		"std-voronoi-texture@1060b73417a893"
 	],
 	"definition": {
 		"nodes": [
@@ -354,7 +354,7 @@
 					"y": 90
 				},
 				"group": {
-					"definitionRef": "std-voronoi-texture@1c0e5b4a0a2e5e",
+					"definitionRef": "std-voronoi-texture@1060b73417a893",
 					"locked": true
 				},
 				"frame": "0a9bd527-3520-4010-a5c7-b632bf12280f"
@@ -1033,7 +1033,7 @@
 					"y": 2953
 				},
 				"group": {
-					"definitionRef": "std-voronoi-texture@1c0e5b4a0a2e5e",
+					"definitionRef": "std-voronoi-texture@1060b73417a893",
 					"locked": true
 				},
 				"frame": "cb8fef99-0a4d-4b4e-942b-54114ef50c8a"

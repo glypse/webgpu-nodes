@@ -296,6 +296,94 @@ const voronoiNearest: GroupSpec = {
 	},
 };
 
+const voronoiBisector: GroupSpec = {
+	id: "std-voronoi-bisector",
+	name: "Voronoi Bisector Distance",
+	aliases: ["Bisector", "Distance to Bisector", "Cell Border Distance"],
+	category: "texture",
+	...VORONOI_HELPERS,
+	build: (g) => {
+		const a = g.input("a", "vec4f", { label: "A" });
+		const b = g.input("b", "vec4f", { label: "B" });
+		const dimensions = g.enum("dimensions", DIMENSIONS, 2, { label: "Dimensions" });
+		const { metric, exponent } = metricInputs(g);
+		const int = (n: number) => g.constant("i32", n);
+		const toA = g.call<"distance">(voronoiDistance, { a, b: 0, metric, exponent }).distance;
+		const toB = g.call<"distance">(voronoiDistance, { a: b, b: 0, metric, exponent }).distance;
+		const { near, far } = g.frame(
+			"Sides",
+			{ note: "A and B relative to the position: which of them it's closer to." },
+			() => {
+				const swapped = g.compare(toB, "<", toA);
+				return { near: g.select(swapped, a, b), far: g.select(swapped, b, a) };
+			},
+		);
+		const euclidean = g.frame(
+			"Euclidean",
+			{ note: "Straight: the distance to the plane half-way between them." },
+			() => g.abs(g.dot(g.mul(g.add(a, b), 0.5), g.normalize(g.sub(b, a)))),
+		);
+		const manhattan = g.frame(
+			"Manhattan",
+			{
+				note: "For each sign pattern σ the far point is ahead of the near one along,\n(|far|₁ + σ·near) / 2: the least is the distance.",
+			},
+			() => {
+				const patterns = g.match(dimensions, {
+					1: int(2),
+					2: int(4),
+					3: int(8),
+					4: int(16),
+				});
+				return g.repeat(patterns, { Distance: ["f32", 1e10] }, (iteration, s) => {
+					const bits = g.mod(g.div(iteration, g.vec("vec4i", 1, 2, 4, 8)), int(2));
+					const sigma = g.sub(g.mul(g.toFloat(bits), 2), 1);
+					const ahead = g.compare(g.dot(sigma, g.sub(far, near)), ">=", 0);
+					const d = g.mul(g.add(g.dot(g.abs(far), 1), g.dot(sigma, near)), 0.5);
+					return { Distance: g.select(ahead, s.Distance, g.min(s.Distance, d)) };
+				}).Distance;
+			},
+		);
+		const chebyshev = g.frame(
+			"Chebyshev",
+			{
+				note: "For each axis and direction the far point isn't behind on, how far\nto half-way along it, the other axes keeping up: the least is the distance.",
+			},
+			() => {
+				const sides = g.mul(g.toInt(dimensions), int(2));
+				return g.repeat(sides, { Distance: ["f32", 1e10] }, (iteration, s) => {
+					const axis = g.div(iteration, int(2));
+					const sign = g.sub(1, g.mul(g.toFloat(g.mod(iteration, int(2))), 2));
+					const along = g.sub(
+						1,
+						g.min(g.abs(g.toFloat(g.sub(g.vec("vec4i", 0, 1, 2, 3), axis))), 1),
+					);
+					const nearK = g.dot(near, along);
+					const farK = g.dot(far, along);
+					const ahead = g.compare(g.mul(sign, g.sub(farK, nearK)), ">=", 0);
+					const { x, y, z, w } = g.split(g.mul(g.abs(far), g.sub(1, along)));
+					const others = g.mul(g.add(g.max(x, y, z, w), g.mul(sign, nearK)), 0.5);
+					const d = g.max(g.mul(sign, g.add(nearK, farK), 0.5), others, 0);
+					return { Distance: g.select(ahead, s.Distance, g.min(s.Distance, d)) };
+				}).Distance;
+			},
+		);
+		const minkowski = g.frame(
+			"Minkowski",
+			{
+				note: "No closed form: half the gap between the two distances,\nexact on the edge itself, approximate away from it.",
+			},
+			() => g.mul(g.abs(g.sub(toB, toA)), 0.5),
+		);
+		g.output(
+			"distance",
+			g.match(metric, { 0: euclidean, 1: manhattan, 2: chebyshev, 3: minkowski }),
+			"f32",
+			{ label: "Distance" },
+		);
+	},
+};
+
 const voronoiEdges: GroupSpec = {
 	id: "std-voronoi-edges",
 	name: "Voronoi Edges",
@@ -304,16 +392,17 @@ const voronoiEdges: GroupSpec = {
 	...VORONOI_HELPERS,
 	build: (g) => {
 		const inputs = cellInputs(g);
+		const { metric, exponent } = metricInputs(g);
 		const f1Point = g.input("f1-point", "vec4f", { label: "F1 Point" });
 		const f2Point = g.input("f2-point", "vec4f", { label: "F2 Point" });
 		const { neighbors, neighborPoint } = lattice(g, inputs);
-		const { local } = inputs;
+		const { local, dimensions } = inputs;
 		const toClosest = g.sub(f1Point, local);
 		const toSecond = g.sub(f2Point, local);
 		const edges = g.frame(
 			"Closest bisectors",
 			{
-				note: "The distance to the bisector of the F1 (or F2) point and each\nother point: the edges of its cell. F2's include F1's bisector,\nfrom its far side.",
+				note: "The distance to the bisector of the F1 (or F2) point and each\nother point, in the metric: the edges of its cell. F2's include\nF1's bisector, from its far side.",
 			},
 			() =>
 				g.repeat(
@@ -324,9 +413,13 @@ const voronoiEdges: GroupSpec = {
 						const toBisector = (from: Ref, current: Ref) => {
 							const across = g.sub(toPoint, from);
 							const distinct = g.compare(g.dot(across, across), ">", 0.0001);
-							const d = g.abs(
-								g.dot(g.mul(g.add(from, toPoint), 0.5), g.normalize(across)),
-							);
+							const d = g.call<"distance">(voronoiBisector, {
+								a: from,
+								b: toPoint,
+								dimensions,
+								metric,
+								exponent,
+							}).distance;
 							return g.select(distinct, current, g.min(current, d));
 						};
 						return {
@@ -353,41 +446,37 @@ const voronoiRadius: GroupSpec = {
 	...VORONOI_HELPERS,
 	build: (g) => {
 		const inputs = pointInputs(g, g.input("cell", "vec4f", { label: "Cell" }));
+		const { metric, exponent } = metricInputs(g);
 		const f1Point = g.input("f1-point", "vec4f", { label: "F1 Point" });
 		const f1Offset = g.input("f1-offset", "vec4f", { label: "F1 Offset" });
 		const { pointAt, neighbors } = lattice(g, inputs);
 		const sphere = g.frame(
 			"Closest point to F1",
-			{ note: "The points of the cells around F1's, its own aside." },
+			{ note: "The points of the cells around F1's, its own aside, in the metric." },
 			() =>
-				g.repeat(
-					neighbors(1),
-					{ "Distance Squared": ["f32", 1e10], "Nearest Point": ["vec4f", 0] },
-					(iteration, s) => {
-						const { offset } = g.call<"offset">(latticeNeighbor, {
-							index: iteration,
-							dimensions: inputs.dimensions,
-						});
-						const itself = g.compare(g.dot(offset, offset), "<", 0.5);
-						const point = pointAt(g.add(f1Offset, offset));
-						const between = g.sub(f1Point, point);
-						const d = g.select(itself, g.dot(between, between), 1e10);
-						return {
-							"Distance Squared": g.min(s["Distance Squared"], d),
-							"Nearest Point": g.select(
-								g.compare(d, "<", s["Distance Squared"]),
-								s["Nearest Point"],
-								point,
-							),
-						};
-					},
-				),
+				g.repeat(neighbors(1), { Distance: ["f32", 1e10] }, (iteration, s) => {
+					const { offset } = g.call<"offset">(latticeNeighbor, {
+						index: iteration,
+						dimensions: inputs.dimensions,
+					});
+					const itself = g.compare(g.dot(offset, offset), "<", 0.5);
+					const point = pointAt(g.add(f1Offset, offset));
+					const d = g.call<"distance">(voronoiDistance, {
+						a: f1Point,
+						b: point,
+						metric,
+						exponent,
+					}).distance;
+					return { Distance: g.select(itself, g.min(s.Distance, d), s.Distance) };
+				}),
 		);
-		g.frame("Half-way", { note: "The largest n-sphere around F1 inside its cell." }, () => {
-			g.output("radius", g.mul(g.distance(sphere["Nearest Point"], f1Point), 0.5), "f32", {
-				label: "Radius",
-			});
-		});
+		g.frame(
+			"Half-way",
+			{ note: "The largest ball of the metric around F1 inside its cell." },
+			() => {
+				g.output("radius", g.mul(sphere.Distance, 0.5), "f32", { label: "Radius" });
+			},
+		);
 	},
 };
 
@@ -594,6 +683,8 @@ const voronoiTexture: GroupSpec = {
 		g.frame("Edges", { note: "How far the cells' edges are." }, () => {
 			const edges = g.call<"edge" | "f2-edge">(voronoiEdges, {
 				...lattice,
+				metric,
+				exponent,
 				"f1-point": nearest.f1Point,
 				"f2-point": nearest.f2Point,
 			});
@@ -601,8 +692,10 @@ const voronoiTexture: GroupSpec = {
 			g.output("f2-edge", edges["f2-edge"], "f32", { label: "F2 Distance to Edge" });
 		});
 
-		g.frame("Radius", { note: "The largest n-sphere inside F1's cell." }, () => {
+		g.frame("Radius", { note: "The largest ball of the metric inside F1's cell." }, () => {
 			const { radius } = g.call<"radius">(voronoiRadius, {
+				metric,
+				exponent,
 				cell,
 				randomness,
 				seed,
@@ -827,6 +920,7 @@ export default [
 	voronoiPoint,
 	voronoiDistance,
 	voronoiNearest,
+	voronoiBisector,
 	voronoiEdges,
 	voronoiRadius,
 	voronoiSmooth,
