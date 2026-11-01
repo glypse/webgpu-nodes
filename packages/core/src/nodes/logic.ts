@@ -169,10 +169,10 @@ type FallbackDocument = {
 };
 
 /**
- * Group-input handles of a definition whose value goes straight into a
- * Fallback node, or into a fallback input of a nested group: unlinked on a
- * group node, they fall back to the group's own default instead of showing
- * an editor.
+ * Group-input handles of a definition whose value goes straight (through
+ * reroutes at most) into a Fallback node, or into a fallback input of a
+ * nested group: unlinked on a group node, they fall back to the group's own
+ * default instead of showing an editor.
  */
 export function fallbackHandleIds(
 	definition: FallbackDocument,
@@ -187,6 +187,11 @@ export function fallbackHandleIds(
 	const isFallback = (target: string, handle: string): boolean => {
 		const node = nodesById.get(target);
 		if (node?.type === "fallback") return handle === "value";
+		if (node?.type === "reroute") {
+			return definition.edges.some(
+				(e) => e.source === target && isFallback(e.target, e.targetHandle),
+			);
+		}
 		const ref = node?.type === "node-group" ? node.group?.definitionRef : undefined;
 		const inner = ref === undefined ? undefined : definitions.get(ref);
 		if (!ref || !inner || visiting.has(inner)) return false;

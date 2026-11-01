@@ -391,7 +391,12 @@ class BodyEmitter {
 	}
 
 	isPresent(node: GraphNode, inputId: string): boolean {
-		const edge = this.incoming(node.id).find((e) => e.targetHandle === inputId);
+		let edge = this.incoming(node.id).find((e) => e.targetHandle === inputId);
+		// A reroute's value is present where the one it passes on is.
+		while (edge && this.nodeMap.get(edge.source)?.type === "reroute") {
+			const source = edge.source;
+			edge = this.incoming(source).find((e) => e.targetHandle === "in");
+		}
 		if (!edge) return false;
 		const source = this.nodeMap.get(edge.source);
 		return !(source?.type === "group-input" && this.absentInputs.has(edge.sourceHandle));
