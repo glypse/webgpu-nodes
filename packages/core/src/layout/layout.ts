@@ -384,6 +384,10 @@ function rootOptions(spacing: LayoutSpacing): ElkOptions {
 		"elk.spacing.nodeNode": String(spacing.betweenNodes),
 		"elk.spacing.componentComponent": String(spacing.betweenLayers),
 		"elk.layered.nodePlacement.strategy": "NETWORK_SIMPLEX",
+		// More tries at ordering each column (default 7): measured on the
+		// Voronoi groups, up to a quarter fewer crossings for under half again
+		// the time.
+		"elk.layered.thoroughness": "30",
 		// Links are drawn by the front end: only node positions matter.
 		"elk.edgeRouting": "POLYLINE",
 	};

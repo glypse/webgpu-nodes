@@ -25,7 +25,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 641
+					"y": 801
 				}
 			},
 			{
@@ -34,7 +34,7 @@
 				"data": {},
 				"position": {
 					"x": 284,
-					"y": 757
+					"y": 917
 				},
 				"group": {
 					"definitionRef": "std-noise-coordinates@00f5df7962d95f",
@@ -50,7 +50,7 @@
 				},
 				"position": {
 					"x": 24,
-					"y": 1208
+					"y": 1368
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -60,7 +60,7 @@
 				"data": {},
 				"position": {
 					"x": 484,
-					"y": 903
+					"y": 1063
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -70,7 +70,7 @@
 				"data": {},
 				"position": {
 					"x": 684,
-					"y": 875
+					"y": 1035
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -83,7 +83,7 @@
 				},
 				"position": {
 					"x": 965,
-					"y": 971
+					"y": 1131
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -93,7 +93,7 @@
 				"data": {},
 				"position": {
 					"x": 884,
-					"y": 731
+					"y": 891
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -106,7 +106,7 @@
 				},
 				"position": {
 					"x": 1084,
-					"y": 827
+					"y": 987
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -121,7 +121,7 @@
 				},
 				"position": {
 					"x": 284,
-					"y": 1047
+					"y": 1207
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -134,7 +134,7 @@
 				},
 				"position": {
 					"x": 565,
-					"y": 1143
+					"y": 1303
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -144,7 +144,7 @@
 				"data": {},
 				"position": {
 					"x": 284,
-					"y": 1599
+					"y": 1759
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -164,7 +164,7 @@
 				},
 				"position": {
 					"x": 24,
-					"y": 1627
+					"y": 1787
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -179,7 +179,7 @@
 				},
 				"position": {
 					"x": 484,
-					"y": 1571
+					"y": 1731
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -196,7 +196,7 @@
 				},
 				"position": {
 					"x": 284,
-					"y": 1332
+					"y": 1492
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -209,7 +209,7 @@
 				},
 				"position": {
 					"x": 565,
-					"y": 1464
+					"y": 1624
 				},
 				"frame": "a7750851-f72f-4e05-ad62-80851cf4a4c4"
 			},
@@ -221,8 +221,8 @@
 					"note": "The closest point (F1) and the one after it (F2)."
 				},
 				"position": {
-					"x": 1289,
-					"y": 277
+					"x": 1276,
+					"y": 372
 				}
 			},
 			{
@@ -230,8 +230,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1553,
-					"y": 707
+					"x": 1540,
+					"y": 768
 				},
 				"group": {
 					"definitionRef": "std-voronoi-nearest@0f9deee7135799",
@@ -246,8 +246,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1313,
-					"y": 1193
+					"x": 1300,
+					"y": 1146
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -259,8 +259,8 @@
 					"hideLinks": true
 				},
 				"position": {
-					"x": 1783,
-					"y": 1779
+					"x": 1780,
+					"y": 531
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -272,8 +272,8 @@
 					"hideLinks": true
 				},
 				"position": {
-					"x": 1783,
-					"y": 475
+					"x": 1780,
+					"y": 570
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -285,8 +285,8 @@
 					"hideLinks": true
 				},
 				"position": {
-					"x": 1783,
-					"y": 1741
+					"x": 1780,
+					"y": 948
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -295,8 +295,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 1831,
-					"y": 351
+					"x": 1838,
+					"y": 446
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -305,8 +305,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 2031,
-					"y": 357
+					"x": 2038,
+					"y": 452
 				},
 				"group": {
 					"definitionRef": "std-hash@019d6613a7682f",
@@ -322,8 +322,8 @@
 					"hideLinks": true
 				},
 				"position": {
-					"x": 2312,
-					"y": 453
+					"x": 2319,
+					"y": 548
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -332,8 +332,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 1831,
-					"y": 1655
+					"x": 1838,
+					"y": 624
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -342,8 +342,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 2031,
-					"y": 1661
+					"x": 2038,
+					"y": 1082
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -355,8 +355,8 @@
 					"hideLinks": true
 				},
 				"position": {
-					"x": 2312,
-					"y": 1757
+					"x": 2319,
+					"y": 1178
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -367,8 +367,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 2451,
-					"y": 655
+					"x": 2458,
+					"y": 1236
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -377,8 +377,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 2231,
-					"y": 563
+					"x": 2238,
+					"y": 1288
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -387,8 +387,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 1831,
-					"y": 1049
+					"x": 1838,
+					"y": 1466
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -397,8 +397,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 2031,
-					"y": 1251
+					"x": 2038,
+					"y": 1472
 				},
 				"group": {
 					"definitionRef": "std-hash@019d6613a7682f",
@@ -411,8 +411,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 1831,
-					"y": 1450
+					"x": 1838,
+					"y": 1671
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -421,8 +421,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 2031,
-					"y": 1456
+					"x": 2038,
+					"y": 1677
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
 			},
@@ -434,8 +434,8 @@
 					"note": "F1 blended with the points around it, or F1 itself at no smoothness."
 				},
 				"position": {
-					"x": 2820,
-					"y": 438
+					"x": 2803,
+					"y": 1242
 				}
 			},
 			{
@@ -443,8 +443,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3084,
-					"y": 880
+					"x": 3067,
+					"y": 1684
 				},
 				"group": {
 					"definitionRef": "std-voronoi-smooth@0f90e97f3111bf",
@@ -459,8 +459,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 2844,
-					"y": 1325
+					"x": 2827,
+					"y": 2129
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -476,8 +476,8 @@
 					}
 				},
 				"position": {
-					"x": 3684,
-					"y": 512
+					"x": 3667,
+					"y": 1316
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -486,8 +486,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3084,
-					"y": 1366
+					"x": 3067,
+					"y": 2170
 				},
 				"group": {
 					"definitionRef": "std-dimension-mask@0420ec82eb2601",
@@ -500,8 +500,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 3904,
-					"y": 591
+					"x": 3887,
+					"y": 1395
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -512,8 +512,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 4114,
-					"y": 1264
+					"x": 4097,
+					"y": 2068
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -522,8 +522,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 3904,
-					"y": 824
+					"x": 3887,
+					"y": 1628
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -532,8 +532,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 3284,
-					"y": 1338
+					"x": 3267,
+					"y": 2142
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -542,8 +542,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 3484,
-					"y": 1310
+					"x": 3467,
+					"y": 2114
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -552,8 +552,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 3684,
-					"y": 1372
+					"x": 3667,
+					"y": 2176
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -562,8 +562,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 3904,
-					"y": 1288
+					"x": 3887,
+					"y": 2092
 				},
 				"frame": "39969372-b702-4387-b7a2-4a3f1bd6eeb6"
 			},
@@ -575,8 +575,8 @@
 					"note": "How far the cells' edges are."
 				},
 				"position": {
-					"x": 2820,
-					"y": 1701
+					"x": 2803,
+					"y": 0
 				}
 			},
 			{
@@ -584,8 +584,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3064,
-					"y": 1775
+					"x": 3047,
+					"y": 74
 				},
 				"group": {
 					"definitionRef": "std-voronoi-edges@1c0fc838d663a0",
@@ -600,8 +600,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 2844,
-					"y": 1979
+					"x": 2827,
+					"y": 278
 				},
 				"frame": "cecd268c-7781-449b-b027-9f440e3937bc"
 			},
@@ -612,8 +612,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 3264,
-					"y": 1807
+					"x": 3247,
+					"y": 106
 				},
 				"frame": "cecd268c-7781-449b-b027-9f440e3937bc"
 			},
@@ -625,8 +625,8 @@
 					"note": "The largest n-sphere inside F1's cell."
 				},
 				"position": {
-					"x": 2820,
-					"y": 0
+					"x": 2803,
+					"y": 483
 				}
 			},
 			{
@@ -634,8 +634,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3064,
-					"y": 74
+					"x": 3047,
+					"y": 557
 				},
 				"group": {
 					"definitionRef": "std-voronoi-radius@1ab49afa340b2e",
@@ -650,8 +650,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 2844,
-					"y": 222
+					"x": 2827,
+					"y": 705
 				},
 				"frame": "847100b9-931d-4711-a974-94f51c7fddef"
 			},
@@ -662,8 +662,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 3264,
-					"y": 106
+					"x": 3247,
+					"y": 589
 				},
 				"frame": "847100b9-931d-4711-a974-94f51c7fddef"
 			}
