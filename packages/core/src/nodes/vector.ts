@@ -1,5 +1,5 @@
 import type { NodeDescriptor } from "../types";
-import { FLOAT_VEC_TYPES, VEC_TYPES, makeType, typeComponents, typeKind } from "../types";
+import { FLOAT_VEC_TYPES, makeType, typeComponents, typeKind, VEC_TYPES } from "../types";
 import { binaryNode, unaryFn } from "./builders";
 
 // Vector

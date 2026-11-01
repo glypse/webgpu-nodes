@@ -1,4 +1,4 @@
-import { CURVE_SOLVE_STEPS, LINEAR_CURVE, curveSegments } from "../curve";
+import { CURVE_SOLVE_STEPS, curveSegments, LINEAR_CURVE } from "../curve";
 import type { NodeDescriptor } from "../types";
 import { FLOAT_TYPES, typeComponents, wgslTypeName } from "../types";
 

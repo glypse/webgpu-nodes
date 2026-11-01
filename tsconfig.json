@@ -9,5 +9,5 @@
 	},
 	"files": [],
 	"references": [],
-	"include": ["eslint.config.ts", "oxfmt.config.ts"]
+	"include": ["eslint.config.ts"]
 }

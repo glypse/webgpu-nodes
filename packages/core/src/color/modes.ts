@@ -1,10 +1,10 @@
 import {
-	type Rgb,
 	decodeRgb,
 	encodeRgb,
 	hsvToRgb,
 	linearToOklch,
 	oklchToLinear,
+	type Rgb,
 	rgbToHsv,
 } from "./convert";
 

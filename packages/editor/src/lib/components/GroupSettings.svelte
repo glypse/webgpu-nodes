@@ -1,19 +1,19 @@
 <script lang="ts">
 	import {
+		boundType,
 		COLOR_DISPLAYS,
 		type ColorDisplay,
-		boundType,
 		type EnumVariant,
-		groupInputDef,
+		FLOAT_TYPES,
 		type GroupHandleDef,
+		groupInputDef,
 		type GroupSide,
-		inputControl,
 		type InputControl,
+		inputControl,
 		type InputOwner,
 		type InputValue,
 		nextVariantValue,
 		ownerExists,
-		FLOAT_TYPES,
 		type SocketType,
 		TYPE_SETS,
 		typeKind,
@@ -31,8 +31,8 @@
 	import XIcon from "phosphor-svelte/lib/XIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
-	import InputEditor from "./controls/InputEditor.svelte";
 	import TypePicker from "./TypePicker.svelte";
+	import InputEditor from "./controls/InputEditor.svelte";
 
 	const graph = getGraphManager();
 

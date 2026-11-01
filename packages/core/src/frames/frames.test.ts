@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import { managerFor, shaderFor } from "../testing/graph";
-import { LAYOUT_FRAME, analyzeFrames } from "./analysis";
+import { analyzeFrames, LAYOUT_FRAME } from "./analysis";
 import { FRAME_PADDING, frameRects } from "./geometry";
 
 const frame = (id: string, inFrame?: string) => ({

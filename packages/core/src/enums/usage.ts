@@ -1,6 +1,6 @@
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import { enumValue } from "../types";
-import { type EnumDocument, constantAt } from "./analysis";
+import { constantAt, type EnumDocument } from "./analysis";
 
 type Definitions = ReadonlyMap<string, HydratedGraphDocument>;
 

@@ -1,6 +1,6 @@
 import type { EnumVariant, NodeInputDef } from "./descriptors";
 import type { InputValue } from "./node-data";
-import { type WgslType, typeKind } from "./values";
+import { typeKind, type WgslType } from "./values";
 
 /**
  * How the value of an unlinked input is edited. Each kind has its own editor

@@ -6,7 +6,7 @@ import { FRAME_TINTS } from "../frames/analysis";
 import { NODE_TYPES } from "../nodes/registry";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, WGSL_TYPES } from "../types";
-import { ProjectSettingsSchema, defaultSettings } from "./settings";
+import { defaultSettings, ProjectSettingsSchema } from "./settings";
 
 const PositionSchema = v.object({
 	x: v.number(),

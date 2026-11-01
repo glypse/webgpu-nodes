@@ -1,21 +1,21 @@
 import { clipToGamut } from "../color/display";
-import { LINEAR_CURVE, evaluateCurve } from "../curve";
-import { MATCH_SELECTOR, caseHandle } from "../enums";
+import { evaluateCurve, LINEAR_CURVE } from "../curve";
+import { caseHandle, MATCH_SELECTOR } from "../enums";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
 import {
+	enumValue,
 	type ResolvedNodeTypes,
 	type TypeBindings,
-	type WgslType,
-	enumValue,
 	typeComponents,
 	typeKind,
+	type WgslType,
 } from "../types";
 import {
-	ITERATIONS_HANDLE,
 	ITERATION_HANDLE,
+	ITERATIONS_HANDLE,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
 	zoneItems,

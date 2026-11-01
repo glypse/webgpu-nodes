@@ -11,15 +11,15 @@
 	import "../styles/xy-theme.css";
 	import { cn } from "$theme";
 	import {
-		SvelteFlow,
-		useSvelteFlow,
-		Controls,
 		Background,
+		type Connection,
+		Controls,
 		type Edge,
 		type EdgeTypes,
 		type Node,
-		type Connection,
 		type OnConnectEnd,
+		SvelteFlow,
+		useSvelteFlow,
 	} from "@xyflow/svelte";
 	import { mode } from "mode-watcher";
 	import { tick, untrack } from "svelte";
@@ -35,8 +35,8 @@
 	import GradientEdge from "./GradientEdge.svelte";
 	import GraphMenu from "./GraphMenu.svelte";
 	import LinkStroke from "./LinkStroke.svelte";
-	import { nodeTypes } from "./node-types";
 	import ZoneBubbles from "./ZoneBubbles.svelte";
+	import { nodeTypes } from "./node-types";
 
 	const edgeTypes: EdgeTypes = {
 		gradient: GradientEdge,

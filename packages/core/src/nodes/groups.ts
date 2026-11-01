@@ -1,6 +1,7 @@
-import type { HydratedGraphDocument } from "../graph/document";
-import type { GraphNode } from "../graph/document";
+import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import {
+	boundType,
+	enumValue,
 	type GroupHandleDef,
 	type InputControl,
 	type InputValue,
@@ -9,8 +10,6 @@ import {
 	type TypeVariable,
 	WGSL_TYPES,
 	type WgslType,
-	boundType,
-	enumValue,
 } from "../types";
 import { fallbackHandleIds } from "./logic";
 

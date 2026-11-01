@@ -5,8 +5,8 @@
 	import AppearanceSettings from "./AppearanceSettings.svelte";
 	import CanvasSettings from "./CanvasSettings.svelte";
 	import ColorSettings from "./ColorSettings.svelte";
-	import { SETTINGS_GROUPS } from "./pages";
 	import TimeSettings from "./TimeSettings.svelte";
+	import { SETTINGS_GROUPS } from "./pages";
 
 	const graph = getGraphManager();
 

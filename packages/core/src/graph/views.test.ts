@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Screen } from "../screen";
-import { type TestEdge, edge } from "../testing/graph";
+import { edge, type TestEdge } from "../testing/graph";
 import { FLOAT_TYPES } from "../types";
 import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "./document";
 import { GraphModel } from "./model";

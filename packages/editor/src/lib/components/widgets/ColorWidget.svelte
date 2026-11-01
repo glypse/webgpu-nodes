@@ -4,9 +4,9 @@
 		type ColorMode,
 		enumValue,
 		type InputValue,
+		type NodeColorWidget,
 		type NodeData,
 		type NodeInputDef,
-		type NodeColorWidget,
 		readComponent,
 	} from "$core";
 	import { ColorWheels } from "$theme";

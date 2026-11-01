@@ -6,10 +6,10 @@ import { parseLibraryRef } from "../library";
 import { hidesLinks } from "../nodes/misc";
 import { type NodeType, registeredNodes } from "../nodes/registry";
 import {
+	enumValue,
 	type NodeCategory,
 	type NodeData,
 	type NodeDescriptor,
-	enumValue,
 	pickableTypes,
 	settingValue,
 } from "../types";

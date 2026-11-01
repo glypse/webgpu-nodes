@@ -1,13 +1,13 @@
 import { describe, expect, it } from "bun:test";
 
 import {
-	NUMERIC_TYPES,
 	convertVar,
 	fitType,
 	highestType,
 	isConnectionCompatible,
 	joinTypes,
 	makeType,
+	NUMERIC_TYPES,
 	wgslTypeName,
 } from ".";
 

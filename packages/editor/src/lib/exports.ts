@@ -1,6 +1,7 @@
 import type { Size } from "$runtime";
 import {
 	BufferTarget,
+	getFirstEncodableVideoCodec,
 	type MkvOutputFormat,
 	Mp4OutputFormat,
 	Output,
@@ -9,7 +10,6 @@ import {
 	VideoSample,
 	VideoSampleSource,
 	WebMOutputFormat,
-	getFirstEncodableVideoCodec,
 } from "mediabunny";
 
 import type { Preview } from "./preview.svelte";

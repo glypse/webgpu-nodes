@@ -1,7 +1,6 @@
-import { type EnumDocument, constantAt, groupConstants, liveEdges } from "../enums";
-import { ROOT_ID, type GraphEdge } from "../graph/document";
-import type { HydratedGraphDocument } from "../graph/document";
-import type { GraphNode } from "../graph/document";
+import { constantAt, type EnumDocument, groupConstants, liveEdges } from "../enums";
+import { type GraphEdge, ROOT_ID } from "../graph/document";
+import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { componentKeys, readComponent } from "../graph/values";
 import type {
@@ -13,7 +12,6 @@ import type {
 	WgslType,
 } from "../types";
 import {
-	WGSL_DEFAULTS,
 	boundType,
 	completeBindings,
 	convertVar,
@@ -22,18 +20,19 @@ import {
 	isUniformControl,
 	makeType,
 	typeKind,
+	WGSL_DEFAULTS,
 	wgslTypeName,
 } from "../types";
 import {
+	analyzeZones,
 	DEFAULT_ITERATIONS,
-	ITERATIONS_HANDLE,
 	ITERATION_HANDLE,
+	ITERATIONS_HANDLE,
+	pairedOutputId,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
 	type Zone,
 	type ZoneAnalysis,
-	analyzeZones,
-	pairedOutputId,
 	zoneItems,
 	zoneMaxIterations,
 } from "../zones";
@@ -296,10 +295,7 @@ type ShaderState = {
  * Uniforms are always floats, converted to the input's type in the shader.
  */
 export type UniformValue =
-	| number
-	| [number, number]
-	| [number, number, number]
-	| [number, number, number, number];
+	number | [number, number] | [number, number, number] | [number, number, number, number];
 
 /** A generated fragment and the uniform values it reads. */
 export type ShaderSource = { fragment: string; uniforms: Record<string, UniformValue> };

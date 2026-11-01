@@ -1,5 +1,5 @@
-import { MATCH, MATCH_SELECTOR, caseHandle } from "../enums";
-import { type EnumVariant, type NodeDescriptor, WGSL_TYPES, familyKey } from "../types";
+import { caseHandle, MATCH, MATCH_SELECTOR } from "../enums";
+import { type EnumVariant, familyKey, type NodeDescriptor, WGSL_TYPES } from "../types";
 
 /**
  * Pick a value by an enum's variant, one input per variant: the cases follow

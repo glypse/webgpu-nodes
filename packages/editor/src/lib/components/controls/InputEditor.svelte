@@ -3,8 +3,8 @@
 	import EnumControl from "./EnumControl.svelte";
 	import NumberControl from "./NumberControl.svelte";
 	import ToggleControl from "./ToggleControl.svelte";
-	import type { ControlProps } from "./types";
 	import WheelControl from "./WheelControl.svelte";
+	import type { ControlProps } from "./types";
 
 	let props: ControlProps = $props();
 </script>

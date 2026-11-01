@@ -8,8 +8,12 @@ import type {
 	WgslType,
 } from ".";
 import { boundType, highestType, inputDefaultType, inputFamilyKey } from ".";
-import type { GraphDocumentEdge, HydratedGraphProject } from "../graph/document";
-import type { GraphNode, HydratedGraphDocument } from "../graph/document";
+import type {
+	GraphDocumentEdge,
+	GraphNode,
+	HydratedGraphDocument,
+	HydratedGraphProject,
+} from "../graph/document";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 

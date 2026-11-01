@@ -7,9 +7,9 @@
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { getPreview } from "../preview.svelte";
 	import NodeSheet from "./NodeSheet.svelte";
+	import VideoExportDialog from "./VideoExportDialog.svelte";
 	import ScreenLayout from "./screen/ScreenLayout.svelte";
 	import SettingsDialog from "./settings/SettingsDialog.svelte";
-	import VideoExportDialog from "./VideoExportDialog.svelte";
 
 	let { class: className }: { class?: string } = $props();
 

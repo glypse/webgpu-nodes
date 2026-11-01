@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
 import { evaluate } from "../testing/evaluate";
-import { type TestEdge, edge } from "../testing/graph";
+import { edge, type TestEdge } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { FLOAT_TYPES, NUMERIC_TYPES, type WgslType } from "../types";
 import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "./document";

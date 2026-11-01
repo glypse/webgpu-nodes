@@ -4,7 +4,7 @@
 	import MoonIcon from "phosphor-svelte/lib/MoonIcon";
 	import SunIcon from "phosphor-svelte/lib/SunIcon";
 
-	import { type Theme, getPreferences } from "../../preferences.svelte";
+	import { getPreferences, type Theme } from "../../preferences.svelte";
 	import SettingField from "./SettingField.svelte";
 
 	const preferences = getPreferences();

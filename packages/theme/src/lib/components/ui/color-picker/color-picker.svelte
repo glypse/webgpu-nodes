@@ -9,8 +9,8 @@
 	import {
 		type ColorComponents,
 		decodeRgb,
-		type Hsv,
 		hexToLinear,
+		type Hsv,
 		hsvKeepingHue,
 		hsvToRgb,
 		type Lch,

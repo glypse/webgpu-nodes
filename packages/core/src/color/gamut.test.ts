@@ -3,7 +3,6 @@ import { describe, expect, it } from "bun:test";
 import { generateShader } from "../codegen";
 import type { ColorSpace } from "../graph/settings";
 import {
-	type V,
 	cssGamutMap,
 	deltaEOK,
 	lin,
@@ -12,6 +11,7 @@ import {
 	oklabToLinear,
 	oklchToOklab,
 	p3ToLinear,
+	type V,
 } from "../testing/css-color";
 import { evaluate } from "../testing/evaluate";
 import { libraryEntry, libraryHandle, managerFor } from "../testing/graph";

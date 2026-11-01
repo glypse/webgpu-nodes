@@ -1,5 +1,5 @@
-import { MATCH, MATCH_SELECTOR, enumAt } from "../enums";
-import { CUSTOM_WGSL, buildCustomWgslDescriptor } from "../nodes/custom";
+import { enumAt, MATCH, MATCH_SELECTOR } from "../enums";
+import { buildCustomWgslDescriptor, CUSTOM_WGSL } from "../nodes/custom";
 import {
 	buildGroupDescriptor,
 	buildGroupInputDescriptor,
@@ -9,12 +9,13 @@ import { buildMatchDescriptor } from "../nodes/match";
 import { nodeRegistry } from "../nodes/registry";
 import { type NodeDescriptor, withDefaults } from "../types";
 import {
-	REPEAT_INPUT,
-	REPEAT_OUTPUT,
 	buildRepeatInputDescriptor,
 	buildRepeatOutputDescriptor,
+	REPEAT_INPUT,
+	REPEAT_OUTPUT,
 } from "../zones";
 import {
+	createPlainDocument,
 	type GraphDocument,
 	type GraphDocumentEdge,
 	type GraphDocumentNode,
@@ -23,7 +24,6 @@ import {
 	type GraphProject,
 	type HydratedGraphDocument,
 	type HydratedGraphProject,
-	createPlainDocument,
 } from "./document";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────

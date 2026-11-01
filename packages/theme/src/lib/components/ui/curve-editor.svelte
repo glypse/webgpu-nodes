@@ -1,5 +1,5 @@
 <script lang="ts" module>
-	import { type CurvePoint, type Vec2, curveSegments } from "$core";
+	import { type CurvePoint, curveSegments, type Vec2 } from "$core";
 
 	/** An SVG path of a curve across the whole square, `at` placing its points. */
 	export function curvePath(points: readonly CurvePoint[], at: (p: Vec2) => Vec2): string {
@@ -21,9 +21,9 @@
 
 <script lang="ts">
 	import {
+		addCurvePoint,
 		CURVE_PRESETS,
 		type CurvePointKind,
-		addCurvePoint,
 		flipCurveX,
 		flipCurveY,
 		insertCurvePoint,

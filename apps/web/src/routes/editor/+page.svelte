@@ -3,10 +3,10 @@
 	import {
 		DevTools,
 		Editor,
+		exportFrame,
 		GraphManager,
 		Preferences,
 		Preview,
-		exportFrame,
 		setDevTools,
 		setGraphManager,
 		setPreferences,
@@ -15,7 +15,7 @@
 	import { AlertDialog, buttonVariants, Menubar } from "$theme";
 	import { toggleMode } from "mode-watcher";
 
-	import { STDLIB_LAYOUT_PARAM, layoutServedProject } from "../../lib/stdlib-layout";
+	import { layoutServedProject, STDLIB_LAYOUT_PARAM } from "../../lib/stdlib-layout";
 
 	const graph = new GraphManager();
 	setGraphManager(graph);

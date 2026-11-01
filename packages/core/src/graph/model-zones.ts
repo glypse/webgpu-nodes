@@ -1,13 +1,13 @@
 import { type HandleDef, type WgslType } from "../types";
 import {
+	analyzeZones,
 	DEFAULT_ITERATIONS,
 	DEFAULT_MAX_ITERATIONS,
 	ITERATIONS_HANDLE,
 	NEW_ITEM_HANDLE,
+	pairedOutputId,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
-	analyzeZones,
-	pairedOutputId,
 	zoneItems,
 } from "../zones";
 import { type GraphEdge, type GraphNode, type HydratedGraphDocument } from "./document";

@@ -1,6 +1,6 @@
 import { FRAGMENT_VAR, FRAME_VAR } from "../codegen/program";
 import type { NodeDescriptor } from "../types";
-import { WGSL_TYPES, makeType, typeComponents, typeKind, wgslTypeName } from "../types";
+import { makeType, typeComponents, typeKind, WGSL_TYPES, wgslTypeName } from "../types";
 import { uniformReader } from "./builders";
 
 const DECLARE_COMPONENTS = ["x", "y", "z", "w"];

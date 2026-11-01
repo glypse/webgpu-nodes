@@ -12,7 +12,7 @@ import {
 	type TestNode,
 } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
-import { type NodeData, WGSL_TYPES, isConnectionCompatible, type WgslType } from "../types";
+import { isConnectionCompatible, type NodeData, WGSL_TYPES, type WgslType } from "../types";
 import { registeredNodes } from "./registry";
 
 const SKIPPED = new Set(["frag-output", "node-group"]);

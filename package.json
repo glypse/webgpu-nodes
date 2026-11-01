@@ -35,9 +35,9 @@
 		"check:root": "bunx tsc --noEmit -p tsconfig.json",
 		"lint": "bun nx run-many -t lint",
 		"test": "bun nx run-many -t test",
-		"lint:root": "bunx eslint oxfmt.config.ts eslint.config.ts",
-		"format": "bun --bun oxfmt",
-		"format:check": "bun --bun oxfmt --check",
+		"lint:root": "bunx eslint eslint.config.ts",
+		"format": "bun fmt",
+		"format:check": "bun fmt --check",
 		"prepare": "husky && bun nx run-many -t prepare",
 		"release": "changeset git-tag"
 	},
@@ -51,7 +51,6 @@
 		"eslint-plugin-svelte": "catalog:",
 		"husky": "^9.1.7",
 		"nx": "23.3.0",
-		"oxfmt": "^0.74.0",
 		"typescript": "catalog:",
 		"typescript-eslint": "catalog:"
 	}

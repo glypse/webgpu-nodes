@@ -1,8 +1,9 @@
 {
 	"recommendations": [
 		"svelte.svelte-vscode",
-		"oxc.oxc-vscode",
+		"jkillian.custom-local-formatters",
 		"dbaeumer.vscode-eslint",
 		"bradlc.vscode-tailwindcss"
-	]
+	],
+	"unwantedRecommendations": ["oxc.oxc-vscode"]
 }

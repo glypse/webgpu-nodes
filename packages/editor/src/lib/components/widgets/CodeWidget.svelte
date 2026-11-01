@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type NodeData, customSockets } from "$core";
+	import { customSockets, type NodeData } from "$core";
 	import { Button, Popover } from "$theme";
 	import PlugsIcon from "phosphor-svelte/lib/PlugsIcon";
 

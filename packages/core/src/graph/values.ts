@@ -1,5 +1,10 @@
-import { type InputValue, type ScalarValue, type VectorValue, type WgslType } from "../types";
-import { typeComponents } from "../types";
+import {
+	type InputValue,
+	type ScalarValue,
+	typeComponents,
+	type VectorValue,
+	type WgslType,
+} from "../types";
 
 const VECTOR_KEYS = ["x", "y", "z", "w"] as const;
 type ComponentKey = (typeof VECTOR_KEYS)[number];

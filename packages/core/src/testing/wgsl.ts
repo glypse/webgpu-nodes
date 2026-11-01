@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { type UniformValue, buildProgram } from "../codegen";
+import { buildProgram, type UniformValue } from "../codegen";
 
 function findNaga(): string | null {
 	const candidates = [

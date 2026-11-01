@@ -31,14 +31,14 @@
 		"lint": {
 			"executor": "nx:run-commands",
 			"options": {
-				"commands": ["bun --bun oxfmt --check", "bun --bun eslint ."],
+				"commands": ["bun fmt --check", "bun --bun eslint ."],
 				"cwd": "{projectRoot}"
 			}
 		},
 		"lint:fix": {
 			"executor": "nx:run-commands",
 			"options": {
-				"command": "bun --bun oxfmt && bun --bun eslint . --fix",
+				"command": "bun fmt && bun --bun eslint . --fix",
 				"cwd": "{projectRoot}"
 			}
 		}

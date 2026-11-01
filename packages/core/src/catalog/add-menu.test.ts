@@ -4,8 +4,8 @@ import type { PendingConnection } from "../graph/model";
 import { containing } from "../testing/expect";
 import { managerFor } from "../testing/graph";
 import {
-	CATEGORY_LABELS,
 	addMenuEntries,
+	CATEGORY_LABELS,
 	groupByHeading,
 	groupResults,
 	highlightParts,

@@ -13,8 +13,8 @@ import { nodeRegistry } from "../nodes/registry";
 import {
 	type ColorDisplay,
 	type EnumVariant,
-	type InputOwner,
 	type GroupHandleDef,
+	type InputOwner,
 	type InputValue,
 	type NodeData,
 	type SocketType,
@@ -39,11 +39,11 @@ import {
 	computeSelectionBounds,
 	deduplicateBySource,
 	groupRefsOf,
-	interfaceOf,
-	sideOf,
 	type GroupSide,
+	interfaceOf,
 	rewireIncomingGroup,
 	rewireOutgoingGroup,
+	sideOf,
 } from "./editing";
 import { indexDocument, normaliseDocument, serialiseEdge, serialiseNode } from "./hydrate";
 import { withEntry } from "./model-base";

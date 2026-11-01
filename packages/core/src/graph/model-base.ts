@@ -2,8 +2,8 @@ import * as v from "valibot";
 
 import { convertColorMode } from "../color";
 import type { CurvePoint } from "../curve";
-import { MATCH, isCaseHandle } from "../enums";
-import { type FrameAnalysis, analyzeFrames } from "../frames";
+import { isCaseHandle, MATCH } from "../enums";
+import { analyzeFrames, type FrameAnalysis } from "../frames";
 import {
 	ARCHIVED_VERSIONS_ENABLED,
 	loadArchivedVersion,
@@ -13,29 +13,30 @@ import {
 import { nodeRegistry } from "../nodes/registry";
 import {
 	type Area,
+	defaultScreen,
 	type EditorState,
 	type GraphEditorState,
 	type Screen,
-	defaultScreen,
 	setAreaEditor,
 } from "../screen/screen";
 import {
+	enumValue,
 	type GroupHandleDef,
+	inputFamilyKey,
 	type InputValue,
+	isConnectionCompatible,
+	type NodeColorWidget,
 	type NodeData,
 	type NodeDescriptor,
 	type NodeInputDef,
 	type NodeOutputDef,
-	type NodeColorWidget,
 	type TypeBindings,
 	type WgslType,
-	enumValue,
-	inputFamilyKey,
-	isConnectionCompatible,
 } from "../types";
-import { type ResolvedNodeTypes, TypeResolver, bindingsKey } from "../types/resolver";
-import { type ZoneAnalysis, analyzeZones } from "../zones";
+import { bindingsKey, type ResolvedNodeTypes, TypeResolver } from "../types/resolver";
+import { analyzeZones, type ZoneAnalysis } from "../zones";
 import {
+	createPlainDocument,
 	type GraphDocument,
 	type GraphDocumentNode,
 	type GraphEdge,
@@ -45,7 +46,6 @@ import {
 	type HydratedGraphProject,
 	ROOT_ID,
 	type StandardLibraryEntry,
-	createPlainDocument,
 } from "./document";
 import { type GroupSide } from "./editing";
 import { type HistoryCounts } from "./history";
@@ -56,7 +56,7 @@ import {
 	normaliseDocument,
 	resolveDescriptor,
 } from "./hydrate";
-import { ProjectSettingsSchema, type ProjectSettings, defaultSettings } from "./settings";
+import { defaultSettings, type ProjectSettings, ProjectSettingsSchema } from "./settings";
 import { readComponent } from "./values";
 
 export type ResolvedTypes = ResolvedNodeTypes;

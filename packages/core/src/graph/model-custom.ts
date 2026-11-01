@@ -1,10 +1,10 @@
 import {
 	CUSTOM_WGSL,
 	type CustomSockets,
-	type SocketSide,
 	customSockets,
 	isSocketName,
 	newSocketLabel,
+	type SocketSide,
 } from "../nodes/custom";
 import type { HandleDef, WgslType } from "../types";
 import type { GraphNode } from "./document";

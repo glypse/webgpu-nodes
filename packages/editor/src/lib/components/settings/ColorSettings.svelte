@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type ColorSpace, COLOR_SPACES } from "$core";
+	import { COLOR_SPACES, type ColorSpace } from "$core";
 	import { RadioGroup } from "$theme";
 
 	import { getGraphManager } from "../../graph-manager.svelte";

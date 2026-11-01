@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { hidesLinks } from "$core";
-	import { getBezierPath, type EdgeProps } from "@xyflow/svelte";
+	import { type EdgeProps, getBezierPath } from "@xyflow/svelte";
 
 	import { getDocumentView } from "../document-view";
 	import { bezierMidpointAngle } from "../geometry/edge-geometry";

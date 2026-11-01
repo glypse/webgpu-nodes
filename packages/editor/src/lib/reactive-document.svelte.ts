@@ -2,8 +2,8 @@ import {
 	type GraphEdge,
 	type GraphNode,
 	type GroupHandleDef,
-	type InputValue,
 	type HydratedGraphDocument,
+	type InputValue,
 	type TypeVariable,
 	type Viewport,
 } from "$core";

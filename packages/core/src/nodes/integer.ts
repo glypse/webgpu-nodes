@@ -1,5 +1,12 @@
-import { type NodeDescriptor, type NodeSetting, settingValue } from "../types";
-import { INTEGER_TYPES, UINT_TYPES, makeType, typeComponents } from "../types";
+import {
+	INTEGER_TYPES,
+	makeType,
+	type NodeDescriptor,
+	type NodeSetting,
+	settingValue,
+	typeComponents,
+	UINT_TYPES,
+} from "../types";
 import { binaryNode, unaryFn } from "./builders";
 
 const BITWISE_SETTING: NodeSetting = {

@@ -5,9 +5,9 @@ import type { DocumentView } from "./document-view";
 import {
 	centerOf,
 	dropTargets,
-	type FrameDrag,
 	frameAt,
 	frameBoxes,
+	type FrameDrag,
 	placeFrames,
 	startFrameDrag,
 } from "./geometry/frame-boxes";

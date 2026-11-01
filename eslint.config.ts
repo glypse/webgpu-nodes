@@ -1,7 +1,7 @@
 import js from "@eslint/js";
 import nx from "@nx/eslint-plugin";
 import svelte from "eslint-plugin-svelte";
-import { includeIgnoreFile, defineConfig } from "eslint/config";
+import { defineConfig, includeIgnoreFile } from "eslint/config";
 import ts from "typescript-eslint";
 
 const gitignorePath = new URL("./.gitignore", import.meta.url).pathname;

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import {
 		inputControl,
-		interfaceOf,
 		type InputValue,
+		interfaceOf,
 		isZoneNodeType,
 		NEW_ITEM_HANDLE,
 		type NodeData,
@@ -23,8 +23,8 @@
 
 	import { getDocumentView } from "../document-view";
 	import { getGraphManager } from "../graph-manager.svelte";
-	import InputEditor from "./controls/InputEditor.svelte";
 	import TypePicker from "./TypePicker.svelte";
+	import InputEditor from "./controls/InputEditor.svelte";
 	import CodeWidget from "./widgets/CodeWidget.svelte";
 	import ColorWidget from "./widgets/ColorWidget.svelte";
 	import CurveWidget from "./widgets/CurveWidget.svelte";

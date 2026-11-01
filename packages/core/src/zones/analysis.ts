@@ -1,9 +1,9 @@
 import {
 	type MinimalEdge,
 	type MinimalNode,
+	pairedOutputId,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
-	pairedOutputId,
 } from "./descriptors";
 
 /** Nodes that can never live inside a zone (they are the document's sinks). */

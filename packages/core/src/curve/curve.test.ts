@@ -1,15 +1,15 @@
 import { describe, expect, it } from "bun:test";
 
 import {
-	type CurvePoint,
-	CURVE_PRESETS,
-	LINEAR_CURVE,
 	addCurvePoint,
+	CURVE_PRESETS,
+	type CurvePoint,
 	curveSegments,
 	evaluateCurve,
 	flipCurveX,
 	flipCurveY,
 	insertCurvePoint,
+	LINEAR_CURVE,
 	moveCurveHandle,
 	moveCurvePoint,
 	removeCurvePoint,

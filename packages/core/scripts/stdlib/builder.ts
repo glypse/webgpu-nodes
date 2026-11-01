@@ -3,7 +3,7 @@
 // truth: a description only produces them (see build.ts).
 import { createHash } from "node:crypto";
 
-import { MATCH, MATCH_SELECTOR, caseHandle } from "../../src/enums";
+import { caseHandle, MATCH, MATCH_SELECTOR } from "../../src/enums";
 import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
 import { rerouteBranches } from "../../src/graph/branches";
 import type { GraphDocument, GraphDocumentEdge, GraphDocumentNode } from "../../src/graph/document";
@@ -11,6 +11,7 @@ import type { NodeType } from "../../src/nodes/registry";
 import {
 	type ColorDisplay,
 	type EnumVariant,
+	familyKey,
 	type GroupHandleDef,
 	type HandleDef,
 	type InputValue,
@@ -20,9 +21,8 @@ import {
 	type TypeVariable,
 	WGSL_TYPES,
 	type WgslType,
-	familyKey,
 } from "../../src/types";
-import { ITERATIONS_HANDLE, ITERATION_HANDLE, REPEAT_INPUT, REPEAT_OUTPUT } from "../../src/zones";
+import { ITERATION_HANDLE, ITERATIONS_HANDLE, REPEAT_INPUT, REPEAT_OUTPUT } from "../../src/zones";
 
 /**
  * An output socket of a node in the group being built. A group input's is

@@ -1,5 +1,13 @@
-import { type NodeDescriptor, type NodeSetting, settingValue } from "../types";
-import { BOOL_TYPES, NUMERIC_TYPES, WGSL_TYPES, makeType, typeComponents } from "../types";
+import {
+	BOOL_TYPES,
+	makeType,
+	type NodeDescriptor,
+	type NodeSetting,
+	NUMERIC_TYPES,
+	settingValue,
+	typeComponents,
+	WGSL_TYPES,
+} from "../types";
 import { binaryNode, unaryFn } from "./builders";
 
 const COMPARE_SETTING: NodeSetting = {

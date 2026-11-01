@@ -7,14 +7,14 @@ import type {
 	WgslType,
 } from "../types";
 import {
-	settingValue,
 	FLOAT_TYPES,
-	NUMERIC_TYPES,
-	WGSL_DEFAULTS,
-	WGSL_TYPES,
 	makeType,
+	NUMERIC_TYPES,
+	settingValue,
 	typeComponents,
 	typeKind,
+	WGSL_DEFAULTS,
+	WGSL_TYPES,
 	wgslTypeName,
 } from "../types";
 

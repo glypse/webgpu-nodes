@@ -10,8 +10,8 @@ import {
 	EMPTY_FRAME_SIZE,
 	FRAME_PADDING,
 	type FrameAnalysis,
-	LAYOUT_FRAME,
 	frameRects,
+	LAYOUT_FRAME,
 } from "../frames";
 import type { GraphEdge, GraphNode } from "../graph/document";
 import type { ZoneAnalysis } from "../zones";

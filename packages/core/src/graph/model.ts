@@ -1,24 +1,24 @@
 import * as v from "valibot";
 
 import { type AddMenuEntry, withOptions } from "../catalog/add-menu";
-import { MATCH, MATCH_SELECTOR, enumOfOutput } from "../enums";
+import { enumOfOutput, MATCH, MATCH_SELECTOR } from "../enums";
 import { LAYOUT_FRAME } from "../frames";
 import {
-	type LayoutSpacing,
-	type NodeGeometry,
-	type NodeRows,
 	computeLayout,
 	estimateFrameHeader,
 	estimateNodeGeometry,
+	type LayoutSpacing,
+	type NodeGeometry,
+	type NodeRows,
 } from "../layout";
-import { type NodeType, defaultDataForType, nodeRegistry } from "../nodes/registry";
+import { defaultDataForType, nodeRegistry, type NodeType } from "../nodes/registry";
 import {
+	isConnectionCompatible,
 	type NodeData,
 	type NodeWidget,
-	type WgslType,
-	isConnectionCompatible,
 	pickableTypes,
 	typeKind,
+	type WgslType,
 	withDefaults,
 } from "../types";
 import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";

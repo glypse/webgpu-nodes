@@ -386,7 +386,7 @@ if (import.meta.main) {
 			register(group.spec.id);
 		}
 		const written = groups.map((g) => join(libraryDir, `${g.spec.id}.json`));
-		spawnSync("bun", ["--bun", "oxfmt", join(libraryDir, "index.ts"), ...written], {
+		spawnSync("bun", ["fmt", join(libraryDir, "index.ts"), ...written], {
 			cwd: coreDir,
 			stdio: "inherit",
 		});

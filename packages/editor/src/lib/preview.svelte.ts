@@ -1,4 +1,4 @@
-import { type ColorSpace, type ShaderSource, buildProgram } from "$core";
+import { buildProgram, type ColorSpace, type ShaderSource } from "$core";
 import {
 	CanvasTarget,
 	type CompiledProgram,

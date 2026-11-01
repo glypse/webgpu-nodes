@@ -2,7 +2,33 @@
 	"files.associations": {
 		"*.css": "tailwindcss"
 	},
-	"oxc.fmt.configPath": "oxfmt.config.ts",
-	"editor.defaultFormatter": "oxc.oxc-vscode",
+	// `bun fmt` has no language server: it formats stdin as the given file.
+	"customLocalFormatters.formatters": [
+		{
+			"command": "bun fmt --stdin-filepath \"${file}\"",
+			"languages": [
+				"css",
+				"graphql",
+				"handlebars",
+				"html",
+				"javascript",
+				"javascriptreact",
+				"json",
+				"jsonc",
+				"less",
+				"markdown",
+				"mdx",
+				"scss",
+				"svelte",
+				"tailwindcss",
+				"toml",
+				"typescript",
+				"typescriptreact",
+				"vue",
+				"yaml"
+			]
+		}
+	],
+	"editor.defaultFormatter": "jkillian.custom-local-formatters",
 	"editor.formatOnSave": true
 }

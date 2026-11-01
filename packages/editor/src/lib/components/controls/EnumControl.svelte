@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { type EnumVariant, enumValue } from "$core";
+	import { enumValue, type EnumVariant } from "$core";
 	import { Select } from "$theme";
 
 	import type { ControlProps } from "./types";

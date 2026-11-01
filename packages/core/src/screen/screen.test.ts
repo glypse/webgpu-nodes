@@ -2,13 +2,13 @@ import { describe, expect, it } from "bun:test";
 
 import {
 	type Area,
-	type Rect,
-	type Screen,
 	closeArea,
 	dockArea,
 	edgeAt,
 	joinAreas,
 	moveEdge,
+	type Rect,
+	type Screen,
 	splitArea,
 	swapAreas,
 } from "./screen";

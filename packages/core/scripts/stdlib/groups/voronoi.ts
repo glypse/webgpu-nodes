@@ -1,7 +1,7 @@
 // Voronoi Texture and Fractal Voronoi, after Blender's (cycles/kernel/svm/voronoi.h),
 // and the helper groups they're made of.
 import type { EnumRef, GroupBuilder, GroupSpec, Ref } from "../builder";
-import { DIMENSIONS, dimensionInputs, fractal, fractalInputs } from "../noise";
+import { dimensionInputs, DIMENSIONS, fractal, fractalInputs } from "../noise";
 
 const METRICS = [
 	[0, "Euclidean"],

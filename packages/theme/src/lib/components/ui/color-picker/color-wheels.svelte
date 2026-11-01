@@ -1,7 +1,7 @@
 <script lang="ts">
 	import {
-		type ColorMode,
 		type ColorComponents,
+		type ColorMode,
 		decodeRgb,
 		type Hsv,
 		hsvKeepingHue,

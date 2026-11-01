@@ -1,5 +1,5 @@
 import type { InputValue, ScalarKind, ScalarValue, WgslType } from "../types";
-import { WGSL_DEFAULTS, typeComponents, typeKind, wgslTypeName } from "../types";
+import { typeComponents, typeKind, WGSL_DEFAULTS, wgslTypeName } from "../types";
 
 const SCALAR_LIMITS = {
 	i32: { min: -2147483647, max: 2147483647 },

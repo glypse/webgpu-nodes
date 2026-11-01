@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
 import { evaluate } from "../testing/evaluate";
-import { type TestNode, libraryEntry, libraryHandle, managerFor } from "../testing/graph";
+import { libraryEntry, libraryHandle, managerFor, type TestNode } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 
 describe("remap", () => {

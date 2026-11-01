@@ -1,0 +1,10 @@
+[fmt]
+printWidth = 100
+tabWidth = 4
+useTabs = true
+sortTailwindcss = true
+svelte = true
+ignorePatterns = ["**/CHANGELOG.md", ".changeset/*.md", ".agents", "**/static/"]
+
+[fmt.sortImports]
+ignoreCase = false

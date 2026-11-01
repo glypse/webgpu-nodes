@@ -1,4 +1,4 @@
-import { type FrameAnalysis, LAYOUT_FRAME, commonFrame } from "../frames";
+import { commonFrame, type FrameAnalysis, LAYOUT_FRAME } from "../frames";
 import { defaultDataForType } from "../nodes/registry";
 import type { GraphNode } from "./document";
 import { EditModel } from "./model-edits";

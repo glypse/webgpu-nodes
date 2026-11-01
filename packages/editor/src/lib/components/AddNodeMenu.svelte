@@ -1,12 +1,12 @@
 <script lang="ts">
 	import {
 		type AddMenuEntry,
-		type MenuSection,
-		type SearchResult,
 		groupByHeading,
 		groupResults,
 		highlightParts,
+		type MenuSection,
 		searchEntries,
+		type SearchResult,
 	} from "$core";
 	import { Button, ContextMenu } from "$theme";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
