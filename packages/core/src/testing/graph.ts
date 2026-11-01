@@ -15,6 +15,7 @@ export type TestNode = {
 	type: string;
 	data?: NodeData;
 	group?: GraphDocumentNode["group"];
+	frame?: string;
 };
 
 /** `[source, sourceHandle, target, targetHandle]` */
@@ -40,6 +41,7 @@ export function rootProject(nodes: TestNode[], edges: TestEdge[]): GraphProject 
 			data: n.data ?? {},
 			position: { x: i * 200, y: 0 },
 			...(n.group ? { group: n.group } : {}),
+			...(n.frame ? { frame: n.frame } : {}),
 		})),
 	];
 	return { definitions: { [ROOT_ID]: { nodes: docNodes, edges: edges.map(edge) } } };

@@ -8,6 +8,7 @@ import {
 	ownerExists,
 	shownApart,
 } from "../enums";
+import { commonFrame } from "../frames";
 import { nodeRegistry } from "../nodes/registry";
 import {
 	type ColorDisplay,
@@ -250,9 +251,14 @@ export abstract class GroupModel extends ZoneModel {
 	groupSelection(selectedNodeIds: Set<string>): void {
 		const UNGROUPABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
 
-		// A zone is grouped as a whole: selecting either boundary brings in its
-		// partner and everything inside it.
+		// A frame is grouped with what it holds, and a zone as a whole:
+		// selecting either boundary brings in its partner and everything
+		// inside it.
+		const frames = this.frameAnalysis(this.activeDocument);
 		const expandedIds = new Set(selectedNodeIds);
+		for (const id of selectedNodeIds) {
+			for (const inside of frames.frames.get(id)?.descendants ?? []) expandedIds.add(inside);
+		}
 		const zones = this.activeZones;
 		for (const id of selectedNodeIds) {
 			const zone = zones.zones.get(zones.zoneOfBoundary.get(id) ?? "");
@@ -339,7 +345,13 @@ export abstract class GroupModel extends ZoneModel {
 
 		const definition: GraphDocument = {
 			nodes: [
-				...(selectedNodes as GraphDocumentNode[]),
+				// Frames left outside don't come along.
+				...selectedNodes.map((n): GraphDocumentNode => {
+					const node = n as GraphDocumentNode;
+					return n.frame === undefined || filteredIds.has(n.frame)
+						? node
+						: { ...node, frame: undefined };
+				}),
 				groupInputNode.node,
 				groupOutputNode.node,
 			],
@@ -349,12 +361,14 @@ export abstract class GroupModel extends ZoneModel {
 
 		this.setDefinitions([[definitionRef, this.hydrate(definition)]]);
 
+		const frame = commonFrame(frames, filteredIds);
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
 			type: "node-group",
 			data: {},
 			position: { x: bounds.centerX, y: bounds.centerY },
 			group: { definitionRef, locked: false },
+			...(frame === null ? {} : { frame }),
 		};
 
 		const touchedEdgeIds = new Set([
@@ -460,6 +474,10 @@ export abstract class GroupModel extends ZoneModel {
 		// Edges between inner nodes come along; boundary edges are spliced below.
 		const clone = cloneSubgraph(innerNodes, def.edges, offset);
 		const remap = (id: string): string => clone.idMap.get(id) ?? id;
+		// What was in no frame of the group goes in the group node's.
+		if (groupNode.frame !== undefined) {
+			for (const node of clone.nodes) node.frame ??= groupNode.frame;
+		}
 
 		// Outer edges connected to this group node instance.
 		const incomingOuter = this.activeDocument.edgesByTarget.get(groupNode.id) ?? [];

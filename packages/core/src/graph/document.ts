@@ -43,6 +43,8 @@ export type GraphDocumentNode = {
 		 */
 		locked: boolean;
 	};
+	/** The frame (a `LAYOUT_FRAME` node of the same document) the node is in. */
+	frame?: string;
 };
 
 export type GraphDocumentEdge = {
@@ -80,6 +82,8 @@ export type GraphNode = {
 		/** Whether the subgraph is editable or not. */
 		locked: boolean;
 	};
+	/** The frame (a `LAYOUT_FRAME` node of the same document) the node is in. */
+	frame?: string;
 	deletable?: boolean;
 	selected?: boolean;
 	width?: number;

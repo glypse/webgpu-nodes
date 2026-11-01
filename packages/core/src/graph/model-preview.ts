@@ -2,7 +2,7 @@ import { nodeRegistry } from "../nodes/registry";
 import { type GroupHandleDef, isConnectionCompatible } from "../types";
 import type { GraphEdge, GraphNode, HydratedGraphDocument } from "./document";
 import { handlesOf } from "./editing";
-import { EditModel } from "./model-edits";
+import { FrameModel } from "./model-frames";
 
 const FRAG_OUTPUT = "frag-output";
 
@@ -16,7 +16,7 @@ type Source = { node: string; handle: string };
  * outputs a preview no longer goes through are removed, so previews never
  * pile up.
  */
-export abstract class PreviewModel extends EditModel {
+export abstract class PreviewModel extends FrameModel {
 	/**
 	 * Preview a node of the active document: its first output that the
 	 * fragment output takes, or the next one when it's already previewed.

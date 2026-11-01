@@ -1,4 +1,5 @@
 import * as nodes from ".";
+import { LAYOUT_FRAME } from "../frames/analysis";
 import type { NodeCategory, NodeData, NodeDescriptor } from "../types";
 import { ZONE_NODE_TYPES } from "../zones";
 
@@ -94,6 +95,9 @@ export const nodeRegistry: Record<string, NodeDescriptor> = {
 	// Misc
 	reroute: nodes.rerouteNode,
 	[nodes.CUSTOM_WGSL]: nodes.buildCustomWgslDescriptor({}),
+
+	// Layout
+	[LAYOUT_FRAME]: nodes.layoutFrameNode,
 
 	// Output
 	"frag-output": nodes.outputNode,

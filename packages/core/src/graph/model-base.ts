@@ -3,6 +3,7 @@ import * as v from "valibot";
 import { convertColorMode } from "../color";
 import type { CurvePoint } from "../curve";
 import { MATCH, isCaseHandle } from "../enums";
+import { type FrameAnalysis, analyzeFrames } from "../frames";
 import {
 	ARCHIVED_VERSIONS_ENABLED,
 	loadArchivedVersion,
@@ -424,6 +425,22 @@ export abstract class GraphModelBase {
 	/** Zone analysis of the currently-viewed document. */
 	get activeZones(): ZoneAnalysis {
 		return this.zoneAnalysis(this.activeDocument);
+	}
+
+	// ── Frames ──────────────────────────────────────────────────────────────────
+
+	protected frameCache = new WeakMap<
+		HydratedGraphDocument,
+		{ nodes: GraphNode[]; analysis: FrameAnalysis }
+	>();
+
+	/** The frames of a document and what they hold, memoised on its nodes. */
+	frameAnalysis(doc: HydratedGraphDocument): FrameAnalysis {
+		const cached = this.frameCache.get(doc);
+		if (cached?.nodes === doc.nodes) return cached.analysis;
+		const analysis = analyzeFrames(doc.nodes);
+		this.frameCache.set(doc, { nodes: doc.nodes, analysis });
+		return analysis;
 	}
 
 	protected isTypeCompatible(

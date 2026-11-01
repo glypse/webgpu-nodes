@@ -44,7 +44,8 @@ export function stableStringify(value: unknown): string {
 
 /**
  * Copy nodes and the edges between them with fresh ids (keeping zone
- * pairings), shifted by `offset`. Returns the copies and the id mapping.
+ * pairings, and frames copied along), shifted by `offset`. Returns the
+ * copies and the id mapping.
  */
 export function cloneSubgraph(
 	nodes: readonly GraphNode[],
@@ -60,6 +61,7 @@ export function cloneSubgraph(
 			data: remapZonePairing(n.data, idMap),
 			position: { x: n.position.x + offset.x, y: n.position.y + offset.y },
 			...(n.group ? { group: { ...n.group } } : {}),
+			...(n.frame && idMap.has(n.frame) ? { frame: remap(n.frame) } : {}),
 		})),
 		edges: edges
 			.filter((e) => idMap.has(e.source) && idMap.has(e.target))

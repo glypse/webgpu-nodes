@@ -220,3 +220,75 @@
 .node-shell__handle-label {
 	@apply text-muted-foreground text-xs whitespace-nowrap;
 }
+
+/* Frames: a header node (label and note) on top of a box drawn under the
+   nodes (FrameBackdrops), both in the frame's tint. */
+.frame-tint {
+	--frame-color: var(--muted-foreground);
+}
+.frame-tint[data-tint="red"] {
+	--frame-color: var(--color-red-500);
+}
+.frame-tint[data-tint="orange"] {
+	--frame-color: var(--color-orange-500);
+}
+.frame-tint[data-tint="yellow"] {
+	--frame-color: var(--color-yellow-500);
+}
+.frame-tint[data-tint="green"] {
+	--frame-color: var(--color-green-500);
+}
+.frame-tint[data-tint="teal"] {
+	--frame-color: var(--color-teal-500);
+}
+.frame-tint[data-tint="blue"] {
+	--frame-color: var(--color-blue-500);
+}
+.frame-tint[data-tint="purple"] {
+	--frame-color: var(--color-purple-500);
+}
+.frame-tint[data-tint="pink"] {
+	--frame-color: var(--color-pink-500);
+}
+
+.svelte-flow__node-layout-frame {
+	width: max-content;
+	padding: 0;
+	border: none;
+	background: transparent;
+	box-shadow: none;
+}
+
+.svelte-flow__node-layout-frame.selectable:focus {
+	outline: none;
+}
+
+.frame-header {
+	@apply flex max-w-md flex-col gap-0.5 px-3 pt-2 pb-1;
+}
+
+.frame-header__label {
+	@apply text-sm font-semibold whitespace-nowrap;
+	color: color-mix(in oklab, var(--frame-color) 80%, var(--foreground));
+}
+
+.frame-header__note {
+	@apply text-muted-foreground text-xs whitespace-pre-wrap;
+}
+
+.frame-backdrop {
+	@apply absolute top-0 left-0 rounded-md border;
+	background: color-mix(in oklab, var(--frame-color) 10%, transparent);
+	border-color: color-mix(in oklab, var(--frame-color) 35%, transparent);
+	pointer-events: none;
+}
+
+.frame-backdrop--selected {
+	border-color: var(--primary);
+}
+
+.frame-backdrop--drop {
+	background: color-mix(in oklab, var(--frame-color) 20%, transparent);
+	border-color: var(--frame-color);
+	border-style: dashed;
+}

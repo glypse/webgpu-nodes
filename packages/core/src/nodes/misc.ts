@@ -1,3 +1,4 @@
+import { LAYOUT_FRAME } from "../frames/analysis";
 import type { NodeDescriptor } from "../types";
 import { WGSL_TYPES } from "../types";
 
@@ -16,6 +17,18 @@ export const rerouteNode: NodeDescriptor = {
 	outputs: [{ id: "out", label: "out", type: "f32" }],
 	defaultData: {},
 	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("in")};`],
+};
+
+/** A labelled box around other nodes; it computes nothing. */
+export const layoutFrameNode: NodeDescriptor = {
+	type: LAYOUT_FRAME,
+	label: "Frame",
+	aliases: ["Comment", "Box", "Region", "Note"],
+	category: "layout",
+	inputs: [],
+	outputs: [],
+	defaultData: {},
+	wgsl: () => [],
 };
 
 export const outputNode: NodeDescriptor = {

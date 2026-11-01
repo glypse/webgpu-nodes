@@ -200,7 +200,8 @@ export type NodeCategory =
 	| "zone"
 	| "color"
 	| "texture"
-	| "misc";
+	| "misc"
+	| "layout";
 
 /** Shader helper functions nodes may request through `WgslCtx.helper`. */
 export type HelperName = "safeDiv" | "safeMod" | "safePow";

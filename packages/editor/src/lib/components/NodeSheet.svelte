@@ -1,9 +1,10 @@
 <script lang="ts">
-	import { isZoneNodeType } from "$core";
+	import { isZoneNodeType, LAYOUT_FRAME } from "$core";
 	import { Button, Dialog, Input } from "$theme";
 	import ArrowCounterClockwiseIcon from "phosphor-svelte/lib/ArrowCounterClockwiseIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
+	import FrameSettings from "./FrameSettings.svelte";
 	import GroupSettings from "./GroupSettings.svelte";
 	import ZoneSettings from "./ZoneSettings.svelte";
 
@@ -89,6 +90,9 @@
 						</Button>
 					</div>
 				</div>
+				{#if node.type === LAYOUT_FRAME}
+					<FrameSettings frameId={node.id} {locked} />
+				{/if}
 				{#if groupId}
 					<GroupSettings {groupId} />
 				{/if}

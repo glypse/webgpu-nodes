@@ -2,11 +2,13 @@ import * as v from "valibot";
 
 import { type AddMenuEntry, withOptions } from "../catalog/add-menu";
 import { MATCH, MATCH_SELECTOR, enumOfOutput } from "../enums";
+import { LAYOUT_FRAME } from "../frames";
 import {
 	type LayoutSpacing,
 	type NodeGeometry,
 	type NodeRows,
 	computeLayout,
+	estimateFrameHeader,
 	estimateNodeGeometry,
 } from "../layout";
 import { defaultDataForType, nodeRegistry } from "../nodes/registry";
@@ -544,9 +546,12 @@ export class GraphModel extends PreviewModel {
 			nodes,
 			edges: doc.edges,
 			zones: this.zoneAnalysis(doc),
+			frames: this.frameAnalysis(doc),
 			geometry: (node) =>
 				options.measure?.(definitionRef, node) ??
-				estimateNodeGeometry(this.nodeRows(doc, node)),
+				(node.type === LAYOUT_FRAME
+					? estimateFrameHeader(this.nodeLabel(node.id), node.data.note)
+					: estimateNodeGeometry(this.nodeRows(doc, node))),
 			spacing: options.spacing,
 		});
 		return this.applyPositions(doc, positions);

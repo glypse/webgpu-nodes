@@ -25,6 +25,7 @@ export const CATEGORY_LABELS: Record<NodeCategory, string> = {
 	color: "Color",
 	texture: "Texture",
 	misc: "Miscellaneous",
+	layout: "Layout",
 };
 
 const GROUPS_HEADING = "Groups";

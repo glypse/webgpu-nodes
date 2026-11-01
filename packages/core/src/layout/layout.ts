@@ -6,6 +6,13 @@ import type {
 	LayoutOptions as ElkOptions,
 } from "elkjs/lib/elk-api";
 
+import {
+	EMPTY_FRAME_SIZE,
+	FRAME_PADDING,
+	type FrameAnalysis,
+	LAYOUT_FRAME,
+	frameRects,
+} from "../frames";
 import type { GraphEdge, GraphNode } from "../graph/document";
 import type { ZoneAnalysis } from "../zones";
 
@@ -52,6 +59,8 @@ export type LayoutInput = {
 	nodes: readonly GraphNode[];
 	edges: readonly GraphEdge[];
 	zones: ZoneAnalysis;
+	frames: FrameAnalysis;
+	/** A frame's geometry is that of its header (label and note). */
 	geometry: (node: GraphNode) => NodeGeometry;
 	spacing?: Partial<LayoutSpacing>;
 };
@@ -80,7 +89,20 @@ export function estimateNodeGeometry(rows: NodeRows): NodeGeometry {
 	};
 }
 
+/** A frame's header as drawn, from its label and note, when it can't be measured. */
+export function estimateFrameHeader(label: string, note: string | undefined): NodeGeometry {
+	const lines = note ? note.split("\n") : [];
+	const longest = Math.max(label.length * 9, ...lines.map((l) => l.length * 7));
+	return {
+		width: Math.min(longest, 480) + 24,
+		height: 36 + 18 * lines.length,
+		inputs: new Map(),
+		outputs: new Map(),
+	};
+}
+
 const zoneKey = (zoneId: string) => `zone:${zoneId}`;
+const frameKey = (frameId: string) => `frame:${frameId}`;
 const portKey = (nodeId: string, side: "in" | "out", handleId: string) =>
 	`${nodeId}:${side}:${handleId}`;
 
@@ -106,7 +128,8 @@ export async function computeLayout(input: LayoutInput): Promise<Map<string, Poi
 	};
 	const elkNodes = new Map<string, ElkNode>();
 	for (const node of nodes) {
-		const geometry = input.geometry(node);
+		if (isFrameBlock(input.frames, node, ids)) continue;
+		const geometry = emptyFrameSize(node, input.geometry(node));
 		for (const [handleId, y] of geometry.inputs) {
 			addPort(node.id, inputPort(node.id, handleId, y));
 		}
@@ -132,41 +155,19 @@ export async function computeLayout(input: LayoutInput): Promise<Map<string, Poi
 		});
 	}
 
-	// A zone is a block when both its boundaries are laid out; its nodes
-	// (nested zones' blocks included) go inside it.
-	const blocks = new Map<string, ElkNode>();
-	for (const zone of zones.zones.values()) {
-		if (!ids.has(zone.inputId) || !ids.has(zone.outputId)) continue;
-		const p = spacing.zonePadding;
-		blocks.set(zone.id, {
-			id: zoneKey(zone.id),
-			children: [],
-			layoutOptions: {
-				"elk.padding": `[top=${String(p)},left=${String(p)},bottom=${String(p)},right=${String(p)}]`,
-			},
-		});
-	}
-	const blockOf = (nodeId: string): ElkNode | undefined => {
-		let zoneId = zones.nodeZone.get(nodeId) ?? null;
-		while (zoneId !== null) {
-			const block = blocks.get(zoneId);
-			if (block) return block;
-			zoneId = zones.zones.get(zoneId)?.parent ?? null;
-		}
-		return undefined;
-	};
-	const parentBlock = (zoneId: string): ElkNode | undefined => {
-		const parent = zones.zones.get(zoneId)?.parent ?? null;
-		return parent === null ? undefined : blockOf(zones.zones.get(parent)?.inputId ?? "");
-	};
-
+	const blocks = layoutBlocks(input, ids, spacing);
 	const root: ElkNode = { id: "root", children: [], layoutOptions: rootOptions(spacing) };
-	for (const [zoneId, block] of blocks) {
-		(parentBlock(zoneId) ?? root).children?.push(block);
+	const elkBlocks = new Map<Block, ElkNode>();
+	for (const block of blocks.list) {
+		elkBlocks.set(block, { id: block.key, children: [], layoutOptions: block.options });
+	}
+	const containerOf = (block: Block | undefined) => (block && elkBlocks.get(block)) ?? root;
+	for (const block of blocks.list) {
+		containerOf(blocks.parent.get(block)).children?.push(elkBlocks.get(block) ?? root);
 	}
 	for (const node of nodes) {
 		const elkNode = elkNodes.get(node.id);
-		if (elkNode) (blockOf(node.id) ?? root).children?.push(elkNode);
+		if (elkNode) containerOf(blocks.ofNode.get(node.id)).children?.push(elkNode);
 	}
 
 	const elkEdges: ElkExtendedEdge[] = links.map((e) => ({
@@ -175,11 +176,11 @@ export async function computeLayout(input: LayoutInput): Promise<Map<string, Poi
 		targets: [portKey(e.target, "in", e.targetHandle)],
 	}));
 	// Keeps a zone's input left of its output, even with nothing in between.
-	for (const zoneId of blocks.keys()) {
-		const zone = zones.zones.get(zoneId);
+	for (const block of blocks.list) {
+		const zone = block.kind === "zone" ? zones.zones.get(block.id) : undefined;
 		if (!zone) continue;
 		elkEdges.push({
-			id: `zone-link:${zoneId}`,
+			id: `zone-link:${zone.id}`,
 			sources: [zone.inputId],
 			targets: [zone.outputId],
 		});
@@ -197,6 +198,19 @@ export async function computeLayout(input: LayoutInput): Promise<Map<string, Poi
 		}
 	};
 	collect(laidOut, { x: 0, y: 0 });
+
+	// Frames go where they're drawn: around what they hold, once it's moved.
+	const placed = nodes.map((n) => ({ ...n, position: positions.get(n.id) ?? n.position }));
+	const sizes = new Map(nodes.map((n) => [n.id, input.geometry(n)]));
+	const boxes = frameRects(
+		placed,
+		input.frames,
+		(n) => ({ ...n.position, ...sizeOf(sizes.get(n.id)) }),
+		(id) => sizeOf(sizes.get(id)),
+	);
+	for (const [id, box] of boxes) {
+		if (ids.has(id)) positions.set(id, { x: box.x, y: box.y });
+	}
 
 	// Keep the nodes where they were: same top-left corner as before.
 	const before = topLeft(nodes.map((n) => n.position));
@@ -224,6 +238,119 @@ async function loadElk(): Promise<ELK> {
 		if (shim) Reflect.deleteProperty(globalThis, "document");
 	}
 	return elk;
+}
+
+const sizeOf = (geometry: NodeGeometry | undefined) => ({
+	width: geometry?.width ?? 0,
+	height: geometry?.height ?? 0,
+});
+
+/** Whether `node` is a frame holding nodes laid out: it's laid out as a block around them. */
+function isFrameBlock(frames: FrameAnalysis, node: GraphNode, ids: ReadonlySet<string>): boolean {
+	const frame = frames.frames.get(node.id);
+	return frame !== undefined && [...frame.descendants].some((id) => ids.has(id));
+}
+
+/** An empty frame is laid out as a node of the size it's drawn at. */
+function emptyFrameSize(node: GraphNode, geometry: NodeGeometry): NodeGeometry {
+	if (node.type !== LAYOUT_FRAME) return geometry;
+	return {
+		...geometry,
+		width: Math.max(geometry.width, EMPTY_FRAME_SIZE.width),
+		height: geometry.height + EMPTY_FRAME_SIZE.height,
+	};
+}
+
+/** A zone or a frame, laid out as a box holding its nodes. */
+type Block = {
+	kind: "zone" | "frame";
+	id: string;
+	key: string;
+	/** The nodes laid out inside it, at any depth. */
+	members: Set<string>;
+	options: ElkOptions;
+};
+
+/**
+ * The blocks to lay out: each zone with both its boundaries laid out, and
+ * each frame holding nodes laid out, unless it holds part of a zone only
+ * (zones decide what's in them, frames give way). Blocks nest as their
+ * nodes do; a frame holding exactly a zone's nodes goes around it.
+ */
+function layoutBlocks(input: LayoutInput, ids: ReadonlySet<string>, spacing: LayoutSpacing) {
+	const { zones, frames } = input;
+	const pad = (top: number, side: number, minWidth = 0) => ({
+		"elk.padding": `[top=${String(top)},left=${String(side)},bottom=${String(side)},right=${String(side)}]`,
+		"elk.nodeSize.constraints": "[MINIMUM_SIZE]",
+		"elk.nodeSize.minimum": `(${String(minWidth)}, 0)`,
+	});
+
+	const zoneBlocks: Block[] = [];
+	for (const zone of zones.zones.values()) {
+		if (!ids.has(zone.inputId) || !ids.has(zone.outputId)) continue;
+		const members = new Set([zone.inputId, zone.outputId, ...zone.members]);
+		const p = spacing.zonePadding;
+		zoneBlocks.push({
+			kind: "zone",
+			id: zone.id,
+			key: zoneKey(zone.id),
+			members: new Set([...members].filter((id) => ids.has(id))),
+			options: pad(p, p),
+		});
+	}
+	const blockFrames = new Map(
+		input.nodes.filter((n) => isFrameBlock(frames, n, ids)).map((n) => [n.id, n]),
+	);
+	const frameBlocks: Block[] = [];
+	for (const [id, node] of blockFrames) {
+		const frame = frames.frames.get(id);
+		if (!frame) continue;
+		const members = new Set(
+			[...frame.descendants].filter((d) => ids.has(d) && !blockFrames.has(d)),
+		);
+		const straddles = zoneBlocks.some((z) => {
+			const shared = [...z.members].filter((id) => members.has(id)).length;
+			return shared > 0 && shared < z.members.size && shared < members.size;
+		});
+		if (straddles) continue;
+		const header = sizeOf(input.geometry(node));
+		frameBlocks.push({
+			kind: "frame",
+			id: frame.id,
+			key: frameKey(frame.id),
+			members,
+			options: pad(FRAME_PADDING + header.height, FRAME_PADDING, header.width),
+		});
+	}
+	const list = [...zoneBlocks, ...frameBlocks];
+
+	const isAncestorFrame = (outer: string, inner: string) => {
+		for (let up = frames.frameOf.get(inner); up !== undefined; up = frames.frameOf.get(up)) {
+			if (up === outer) return true;
+		}
+		return false;
+	};
+	/** Whether `outer` goes around `inner`. */
+	const holds = (outer: Block, inner: Block) => {
+		if (outer === inner || [...inner.members].some((id) => !outer.members.has(id))) {
+			return false;
+		}
+		if (inner.members.size < outer.members.size) return true;
+		if (outer.kind === "frame" && inner.kind === "zone") return true;
+		return outer.kind === "frame" && isAncestorFrame(outer.id, inner.id);
+	};
+	/** Of blocks around something, the innermost: the one all the others hold. */
+	const innermost = (around: Block[]) =>
+		around.find((b) => around.every((other) => other === b || holds(other, b)));
+
+	const parent = new Map<Block, Block | undefined>(
+		list.map((b) => [b, innermost(list.filter((other) => holds(other, b)))]),
+	);
+	const ofNode = new Map<string, Block | undefined>();
+	for (const id of ids) {
+		ofNode.set(id, innermost(list.filter((b) => b.members.has(id))));
+	}
+	return { list, parent, ofNode };
 }
 
 function inputPort(nodeId: string, handleId: string, y: number): ElkPort {

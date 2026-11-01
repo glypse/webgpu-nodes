@@ -1,4 +1,5 @@
 import type { CurvePoint } from "../curve/curve";
+import type { FrameTint } from "../frames/analysis";
 import type { GroupHandleDef, HandleDef } from "./descriptors";
 import type { WgslType } from "./values";
 
@@ -38,6 +39,10 @@ export type NodeData = {
 	code?: string;
 	/** A Custom WGSL node's sockets; their labels name them in `code`. */
 	sockets?: { inputs: HandleDef[]; outputs: HandleDef[] };
+	/** A frame's note, shown under its label. */
+	note?: string;
+	/** A frame's colour; neutral when absent. */
+	tint?: FrameTint;
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

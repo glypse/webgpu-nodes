@@ -28,20 +28,22 @@ type Point = { x: number; y: number };
 
 /**
  * Editing nodes of the document in view as a whole: copy and paste, delete
- * and dissolve, reset, labels, and inserting reroutes into links.
+ * and dissolve, reset, labels, and inserting reroutes into links. Deleting
+ * a frame keeps what it holds.
  */
 export abstract class EditModel extends CustomWgslModel {
 	abstract isValidConnection(connection: Connection): boolean;
 	abstract connect(connection: Connection): void;
 
 	/**
-	 * Copy nodes of the active document, a zone's boundaries always together.
+	 * Copy nodes of the active document, frames with what they hold and a
+	 * zone's boundaries always together.
 	 * Nodes a document has exactly one of (its output, a group's boundaries)
 	 * are left out. Undefined when nothing can be copied.
 	 */
 	copyNodes(nodeIds: Iterable<string>): NodeClipboard | undefined {
 		const doc = this.activeDocument;
-		const ids = this.withZonePartners(nodeIds);
+		const ids = this.withZonePartners(this.withFrameContents(doc, nodeIds));
 		const nodes = doc.nodes.filter((n) => ids.has(n.id) && n.deletable !== false);
 		if (nodes.length === 0) return undefined;
 		const kept = new Set(nodes.map((n) => n.id));
@@ -141,7 +143,18 @@ export abstract class EditModel extends CustomWgslModel {
 			(e) => !removedEdges.has(e.id) && !removed.has(e.source) && !removed.has(e.target),
 		);
 		if (removed.size === 0 && edges.length === doc.edges.length) return false;
-		this.setContent(doc, { nodes: doc.nodes.filter((n) => !removed.has(n.id)), edges });
+		// What a deleted frame held stays, in the frame around it.
+		const { frameOf } = this.frameAnalysis(doc);
+		const kept = (frame: string | undefined): string | undefined =>
+			frame !== undefined && removed.has(frame) ? kept(frameOf.get(frame)) : frame;
+		this.setContent(doc, {
+			nodes: doc.nodes.flatMap((n) => {
+				if (removed.has(n.id)) return [];
+				const frame = kept(frameOf.get(n.id));
+				return frame === frameOf.get(n.id) ? [n] : [{ ...n, frame }];
+			}),
+			edges,
+		});
 		this.selectedNodeIds = this.selectedNodeIds.filter((id) => !removed.has(id));
 		this.rebuildTypeCache();
 		return true;
@@ -316,6 +329,16 @@ export abstract class EditModel extends CustomWgslModel {
 		});
 		this.rebuildTypeCache();
 		return reroutes.map((n) => n.id);
+	}
+
+	/** The ids given, plus every node the frames among them hold. */
+	private withFrameContents(doc: HydratedGraphDocument, nodeIds: Iterable<string>): Set<string> {
+		const { frames } = this.frameAnalysis(doc);
+		const ids = new Set(nodeIds);
+		for (const id of [...ids]) {
+			for (const inside of frames.get(id)?.descendants ?? []) ids.add(inside);
+		}
+		return ids;
 	}
 
 	/** The ids given, plus the partner of every zone boundary among them. */

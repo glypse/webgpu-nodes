@@ -85,6 +85,7 @@ export function hydrateNode(node: GraphDocumentNode): GraphNode {
 		data: node.data,
 		position: node.position,
 		deletable: NON_DELETABLE_TYPES.has(node.type) ? false : undefined,
+		...(node.frame ? { frame: node.frame } : {}),
 	};
 
 	if (node.group) {
@@ -155,8 +156,15 @@ export function hydrateProject(
 
 /** The serialisable part of a node (UI-only fields dropped, data shared). */
 export function serialiseNode(node: GraphNode): GraphDocumentNode {
-	const { id, type, data, position, group } = node;
-	return { id, type: type ?? "", data, position, ...(group ? { group } : {}) };
+	const { id, type, data, position, group, frame } = node;
+	return {
+		id,
+		type: type ?? "",
+		data,
+		position,
+		...(group ? { group } : {}),
+		...(frame ? { frame } : {}),
+	};
 }
 
 /** The serialisable part of an edge. */

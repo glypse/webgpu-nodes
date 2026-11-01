@@ -30,6 +30,10 @@
 
 	const selected = $derived(view.selectedNodeIds);
 	const locked = $derived(view.locked);
+	const inFrame = $derived.by(() => {
+		const { frameOf } = graph.frameAnalysis(view.document);
+		return selected.some((id) => frameOf.has(id));
+	});
 
 	function handleContextMenu(event: MouseEvent) {
 		at = { x: event.clientX, y: event.clientY };
@@ -95,8 +99,23 @@
 				<ContextMenu.Shortcut>⌘⌫</ContextMenu.Shortcut>
 			</ContextMenu.Item>
 		{/if}
-		{#if selected.length > 1}
+		{#if selected.length > 0}
 			<ContextMenu.Separator />
+			<ContextMenu.Item disabled={locked} onSelect={() => graph.frameNodes(selected)}>
+				Frame selected
+				<ContextMenu.Shortcut>⌘J</ContextMenu.Shortcut>
+			</ContextMenu.Item>
+			{#if inFrame}
+				<ContextMenu.Item
+					disabled={locked}
+					onSelect={() => graph.removeFromFrame(selected)}
+				>
+					Remove from frame
+					<ContextMenu.Shortcut>⌥P</ContextMenu.Shortcut>
+				</ContextMenu.Item>
+			{/if}
+		{/if}
+		{#if selected.length > 1}
 			<ContextMenu.Item
 				disabled={locked}
 				onSelect={() => graph.groupSelection(new Set(selected))}

@@ -31,6 +31,7 @@
 	import { openContextMenuAt } from "../utils";
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import DocumentMeasurer from "./DocumentMeasurer.svelte";
+	import FrameBackdrops from "./FrameBackdrops.svelte";
 	import GradientEdge from "./GradientEdge.svelte";
 	import GraphMenu from "./GraphMenu.svelte";
 	import LinkStroke from "./LinkStroke.svelte";
@@ -237,6 +238,8 @@
 		if (cancel) {
 			graph.deleteNodes(grab.ids);
 			graph.selectNodes(grab.originals);
+		} else {
+			view.dropInFrames(grab.ids);
 		}
 		grab = null;
 	}
@@ -330,6 +333,17 @@
 		if (key === "d" && event.shiftKey && !mod && !event.altKey) {
 			event.preventDefault();
 			if (!isLocked) duplicateSelection();
+			return;
+		}
+		if (key === "j" && mod && !event.altKey && !event.shiftKey) {
+			event.preventDefault();
+			if (!isLocked) graph.frameNodes(view.selectedNodeIds);
+			return;
+		}
+		// By code: Alt changes the key typed (π on a Mac).
+		if (event.code === "KeyP" && event.altKey && !mod && !event.shiftKey) {
+			event.preventDefault();
+			graph.removeFromFrame(view.selectedNodeIds);
 			return;
 		}
 		if (key === "r" && !mod && !event.altKey && !event.shiftKey) {
@@ -430,6 +444,15 @@
 				// Moves of our own (restoring a camera) have no event.
 				if (event) view.viewport = { ...viewport };
 			}}
+			onnodedragstart={({ nodes: dragged }) => {
+				view.startDrag(dragged.map((n) => n.id));
+			}}
+			onnodedrag={({ targetNode }) => {
+				if (targetNode) view.moveDrag(targetNode.id, targetNode.position);
+			}}
+			onnodedragstop={() => {
+				view.endDrag();
+			}}
 			onconnect={handleConnect}
 			onconnectend={handleConnectEnd}
 			onnodeclick={({ node, event }) => {
@@ -442,6 +465,7 @@
 				if (view.active) graph.selectedNodeIds = selectedNodes.map((n) => n.id);
 			}}
 		>
+			<FrameBackdrops />
 			<ZoneBubbles />
 			<LinkStroke />
 			<Controls showLock={false} showZoom={false} />
