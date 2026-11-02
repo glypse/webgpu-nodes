@@ -107,6 +107,7 @@ const BINARY: Record<string, [string, string, (a: number, b: number) => number]>
 	mod: ["a", "b", (a, b) => (b === 0 ? 0 : a % b)],
 	pow: ["e1", "e2", (a, b) => (b === 0 ? 1 : a ** b)],
 	atan2: ["e1", "e2", Math.atan2],
+	step: ["e1", "e2", (edge, x) => Number(x >= edge)],
 };
 
 const BITWISE: Record<string, (a: number, b: number) => number> = {
@@ -277,6 +278,11 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		case "boolean-math": {
 			const op = BOOLEAN[node.data.settings?.op ?? "and"];
 			return zip([get("a"), get("b")], (a, b) => Number(op?.(!!a, !!b)));
+		}
+		case "cross": {
+			const [a = 0, b = 0, c = 0] = get("e1");
+			const [d = 0, e = 0, f = 0] = get("e2");
+			return [b * f - c * e, c * d - a * f, a * e - b * d];
 		}
 		case "dot":
 			return [zip([get("e1"), get("e2")], (a, b) => a * b).reduce((a, b) => a + b, 0)];
