@@ -20,6 +20,7 @@ import {
 	isUniformControl,
 	makeType,
 	typeKind,
+	unavailableEdges,
 	WGSL_DEFAULTS,
 	wgslTypeName,
 } from "../types";
@@ -653,8 +654,8 @@ function inputTypeIn(
  * Within a scope, nodes and child zones are emitted in dependency order; a
  * child zone becomes a `for` loop whose body is its own scope. Loop
  * invariants live in the enclosing scope, so they are computed once before
- * the loop. Invalid links are ignored (inputs fall back to their stored
- * values).
+ * the loop. Invalid links, and links to sockets the nodes don't have with
+ * `bindings`, are ignored (inputs fall back to their stored values).
  */
 function emitDocumentBody(
 	state: ShaderState,
@@ -671,7 +672,23 @@ function emitDocumentBody(
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
 
 	const zones = analyzeZones(doc.nodes, doc.edges);
-	const validEdges = doc.edges.filter((e) => !zones.invalidEdges.has(e.id));
+	const incoming = new Map<string, GraphEdge[]>();
+	for (const e of doc.edges) incoming.set(e.target, [...(incoming.get(e.target) ?? []), e]);
+	const unavailable = unavailableEdges(doc.edges, (id) => {
+		const node = nodeMap.get(id);
+		return (
+			node &&
+			state.graph.typeResolver.resolveNodeTypes(
+				node,
+				incoming.get(id) ?? [],
+				(other) => state.graph.resolveNode(other),
+				bindings,
+			)
+		);
+	});
+	const validEdges = doc.edges.filter(
+		(e) => !zones.invalidEdges.has(e.id) && !unavailable.has(e.id),
+	);
 	const edgesByTarget = new Map<string, GraphEdge[]>();
 	for (const e of validEdges)
 		edgesByTarget.set(e.target, [...(edgesByTarget.get(e.target) ?? []), e]);

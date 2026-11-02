@@ -243,6 +243,19 @@ function resolveRegularNodeTypes(
 			? descriptor.resolveInputs(familyOutputType, nodeData)
 			: descriptor.inputs;
 
+	// Links from outputs their source doesn't have with these bindings don't count.
+	const linkedTypes = new Map<string, WgslType[]>();
+	const sourceTypesOf = (inputId: string): WgslType[] => {
+		let types = linkedTypes.get(inputId);
+		if (!types) {
+			types = incoming
+				.filter((e) => e.targetHandle === inputId)
+				.flatMap((e) => sourceHandleType(e, resolveNode, env, bindings) ?? []);
+			linkedTypes.set(inputId, types);
+		}
+		return types;
+	};
+
 	// Phase 1: infer each input independently
 	const rawInferred: Record<string, WgslType> = {};
 	for (const inputDef of activeInputs) {
@@ -251,14 +264,11 @@ function resolveRegularNodeTypes(
 			rawInferred[inputDef.id] = familyOverride;
 			continue;
 		}
-		const edgesForInput = incoming.filter((e) => e.targetHandle === inputDef.id);
-		if (edgesForInput.length === 0 || inputDef.types.length === 1) {
+		const sourceTypes = inputDef.types.length === 1 ? [] : sourceTypesOf(inputDef.id);
+		if (sourceTypes.length === 0) {
 			rawInferred[inputDef.id] = inputDefaultType(inputDef);
 			continue;
 		}
-		const sourceTypes = edgesForInput.map((e) =>
-			inferHandleType(e, resolveNode, env, bindings),
-		);
 		rawInferred[inputDef.id] = highestType(sourceTypes, inputDef.types);
 	}
 
@@ -269,7 +279,11 @@ function resolveRegularNodeTypes(
 	for (const inputDef of activeInputs) {
 		const family = inputFamilyKey(inputDef);
 		const entry = familyCandidates.get(family) ?? { types: inputDef.types, found: [] };
-		const connected = incoming.some((e) => e.targetHandle === inputDef.id);
+		// A fixed type needs no source resolved: its family takes it anyway.
+		const connected =
+			inputDef.types.length === 1
+				? incoming.some((e) => e.targetHandle === inputDef.id)
+				: sourceTypesOf(inputDef.id).length > 0;
 		const overridden = nodeOverrides?.[family] !== undefined;
 		const inferred = rawInferred[inputDef.id];
 		if (inferred && (connected || overridden)) entry.found.push(inferred);
@@ -322,16 +336,17 @@ function outputHandleType(resolved: ResolvedNodeTypes, handleId: string): WgslTy
 
 /**
  * Recursively resolve the WGSL type produced by an edge's source handle,
- * in a document whose variables take `bindings`.
+ * in a document whose variables take `bindings`: undefined when the source
+ * has no such output with them.
  */
-function inferHandleType(
+function sourceHandleType(
 	edge: GraphDocumentEdge,
 	resolveNode: ResolveNode,
 	env: Env,
 	bindings: TypeBindings,
-): WgslType {
+): WgslType | undefined {
 	const sourceNode = resolveNode(edge.source);
-	if (!sourceNode) return "f32";
+	if (!sourceNode) return undefined;
 
 	const resolved = resolveNodeTypesForNode(
 		sourceNode,
@@ -342,7 +357,31 @@ function inferHandleType(
 		env,
 		bindings,
 	);
-	return outputHandleType(resolved, edge.sourceHandle);
+	return resolved.resolvedOutputs.find((o) => o.id === edge.sourceHandle)?.type;
+}
+
+/**
+ * The links among `edges` to sockets their nodes don't have with the types
+ * `typesOf` gives them: a socket that comes and goes with types (a vector's
+ * components, a node's own sockets) may exist for some instances of a
+ * generic group and not others, so its links are kept but don't count.
+ */
+export function unavailableEdges(
+	edges: readonly GraphDocumentEdge[],
+	typesOf: (nodeId: string) => ResolvedNodeTypes | undefined,
+): Set<string> {
+	const unavailable = new Set<string>();
+	for (const e of edges) {
+		const source = typesOf(e.source);
+		const target = typesOf(e.target);
+		if (
+			(source && !source.resolvedOutputs.some((o) => o.id === e.sourceHandle)) ||
+			(target && !target.resolvedInputs.some((i) => i.id === e.targetHandle))
+		) {
+			unavailable.add(e.id);
+		}
+	}
+	return unavailable;
 }
 
 // ── TypeResolver class ────────────────────────────────────────────────────────
@@ -526,7 +565,7 @@ export class TypeResolver {
 		const cached = this.cached(edge.source, bindings);
 		if (cached) return outputHandleType(cached, edge.sourceHandle);
 
-		return inferHandleType(edge, resolveNode, this.env, bindings);
+		return sourceHandleType(edge, resolveNode, this.env, bindings) ?? "f32";
 	}
 
 	// ── Cache management ────────────────────────────────────────────────────

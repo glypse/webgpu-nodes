@@ -33,7 +33,12 @@ import {
 	type TypeBindings,
 	type WgslType,
 } from "../types";
-import { bindingsKey, type ResolvedNodeTypes, TypeResolver } from "../types/resolver";
+import {
+	bindingsKey,
+	type ResolvedNodeTypes,
+	TypeResolver,
+	unavailableEdges,
+} from "../types/resolver";
 import { analyzeZones, type ZoneAnalysis } from "../zones";
 import {
 	createPlainDocument,
@@ -833,38 +838,19 @@ export abstract class GraphModelBase {
 			caches.set(pathKey(path), cache);
 		}
 		this.state.typeCaches = caches;
-
-		// Disconnect edges to outputs/inputs that no longer exist
-		// (e.g. separate vec3f → vec2f drops z output; declare vec3f → f32 drops y/w inputs)
-		const documents = this.project.definitions.values();
-		for (const nodeId of invalidated) {
-			const cached = this.typeCache.get(nodeId);
-			if (!cached) continue;
-
-			// Clean dangling source handles (outputs) — read from cached resolved outputs
-			const activeOutIds = new Set(cached.resolvedOutputs.map((o) => o.id));
-			for (const doc of documents) {
-				doc.edges = doc.edges.filter(
-					(e) => !(e.source === nodeId && !activeOutIds.has(e.sourceHandle)),
-				);
-				indexDocument(doc);
-			}
-
-			// Clean dangling target handles (inputs) — read from cached resolved inputs
-			const activeInIds = new Set(cached.resolvedInputs.map((i) => i.id));
-			for (const doc of documents) {
-				doc.edges = doc.edges.filter(
-					(e) => !(e.target === nodeId && !activeInIds.has(e.targetHandle)),
-				);
-				indexDocument(doc);
-			}
-		}
-
-		this.state.typeCaches = new Map(this.state.typeCaches);
 		this.refreshViewTypes();
 	}
 
 	private lookup = (id: string) => this.resolveNode(id);
+
+	/**
+	 * The links of `doc` to sockets its nodes don't have as seen from `path`
+	 * (see `unavailableEdges`): kept, but ignored and not drawn.
+	 */
+	unavailableLinks(doc: HydratedGraphDocument, path: readonly string[] = this.path): Set<string> {
+		const types = this.typesAt(path);
+		return unavailableEdges(doc.edges, (id) => types.get(id));
+	}
 
 	/**
 	 * The variables' types of the groups on a breadcrumb path, by

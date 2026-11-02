@@ -42,6 +42,9 @@ export class GraphView implements DocumentView {
 	readonly frameBoxes: ReadonlyMap<string, Box>;
 	/** The document's nodes, each frame's header at the top of its box. */
 	private readonly placedNodes: GraphNode[];
+	/** Links to sockets their nodes don't have as seen from here: kept, not drawn. */
+	private readonly unavailable: ReadonlySet<string>;
+	private readonly shownEdges: GraphEdge[];
 
 	constructor(
 		private graph: GraphManager,
@@ -62,6 +65,12 @@ export class GraphView implements DocumentView {
 			);
 		});
 		this.placedNodes = $derived(placeFrames(this.document.nodes, this.frameBoxes));
+		this.unavailable = $derived(graph.unavailableLinks(this.document, this.path));
+		this.shownEdges = $derived.by(() => {
+			const unavailable = this.unavailable;
+			const edges = this.document.edges;
+			return unavailable.size === 0 ? edges : edges.filter((e) => !unavailable.has(e.id));
+		});
 	}
 
 	// ── Dragging in and out of frames ───────────────────────────────────────
@@ -159,11 +168,18 @@ export class GraphView implements DocumentView {
 	}
 
 	get edges(): GraphEdge[] {
-		return this.document.edges;
+		return this.shownEdges;
 	}
 
 	set edges(value: GraphEdge[]) {
-		this.graph.setDocumentEdges(this.definitionRef, value);
+		const { nodesById, edges } = this.document;
+		const kept = edges.filter(
+			(e) => this.unavailable.has(e.id) && nodesById.has(e.source) && nodesById.has(e.target),
+		);
+		this.graph.setDocumentEdges(
+			this.definitionRef,
+			kept.length > 0 ? [...value, ...kept] : value,
+		);
 	}
 
 	enterGroup(groupNodeId: string) {
