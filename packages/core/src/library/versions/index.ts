@@ -4,8 +4,8 @@
 export const archivedVersions: Record<string, () => Promise<unknown>> = {
 	"std-opensimplex-3d@053eb8ebb3e298": () =>
 		import("./std-opensimplex-3d/053eb8ebb3e298.json").then((m) => m.default),
-	"std-opensimplex-noise@1e5bc8996d10c0": () =>
-		import("./std-opensimplex-noise/1e5bc8996d10c0.json").then((m) => m.default),
+	"std-opensimplex-noise@0db7e8a661969e": () =>
+		import("./std-opensimplex-noise/0db7e8a661969e.json").then((m) => m.default),
 	"std-opensimplex-3d-half@085b25e1002f09": () =>
 		import("./std-opensimplex-3d-half/085b25e1002f09.json").then((m) => m.default),
 	"std-oklch-gamut-map@1acc14cbea7282": () =>
@@ -14,8 +14,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-voronoi-point/0f23ded1433eed.json").then((m) => m.default),
 	"std-linear-rgb-to-oklch@106b2f48a50ee0": () =>
 		import("./std-linear-rgb-to-oklch/106b2f48a50ee0.json").then((m) => m.default),
-	"std-noise-distortion@0f51f01bd54528": () =>
-		import("./std-noise-distortion/0f51f01bd54528.json").then((m) => m.default),
+	"std-noise-distortion@15488deb7b833a": () =>
+		import("./std-noise-distortion/15488deb7b833a.json").then((m) => m.default),
 	"std-in-display-gamut@0421a880f36e29": () =>
 		import("./std-in-display-gamut/0421a880f36e29.json").then((m) => m.default),
 	"std-xyz-to-oklab@1feafc3e85312d": () =>
@@ -50,10 +50,10 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-voronoi-radius/02232c18bc6868.json").then((m) => m.default),
 	"std-aspect-uv@1b256db7053e2f": () =>
 		import("./std-aspect-uv/1b256db7053e2f.json").then((m) => m.default),
-	"std-fractal-noise-octaves@1f664f6a44917c": () =>
-		import("./std-fractal-noise-octaves/1f664f6a44917c.json").then((m) => m.default),
-	"std-opensimplex-orientation@050fe4e12d9be7": () =>
-		import("./std-opensimplex-orientation/050fe4e12d9be7.json").then((m) => m.default),
+	"std-fractal-noise-octaves@1aeb20aed9be93": () =>
+		import("./std-fractal-noise-octaves/1aeb20aed9be93.json").then((m) => m.default),
+	"std-opensimplex-orientation@1e75ee44eb0bed": () =>
+		import("./std-opensimplex-orientation/1e75ee44eb0bed.json").then((m) => m.default),
 	"std-voronoi-edges@1ad79f4231c545": () =>
 		import("./std-voronoi-edges/1ad79f4231c545.json").then((m) => m.default),
 	"std-color@1c6bb6de3a1d20": () =>
@@ -74,8 +74,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-component-sum/19655c913fca94.json").then((m) => m.default),
 	"std-remap@18bb11b8c3230a": () =>
 		import("./std-remap/18bb11b8c3230a.json").then((m) => m.default),
-	"std-fractal-noise@0398c17b77473c": () =>
-		import("./std-fractal-noise/0398c17b77473c.json").then((m) => m.default),
+	"std-fractal-noise@1cae333dc95b3f": () =>
+		import("./std-fractal-noise/1cae333dc95b3f.json").then((m) => m.default),
 	"std-gradient-noise-1d@03d35b22435124": () =>
 		import("./std-gradient-noise-1d/03d35b22435124.json").then((m) => m.default),
 	"std-voronoi-texture@14125cf8ec73fb": () =>

@@ -1,13 +1,25 @@
 // OpenSimplex Noise in any dimension count, and Fractal Noise: its octaves
 // summed in Blender's fractal types (cycles/kernel/svm/fractal_noise.h).
-import type { EnumRef, GroupBuilder, GroupSpec, Operand, Ref } from "../../../builder";
+import type {
+	EnumRef,
+	GroupBuilder,
+	GroupSpec,
+	Operand,
+	Ref,
+	VariableType,
+} from "../../../builder";
 import { padVector } from "../../vector";
 import { coordinatesInput, coordinatesType, noiseCoordinates } from "../coordinates";
 import { fractal, fractalInputs } from "../fractal";
 import { hash } from "../lattice";
 import { SIMPLEX_HELPERS } from "./kernel";
 import { gradientNoise1d, openSimplex2d, openSimplex3d, openSimplex4d } from "./lattices";
-import { orientationInput, simplexOrientation, variantInput } from "./orientation";
+import {
+	type OrientationInputs,
+	orientationInputs,
+	simplexOrientation,
+	variantInput,
+} from "./orientation";
 
 /** XORed into the seed for Color's second and third components. */
 const COLOR_SALTS = [1540483477, 668265263] as const;
@@ -16,12 +28,13 @@ const DISTORTION_SALT = 1103515245;
 /** How far apart, at most, the octaves are moved, in their own scale. */
 const OCTAVE_SPREAD = 128;
 
-type NoiseOptions = { variant: EnumRef; orientation: EnumRef; seed: Operand };
+type NoiseOptions = OrientationInputs & { variant: EnumRef; seed: Operand };
 
-function noiseOptions(g: GroupBuilder): NoiseOptions {
+/** The noise's options, on a group whose coordinates are `t`. */
+function noiseOptions(g: GroupBuilder, t: VariableType): NoiseOptions {
 	return {
-		variant: variantInput(g),
-		orientation: orientationInput(g),
+		variant: variantInput(g, t),
+		...orientationInputs(g, t),
 		seed: g.input("seed", "i32", { label: "Seed", default: 0 }),
 	};
 }
@@ -33,13 +46,13 @@ export const openSimplexNoise: GroupSpec = {
 	category: "texture",
 	...SIMPLEX_HELPERS,
 	build: (g) => {
-		const { vector } = coordinatesInput(g);
-		const { variant, orientation, seed } = noiseOptions(g);
+		const { t, vector } = coordinatesInput(g);
+		const { variant, seed, ...orientations } = noiseOptions(g, t);
 		const { coordinates } = g.call<"coordinates">(noiseCoordinates, { vector });
 		const { lattice } = g.call<"lattice">(simplexOrientation, {
 			vector: coordinates,
 			variant,
-			orientation,
+			...orientations,
 		});
 		const options = { lattice, variant, seed };
 		const value = g.frame(
@@ -76,7 +89,7 @@ export const noiseDistortion: GroupSpec = {
 		const t = coordinatesType(g);
 		const vector = g.input("vector", t, { label: "Vector" });
 		const amount = g.input("amount", "f32", { label: "Amount", default: 0 });
-		const options = noiseOptions(g);
+		const options = noiseOptions(g, t);
 		const { padded } = g.call<"padded">(padVector, { vector });
 		const distorted = g.repeat(
 			g.select(g.compare(amount, "!=", 0), g.constant("i32", 0), g.constant("i32", 1)),
@@ -202,7 +215,7 @@ export const fractalNoiseOctaves: GroupSpec = {
 			ridgedGain,
 			...octaves
 		} = octaveInputs(g);
-		const options = noiseOptions(g);
+		const options = noiseOptions(g, t);
 		const pick = (cases: Record<number, Operand>) => g.match(type, cases);
 		const sum = g.frame(
 			"Octaves",
@@ -362,11 +375,11 @@ export const fractalNoise: GroupSpec = {
 	],
 	category: "texture",
 	build: (g) => {
-		const { vector } = coordinatesInput(g);
+		const { t, vector } = coordinatesInput(g);
 		const scale = g.input("scale", "f32", { label: "Scale", default: 5 });
 		const octaves = octaveInputs(g);
 		const distortion = g.input("distortion", "f32", { label: "Distortion", default: 0 });
-		const options = noiseOptions(g);
+		const options = noiseOptions(g, t);
 		const distorted = g.frame(
 			"Coordinates",
 			{
