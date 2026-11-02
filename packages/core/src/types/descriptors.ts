@@ -332,10 +332,13 @@ export type NodeDescriptor<
 	 */
 	staticOutputTypes?: boolean;
 	/**
-	 * Resolve the output type from the representative input type.
-	 * When omitted, defaults to identity.
+	 * Resolve the output type from the representative input type, or from
+	 * the types of all its inputs. When omitted, defaults to identity.
 	 */
-	resolveOutputType?: (resolvedType: WgslType) => WgslType;
+	resolveOutputType?: (
+		resolvedType: WgslType,
+		inputTypes: Readonly<Record<string, WgslType>>,
+	) => WgslType;
 	/**
 	 * Resolve the active outputs based on the representative input type.
 	 * When omitted, defaults to the static `outputs` array.

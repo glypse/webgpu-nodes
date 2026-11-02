@@ -202,10 +202,13 @@ describe("Match node", () => {
 	});
 });
 
-describe("Component Count node", () => {
+describe("Width Switch node", () => {
+	const CASE_TYPES = ["f32", "vec2f", "vec3f", "vec4f"] as const;
+
 	/**
-	 * A group generic over its "v" input's width, picking by its component
-	 * count one of four constants (`c1`…`c4`). Its instance is fed a `type`.
+	 * A group generic over its "v" input's width, picking by it one of four
+	 * constants (`c1`…`c4`) each as wide as its case. Its instance is fed a
+	 * `type`; the group's output takes what reaches it.
 	 */
 	function generic(type: WgslType): GraphProject {
 		return {
@@ -231,30 +234,31 @@ describe("Component Count node", () => {
 						{ id: "t", name: "T", types: ["f32", "vec2f", "vec3f", "vec4f"] },
 					],
 					inputs: [{ id: "v", label: "V", type: { variable: "t" } }],
-					outputs: [{ id: "result", label: "Result", type: "f32" }],
+					outputs: [{ id: "result", label: "Result", type: { inferred: true } }],
 					nodes: [
 						node("in", "group-input"),
 						node("go", "group-output"),
-						node("count", "component-count"),
-						node("m", "match"),
-						...[1, 2, 3, 4].map((n) =>
-							node(`c${String(n)}`, "declare", { values: { x: n } }),
+						node("ws", "width-switch"),
+						...CASE_TYPES.map((t, i) =>
+							node(`c${String(i + 1)}`, "declare", {
+								types: { declare: t },
+								values: { x: i + 1 },
+							}),
 						),
 					],
 					edges: (
 						[
-							["in", "v", "count", "value"],
-							["count", "count", "m", "selector"],
-							...[1, 2, 3, 4].map(
-								(n) =>
+							["in", "v", "ws", "value"],
+							...CASE_TYPES.map(
+								(_, i) =>
 									[
-										`c${String(n)}`,
+										`c${String(i + 1)}`,
 										"value",
-										"m",
-										caseHandle(n),
+										"ws",
+										caseHandle(i + 1),
 									] satisfies TestEdge,
 							),
-							["m", "result", "go", "result"],
+							["ws", "result", "go", "result"],
 						] satisfies TestEdge[]
 					).map(edge),
 				},
@@ -262,28 +266,20 @@ describe("Component Count node", () => {
 		};
 	}
 
-	it("is an enum of widths a Match node can branch on", () => {
-		const graph = new GraphModel(generic("vec2f"));
-		expect(caseIds(graph)).toEqual([
-			"selector:enum",
-			"case-1:Scalar",
-			"case-2:Vector 2",
-			"case-3:Vector 3",
-			"case-4:Vector 4",
-		]);
-		graph.enterGroup("g");
-		const link = { target: "m", targetHandle: "selector", sourceHandle: "count" };
-		expect(graph.isValidConnection({ ...link, source: "count" })).toBe(true);
+	it("takes the type of the case its value's width picks, whatever the others'", () => {
+		for (const type of CASE_TYPES) {
+			const graph = new GraphModel(generic(type));
+			expect(graph.resolveOutputHandleType("g", "result")).toBe(type);
+			graph.enterGroup("g");
+			expect(graph.resolveNodeOutputType("ws")).toBe(type);
+		}
 	});
 
-	it("is known while compiling, from the type its input takes in each instance", () => {
-		for (const [type, picked] of [
-			["f32", 1],
-			["vec3f", 3],
-			["vec4f", 4],
-		] as const) {
+	it("computes only the picked case", () => {
+		for (const [n, type] of CASE_TYPES.entries()) {
+			const picked = n + 1;
 			const { shader } = generateShader(new GraphModel(generic(type)));
-			expect(shader).toContain(`let v_m = v_c${String(picked)};`);
+			expect(shader).toContain(`let v_ws = v_c${String(picked)};`);
 			expect(shader).not.toContain(`v_c${String(picked === 1 ? 2 : 1)} =`);
 			if (nagaBin) expect(validateFragment(shader)).toBeNull();
 		}

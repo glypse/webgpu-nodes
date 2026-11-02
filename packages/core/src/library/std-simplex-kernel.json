@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-lattice-gradient@05f62eee0a5890", "std-component-sum@19655c913fca94"],
+	"dependencies": ["std-lattice-gradient@05900a454cf1a6", "std-component-sum@0e43caf9357ab7"],
 	"definition": {
 		"nodes": [
 			{
@@ -17,7 +17,7 @@
 					"y": 146
 				},
 				"group": {
-					"definitionRef": "std-lattice-gradient@05f62eee0a5890",
+					"definitionRef": "std-lattice-gradient@05900a454cf1a6",
 					"locked": true
 				}
 			},
@@ -75,7 +75,7 @@
 					"y": 375
 				},
 				"group": {
-					"definitionRef": "std-component-sum@19655c913fca94",
+					"definitionRef": "std-component-sum@0e43caf9357ab7",
 					"locked": true
 				},
 				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
@@ -149,7 +149,7 @@
 					"y": 90
 				},
 				"group": {
-					"definitionRef": "std-component-sum@19655c913fca94",
+					"definitionRef": "std-component-sum@0e43caf9357ab7",
 					"locked": true
 				},
 				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"

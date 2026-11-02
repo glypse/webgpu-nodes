@@ -1,4 +1,3 @@
-import { COMPONENT_COUNT, COMPONENT_COUNT_INPUT } from "../enums";
 import {
 	defineNode,
 	FLOAT_VEC_TYPES,
@@ -13,6 +12,9 @@ import { binaryNode, unaryFn } from "./builders";
 
 /** Measurable as WGSL's `length` and `distance` measure them: a scalar as its absolute value. */
 const MEASURED_TYPES: readonly WgslType[] = [...FLOAT_VEC_TYPES, "f32"];
+
+export const COMPONENT_COUNT = "component-count";
+export const COMPONENT_COUNT_INPUT = "value";
 
 // Vector
 export const dotNode = defineNode({

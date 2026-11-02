@@ -310,7 +310,7 @@ function resolveRegularNodeTypes(
 	const outputType =
 		familyOutputType ??
 		(descriptor.resolveOutputType
-			? descriptor.resolveOutputType(representativeType)
+			? descriptor.resolveOutputType(representativeType, inputTypes)
 			: representativeType);
 
 	// Phase 5: resolve dynamic inputs and outputs. Outputs carry their concrete

@@ -1,11 +1,12 @@
 import { clipToGamut } from "../color/display";
 import { evaluateCurve, LINEAR_CURVE } from "../curve";
-import { caseHandle, COMPONENT_COUNT, COMPONENT_COUNT_INPUT, MATCH_SELECTOR } from "../enums";
+import { caseHandle, MATCH_SELECTOR, WIDTH_SWITCH_VALUE } from "../enums";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
 import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
+import { COMPONENT_COUNT, COMPONENT_COUNT_INPUT } from "../nodes/vector";
 import {
 	enumValue,
 	type ResolvedNodeTypes,
@@ -271,6 +272,10 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			return [get("v")["xyzw".indexOf(handleId)] ?? 0];
 		case COMPONENT_COUNT:
 			return [typeComponents(resolved.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32")];
+		case "width-switch":
+			return get(
+				caseHandle(typeComponents(resolved.inputTypes[WIDTH_SWITCH_VALUE] ?? "f32")),
+			);
 		case "distance":
 			return [Math.hypot(...zip([get("e1"), get("e2")], (a, b) => a - b))];
 		case "not":

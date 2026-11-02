@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-simplex-kernel@075efca10e0a4c"],
+	"dependencies": ["std-simplex-kernel@19d80272a2278d"],
 	"definition": {
 		"nodes": [
 			{
@@ -294,7 +294,7 @@
 					"y": 532
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "48e36817-f8ad-4d8e-970f-36f03ebe911d"
@@ -386,7 +386,7 @@
 					"y": 1334
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "48e36817-f8ad-4d8e-970f-36f03ebe911d"
@@ -478,7 +478,7 @@
 					"y": 1011
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "48e36817-f8ad-4d8e-970f-36f03ebe911d"
@@ -1006,7 +1006,7 @@
 					"y": 5797
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "2d2f01f0-411a-496f-bd01-30c4a776b6f4"
@@ -1098,7 +1098,7 @@
 					"y": 3547
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "2d2f01f0-411a-496f-bd01-30c4a776b6f4"
@@ -1190,7 +1190,7 @@
 					"y": 3017
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "2d2f01f0-411a-496f-bd01-30c4a776b6f4"
@@ -1282,7 +1282,7 @@
 					"y": 2154
 				},
 				"group": {
-					"definitionRef": "std-simplex-kernel@075efca10e0a4c",
+					"definitionRef": "std-simplex-kernel@19d80272a2278d",
 					"locked": true
 				},
 				"frame": "2d2f01f0-411a-496f-bd01-30c4a776b6f4"

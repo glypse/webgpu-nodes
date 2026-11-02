@@ -63,16 +63,12 @@ export const openSimplexNoise = group({
 				note: "OpenSimplex2 in as many dimensions as Vector has components,\nplain gradient noise for a single one. In [-1, 1].",
 			},
 			() =>
-				g.match(
-					g.componentCount(coordinates),
-					{
-						1: g.call(gradientNoise1d, { value: coordinates, seed }).value,
-						2: g.call(openSimplex2d, options).value,
-						3: g.call(openSimplex3d, options).value,
-						4: g.call(openSimplex4d, options).value,
-					},
-					"f32",
-				),
+				g.widthSwitch(coordinates, {
+					1: g.call(gradientNoise1d, { value: coordinates, seed }).value,
+					2: g.call(openSimplex2d, options).value,
+					3: g.call(openSimplex3d, options).value,
+					4: g.call(openSimplex4d, options).value,
+				}),
 		);
 		g.output("value", value, "f32", { label: "Value" });
 	},
@@ -127,16 +123,12 @@ export const noiseDistortion = group({
 								),
 							});
 						const [x, y, z, w] = [0, 1, 2, 3].map(axis);
-						const offset = g.match(
-							g.componentCount(vector),
-							{
-								1: g.vec("vec4f", x ?? 0, 0, 0, 0),
-								2: g.vec("vec4f", x ?? 0, y ?? 0, 0, 0),
-								3: g.vec("vec4f", x ?? 0, y ?? 0, z ?? 0, 0),
-								4: g.vec("vec4f", x ?? 0, y ?? 0, z ?? 0, w ?? 0),
-							},
-							"vec4f",
-						);
+						const offset = g.widthSwitch(vector, {
+							1: g.vec("vec4f", x ?? 0, 0, 0, 0),
+							2: g.vec("vec4f", x ?? 0, y ?? 0, 0, 0),
+							3: g.vec("vec4f", x ?? 0, y ?? 0, z ?? 0, 0),
+							4: g.vec("vec4f", x ?? 0, y ?? 0, z ?? 0, w ?? 0),
+						});
 						return { Distorted: g.add(padded, g.mul(offset, amount)) };
 					},
 				),

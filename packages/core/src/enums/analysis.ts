@@ -10,11 +10,11 @@ import {
 export const MATCH = "match";
 export const MATCH_SELECTOR = "selector";
 
-export const COMPONENT_COUNT = "component-count";
-export const COMPONENT_COUNT_INPUT = "value";
+export const WIDTH_SWITCH = "width-switch";
+export const WIDTH_SWITCH_VALUE = "value";
 
-/** The enum a Component Count node's output carries: one variant per width. */
-export const COMPONENT_COUNTS: readonly EnumVariant[] = [
+/** A Width Switch node's cases: one per component count. */
+export const WIDTHS: readonly EnumVariant[] = [
 	{ value: 1, label: "Scalar" },
 	{ value: 2, label: "Vector 2" },
 	{ value: 3, label: "Vector 3" },
@@ -44,8 +44,8 @@ export type EnumDocument = {
 	/** The inputs of the group the document is, which its Group Input nodes show. */
 	inputs: readonly GroupHandleDef[];
 	/**
-	 * The type an input of a node resolves to, for values computed from
-	 * types (Component Count). Without it those values aren't known.
+	 * The type an input of a node resolves to, for the case a Width Switch
+	 * picks. Without it every case is used.
 	 */
 	inputType?: (nodeId: string, inputId: string) => WgslType | undefined;
 };
@@ -58,9 +58,8 @@ function feed(doc: EnumDocument, nodeId: string, inputId: string) {
 }
 
 /**
- * The enum an output carries: that of a group input's enum handle or a
- * Component Count node, through nodes passing values unchanged. Undefined
- * for any other value.
+ * The enum an output carries: that of a group input's enum handle, through
+ * nodes passing values unchanged. Undefined for any other value.
  */
 export function enumOfOutput(
 	doc: EnumDocument,
@@ -71,7 +70,6 @@ export function enumOfOutput(
 	if (node?.type === "group-input") {
 		return doc.inputs.find((h) => h.id === handleId)?.variants;
 	}
-	if (node?.type === COMPONENT_COUNT) return COMPONENT_COUNTS;
 	const through = PASS_THROUGH[node?.type ?? ""];
 	return through ? enumAt(doc, nodeId, through) : undefined;
 }
@@ -88,8 +86,7 @@ export function enumAt(
 
 /**
  * The value an input has while compiling, when it comes from a group input
- * whose value is known (`constants` holds those, by handle id) or from a
- * Component Count node.
+ * whose value is known (`constants` holds those, by handle id).
  */
 export function constantAt(
 	doc: EnumDocument,
@@ -101,10 +98,6 @@ export function constantAt(
 	if (!edge) return undefined;
 	const source = doc.nodesById.get(edge.source);
 	if (source?.type === "group-input") return constants.get(edge.sourceHandle);
-	if (source?.type === COMPONENT_COUNT) {
-		const type = doc.inputType?.(edge.source, COMPONENT_COUNT_INPUT);
-		return type && typeComponents(type);
-	}
 	const through = PASS_THROUGH[source?.type ?? ""];
 	return through ? constantAt(doc, edge.source, through, constants) : undefined;
 }
@@ -126,9 +119,16 @@ export function matchedCase(
 	return variant && caseHandle(variant.value);
 }
 
+/** The case input a Width Switch node uses: that of its value's component count. */
+export function widthCase(doc: EnumDocument, nodeId: string): string | undefined {
+	const type = doc.inputType?.(nodeId, WIDTH_SWITCH_VALUE);
+	return type && caseHandle(typeComponents(type));
+}
+
 /**
  * `edges` without those whose value is never used while compiling with
- * `constants`: links into the cases a Match node doesn't pick.
+ * `constants`: links into the cases a Match or Width Switch node doesn't
+ * pick.
  */
 export function liveEdges<E extends GraphDocumentEdge>(
 	doc: EnumDocument,
@@ -136,11 +136,16 @@ export function liveEdges<E extends GraphDocumentEdge>(
 	constants: ReadonlyMap<string, number>,
 ): E[] {
 	const picked = new Map<string, string | undefined>();
+	const pick = (nodeId: string, type: string | undefined) => {
+		if (type === MATCH) return matchedCase(doc, nodeId, constants);
+		if (type === WIDTH_SWITCH) return widthCase(doc, nodeId);
+		return undefined;
+	};
 	return edges.filter((e) => {
-		if (!isCaseHandle(e.targetHandle) || doc.nodesById.get(e.target)?.type !== MATCH) {
-			return true;
+		if (!isCaseHandle(e.targetHandle)) return true;
+		if (!picked.has(e.target)) {
+			picked.set(e.target, pick(e.target, doc.nodesById.get(e.target)?.type));
 		}
-		if (!picked.has(e.target)) picked.set(e.target, matchedCase(doc, e.target, constants));
 		const chosen = picked.get(e.target);
 		return chosen === undefined || chosen === e.targetHandle;
 	});

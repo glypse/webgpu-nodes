@@ -219,11 +219,7 @@ export const simplexOrientation = group({
 					[SMOOTH]: pick(orientation4d, hyper(SMOOTH), 4),
 				}),
 		);
-		const lattice = g.match(
-			g.componentCount(vector),
-			{ 1: g.vec("vec4f", vector, 0, 0, 0), 2: plane, 3: space, 4: fourD },
-			"vec4f",
-		);
+		const lattice = g.widthSwitch(vector, { 1: vector, 2: plane, 3: space, 4: fourD });
 		g.output("lattice", lattice, t, { label: "Lattice Position" });
 	},
 });

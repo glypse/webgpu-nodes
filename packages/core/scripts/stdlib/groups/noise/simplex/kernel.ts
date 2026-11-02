@@ -81,11 +81,7 @@ export const latticeGradient = group({
 				);
 			},
 		);
-		const gradient = g.match(
-			g.componentCount(vertex),
-			{ 1: g.vec("vec4f", line, 0, 0, 0), 2: plane, 3: space, 4: hyper },
-			"vec4f",
-		);
+		const gradient = g.widthSwitch(vertex, { 1: line, 2: plane, 3: space, 4: hyper });
 		g.output("gradient", gradient, t, { label: "Gradient" });
 	},
 });

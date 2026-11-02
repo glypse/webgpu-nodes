@@ -6,9 +6,9 @@
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-lattice-neighbor@1ee7867fbed39b",
-		"std-voronoi-point@0f23ded1433eed",
-		"std-voronoi-distance@0bf9f8667f1269"
+		"std-lattice-neighbor@00261a88c1423c",
+		"std-voronoi-point@0bfee95a7f94f4",
+		"std-voronoi-distance@0180c4aa500792"
 	],
 	"definition": {
 		"nodes": [
@@ -37,7 +37,7 @@
 					"y": 315
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1ee7867fbed39b",
+					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -96,7 +96,7 @@
 					"y": 238
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@1ee7867fbed39b",
+					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -147,7 +147,7 @@
 					"y": 423
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0f23ded1433eed",
+					"definitionRef": "std-voronoi-point@0bfee95a7f94f4",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -161,7 +161,7 @@
 					"y": 657
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0bf9f8667f1269",
+					"definitionRef": "std-voronoi-distance@0180c4aa500792",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"

@@ -7,11 +7,11 @@
 	"searchSection": "Helpers",
 	"dependencies": [
 		"std-noise-coordinates@099ff8c499b858",
-		"std-voronoi-nearest@0d890ee0e570e2",
-		"std-hash@1b6519412c054e",
-		"std-voronoi-smooth@02243b0b8616e5",
-		"std-voronoi-edges@1ad79f4231c545",
-		"std-voronoi-radius@02232c18bc6868"
+		"std-voronoi-nearest@1d722c208add8d",
+		"std-hash@195359940b5270",
+		"std-voronoi-smooth@04012c3e9902b8",
+		"std-voronoi-edges@170764a71f4576",
+		"std-voronoi-radius@08cda1a95cdbca"
 	],
 	"definition": {
 		"nodes": [
@@ -233,7 +233,7 @@
 					"y": 1479
 				},
 				"group": {
-					"definitionRef": "std-voronoi-nearest@0d890ee0e570e2",
+					"definitionRef": "std-voronoi-nearest@1d722c208add8d",
 					"locked": true
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
@@ -331,7 +331,7 @@
 					"y": 798
 				},
 				"group": {
-					"definitionRef": "std-hash@1b6519412c054e",
+					"definitionRef": "std-hash@195359940b5270",
 					"locked": true
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
@@ -433,7 +433,7 @@
 					"y": 1271
 				},
 				"group": {
-					"definitionRef": "std-hash@1b6519412c054e",
+					"definitionRef": "std-hash@195359940b5270",
 					"locked": true
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
@@ -479,7 +479,7 @@
 					"y": 406
 				},
 				"group": {
-					"definitionRef": "std-voronoi-smooth@02243b0b8616e5",
+					"definitionRef": "std-voronoi-smooth@04012c3e9902b8",
 					"locked": true
 				},
 				"frame": "61670854-a246-4f4f-b7ac-94d2ae6bd943"
@@ -596,7 +596,7 @@
 					"y": 1193
 				},
 				"group": {
-					"definitionRef": "std-voronoi-edges@1ad79f4231c545",
+					"definitionRef": "std-voronoi-edges@170764a71f4576",
 					"locked": true
 				},
 				"frame": "19e41e74-664b-4c13-a392-8b8a2b6e425f"
@@ -646,7 +646,7 @@
 					"y": 2223
 				},
 				"group": {
-					"definitionRef": "std-voronoi-radius@02232c18bc6868",
+					"definitionRef": "std-voronoi-radius@08cda1a95cdbca",
 					"locked": true
 				},
 				"frame": "eff7025e-eb2e-4df5-a69c-7e9241344111"

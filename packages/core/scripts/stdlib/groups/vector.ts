@@ -26,8 +26,8 @@ export const padVector = group({
 				note: "Zeros past the vector's own components:\na scalar would be spread into all four.",
 			},
 			() => {
-				const padded = g.match(
-					g.componentCount(vector),
+				const padded = g.widthSwitch(
+					vector,
 					{ 1: g.vec("vec4f", vector, 0, 0, 0), 2: vector, 3: vector, 4: vector },
 					"vec4f",
 				);
@@ -49,7 +49,7 @@ export const componentSum = group({
 		const { vector } = vectorInput(g);
 		// WGSL's dot takes no scalars.
 		const dot = g.dot(vector, 1);
-		const sum = g.match(g.componentCount(vector), { 1: vector, 2: dot, 3: dot, 4: dot }, "f32");
+		const sum = g.widthSwitch(vector, { 1: vector, 2: dot, 3: dot, 4: dot });
 		g.output("sum", sum, "f32", { label: "Sum" });
 	},
 });
@@ -67,11 +67,12 @@ export const maxComponent = group({
 		// Split padded so every width finds its components on the same node.
 		const { padded } = g.call(padVector, { vector });
 		const { x, y, z, w } = g.separateVector(padded);
-		const max = g.match(
-			g.componentCount(vector),
-			{ 1: vector, 2: g.max(x, y), 3: g.max(x, y, z), 4: g.max(x, y, z, w) },
-			"f32",
-		);
+		const max = g.widthSwitch(vector, {
+			1: vector,
+			2: g.max(x, y),
+			3: g.max(x, y, z),
+			4: g.max(x, y, z, w),
+		});
 		g.output("max", max, "f32", { label: "Max" });
 	},
 });

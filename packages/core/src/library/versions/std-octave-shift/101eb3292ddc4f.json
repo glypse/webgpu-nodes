@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-hash@1b6519412c054e"],
+	"dependencies": ["std-hash@195359940b5270"],
 	"definition": {
 		"nodes": [
 			{
@@ -29,7 +29,7 @@
 					"y": 90
 				},
 				"group": {
-					"definitionRef": "std-hash@1b6519412c054e",
+					"definitionRef": "std-hash@195359940b5270",
 					"locked": true
 				},
 				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"

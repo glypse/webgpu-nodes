@@ -14,8 +14,8 @@
 	"category": "texture",
 	"dependencies": [
 		"std-noise-coordinates@099ff8c499b858",
-		"std-noise-distortion@15488deb7b833a",
-		"std-fractal-noise-octaves@1aeb20aed9be93"
+		"std-noise-distortion@06fbd2110fb08d",
+		"std-fractal-noise-octaves@0b4bac3f9ebb51"
 	],
 	"definition": {
 		"nodes": [
@@ -76,7 +76,7 @@
 					"y": 528
 				},
 				"group": {
-					"definitionRef": "std-noise-distortion@15488deb7b833a",
+					"definitionRef": "std-noise-distortion@06fbd2110fb08d",
 					"locked": true
 				},
 				"frame": "761db6fc-8e52-40b2-b6a4-e01eefd37ba7"
@@ -115,7 +115,7 @@
 					"y": 74
 				},
 				"group": {
-					"definitionRef": "std-fractal-noise-octaves@1aeb20aed9be93",
+					"definitionRef": "std-fractal-noise-octaves@0b4bac3f9ebb51",
 					"locked": true
 				},
 				"frame": "f8533d52-9c44-4469-b185-a67c4f2ff55a"
@@ -211,7 +211,7 @@
 					"y": 869
 				},
 				"group": {
-					"definitionRef": "std-fractal-noise-octaves@1aeb20aed9be93",
+					"definitionRef": "std-fractal-noise-octaves@0b4bac3f9ebb51",
 					"locked": true
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
@@ -259,7 +259,7 @@
 					"y": 1446
 				},
 				"group": {
-					"definitionRef": "std-fractal-noise-octaves@1aeb20aed9be93",
+					"definitionRef": "std-fractal-noise-octaves@0b4bac3f9ebb51",
 					"locked": true
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"

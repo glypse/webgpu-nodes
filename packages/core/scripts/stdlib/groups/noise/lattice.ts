@@ -33,8 +33,8 @@ export const hash = group({
 				note: "Zeros past the value's own components, so a cell hashes\nthe same whatever its dimensions; a scalar would be spread.",
 			},
 			() =>
-				g.match(
-					g.componentCount(value),
+				g.widthSwitch(
+					value,
 					{ 1: g.vec("vec4i", value, 0, 0, 0), 2: value, 3: value, 4: value },
 					"vec4i",
 				),
@@ -86,7 +86,7 @@ export const latticeNeighbor = group({
 		const side2 = g.mul(side, side);
 		const side3 = g.mul(side2, side);
 		const side4 = g.mul(side3, side);
-		const count = g.match(g.componentCount(cell), { 1: side, 2: side2, 3: side3, 4: side4 });
+		const count = g.widthSwitch(cell, { 1: side, 2: side2, 3: side3, 4: side4 });
 		const { offset } = g.frame(
 			"Offset",
 			{

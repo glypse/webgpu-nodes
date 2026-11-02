@@ -5,11 +5,10 @@ import { createHash } from "node:crypto";
 
 import {
 	caseHandle,
-	COMPONENT_COUNT,
-	COMPONENT_COUNT_INPUT,
-	COMPONENT_COUNTS,
 	MATCH,
 	MATCH_SELECTOR,
+	WIDTH_SWITCH,
+	WIDTH_SWITCH_VALUE,
 } from "../../src/enums";
 import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
 import { rerouteBranches } from "../../src/graph/branches";
@@ -179,7 +178,7 @@ const OWN_NODES = [
 	MATCH,
 	INDEX_SWITCH,
 	CUSTOM_WGSL,
-	COMPONENT_COUNT,
+	WIDTH_SWITCH,
 	"test-invalid-wgsl",
 	"test-runtime-error",
 ] as const satisfies Registered[];
@@ -531,12 +530,21 @@ class Builder<I extends string, O extends string> {
 		);
 	}
 
-	/** How many components `v`'s type has, as an enum known while compiling. */
-	componentCount(v: Operand): EnumRef {
-		return {
-			...this.node(COMPONENT_COUNT, { [COMPONENT_COUNT_INPUT]: v }),
-			variants: COMPONENT_COUNTS,
-		};
+	/**
+	 * The case of `cases` (by component count) `value`'s type picks; with
+	 * `type`, every case is converted to it.
+	 */
+	widthSwitch(value: Operand, cases: Record<1 | 2 | 3 | 4, Operand>, type?: WgslType): Ref {
+		const handles = Object.keys(cases).map((n) => caseHandle(Number(n)));
+		const ref = this.node(
+			WIDTH_SWITCH,
+			{ [WIDTH_SWITCH_VALUE]: value },
+			type ? { data: { types: Object.fromEntries(handles.map((h) => [h, type])) } } : {},
+		);
+		for (const [n, operand] of Object.entries(cases)) {
+			this.feed(ref.node, caseHandle(Number(n)), operand);
+		}
+		return ref;
 	}
 
 	/** The case of `cases` (by variant value) `selector` picks; `type` when no case decides it. */

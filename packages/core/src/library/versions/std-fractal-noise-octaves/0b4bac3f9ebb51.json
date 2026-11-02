@@ -7,8 +7,8 @@
 	"searchSection": "Helpers",
 	"dependencies": [
 		"std-fractal-octave@009987a5825aa9",
-		"std-octave-shift@0253e4b52a0a00",
-		"std-opensimplex-noise@0db7e8a661969e"
+		"std-octave-shift@101eb3292ddc4f",
+		"std-opensimplex-noise@09e97e683bc5c3"
 	],
 	"definition": {
 		"nodes": [
@@ -145,7 +145,7 @@
 					"y": 1962
 				},
 				"group": {
-					"definitionRef": "std-octave-shift@0253e4b52a0a00",
+					"definitionRef": "std-octave-shift@101eb3292ddc4f",
 					"locked": true
 				},
 				"frame": "6935b937-4fc5-4b6f-9336-6fa5f90e06cc"
@@ -159,7 +159,7 @@
 					"y": 3112
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@0db7e8a661969e",
+					"definitionRef": "std-opensimplex-noise@09e97e683bc5c3",
 					"locked": true
 				},
 				"frame": "6935b937-4fc5-4b6f-9336-6fa5f90e06cc"

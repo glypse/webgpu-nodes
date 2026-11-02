@@ -33,7 +33,7 @@ export function metricInputs(g: GroupBuilder): { metric: EnumRef; exponent: Ref 
 export function farthestInCell(
 	g: GroupBuilder,
 	{ metric, exponent }: { metric: EnumRef; exponent: Ref },
-	dimensions: EnumRef,
+	dimensions: Ref,
 	reach: Ref,
 ): Ref {
 	const n = g.toFloat(dimensions);
@@ -109,7 +109,7 @@ export const voronoiBisector = group({
 				note: "For each sign pattern σ the far point is ahead of the near one along,\n(|far|₁ + σ·near) / 2: the least is the distance.",
 			},
 			() => {
-				const patterns = g.match(dimensions, {
+				const patterns = g.widthSwitch(a, {
 					1: int(2),
 					2: int(4),
 					3: int(8),
