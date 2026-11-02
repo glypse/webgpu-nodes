@@ -92,7 +92,17 @@ export type InputOptions = {
 	display?: ColorDisplay;
 	/** Shown only while this variant of one of the group's enum inputs is picked. */
 	owner?: { enum: EnumRef; value: number };
+	typeOwner?: TypeOwnerOption;
 };
+
+/** Shown only while the type variable `variable` has one of `types`. */
+export type TypeOwnerOption = { variable: VariableType; types: readonly WgslType[] };
+
+function typeOwnerOf(option: TypeOwnerOption | undefined) {
+	return option
+		? { typeOwner: { variable: option.variable.variable, types: [...option.types] } }
+		: {};
+}
 
 export function isRef(operand: Operand | undefined): operand is Ref {
 	return typeof operand === "object" && "node" in operand && "handle" in operand;
@@ -281,6 +291,7 @@ export class GroupBuilder {
 			...(options.min === undefined ? {} : { min: options.min }),
 			...(options.max === undefined ? {} : { max: options.max }),
 			...(options.display ? { display: options.display } : {}),
+			...typeOwnerOf(options.typeOwner),
 		});
 		if (options.default !== undefined) this.inputValues[id] = options.default;
 		return { node: GROUP_INPUT, handle: id };
@@ -291,12 +302,18 @@ export class GroupBuilder {
 		key: string,
 		variants: readonly (readonly [number, string])[],
 		initial: number,
-		options: { label?: string } = {},
+		options: { label?: string; typeOwner?: TypeOwnerOption } = {},
 	): EnumRef {
 		const id = handleId(this.id, "in", key);
 		this.inputKeys.set(key, id);
 		const list = variants.map(([value, label]) => ({ value, label }));
-		this.inputs.push({ id, label: options.label ?? key, type: "u32", variants: list });
+		this.inputs.push({
+			id,
+			label: options.label ?? key,
+			type: "u32",
+			variants: list,
+			...typeOwnerOf(options.typeOwner),
+		});
 		this.inputValues[id] = initial;
 		return { node: GROUP_INPUT, handle: id, variants: list };
 	}

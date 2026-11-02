@@ -1,7 +1,7 @@
-import type { HandleDef, InputOwner } from "../types";
+import type { HandleDef, InputOwner, TypeBindings, TypeOwner } from "../types";
 
 /** What enums need of a handle, whatever its type. */
-type Owned = Pick<HandleDef, "id" | "owner" | "variants">;
+type Owned = Pick<HandleDef, "id" | "owner" | "variants" | "typeOwner">;
 
 /** The variants `handle` lies under, nearest first: its owner, its enum's owner… */
 export function ownerChain(handles: readonly Owned[], handle: Owned): InputOwner[] {
@@ -32,30 +32,53 @@ export function ownerExists(handles: readonly Owned[], owner: InputOwner | undef
 	return !!enumHandle?.variants?.some((v) => v.value === owner?.value);
 }
 
+/** The type owners of `handle` and of the enums it lies under. */
+function typeOwners(handles: readonly Owned[], handle: Owned): TypeOwner[] {
+	const enums = ownerChain(handles, handle).map((o) => handles.find((h) => h.id === o.enumId));
+	return [handle, ...enums].flatMap((h) => (h?.typeOwner ? [h.typeOwner] : []));
+}
+
 /**
- * The inputs a group node doesn't show with its enums on `values`: those
- * under a variant one of them isn't on. An enum whose value is unknown (a
- * link computing it) shows all its variants' inputs.
+ * The inputs a group node doesn't show with its enums on `values` and its
+ * type variables bound to `bindings`: those under a variant one of them
+ * isn't on, or owned by types its variable doesn't have (or under an enum
+ * that is). An enum whose value is unknown (a link computing it) shows all
+ * its variants' inputs.
  */
-export function hiddenByVariant(
+export function hiddenInputsOf(
 	handles: readonly Owned[],
 	values: ReadonlyMap<string, number>,
+	bindings: TypeBindings = {},
 ): Set<string> {
 	const hidden = new Set<string>();
 	for (const handle of handles) {
-		const off = ownerChain(handles, handle).some((o) => {
+		const offVariant = ownerChain(handles, handle).some((o) => {
 			const value = values.get(o.enumId);
 			return value !== undefined && value !== o.value;
 		});
-		if (off) hidden.add(handle.id);
+		const offType = typeOwners(handles, handle).some((o) => {
+			const type = bindings[o.variable];
+			return type !== undefined && !o.types.includes(type);
+		});
+		if (offVariant || offType) hidden.add(handle.id);
 	}
 	return hidden;
 }
 
-/** Whether two inputs are never shown together: they lie under different variants of an enum. */
+/**
+ * Whether two inputs are never shown together: they lie under different
+ * variants of an enum, or are owned by none of the same types of a variable.
+ */
 export function shownApart(handles: readonly Owned[], a: Owned, b: Owned): boolean {
 	const of = ownerChain(handles, b);
-	return ownerChain(handles, a).some((o) =>
+	const variants = ownerChain(handles, a).some((o) =>
 		of.some((p) => p.enumId === o.enumId && p.value !== o.value),
 	);
+	const typesOfB = typeOwners(handles, b);
+	const types = typeOwners(handles, a).some((o) =>
+		typesOfB.some(
+			(p) => p.variable === o.variable && !p.types.some((t) => o.types.includes(t)),
+		),
+	);
+	return variants || types;
 }

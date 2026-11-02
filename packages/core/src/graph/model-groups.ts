@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 import {
 	groupConstants,
-	hiddenByVariant,
+	hiddenInputsOf,
 	isUnder,
 	ownerChain,
 	ownerExists,
@@ -18,6 +18,7 @@ import {
 	type InputValue,
 	type NodeData,
 	type SocketType,
+	type TypeOwner,
 	type TypeVariable,
 	type WgslType,
 	type ZoneItem,
@@ -876,16 +877,21 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * The inputs a group node doesn't show: those under a variant of one of
-	 * its enums other than the one it's on. Their links stay, unused, for
-	 * when that variant is picked again.
+	 * The inputs a group node doesn't show, seen from `path`: those under a
+	 * variant of one of its enums other than the one it's on, or owned by
+	 * types its variables don't have there. Their links stay, unused, for
+	 * when that variant or type is picked again.
 	 */
-	hiddenInputs(nodeId: string): Set<string> {
+	hiddenInputs(nodeId: string, path: readonly string[] = this.path): Set<string> {
 		const node = this.resolveNode(nodeId);
 		const def = node?.group && this.project.definitions.get(node.group.definitionRef);
 		const doc = this.documentOf(nodeId);
 		if (node?.type !== "node-group" || !def || !doc) return new Set();
-		return hiddenByVariant(def.inputs, this.instanceEnumValues(node));
+		return hiddenInputsOf(
+			def.inputs,
+			this.instanceEnumValues(node),
+			this.typesOf(node, path).bindings,
+		);
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
@@ -964,6 +970,38 @@ export abstract class GroupModel extends ZoneModel {
 			return display ? { ...rest, display } : rest;
 		});
 		if (changed) this.rebuildTypeCache();
+	}
+
+	/**
+	 * Show a group input only while one of the group's type variables has
+	 * one of some types, or whatever the types with `undefined`.
+	 */
+	setHandleTypeOwner(definitionRef: string, handleId: string, typeOwner: TypeOwner | undefined) {
+		const def = this.project.definitions.get(definitionRef);
+		const variable = def?.typeVariables.find((v) => v.id === typeOwner?.variable);
+		if (!def || (typeOwner && !variable)) return;
+		const owner = typeOwner && fitTypeOwner(typeOwner, variable?.types ?? []);
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			const rest = { ...h };
+			delete rest.typeOwner;
+			return owner ? { ...rest, typeOwner: owner } : rest;
+		});
+		if (changed) this.rebuildTypeCache();
+	}
+
+	/** Fit the inputs' type owners to the group's type variables, as they now are. */
+	private fitTypeOwners(def: HydratedGraphDocument) {
+		const fitted = (h: GroupHandleDef): GroupHandleDef => {
+			if (!h.typeOwner) return h;
+			const variable = def.typeVariables.find((v) => v.id === h.typeOwner?.variable);
+			const owner = variable && fitTypeOwner(h.typeOwner, variable.types);
+			const rest = { ...h };
+			delete rest.typeOwner;
+			return owner ? { ...rest, typeOwner: owner } : rest;
+		};
+		if (def.inputs.some((h) => h.typeOwner)) {
+			this.setInterface(def, "input", def.inputs.map(fitted));
+		}
 	}
 
 	/**
@@ -1074,6 +1112,7 @@ export abstract class GroupModel extends ZoneModel {
 				};
 			});
 		}
+		if (patch.types) this.fitTypeOwners(def);
 		this.rebuildTypeCache();
 		if (patch.types)
 			this.dropUnfitLinks(definitionRef, this.handlesOfVariable(def, variableId));
@@ -1115,6 +1154,7 @@ export abstract class GroupModel extends ZoneModel {
 			indexDocument(def);
 		}
 		def.typeVariables = def.typeVariables.filter((v) => v.id !== variableId);
+		this.fitTypeOwners(def);
 		this.forEachInstance(definitionRef, (node) =>
 			node.data.types?.[variableId]
 				? {
@@ -1355,4 +1395,15 @@ export abstract class GroupModel extends ZoneModel {
 			indexDocument(doc);
 		}
 	}
+}
+
+/**
+ * `owner` within the types its variable may take, or undefined once it
+ * owns none of them, or all: either way it hides nothing.
+ */
+function fitTypeOwner(owner: TypeOwner, allowed: readonly WgslType[]): TypeOwner | undefined {
+	const types = allowed.filter((t) => owner.types.includes(t));
+	return types.length === 0 || types.length === allowed.length
+		? undefined
+		: { variable: owner.variable, types };
 }

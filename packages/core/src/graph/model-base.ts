@@ -711,7 +711,7 @@ export abstract class GraphModelBase {
 	 * A node's types as seen from `path` (the active one by default): cached,
 	 * or computed on the fly for a node not cached yet.
 	 */
-	private typesOf(node: GraphNode, path: readonly string[] = this.path): ResolvedTypes {
+	protected typesOf(node: GraphNode, path: readonly string[] = this.path): ResolvedTypes {
 		const cached = this.typesAt(path).get(node.id);
 		if (cached) return cached;
 		return this.typeResolver.resolveNodeTypes(

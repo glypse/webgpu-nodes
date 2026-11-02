@@ -52,7 +52,7 @@ A repeat zone is a `repeat-input` / `repeat-output` node pair: the output owns t
 
 ## Group interface
 
-A group's inputs, outputs and input defaults live on its definition (`inputs`, `outputs`, `defaults`), edited by side (`GroupSide`); its Group Input and Group Output nodes are views of them, any number of each. An output is linked on one Group Output node at a time (`connect` enforces it), and codegen reads each output from the node it's linked on.
+A group's inputs, outputs and input defaults live on its definition (`inputs`, `outputs`, `defaults`), edited by side (`GroupSide`); its Group Input and Group Output nodes are views of them, any number of each. An output is linked on one Group Output node at a time (`connect` enforces it), and codegen reads each output from the node it's linked on. An input can belong to a variant of an enum input (`owner`) or to some types of a type variable (`typeOwner`): group nodes hide it otherwise (`hiddenInputsOf`), keeping its links.
 
 ## Frames
 

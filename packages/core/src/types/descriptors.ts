@@ -21,6 +21,13 @@ export type HandleDef = {
 	 */
 	owner?: InputOwner;
 	/**
+	 * On a group input: the types of one of the group's type variables it's
+	 * shown for. Group nodes hide it (and, for an enum, its variants' inputs)
+	 * while that variable has another type, so each type can have inputs of
+	 * its own.
+	 */
+	typeOwner?: TypeOwner;
+	/**
 	 * On a numeric group input: the range its value is kept within while
 	 * edited on group nodes. Linked values pass as they are.
 	 */
@@ -93,6 +100,9 @@ export type EnumVariant = { value: number; label: string };
 
 /** A variant of a group's enum input, by the input's handle id and the variant's value. */
 export type InputOwner = { enumId: string; value: number };
+
+/** Some of the types of a group's type variable, by the variable's id. */
+export type TypeOwner = { variable: string; types: WgslType[] };
 
 export type NodeInputDef = {
 	/** Stable port identifier. Doubles as the UI handle id and the key edges reference. */

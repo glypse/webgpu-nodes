@@ -74,7 +74,7 @@
 
 	/** Only the linked sockets are shown (Ctrl+H). */
 	const onlyLinked = $derived(data.hideUnlinked === true);
-	const hiddenInputs = $derived(graph.hiddenInputs(id));
+	const hiddenInputs = $derived(graph.hiddenInputs(id, view.path));
 	const inputs = $derived(
 		graph
 			.resolveNodeInputs(id, view.path)

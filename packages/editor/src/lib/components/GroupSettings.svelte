@@ -21,7 +21,7 @@
 		WGSL_TYPES,
 		type WgslType,
 	} from "$core";
-	import { Button, DropdownMenu, Input, Scrubbable, Select } from "$theme";
+	import { Button, DropdownMenu, Input, Scrubbable, Select, ToggleGroup } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
@@ -301,6 +301,30 @@
 				}}
 			/>
 		</div>
+
+		{#each variables as variable (variable.id)}
+			{@const owner = handle.typeOwner}
+			<div class="flex flex-col gap-1">
+				<span class="text-muted-foreground text-xs">Shown while {variable.name} is</span>
+				<ToggleGroup.Root
+					type="multiple"
+					size="sm"
+					disabled={locked || (owner !== undefined && owner.variable !== variable.id)}
+					value={owner?.variable === variable.id ? owner.types : [...variable.types]}
+					onValueChange={(types: string[]) => {
+						if (!definitionRef) return;
+						graph.setHandleTypeOwner(definitionRef, handle.id, {
+							variable: variable.id,
+							types: variable.types.filter((t) => types.includes(t)),
+						});
+					}}
+				>
+					{#each variable.types as type (type)}
+						<ToggleGroup.Item value={type}>{type}</ToggleGroup.Item>
+					{/each}
+				</ToggleGroup.Root>
+			</div>
+		{/each}
 
 		{#if !handle.variants && !handle.display && typeKind(typeOf(handle)) !== "bool"}
 			<div class="flex flex-col gap-1">

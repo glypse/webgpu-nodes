@@ -53,8 +53,8 @@
 		return between ? bezierMidpointAngle(sourceX, sourceY, targetX, targetY) : null;
 	});
 
-	/** Links into the inputs of a variant the node isn't on are kept but not drawn. */
-	const parked = $derived(graph.hiddenInputs(target).has(targetHandleId ?? ""));
+	/** Links into the inputs the node doesn't show (another variant's or type's) are kept but not drawn. */
+	const parked = $derived(graph.hiddenInputs(target, view.path).has(targetHandleId ?? ""));
 
 	/** Links breaking zone rules are drawn red and ignored by codegen. */
 	const invalid = $derived(graph.isEdgeInvalid(id));

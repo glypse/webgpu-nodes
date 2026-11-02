@@ -23,6 +23,9 @@ const HandleFields = {
 	label: v.string(),
 	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
 	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
+	typeOwner: v.optional(
+		v.object({ variable: v.string(), types: v.array(v.picklist(WGSL_TYPES)) }),
+	),
 	min: v.optional(v.number()),
 	max: v.optional(v.number()),
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),
