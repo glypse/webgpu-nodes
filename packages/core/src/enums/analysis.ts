@@ -23,6 +23,9 @@ export const WIDTHS: readonly EnumVariant[] = [
 
 const CASE_PREFIX = "case-";
 
+/** The family of a Match or Index Switch node's cases: one type for all of them. */
+export const CASES_FAMILY = "cases";
+
 /** The input of a Match node taking the value of one variant. */
 export function caseHandle(value: number): string {
 	return `${CASE_PREFIX}${String(value)}`;

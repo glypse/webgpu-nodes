@@ -5,6 +5,7 @@ import { createHash } from "node:crypto";
 
 import {
 	caseHandle,
+	CASES_FAMILY,
 	MATCH,
 	MATCH_SELECTOR,
 	WIDTH_SWITCH,
@@ -24,7 +25,6 @@ import {
 import {
 	type ColorDisplay,
 	type EnumVariant,
-	familyKey,
 	type GroupHandleDef,
 	type InputValue,
 	type NodeData,
@@ -32,7 +32,6 @@ import {
 	type NodeWidget,
 	type SocketType,
 	type TypeVariable,
-	WGSL_TYPES,
 	type WgslType,
 	type ZoneItem,
 } from "../../src/types";
@@ -562,7 +561,7 @@ class Builder<I extends string, O extends string> {
 		const ref = this.node(
 			MATCH,
 			{ [MATCH_SELECTOR]: selector },
-			type ? { data: { types: { [familyKey(WGSL_TYPES)]: type } } } : {},
+			type ? { data: { types: { [CASES_FAMILY]: type } } } : {},
 		);
 		for (const [value, operand] of Object.entries(cases)) {
 			this.feed(ref.node, caseHandle(Number(value)), operand);
@@ -575,7 +574,7 @@ class Builder<I extends string, O extends string> {
 		const ref = this.node(
 			INDEX_SWITCH,
 			{ [INDEX_SWITCH_INDEX]: index },
-			{ data: { cases: cases.length, types: { [familyKey(WGSL_TYPES)]: type } } },
+			{ data: { cases: cases.length, types: { [CASES_FAMILY]: type } } },
 		);
 		cases.forEach((operand, i) => {
 			this.feed(ref.node, caseHandle(i), operand);

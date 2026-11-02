@@ -524,7 +524,8 @@ export abstract class GraphModelBase {
 		}
 
 		// If the target has a node-wide override, validate against that specific type
-		const overrideType = targetNode.data.types?.[inputFamilyKey(targetInputDef)];
+		const overrideType =
+			targetNode.data.types?.[inputFamilyKey(targetInputDef, targetDescriptor.inputs)];
 		if (overrideType) return isConnectionCompatible(sourceType, overrideType);
 
 		// Valid if the source can be converted to any type within the family

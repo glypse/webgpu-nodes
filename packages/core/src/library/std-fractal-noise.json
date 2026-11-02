@@ -14,8 +14,8 @@
 	"category": "texture",
 	"dependencies": [
 		"std-noise-coordinates@099ff8c499b858",
-		"std-noise-distortion@16059a47a3a302",
-		"std-fractal-noise-octaves@0fe9cde318a00f"
+		"std-noise-distortion@0aa025ada4280e",
+		"std-fractal-noise-octaves@08724997071465"
 	],
 	"definition": {
 		"nodes": [
@@ -28,7 +28,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 23
+					"y": 0
 				}
 			},
 			{
@@ -36,8 +36,8 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 234,
-					"y": 169
+					"x": 224,
+					"y": 90
 				},
 				"group": {
 					"definitionRef": "std-noise-coordinates@099ff8c499b858",
@@ -53,7 +53,7 @@
 				},
 				"position": {
 					"x": 24,
-					"y": 258
+					"y": 190
 				},
 				"frame": "761db6fc-8e52-40b2-b6a4-e01eefd37ba7"
 			},
@@ -62,8 +62,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 434,
-					"y": 177
+					"x": 424,
+					"y": 98
 				},
 				"frame": "761db6fc-8e52-40b2-b6a4-e01eefd37ba7"
 			},
@@ -72,11 +72,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 654,
-					"y": 113
+					"x": 624,
+					"y": 118
 				},
 				"group": {
-					"definitionRef": "std-noise-distortion@16059a47a3a302",
+					"definitionRef": "std-noise-distortion@0aa025ada4280e",
 					"locked": true
 				},
 				"frame": "761db6fc-8e52-40b2-b6a4-e01eefd37ba7"
@@ -89,8 +89,8 @@
 					"hideLinks": true
 				},
 				"position": {
-					"x": 854,
-					"y": 245
+					"x": 824,
+					"y": 250
 				},
 				"frame": "761db6fc-8e52-40b2-b6a4-e01eefd37ba7"
 			},
@@ -102,8 +102,8 @@
 					"note": "The octaves, combined as Type does."
 				},
 				"position": {
-					"x": 1030,
-					"y": 63
+					"x": 1000,
+					"y": 68
 				}
 			},
 			{
@@ -111,11 +111,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1254,
-					"y": 137
+					"x": 1224,
+					"y": 142
 				},
 				"group": {
-					"definitionRef": "std-fractal-noise-octaves@0fe9cde318a00f",
+					"definitionRef": "std-fractal-noise-octaves@08724997071465",
 					"locked": true
 				},
 				"frame": "f8533d52-9c44-4469-b185-a67c4f2ff55a"
@@ -127,8 +127,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1054,
-					"y": 265
+					"x": 1024,
+					"y": 270
 				},
 				"frame": "f8533d52-9c44-4469-b185-a67c4f2ff55a"
 			},
@@ -139,8 +139,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1492,
-					"y": 205
+					"x": 1462,
+					"y": 210
 				},
 				"frame": "f8533d52-9c44-4469-b185-a67c4f2ff55a"
 			},
@@ -152,8 +152,8 @@
 					"note": "Fac and two more fractal noises, seeded apart."
 				},
 				"position": {
-					"x": 1798,
-					"y": 0
+					"x": 1768,
+					"y": 5
 				}
 			},
 			{
@@ -171,8 +171,8 @@
 					}
 				},
 				"position": {
-					"x": 2072,
-					"y": 622
+					"x": 2022,
+					"y": 627
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -185,8 +185,8 @@
 					}
 				},
 				"position": {
-					"x": 2272,
-					"y": 530
+					"x": 2222,
+					"y": 535
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -197,8 +197,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1822,
-					"y": 102
+					"x": 1792,
+					"y": 79
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -207,11 +207,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 2602,
-					"y": 956
+					"x": 2552,
+					"y": 961
 				},
 				"group": {
-					"definitionRef": "std-fractal-noise-octaves@0fe9cde318a00f",
+					"definitionRef": "std-fractal-noise-octaves@08724997071465",
 					"locked": true
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
@@ -231,8 +231,8 @@
 					}
 				},
 				"position": {
-					"x": 2072,
-					"y": 1136
+					"x": 2022,
+					"y": 1141
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -245,8 +245,8 @@
 					}
 				},
 				"position": {
-					"x": 2272,
-					"y": 771
+					"x": 2222,
+					"y": 776
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -255,11 +255,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 2602,
-					"y": 245
+					"x": 2552,
+					"y": 384
 				},
 				"group": {
-					"definitionRef": "std-fractal-noise-octaves@0fe9cde318a00f",
+					"definitionRef": "std-fractal-noise-octaves@08724997071465",
 					"locked": true
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
@@ -273,8 +273,8 @@
 					}
 				},
 				"position": {
-					"x": 2812,
-					"y": 936
+					"x": 2762,
+					"y": 941
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -285,8 +285,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 3012,
-					"y": 968
+					"x": 2962,
+					"y": 973
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -295,8 +295,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1454,
-					"y": 269
+					"x": 1424,
+					"y": 274
 				},
 				"frame": "f8533d52-9c44-4469-b185-a67c4f2ff55a"
 			},
@@ -305,8 +305,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2153,
-					"y": 931
+					"x": 2103,
+					"y": 936
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -315,8 +315,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 74
+					"x": 2303,
+					"y": 79
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -325,8 +325,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 112
+					"x": 2303,
+					"y": 117
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -335,8 +335,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 150
+					"x": 2303,
+					"y": 155
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -345,8 +345,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 188
+					"x": 2303,
+					"y": 193
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -355,8 +355,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 226
+					"x": 2303,
+					"y": 231
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -365,8 +365,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 302
+					"x": 2303,
+					"y": 269
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -375,8 +375,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 340
+					"x": 2303,
+					"y": 307
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -385,8 +385,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 378
+					"x": 2303,
+					"y": 345
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -395,8 +395,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 416
+					"x": 2303,
+					"y": 383
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -405,8 +405,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 454
+					"x": 2303,
+					"y": 421
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -415,8 +415,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 492
+					"x": 2303,
+					"y": 459
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			},
@@ -425,8 +425,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2353,
-					"y": 264
+					"x": 2303,
+					"y": 497
 				},
 				"frame": "084cf9a8-1fde-4c77-bb06-c11ed0cbf274"
 			}

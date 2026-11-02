@@ -240,6 +240,9 @@ function resolveRegularNodeTypes(
 			? descriptor.resolveInputs(familyOutputType, nodeData)
 			: descriptor.inputs;
 
+	const familyOf = new Map(activeInputs.map((i) => [i.id, inputFamilyKey(i, activeInputs)]));
+	const family = (input: NodeInputDef) => familyOf.get(input.id) ?? input.id;
+
 	// Links from outputs their source doesn't have with these bindings don't count.
 	const linkedTypes = new Map<string, WgslType[]>();
 	const sourceTypesOf = (inputId: string): WgslType[] => {
@@ -256,7 +259,7 @@ function resolveRegularNodeTypes(
 	// Phase 1: infer each input independently
 	const rawInferred: Record<string, WgslType> = {};
 	for (const inputDef of activeInputs) {
-		const familyOverride = nodeOverrides?.[inputFamilyKey(inputDef)];
+		const familyOverride = nodeOverrides?.[family(inputDef)];
 		if (familyOverride) {
 			rawInferred[inputDef.id] = familyOverride;
 			continue;
@@ -274,28 +277,28 @@ function resolveRegularNodeTypes(
 	// unconnected (default-typed) siblings.
 	const familyCandidates = new Map<string, { types: readonly WgslType[]; found: WgslType[] }>();
 	for (const inputDef of activeInputs) {
-		const family = inputFamilyKey(inputDef);
-		const entry = familyCandidates.get(family) ?? { types: inputDef.types, found: [] };
+		const key = family(inputDef);
+		const entry = familyCandidates.get(key) ?? { types: inputDef.types, found: [] };
 		// A fixed type needs no source resolved: its family takes it anyway.
 		const connected =
 			inputDef.types.length === 1
 				? incoming.some((e) => e.targetHandle === inputDef.id)
 				: sourceTypesOf(inputDef.id).length > 0;
-		const overridden = nodeOverrides?.[family] !== undefined;
+		const overridden = nodeOverrides?.[key] !== undefined;
 		const inferred = rawInferred[inputDef.id];
 		if (inferred && (connected || overridden)) entry.found.push(inferred);
-		familyCandidates.set(family, entry);
+		familyCandidates.set(key, entry);
 	}
 	const familyResolved = new Map<string, WgslType>();
-	for (const [family, { types, found }] of familyCandidates) {
-		familyResolved.set(family, highestType(found, types));
+	for (const [key, { types, found }] of familyCandidates) {
+		familyResolved.set(key, highestType(found, types));
 	}
 
 	// Phase 3: all inputs in the same family get the family's resolved type
 	const inputTypes: Record<string, WgslType> = {};
 	for (const inputDef of activeInputs) {
 		inputTypes[inputDef.id] =
-			familyResolved.get(inputFamilyKey(inputDef)) ?? inputDefaultType(inputDef);
+			familyResolved.get(family(inputDef)) ?? inputDefaultType(inputDef);
 	}
 
 	// Phase 4: resolve output type from the primary input

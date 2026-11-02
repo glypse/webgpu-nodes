@@ -124,7 +124,8 @@ export type NodeInputDef = {
 	 *
 	 * Inputs of the same "family" resolve to one concrete type across the
 	 * whole node (node-wide resolution). Inputs are in the same family when
-	 * their `family` keys are equal, or by default when their `types` are.
+	 * their `family` keys are equal, or by default when their `types` are
+	 * (see `inputFamilyKey`).
 	 */
 	types: readonly WgslType[];
 	/**
@@ -155,14 +156,18 @@ export function inputDefaultType(input: NodeInputDef): WgslType {
 	return input.types[0] ?? "f32";
 }
 
-/** Stable string key for grouping inputs into families (see `NodeInputDef.types`). */
-export function inputFamilyKey(input: NodeInputDef): string {
-	return input.family ?? familyKey(input.types);
-}
-
-/** The family key of inputs accepting `types` (see `inputFamilyKey`). */
-export function familyKey(types: readonly WgslType[]): string {
-	return types.join(",");
+/**
+ * The key of an input's family among a node's `inputs`, under which a type
+ * forced on it is stored (`NodeData.types`): its own `family`, or else the
+ * id of the first input accepting the same types without one.
+ */
+export function inputFamilyKey(input: NodeInputDef, inputs: readonly NodeInputDef[]): string {
+	if (input.family !== undefined) return input.family;
+	const same = (i: NodeInputDef) =>
+		i.family === undefined &&
+		i.types.length === input.types.length &&
+		i.types.every((t, k) => t === input.types[k]);
+	return inputs.find(same)?.id ?? input.id;
 }
 
 export type NodeOutputDef = {
@@ -405,5 +410,9 @@ export function pickableTypes(
 	const primary =
 		descriptor.inputs.find((i) => i.id === descriptor.primaryInput) ?? descriptor.inputs[0];
 	if (!primary || primary.types.length < 2) return undefined;
-	return { key: familyKey(primary.types), types: primary.types, inferable: true };
+	return {
+		key: inputFamilyKey(primary, descriptor.inputs),
+		types: primary.types,
+		inferable: true,
+	};
 }

@@ -1,4 +1,4 @@
-import { caseHandle } from "../enums";
+import { caseHandle, CASES_FAMILY } from "../enums";
 import { type NodeData, type NodeDescriptor, WGSL_TYPES, wgslTypeName } from "../types";
 
 export const INDEX_SWITCH = "index-switch";
@@ -27,7 +27,12 @@ export function buildIndexSwitchDescriptor(data: NodeData): NodeDescriptor {
 		widget: { kind: "cases" },
 		inputs: [
 			{ id: INDEX_SWITCH_INDEX, label: "index", types: ["i32"] },
-			...cases.map((id, i) => ({ id, label: String(i), types: WGSL_TYPES })),
+			...cases.map((id, i) => ({
+				id,
+				label: String(i),
+				types: WGSL_TYPES,
+				family: CASES_FAMILY,
+			})),
 		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: { cases: DEFAULT_CASES },

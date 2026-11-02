@@ -11,7 +11,7 @@
 		"std-gradient-noise-1d@1bf7c19db4dbe5",
 		"std-opensimplex-2d@0cfc9edb3af544",
 		"std-opensimplex-3d@05d78c8e8e7b64",
-		"std-opensimplex-4d@07947459b08a40"
+		"std-opensimplex-4d@1bd38fd7c8187b"
 	],
 	"definition": {
 		"nodes": [
@@ -20,7 +20,7 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 269,
+					"x": 260,
 					"y": 228
 				},
 				"group": {
@@ -36,7 +36,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 328
+					"y": 334
 				}
 			},
 			{
@@ -44,7 +44,7 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 644,
+					"x": 635,
 					"y": 234
 				},
 				"group": {
@@ -60,7 +60,7 @@
 					"note": "OpenSimplex2 in as many dimensions as Vector has components,\nplain gradient noise for a single one. In [-1, 1]."
 				},
 				"position": {
-					"x": 1043,
+					"x": 1034,
 					"y": 0
 				}
 			},
@@ -69,7 +69,7 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1325,
+					"x": 1316,
 					"y": 90
 				},
 				"group": {
@@ -85,7 +85,7 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1067,
+					"x": 1058,
 					"y": 387
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -95,7 +95,7 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1325,
+					"x": 1316,
 					"y": 295
 				},
 				"group": {
@@ -109,7 +109,7 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1325,
+					"x": 1316,
 					"y": 528
 				},
 				"group": {
@@ -123,11 +123,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1325,
+					"x": 1316,
 					"y": 761
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-4d@07947459b08a40",
+					"definitionRef": "std-opensimplex-4d@1bd38fd7c8187b",
 					"locked": true
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -137,7 +137,7 @@
 				"type": "width-switch",
 				"data": {},
 				"position": {
-					"x": 1535,
+					"x": 1526,
 					"y": 211
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -149,7 +149,7 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1824,
+					"x": 1815,
 					"y": 243
 				}
 			},
@@ -158,8 +158,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 535,
-					"y": 228
+					"x": 528,
+					"y": 214
 				}
 			},
 			{
@@ -167,7 +167,7 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1267,
+					"x": 1258,
 					"y": 708
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -177,7 +177,7 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 922,
+					"x": 913,
 					"y": 727
 				}
 			},
@@ -186,7 +186,7 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1267,
+					"x": 1258,
 					"y": 447
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"

@@ -1,11 +1,10 @@
 import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
-import { caseHandle } from "../enums";
+import { caseHandle, CASES_FAMILY } from "../enums";
 import { evaluate } from "../testing/evaluate";
 import { managerFor } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
-import { familyKey, WGSL_TYPES } from "../types";
 import { INDEX_SWITCH, INDEX_SWITCH_INDEX } from "./index-switch";
 
 const CASES = [
@@ -28,7 +27,7 @@ function graphAt(index: number) {
 				type: INDEX_SWITCH,
 				data: {
 					cases: CASES.length,
-					types: { [familyKey(WGSL_TYPES)]: "vec3f" },
+					types: { [CASES_FAMILY]: "vec3f" },
 					values: Object.fromEntries(CASES.map((v, k) => [caseHandle(k), v])),
 				},
 			},
