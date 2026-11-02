@@ -86,6 +86,25 @@ export function emptyProject(): GraphProject {
 }
 
 /**
+ * The root types of each standard-library version's nodes, shared by every
+ * model: a ref names its definition's content, and only the library
+ * versions it calls (named by their refs too) can change what it infers.
+ */
+const LIBRARY_TYPES = new Map<string, ReadonlyMap<string, ResolvedTypes>>();
+
+function libraryTypes(
+	ref: string,
+	compute: () => ReadonlyMap<string, ResolvedTypes>,
+): ReadonlyMap<string, ResolvedTypes> {
+	let types = LIBRARY_TYPES.get(ref);
+	if (!types) {
+		types = compute();
+		LIBRARY_TYPES.set(ref, types);
+	}
+	return types;
+}
+
+/**
  * The model's state and the queries everything else builds on: documents and
  * the standard library, navigation through groups, and resolved types.
  */
@@ -951,8 +970,10 @@ export abstract class GraphModelBase {
 		this.typeResolver.clearCache();
 
 		const root = new Map<string, ResolvedTypes>();
-		for (const doc of this.project.definitions.values()) {
-			const resolved = this.typeResolver.computeAll(doc.nodes, doc.edges, this.lookup, {});
+		for (const [ref, doc] of this.project.definitions) {
+			const compute = () =>
+				this.typeResolver.computeAll(doc.nodes, doc.edges, this.lookup, {});
+			const resolved = this.isStandardLibrary(ref) ? libraryTypes(ref, compute) : compute();
 			for (const [nodeId, result] of resolved) root.set(nodeId, result);
 		}
 		this.state.typeCaches = new Map([["", root]]);

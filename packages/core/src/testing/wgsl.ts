@@ -1,6 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { buildProgram, type UniformValue } from "../codegen";
@@ -41,4 +41,42 @@ export function validateFragment(
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+}
+
+/** A fragment to validate, and the uniforms it reads. */
+export type Fragment = { fragment: string; uniforms?: Record<string, UniformValue> };
+
+/**
+ * `validateFragment` for each of `fragments`, several naga processes at a
+ * time: for tests validating many shaders, which would otherwise mostly
+ * wait on naga one at a time.
+ */
+export async function validateFragments(
+	fragments: readonly Fragment[],
+): Promise<(string | null)[]> {
+	const naga = nagaBin;
+	if (!naga) throw new Error("naga is not installed");
+	const dir = mkdtempSync(join(tmpdir(), "webgpu-nodes-"));
+	const results: (string | null)[] = [];
+	let next = 0;
+	const worker = async () => {
+		for (let i = next++; i < fragments.length; i = next++) {
+			const { fragment, uniforms = {} } = fragments[i] ?? { fragment: "" };
+			const file = join(dir, `${String(i)}.wgsl`);
+			writeFileSync(file, buildProgram(fragment, uniforms).code);
+			const child = Bun.spawn([naga, file], { stdout: "pipe", stderr: "pipe" });
+			const [stdout, stderr, status] = await Promise.all([
+				new Response(child.stdout).text(),
+				new Response(child.stderr).text(),
+				child.exited,
+			]);
+			results[i] = status === 0 ? null : `${stdout}\n${stderr}`.trim();
+		}
+	};
+	try {
+		await Promise.all(Array.from({ length: availableParallelism() }, worker));
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+	return results;
 }

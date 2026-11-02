@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { beforeAll, describe, expect, it } from "bun:test";
 
 import { formatWgslLiteral, generateShader } from "../codegen";
 import { ROOT_ID } from "../graph/document";
@@ -11,7 +11,7 @@ import {
 	type TestEdge,
 	type TestNode,
 } from "../testing/graph";
-import { nagaBin, validateFragment } from "../testing/wgsl";
+import { nagaBin, validateFragment, validateFragments } from "../testing/wgsl";
 import { isConnectionCompatible, type NodeData, WGSL_TYPES, type WgslType } from "../types";
 import { registeredNodes } from "./registry";
 
@@ -62,18 +62,32 @@ function* cases(): Generator<{ name: string; nodes: TestNode[]; edges: TestEdge[
 }
 
 describe.skipIf(!nagaBin)("every node generates valid WGSL for every input type", () => {
-	for (const { name, nodes, edges } of cases()) {
-		it(name, () => {
-			const shader = shaderFor(nodes, edges);
-			const error = validateFragment(shader);
-			expect(error, `${error ?? ""}\n\n${shader}`).toBeNull();
+	// Each case's shader, then the same with every value read from uniforms.
+	const shaders = [...cases()].map(({ name, nodes, edges }) => {
+		const model = managerFor(nodes, edges);
+		const scoped = generateShader(model, { uniformScopes: [ROOT_ID] });
+		return {
+			name,
+			fragments: [
+				{ fragment: generateShader(model).shader },
+				{ fragment: scoped.shader, uniforms: scoped.uniforms },
+			],
+		};
+	});
+	let errors: (string | null)[] = [];
+	// Thousands of naga runs: seconds, more alongside other test files.
+	beforeAll(async () => {
+		errors = await validateFragments(shaders.flatMap((s) => s.fragments));
+	}, 60_000);
 
-			// The same with every value read from uniforms.
-			const scoped = generateShader(managerFor(nodes, edges), { uniformScopes: [ROOT_ID] });
-			const scopedError = validateFragment(scoped.shader, scoped.uniforms);
-			expect(scopedError, `${scopedError ?? ""}\n\n${scoped.shader}`).toBeNull();
+	shaders.forEach(({ name, fragments }, i) => {
+		it(name, () => {
+			fragments.forEach(({ fragment }, j) => {
+				const error = errors[i * fragments.length + j];
+				expect(error, `${error ?? ""}\n\n${fragment}`).toBeNull();
+			});
 		});
-	}
+	});
 });
 
 describe("formatWgslLiteral", () => {
