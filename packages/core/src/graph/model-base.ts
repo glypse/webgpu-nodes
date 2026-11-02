@@ -303,6 +303,7 @@ export abstract class GraphModelBase {
 			(n) => this.resolveDescriptor(n),
 			() => this.project.definitions,
 			(id) => this.getIncomingEdges(id),
+			(id) => this.resolveNode(id),
 		);
 		this.setScreen(screen);
 		this.rebuildTypeCache();
@@ -489,10 +490,13 @@ export abstract class GraphModelBase {
 		targetNode: GraphNode,
 		targetHandle: string,
 	): boolean {
-		const sourceType = this.typeResolver.inferHandleType(
-			{ source: sourceNode.id, sourceHandle, target: "", targetHandle: "", id: "" },
-			(id) => this.resolveNode(id),
-		);
+		const sourceType = this.typeResolver.inferHandleType({
+			source: sourceNode.id,
+			sourceHandle,
+			target: "",
+			targetHandle: "",
+			id: "",
+		});
 
 		const targetDescriptor = this.resolveDescriptor(targetNode);
 
@@ -753,7 +757,6 @@ export abstract class GraphModelBase {
 		return this.typeResolver.resolveNodeTypes(
 			node,
 			this.getIncomingEdges(node.id),
-			this.lookup,
 			this.viewBindings(node.id, path),
 		);
 	}
@@ -780,7 +783,6 @@ export abstract class GraphModelBase {
 			node,
 			this.getIncomingEdges(nodeId),
 			data,
-			this.lookup,
 			this.viewBindings(node.id, path),
 		);
 		return result.inputTypes[inputId] ?? forced;
@@ -815,19 +817,10 @@ export abstract class GraphModelBase {
 		return node ? this.typesOf(node, path).resolvedOutputs : [];
 	}
 
-	/**
-	 * Invalidate types for the given node IDs and all their ancestors.
-	 * Walks backward through the reverse graph, recomputing only affected nodes.
-	 * Stops at group-output boundaries (within the same document).
-	 * Cross-document propagation goes through `node-group` instances.
-	 */
+	/** Recompute the types of the given nodes and of what's downstream of them (see `TypeResolver.invalidate`). */
 	invalidateTypes(nodeIds: string[]): void {
 		const allEdges = [...this.project.definitions.values()].flatMap((d) => d.edges);
-		const invalidated = this.typeResolver.invalidate(
-			nodeIds,
-			(id) => this.resolveNode(id),
-			allEdges,
-		);
+		const invalidated = this.typeResolver.invalidate(nodeIds, allEdges);
 
 		// Recompute types for all invalidated nodes, as seen from every path viewed.
 		const caches = new Map<string, Map<string, ResolvedTypes>>();
@@ -842,7 +835,6 @@ export abstract class GraphModelBase {
 					this.typeResolver.resolveNodeTypes(
 						node,
 						incoming,
-						this.lookup,
 						this.viewBindings(node.id, path),
 					),
 				);
@@ -852,8 +844,6 @@ export abstract class GraphModelBase {
 		this.state.typeCaches = caches;
 		this.refreshViewTypes();
 	}
-
-	private lookup = (id: string) => this.resolveNode(id);
 
 	/**
 	 * The links of `doc` to sockets its nodes don't have as seen from `path`
@@ -874,9 +864,7 @@ export abstract class GraphModelBase {
 		let doc = this.root;
 		for (const { node, group, definition } of this.walkPath(path)) {
 			const incoming = doc.edgesByTarget.get(node.id) ?? [];
-			bindings =
-				this.typeResolver.resolveNodeTypes(node, incoming, this.lookup, bindings)
-					.bindings ?? {};
+			bindings = this.typeResolver.resolveNodeTypes(node, incoming, bindings).bindings ?? {};
 			bound.set(group.definitionRef, bindings);
 			doc = definition;
 		}
@@ -910,12 +898,7 @@ export abstract class GraphModelBase {
 		for (const [ref, bindings] of this.pathBindings(path)) {
 			const doc = this.project.definitions.get(ref);
 			if (!doc || bindingsKey(bindings) === bindingsKey({})) continue;
-			const resolved = this.typeResolver.computeAll(
-				doc.nodes,
-				doc.edges,
-				this.lookup,
-				bindings,
-			);
+			const resolved = this.typeResolver.computeAll(doc.nodes, doc.edges, bindings);
 			for (const [nodeId, result] of resolved) cache.set(nodeId, result);
 		}
 		return cache;
@@ -969,8 +952,7 @@ export abstract class GraphModelBase {
 
 		const root = new Map<string, ResolvedTypes>();
 		for (const [ref, doc] of this.project.definitions) {
-			const compute = () =>
-				this.typeResolver.computeAll(doc.nodes, doc.edges, this.lookup, {});
+			const compute = () => this.typeResolver.computeAll(doc.nodes, doc.edges, {});
 			const resolved = this.isStandardLibrary(ref) ? libraryTypes(ref, compute) : compute();
 			for (const [nodeId, result] of resolved) root.set(nodeId, result);
 		}

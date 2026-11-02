@@ -44,8 +44,11 @@ type ResolveNode = (id: string) => GraphNode | undefined;
 type Env = {
 	resolveDescriptor: ResolveDescriptor;
 	getIncomingEdges: GetIncomingEdges;
+	resolveNode: ResolveNode;
 	/** The project's definitions as they are now: the model replaces the map as they change. */
 	definitions: () => HydratedGraphProject["definitions"];
+	/** Another node's types, memoised: what a node's types are inferred from. */
+	resolve: (node: GraphNode, bindings: TypeBindings) => ResolvedNodeTypes;
 };
 
 const NO_BINDINGS: TypeBindings = {};
@@ -91,7 +94,6 @@ function resolveNodeTypesForNode(
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
 	nodeData: NodeData,
-	resolveNode: ResolveNode,
 	env: Env,
 	bindings: TypeBindings,
 ): ResolvedNodeTypes {
@@ -101,17 +103,9 @@ function resolveNodeTypesForNode(
 		if (node.type === "group-output") {
 			// The variables' families are forced to their bound types.
 			const data = { ...nodeData, types: { ...nodeData.types, ...bound } };
-			const lookup: ResolveNode = (id) => def?.nodesById.get(id) ?? resolveNode(id);
-			return resolveRegularNodeTypes(descriptor, incoming, data, lookup, env, bound);
+			return resolveRegularNodeTypes(descriptor, incoming, data, env, bound);
 		}
-		const resolved = resolveRegularNodeTypes(
-			descriptor,
-			incoming,
-			nodeData,
-			resolveNode,
-			env,
-			bound,
-		);
+		const resolved = resolveRegularNodeTypes(descriptor, incoming, nodeData, env, bound);
 		const variables = def?.typeVariables ?? [];
 		const resolvedOutputs = (def?.inputs ?? []).map((h) => ({
 			id: h.id,
@@ -121,24 +115,9 @@ function resolveNodeTypesForNode(
 		return { ...resolved, resolvedOutputs };
 	}
 	if (node.type === REPEAT_INPUT || node.type === REPEAT_OUTPUT) {
-		return resolveZoneNodeTypes(
-			node,
-			descriptor,
-			incoming,
-			nodeData,
-			resolveNode,
-			env,
-			bindings,
-		);
+		return resolveZoneNodeTypes(node, descriptor, incoming, nodeData, env, bindings);
 	}
-	const resolved = resolveRegularNodeTypes(
-		descriptor,
-		incoming,
-		nodeData,
-		resolveNode,
-		env,
-		bindings,
-	);
+	const resolved = resolveRegularNodeTypes(descriptor, incoming, nodeData, env, bindings);
 	return node.type === "node-group" ? resolveGroupNodeTypes(node, resolved, env) : resolved;
 }
 
@@ -154,7 +133,6 @@ function resolveZoneNodeTypes(
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
 	nodeData: NodeData,
-	resolveNode: ResolveNode,
 	env: Env,
 	bindings: TypeBindings,
 ): ResolvedNodeTypes {
@@ -172,31 +150,14 @@ function resolveZoneNodeTypes(
 		types = Object.fromEntries(Object.entries(types).filter(([key]) => !ignored.has(key)));
 	} else {
 		const input = doc && pairedInput(doc.nodes, node.id);
-		const paired =
-			input &&
-			resolveNodeTypesForNode(
-				input,
-				env.resolveDescriptor(input),
-				env.getIncomingEdges(input.id),
-				input.data,
-				resolveNode,
-				env,
-				bindings,
-			);
+		const paired = input && env.resolve(input, bindings);
 		for (const item of zoneItems(node)) {
 			const type = paired?.inputTypes[item.id];
 			if (isInferredItem(item) && type) types[inferredItemFamily(item.id)] = type;
 		}
 	}
 	const data = { ...nodeData, types };
-	const resolved = resolveRegularNodeTypes(
-		descriptor,
-		incoming,
-		data,
-		resolveNode,
-		env,
-		bindings,
-	);
+	const resolved = resolveRegularNodeTypes(descriptor, incoming, data, env, bindings);
 	const resolvedOutputs = resolved.resolvedOutputs.map((o) => ({
 		...o,
 		type: resolved.inputTypes[o.id] ?? o.type,
@@ -227,28 +188,13 @@ function resolveGroupNodeTypes(
 	// Output node it's linked on.
 	const outputs = def.nodes.filter((n) => n.type === "group-output");
 	const inferable = def.outputs.some((h) => typeof h.type === "object" && "inferred" in h.type);
-	const innerTypes = new Map<GraphNode, Record<string, WgslType>>();
 	const innerType = (handleId: string): WgslType | undefined => {
 		if (!inferable) return undefined;
 		const output =
 			outputs.find((n) =>
 				def.edgesByTarget.get(n.id)?.some((e) => e.targetHandle === handleId),
 			) ?? outputs[0];
-		if (!output) return undefined;
-		let types = innerTypes.get(output);
-		if (!types) {
-			types = resolveNodeTypesForNode(
-				output,
-				env.resolveDescriptor(output),
-				def.edgesByTarget.get(output.id) ?? [],
-				output.data,
-				(id) => def.nodesById.get(id),
-				env,
-				bindings,
-			).inputTypes;
-			innerTypes.set(output, types);
-		}
-		return types[handleId];
+		return output && env.resolve(output, bindings).inputTypes[handleId];
 	};
 	const resolvedOutputs = def.outputs.map((h) => ({
 		id: h.id,
@@ -277,7 +223,6 @@ function resolveRegularNodeTypes(
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
 	nodeData: NodeData,
-	resolveNode: ResolveNode,
 	env: Env,
 	bindings: TypeBindings,
 ): ResolvedNodeTypes {
@@ -302,7 +247,7 @@ function resolveRegularNodeTypes(
 		if (!types) {
 			types = incoming
 				.filter((e) => e.targetHandle === inputId)
-				.flatMap((e) => sourceHandleType(e, resolveNode, env, bindings) ?? []);
+				.flatMap((e) => sourceHandleType(e, env, bindings) ?? []);
 			linkedTypes.set(inputId, types);
 		}
 		return types;
@@ -387,28 +332,18 @@ function outputHandleType(resolved: ResolvedNodeTypes, handleId: string): WgslTy
 }
 
 /**
- * Recursively resolve the WGSL type produced by an edge's source handle,
- * in a document whose variables take `bindings`: undefined when the source
- * has no such output with them.
+ * The WGSL type produced by an edge's source handle, in a document whose
+ * variables take `bindings`: undefined when the source has no such output
+ * with them.
  */
 function sourceHandleType(
 	edge: GraphDocumentEdge,
-	resolveNode: ResolveNode,
 	env: Env,
 	bindings: TypeBindings,
 ): WgslType | undefined {
-	const sourceNode = resolveNode(edge.source);
+	const sourceNode = env.resolveNode(edge.source);
 	if (!sourceNode) return undefined;
-
-	const resolved = resolveNodeTypesForNode(
-		sourceNode,
-		env.resolveDescriptor(sourceNode),
-		env.getIncomingEdges(edge.source),
-		sourceNode.data,
-		resolveNode,
-		env,
-		bindings,
-	);
+	const resolved = env.resolve(sourceNode, bindings);
 	return resolved.resolvedOutputs.find((o) => o.id === edge.sourceHandle)?.type;
 }
 
@@ -439,72 +374,65 @@ export function unavailableEdges(
 // ── TypeResolver class ────────────────────────────────────────────────────────
 
 /**
- * Centralised, document-aware type resolver for the node graph.
- *
- * Responsibilities:
- * - Resolve per-input and output types for every node (single source of truth).
- * - Memoize results so repeated reads are O(1).
- * - Invalidate efficiently: walk backward from a changed node through the
- *   reverse graph, recomputing only affected ancestors. Stop at group-output
- *   boundaries (within the same document). Cross-document propagation goes
- *   through `node-group` instances.
- *
- * The resolver is document-agnostic: it receives a `resolveNode` callback and
- * reads the project's definitions through a getter, so it can resolve types across the entire project
- * without depending on any mutable state.
+ * Resolves and memoises every node's types, across the project's documents.
+ * A node's types only depend on what's upstream of it (its links' sources,
+ * a Repeat Output's Repeat Input, a group node's definition), so a change
+ * invalidates what's downstream of it.
  *
  * Nodes inside a group with type variables resolve differently for each
  * group node: every call takes the variables' `bindings` (none by default,
- * each variable then taking its first type).
+ * each variable then taking its first type). Results are memoised by the
+ * bindings of the node's own document's variables, all of them bound.
  */
 export class TypeResolver {
-	/** Memoized type resolution, by node ID then `bindingsKey`. */
+	/** Memoised types, by node id then the key of its document's bindings. */
 	private cache = new Map<string, Map<string, ResolvedNodeTypes>>();
+	/** The type variables of each node's document. */
+	private variables = new Map<string, readonly TypeVariable[]>();
 
 	private env: Env;
 	constructor(
 		resolveDescriptor: ResolveDescriptor,
 		definitions: () => HydratedGraphProject["definitions"],
 		getIncomingEdges: GetIncomingEdges,
+		resolveNode: ResolveNode,
 	) {
-		this.env = { resolveDescriptor, definitions, getIncomingEdges };
+		this.env = {
+			resolveDescriptor,
+			definitions,
+			getIncomingEdges,
+			resolveNode,
+			resolve: (node, bindings) =>
+				this.resolveNodeTypes(node, getIncomingEdges(node.id), bindings),
+		};
 	}
 
-	private get definitions(): HydratedGraphProject["definitions"] {
-		return this.env.definitions();
+	private key(nodeId: string, bindings: TypeBindings): string {
+		let variables = this.variables.get(nodeId);
+		if (!variables) {
+			variables = definitionOf(nodeId, this.env.definitions())?.typeVariables ?? [];
+			this.variables.set(nodeId, variables);
+		}
+		return variables.length === 0 ? "" : bindingsKey(completeBindings(variables, bindings));
 	}
 
-	private cached(nodeId: string, bindings: TypeBindings): ResolvedNodeTypes | undefined {
-		return this.cache.get(nodeId)?.get(bindingsKey(bindings));
+	private forget(nodeId: string) {
+		this.cache.delete(nodeId);
+		this.variables.delete(nodeId);
 	}
 
-	// ── Public API ──────────────────────────────────────────────────────────
-
-	/**
-	 * Resolve types for a node, using the cache if available.
-	 *
-	 * @param node        The node to resolve.
-	 * @param incoming    Edges targeting this node (from the node's document).
-	 * @param resolveNode Callback to look up any node by ID across all documents.
-	 */
+	/** A node's types, linked by `incoming` (used when they aren't memoised yet). */
 	resolveNodeTypes(
 		node: GraphNode,
 		incoming: GraphDocumentEdge[],
-		resolveNode: (id: string) => GraphNode | undefined,
 		bindings: TypeBindings = NO_BINDINGS,
 	): ResolvedNodeTypes {
-		const cached = this.cached(node.id, bindings);
+		const key = this.key(node.id, bindings);
+		const cached = this.cache.get(node.id)?.get(key);
 		if (cached) return cached;
-
-		const result = this.resolveNodeTypesUncached(
-			node,
-			incoming,
-			node.data,
-			resolveNode,
-			bindings,
-		);
+		const result = this.resolveNodeTypesUncached(node, incoming, node.data, bindings);
 		const byBindings = this.cache.get(node.id) ?? new Map<string, ResolvedNodeTypes>();
-		byBindings.set(bindingsKey(bindings), result);
+		byBindings.set(key, result);
 		this.cache.set(node.id, byBindings);
 		return result;
 	}
@@ -517,7 +445,6 @@ export class TypeResolver {
 		node: GraphNode,
 		incoming: GraphDocumentEdge[],
 		data: NodeData,
-		resolveNode: (id: string) => GraphNode | undefined,
 		bindings: TypeBindings = NO_BINDINGS,
 	): ResolvedNodeTypes {
 		return resolveNodeTypesForNode(
@@ -525,267 +452,67 @@ export class TypeResolver {
 			this.env.resolveDescriptor(node),
 			incoming,
 			data,
-			resolveNode,
 			this.env,
 			bindings,
 		);
 	}
 
-	/**
-	 * Resolve the effective type for an input handle on a node.
-	 * Reads from the memoised cache; recomputes if the node isn't cached yet.
-	 */
-	resolveInputType(
-		nodeId: string,
-		inputId: string,
-		resolveNode: (id: string) => GraphNode | undefined,
-		incoming: GraphDocumentEdge[],
-	): WgslType {
-		let cached = this.cached(nodeId, NO_BINDINGS);
-		if (!cached) {
-			const node = resolveNode(nodeId);
-			if (!node) return "f32";
-			cached = this.resolveNodeTypes(node, incoming, resolveNode);
-		}
-		const inputDef = cached.resolvedInputs.find((i) => i.id === inputId);
-		return cached.inputTypes[inputId] ?? (inputDef ? inputDefaultType(inputDef) : "f32");
+	/** The type of an edge's source handle. */
+	inferHandleType(edge: GraphDocumentEdge, bindings: TypeBindings = NO_BINDINGS): WgslType {
+		const source = this.env.resolveNode(edge.source);
+		if (!source) return "f32";
+		return outputHandleType(this.env.resolve(source, bindings), edge.sourceHandle);
 	}
 
-	/**
-	 * Resolve the output type for a node.
-	 * Reads from the memoised cache; recomputes if the node isn't cached yet.
-	 */
-	resolveOutputType(
-		nodeId: string,
-		resolveNode: (id: string) => GraphNode | undefined,
-		incoming: GraphDocumentEdge[],
-	): WgslType {
-		let cached = this.cached(nodeId, NO_BINDINGS);
-		if (!cached) {
-			const node = resolveNode(nodeId);
-			if (!node) return "f32";
-			cached = this.resolveNodeTypes(node, incoming, resolveNode);
-		}
-		return cached.outputType;
-	}
-
-	/**
-	 * Resolve the active inputs for a node instance.
-	 * Reads from the memoised cache; recomputes if the node isn't cached yet.
-	 */
-	resolveInputs(
-		nodeId: string,
-		resolveNode: (id: string) => GraphNode | undefined,
-		incoming: GraphDocumentEdge[],
-	): NodeInputDef[] {
-		let cached = this.cached(nodeId, NO_BINDINGS);
-		if (!cached) {
-			const node = resolveNode(nodeId);
-			if (!node) return [];
-			cached = this.resolveNodeTypes(node, incoming, resolveNode);
-		}
-		return cached.resolvedInputs;
-	}
-
-	/**
-	 * Resolve the active outputs for a node instance.
-	 * Reads from the memoised cache; recomputes if the node isn't cached yet.
-	 */
-	resolveOutputs(
-		nodeId: string,
-		resolveNode: (id: string) => GraphNode | undefined,
-		incoming: GraphDocumentEdge[],
-	): NodeOutputDef[] {
-		let cached = this.cached(nodeId, NO_BINDINGS);
-		if (!cached) {
-			const node = resolveNode(nodeId);
-			if (!node) return [];
-			cached = this.resolveNodeTypes(node, incoming, resolveNode);
-		}
-		return cached.resolvedOutputs;
-	}
-
-	/**
-	 * Infer the type of an edge's source handle (recursive resolution).
-	 * Equivalent to the old `inferHandleType` — uses the memoised cache.
-	 */
-	inferHandleType(
-		edge: GraphDocumentEdge,
-		resolveNode: (id: string) => GraphNode | undefined,
-		bindings: TypeBindings = NO_BINDINGS,
-	): WgslType {
-		const cached = this.cached(edge.source, bindings);
-		if (cached) return outputHandleType(cached, edge.sourceHandle);
-
-		return sourceHandleType(edge, resolveNode, this.env, bindings) ?? "f32";
-	}
-
-	// ── Cache management ────────────────────────────────────────────────────
-
-	/** Clear the entire cache. Called on project load. */
+	/** Forget every node's types. */
 	clearCache(): void {
 		this.cache.clear();
+		this.variables.clear();
 	}
 
 	/**
-	 * Invalidate a node and all its ancestors (backward walk through the
-	 * reverse graph). Stops at group-output boundaries within the same
-	 * document. Cross-document propagation goes through `node-group` instances.
+	 * Forget the types of `nodeIds` and of everything downstream of them:
+	 * through links (`allEdges`), from a Repeat Input to its Repeat Output,
+	 * and from a group's nodes to its group nodes.
 	 *
-	 * @returns The set of node IDs that were invalidated (for reactive updates).
+	 * @returns The ids of the nodes forgotten.
 	 */
-	invalidate(
-		nodeIds: string[],
-		resolveNode: (id: string) => GraphNode | undefined,
-		allEdges: GraphDocumentEdge[],
-	): Set<string> {
+	invalidate(nodeIds: readonly string[], allEdges: readonly GraphDocumentEdge[]): Set<string> {
+		const bySource = new Map<string, GraphDocumentEdge[]>();
+		for (const e of allEdges) bySource.set(e.source, [...(bySource.get(e.source) ?? []), e]);
+		const definitions = this.env.definitions();
 		const invalidated = new Set<string>();
-
-		for (const nodeId of nodeIds) {
-			this.invalidateNodeAndAncestors(nodeId, resolveNode, allEdges, invalidated);
-			this.invalidateGroupInstances(nodeId, resolveNode, invalidated);
+		const groupsSeen = new Set<string>();
+		const queue: string[] = [];
+		const add = (id: string) => {
+			if (invalidated.has(id) || !this.env.resolveNode(id)) return;
+			invalidated.add(id);
+			this.forget(id);
+			queue.push(id);
+		};
+		for (const id of nodeIds) add(id);
+		// Grows as it's walked: what's added is walked too.
+		for (const id of queue) {
+			for (const e of bySource.get(id) ?? []) add(e.target);
+			const node = this.env.resolveNode(id);
+			const paired = node?.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
+			if (paired) add(paired);
+			const ref = [...definitions].find(([, def]) => def.nodesById.has(id))?.[0];
+			if (ref === undefined || groupsSeen.has(ref)) continue;
+			groupsSeen.add(ref);
+			for (const def of definitions.values()) {
+				for (const n of def.nodes) {
+					if (n.type === "node-group" && n.group?.definitionRef === ref) add(n.id);
+				}
+			}
 		}
-
-		// Walk forward from every invalidated node to recompute downstream dependents
-		this.invalidateDescendants(invalidated, resolveNode, allEdges, invalidated);
-
 		return invalidated;
 	}
 
-	// ── Internal ────────────────────────────────────────────────────────────
-
-	/**
-	 * Invalidate a single node and walk backward through the reverse graph
-	 * to invalidate all ancestors. Stops at group-output boundaries.
-	 */
-	private invalidateNodeAndAncestors(
-		startNodeId: string,
-		resolveNode: (id: string) => GraphNode | undefined,
-		allEdges: GraphDocumentEdge[],
-		invalidated: Set<string>,
-	): void {
-		const queue: string[] = [startNodeId];
-
-		while (queue.length > 0) {
-			const nodeId = queue.shift();
-			if (nodeId === undefined) break;
-			if (invalidated.has(nodeId)) continue;
-
-			const node = resolveNode(nodeId);
-			if (!node) continue;
-
-			// Stop at group-output boundaries: ancestors within the same
-			// definition are not affected (group output types are statically
-			// defined for UX simplicity).
-			if (node.type === "group-output") {
-				invalidated.add(nodeId);
-				this.cache.delete(nodeId);
-				continue;
-			}
-
-			invalidated.add(nodeId);
-			this.cache.delete(nodeId);
-
-			// Walk backward: find all nodes that feed into this node
-			for (const edge of allEdges) {
-				if (edge.target === nodeId && !invalidated.has(edge.source)) {
-					queue.push(edge.source);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Walk forward from every invalidated node through the forward graph
-	 * to invalidate all downstream dependents. This ensures that when a
-	 * node's output type changes (e.g. via override), all consumers recompute.
-	 */
-	private invalidateDescendants(
-		seed: Set<string>,
-		resolveNode: (id: string) => GraphNode | undefined,
-		allEdges: GraphDocumentEdge[],
-		invalidated: Set<string>,
-	): void {
-		const queue = [...seed];
-
-		while (queue.length > 0) {
-			const nodeId = queue.shift();
-			if (nodeId === undefined) break;
-
-			// A Repeat Output takes its items' types from its Repeat Input,
-			// linked to it or not.
-			const node = resolveNode(nodeId);
-			const paired = node?.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
-			if (paired && !invalidated.has(paired) && resolveNode(paired)) {
-				invalidated.add(paired);
-				this.cache.delete(paired);
-				queue.push(paired);
-			}
-
-			// Find all nodes that consume this node's output
-			for (const edge of allEdges) {
-				if (edge.source === nodeId && !invalidated.has(edge.target)) {
-					const targetNode = resolveNode(edge.target);
-					if (!targetNode) continue;
-
-					// Stop at group-input boundaries: downstream types are resolved
-					// via the group-input handle definitions, not internal wiring.
-					if (targetNode.type === "group-input") continue;
-
-					invalidated.add(edge.target);
-					this.cache.delete(edge.target);
-					queue.push(edge.target);
-				}
-			}
-		}
-	}
-
-	/**
-	 * If the changed node lives inside a group definition, find all
-	 * `node-group` instances in parent documents that reference this
-	 * definition, and invalidate them and their ancestors too.
-	 * This is the cross-document propagation path.
-	 */
-	private invalidateGroupInstances(
-		nodeId: string,
-		resolveNode: (id: string) => GraphNode | undefined,
-		invalidated: Set<string>,
-	): void {
-		// Find which definition this node belongs to
-		let definitionRef: string | undefined;
-		for (const [ref, def] of this.definitions) {
-			if (def.nodesById.has(nodeId)) {
-				definitionRef = ref;
-				break;
-			}
-		}
-		if (!definitionRef) return;
-
-		// Search all documents (including root) for node-group instances of this definition
-		for (const def of this.definitions.values()) {
-			const instanceIds = def.nodes
-				.filter((n) => n.type === "node-group" && n.group?.definitionRef === definitionRef)
-				.map((n) => n.id);
-			for (const instanceId of instanceIds) {
-				if (!invalidated.has(instanceId)) {
-					this.invalidateNodeAndAncestors(
-						instanceId,
-						resolveNode,
-						def.edges,
-						invalidated,
-					);
-				}
-			}
-		}
-	}
-
-	/**
-	 * Compute types for all nodes in a document. Used for initial cache build.
-	 */
+	/** Types for all nodes of a document. */
 	computeAll(
 		nodes: GraphNode[],
 		allEdges: GraphDocumentEdge[],
-		resolveNode: (id: string) => GraphNode | undefined,
 		bindings: TypeBindings = NO_BINDINGS,
 	): Map<string, ResolvedNodeTypes> {
 		const targetEdgeMap = new Map<string, GraphDocumentEdge[]>();
@@ -798,7 +525,7 @@ export class TypeResolver {
 		const resolved = new Map<string, ResolvedNodeTypes>();
 		for (const node of nodes) {
 			const incoming = targetEdgeMap.get(node.id) ?? [];
-			resolved.set(node.id, this.resolveNodeTypes(node, incoming, resolveNode, bindings));
+			resolved.set(node.id, this.resolveNodeTypes(node, incoming, bindings));
 		}
 		return resolved;
 	}

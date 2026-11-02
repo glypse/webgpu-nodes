@@ -166,7 +166,6 @@ function typesIn(model: GraphModel, frame: Frame, node: GraphNode): ResolvedNode
 	return model.typeResolver.resolveNodeTypes(
 		node,
 		frame.doc.edgesByTarget.get(node.id) ?? [],
-		(id) => model.resolveNode(id),
 		frame.bindings,
 	);
 }

@@ -42,10 +42,11 @@ describe("type families", () => {
 		(node) => (node.id === "n" ? pair : vec3),
 		() => new Map(),
 		(id) => edges.filter((e) => e.target === id),
+		(id) => nodes.get(id),
 	);
 
 	it("keeps inputs of different family keys apart, even accepting the same types", () => {
-		const resolved = resolver.resolveNodeTypes(node, edges, (id) => nodes.get(id));
+		const resolved = resolver.resolveNodeTypes(node, edges);
 		expect(resolved.inputTypes).toEqual({ a: "f32", b: "vec3f", c: "vec3f" });
 	});
 });

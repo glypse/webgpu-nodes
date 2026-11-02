@@ -160,7 +160,6 @@ export function buildBoundaryNode(
 	direction: "input" | "output",
 	deduped: GraphDocumentEdge[][],
 	typeResolver: TypeResolver,
-	resolveNode: (id: string) => GraphNode | undefined,
 	position: { x: number; y: number },
 ): BoundaryBuildResult {
 	const handleFor = new Map<GraphDocumentEdge[], GroupHandleDef>();
@@ -177,7 +176,7 @@ export function buildBoundaryNode(
 		const handle: GroupHandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(i + 1)}`,
-			type: typeResolver.inferHandleType(representative, resolveNode),
+			type: typeResolver.inferHandleType(representative),
 		};
 		handles.push(handle);
 		handleFor.set(group, handle);

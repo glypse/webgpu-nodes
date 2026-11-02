@@ -293,20 +293,14 @@ export abstract class GroupModel extends ZoneModel {
 
 		const OFFSET = 300;
 
-		const groupInputNode = buildBoundaryNode(
-			"input",
-			dedupedIncoming,
-			this.typeResolver,
-			(id) => this.resolveNode(id),
-			{ x: bounds.minX - OFFSET, y: bounds.centerY },
-		);
-		const groupOutputNode = buildBoundaryNode(
-			"output",
-			dedupedOutgoing,
-			this.typeResolver,
-			(id) => this.resolveNode(id),
-			{ x: bounds.maxX + OFFSET, y: bounds.centerY },
-		);
+		const groupInputNode = buildBoundaryNode("input", dedupedIncoming, this.typeResolver, {
+			x: bounds.minX - OFFSET,
+			y: bounds.centerY,
+		});
+		const groupOutputNode = buildBoundaryNode("output", dedupedOutgoing, this.typeResolver, {
+			x: bounds.maxX + OFFSET,
+			y: bounds.centerY,
+		});
 
 		const definitionRef = crypto.randomUUID();
 		const groupNodeId = crypto.randomUUID();
@@ -1222,16 +1216,14 @@ export abstract class GroupModel extends ZoneModel {
 		const doc = this.documentOf(nodeId);
 		const incoming = doc?.edgesByTarget.get(nodeId) ?? [];
 		const bindings = this.viewBindings(nodeId, path);
-		const lookup = (id: string) => this.resolveNode(id);
 		// The type cache keeps front ends following types decided upstream.
 		const resolved =
 			this.typesAt(path).get(nodeId) ??
-			this.typeResolver.resolveNodeTypes(node, incoming, lookup, bindings);
+			this.typeResolver.resolveNodeTypes(node, incoming, bindings);
 		const unforced = this.typeResolver.resolveNodeTypesUncached(
 			node,
 			incoming,
 			{ ...node.data, types: undefined },
-			lookup,
 			bindings,
 		);
 		return def.typeVariables.map((variable) => {

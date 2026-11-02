@@ -389,7 +389,6 @@ class BodyEmitter {
 		const { resolvedOutputs } = this.typeResolver.resolveNodeTypes(
 			input,
 			this.incoming(input.id),
-			this.resolveNode,
 			this.bindings,
 		);
 		return new Map(resolvedOutputs.map((o) => [o.id, o.type]));
@@ -398,8 +397,6 @@ class BodyEmitter {
 	private get typeResolver() {
 		return this.state.graph.typeResolver;
 	}
-
-	private resolveNode = (id: string) => this.state.graph.resolveNode(id);
 
 	incoming(nodeId: string): GraphEdge[] {
 		return this.incomingByTarget.get(nodeId) ?? [];
@@ -436,7 +433,7 @@ class BodyEmitter {
 	}
 
 	sourceType(edge: GraphEdge): WgslType {
-		return this.typeResolver.inferHandleType(edge, this.resolveNode, this.bindings);
+		return this.typeResolver.inferHandleType(edge, this.bindings);
 	}
 
 	convertedSource(edge: GraphEdge, target: WgslType): string {
@@ -515,7 +512,7 @@ class BodyEmitter {
 		const varName = getVarName(node.id);
 		const incoming = this.incoming(node.id);
 		const { inputTypes, outputType, resolvedInputs, resolvedOutputs } =
-			this.typeResolver.resolveNodeTypes(node, incoming, this.resolveNode, this.bindings);
+			this.typeResolver.resolveNodeTypes(node, incoming, this.bindings);
 
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of resolvedOutputs) {
@@ -582,7 +579,6 @@ class BodyEmitter {
 		const resolved = this.typeResolver.resolveNodeTypes(
 			node,
 			this.incoming(node.id),
-			this.resolveNode,
 			this.bindings,
 		);
 		// Enum values known here are compiled into the call's function.
@@ -642,7 +638,6 @@ function inputTypeIn(
 		return state.graph.typeResolver.resolveNodeTypes(
 			node,
 			edgesByTarget.get(nodeId) ?? [],
-			(id) => state.graph.resolveNode(id),
 			bindings,
 		).inputTypes[inputId];
 	};
@@ -679,12 +674,7 @@ function emitDocumentBody(
 		const node = nodeMap.get(id);
 		return (
 			node &&
-			state.graph.typeResolver.resolveNodeTypes(
-				node,
-				incoming.get(id) ?? [],
-				(other) => state.graph.resolveNode(other),
-				bindings,
-			)
+			state.graph.typeResolver.resolveNodeTypes(node, incoming.get(id) ?? [], bindings)
 		);
 	});
 	const validEdges = doc.edges.filter(
@@ -887,7 +877,6 @@ function emitGroupFunction(
 			? state.graph.typeResolver.resolveNodeTypes(
 					node,
 					definition.edgesByTarget.get(node.id) ?? [],
-					(id) => state.graph.resolveNode(id),
 					bindings,
 				).inputTypes
 			: {};

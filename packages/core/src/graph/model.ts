@@ -347,9 +347,7 @@ export class GraphModel extends PreviewModel {
 				position: { x: 0, y: 0 },
 			};
 		} else return undefined;
-		return this.typeResolver.resolveNodeTypesUncached(node, [], node.data, (id) =>
-			id === FRESH_ID ? node : this.resolveNode(id),
-		);
+		return this.typeResolver.resolveNodeTypesUncached(node, [], node.data);
 	}
 
 	/**
