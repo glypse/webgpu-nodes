@@ -3,7 +3,7 @@
 	"name": "Fractal Voronoi",
 	"aliases": ["Voronoi fBm", "Voronoi FBM", "Fractal Worley", "Voronoi Texture", "Cellular fBm"],
 	"category": "texture",
-	"dependencies": ["std-fractal-octave@18f11aa710fb7f", "std-voronoi-texture@14125cf8ec73fb"],
+	"dependencies": ["std-fractal-octave@009987a5825aa9", "std-voronoi-texture@14125cf8ec73fb"],
 	"definition": {
 		"nodes": [
 			{
@@ -229,10 +229,10 @@
 				"data": {},
 				"position": {
 					"x": 2020,
-					"y": 2352
+					"y": 2324
 				},
 				"group": {
-					"definitionRef": "std-fractal-octave@18f11aa710fb7f",
+					"definitionRef": "std-fractal-octave@009987a5825aa9",
 					"locked": true
 				},
 				"frame": "8ead46ed-2fcf-465a-805c-1b5ba8c68699"
@@ -368,7 +368,7 @@
 					"y": 2971
 				},
 				"group": {
-					"definitionRef": "std-fractal-octave@18f11aa710fb7f",
+					"definitionRef": "std-fractal-octave@009987a5825aa9",
 					"locked": true
 				},
 				"frame": "8ead46ed-2fcf-465a-805c-1b5ba8c68699"

@@ -6,24 +6,37 @@ import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
 import componentSum from "./std-component-sum.json";
+import fractalNoiseOctaves from "./std-fractal-noise-octaves.json";
+import fractalNoise from "./std-fractal-noise.json";
 import fractalOctave from "./std-fractal-octave.json";
 import fractalVoronoi from "./std-fractal-voronoi.json";
+import gradientNoise1d from "./std-gradient-noise-1d.json";
 import hash from "./std-hash.json";
 import inDisplayGamut from "./std-in-display-gamut.json";
+import latticeGradient from "./std-lattice-gradient.json";
 import latticeNeighbor from "./std-lattice-neighbor.json";
 import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
 import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
 import maxComponent from "./std-max-component.json";
 import noiseCoordinates from "./std-noise-coordinates.json";
+import noiseDistortion from "./std-noise-distortion.json";
+import octaveShift from "./std-octave-shift.json";
 import oklabToLinearRgb from "./std-oklab-to-linear-rgb.json";
 import oklabToOklch from "./std-oklab-to-oklch.json";
 import oklabToXyz from "./std-oklab-to-xyz.json";
 import oklchGamutMap from "./std-oklch-gamut-map.json";
 import oklchToLinearRgb from "./std-oklch-to-linear-rgb.json";
 import oklchToOklab from "./std-oklch-to-oklab.json";
+import opensimplex2d from "./std-opensimplex-2d.json";
+import opensimplex3dHalf from "./std-opensimplex-3d-half.json";
+import opensimplex3d from "./std-opensimplex-3d.json";
+import opensimplex4d from "./std-opensimplex-4d.json";
+import opensimplexNoise from "./std-opensimplex-noise.json";
+import opensimplexOrientation from "./std-opensimplex-orientation.json";
 import padVector from "./std-pad-vector.json";
 import remap from "./std-remap.json";
+import simplexKernel from "./std-simplex-kernel.json";
 import voronoiBisector from "./std-voronoi-bisector.json";
 import voronoiDistance from "./std-voronoi-distance.json";
 import voronoiEdges from "./std-voronoi-edges.json";
@@ -98,6 +111,19 @@ const files: unknown[] = [
 	padVector,
 	componentSum,
 	maxComponent,
+	latticeGradient,
+	simplexKernel,
+	opensimplexOrientation,
+	gradientNoise1d,
+	opensimplex2d,
+	opensimplex3dHalf,
+	opensimplex3d,
+	opensimplex4d,
+	opensimplexNoise,
+	noiseDistortion,
+	octaveShift,
+	fractalNoiseOctaves,
+	fractalNoise,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

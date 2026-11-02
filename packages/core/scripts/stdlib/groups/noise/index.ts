@@ -2,6 +2,22 @@
 import { noiseCoordinates } from "./coordinates";
 import { fractalOctave } from "./fractal";
 import { hash, latticeNeighbor } from "./lattice";
+import { latticeGradient, simplexKernel } from "./simplex/kernel";
+import {
+	bccHalfLattice,
+	gradientNoise1d,
+	openSimplex2d,
+	openSimplex3d,
+	openSimplex4d,
+} from "./simplex/lattices";
+import { simplexOrientation } from "./simplex/orientation";
+import {
+	fractalNoise,
+	fractalNoiseOctaves,
+	noiseDistortion,
+	octaveShift,
+	openSimplexNoise,
+} from "./simplex/texture";
 import {
 	voronoiEdges,
 	voronoiNearest,
@@ -26,4 +42,17 @@ export default [
 	voronoiSmooth,
 	voronoiTexture,
 	fractalVoronoi,
+	latticeGradient,
+	simplexKernel,
+	simplexOrientation,
+	gradientNoise1d,
+	openSimplex2d,
+	bccHalfLattice,
+	openSimplex3d,
+	openSimplex4d,
+	openSimplexNoise,
+	noiseDistortion,
+	octaveShift,
+	fractalNoiseOctaves,
+	fractalNoise,
 ];

@@ -55,14 +55,14 @@ export const fractalOctave: GroupSpec = {
 		g.frame(
 			"Octave",
 			{
-				note: "Its scale and weight; the octave past Detail's\nwhole part counts for its fraction.",
+				note: "Its scale and weight (Amplitude); the octave past Detail's\nwhole part counts for its fraction, which Power leaves out.",
 			},
 			() => {
 				const weight = g.clamp(g.add(g.sub(detail, octave), 1), 0, 1);
+				const power = g.pow(roughness, octave);
 				g.output("scale", g.pow(lacunarity, octave), "f32", { label: "Scale" });
-				g.output("amplitude", g.mul(g.pow(roughness, octave), weight), "f32", {
-					label: "Amplitude",
-				});
+				g.output("amplitude", g.mul(power, weight), "f32", { label: "Amplitude" });
+				g.output("power", power, "f32", { label: "Power" });
 			},
 		);
 		g.frame(
@@ -85,6 +85,9 @@ export const fractalOctave: GroupSpec = {
 	},
 };
 
+/** An octave as `fractal` hands it over: its index, and `std-fractal-octave`'s outputs. */
+export type Octave = { iteration: Ref; scale: Ref; amplitude: Ref; power: Ref };
+
 /**
  * Sum octaves of a noise (fBm): `octave` gets each octave's scale and
  * amplitude (the last one weighted by Detail's fraction) and the items'
@@ -94,10 +97,14 @@ export function fractal<K extends string>(
 	g: GroupBuilder,
 	inputs: FractalInputs,
 	items: Record<K, readonly [ItemType, Operand]>,
-	octave: (octave: { scale: Ref; amplitude: Ref }, state: Record<K, Ref>) => Record<K, Operand>,
+	octave: (octave: Octave, state: Record<K, Ref>) => Record<K, Operand>,
 ): Record<K, Ref> {
 	const { octaves } = g.call<"octaves">(fractalOctave, { ...inputs });
-	return g.repeat(octaves, items, (iteration, state) =>
-		octave(g.call<"scale" | "amplitude">(fractalOctave, { iteration, ...inputs }), state),
-	);
+	return g.repeat(octaves, items, (iteration, state) => {
+		const outputs = g.call<"scale" | "amplitude" | "power">(fractalOctave, {
+			iteration,
+			...inputs,
+		});
+		return octave({ iteration, ...outputs }, state);
+	});
 }

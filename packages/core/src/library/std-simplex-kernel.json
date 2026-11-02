@@ -1,0 +1,404 @@
+{
+	"id": "std-simplex-kernel",
+	"name": "Simplex Kernel",
+	"aliases": ["Surflet", "Gradient Kernel", "Simplex Contribution"],
+	"category": "texture",
+	"section": ["Helpers", "OpenSimplex"],
+	"searchSection": "Helpers",
+	"dependencies": ["std-lattice-gradient@05f62eee0a5890", "std-component-sum@19655c913fca94"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "7e6ab405-40a2-49f7-b9a5-0be0bf3a1c31",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 146
+				},
+				"group": {
+					"definitionRef": "std-lattice-gradient@05f62eee0a5890",
+					"locked": true
+				}
+			},
+			{
+				"id": "98fcd439-4dbc-40db-8d36-13c2051e3e81",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 246
+				}
+			},
+			{
+				"id": "7a377af2-db58-4cfd-af46-e7e546b4e26c",
+				"type": "layout-frame",
+				"data": {
+					"label": "Kernel",
+					"note": "The vertex's gradient along the offset to it, faded by (r² − |offset|²)⁴:\nnothing past the radius, and smooth to its edge."
+				},
+				"position": {
+					"x": 525,
+					"y": 0
+				}
+			},
+			{
+				"id": "5c4ac1ce-34d1-4cb5-b4fa-d0e59760f283",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 787,
+					"y": 439
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "76ca4700-113f-488b-ba23-607e0b38a23a",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 549,
+					"y": 509
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "cffd88b0-6a63-4833-a3a8-00c1e7db8bcf",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 987,
+					"y": 375
+				},
+				"group": {
+					"definitionRef": "std-component-sum@19655c913fca94",
+					"locked": true
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "f5ff6c85-be0a-489c-975f-6bef8deef7ff",
+				"type": "sub",
+				"data": {},
+				"position": {
+					"x": 1187,
+					"y": 473
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "07bcaeae-75ac-4ee0-88c5-d7327ad2fdde",
+				"type": "max",
+				"data": {},
+				"position": {
+					"x": 1387,
+					"y": 445
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "72adfe1d-2e17-46d4-8210-1827b7e3afe9",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "f32"
+					},
+					"values": {
+						"x": 0,
+						"y": 0,
+						"z": 0,
+						"w": 0
+					}
+				},
+				"position": {
+					"x": 1187,
+					"y": 270
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "6ea6710a-75be-40a2-9550-b153573c97c4",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 1625,
+					"y": 417
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "8c675fd8-a6eb-4800-b822-53c9dfbf2630",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 987,
+					"y": 154
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "2ed8863c-3e08-4879-afa3-b3ee062a78d0",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 1387,
+					"y": 90
+				},
+				"group": {
+					"definitionRef": "std-component-sum@19655c913fca94",
+					"locked": true
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "536b8844-8276-44bf-95fb-ec14045f8c15",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 1863,
+					"y": 389
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "d2515f86-100c-487a-ad9d-0cd59d7dfb9c",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 2063,
+					"y": 421
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "1fc905d6-691a-4425-a67a-8564c9a5e75f",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 749,
+					"y": 563
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "9b1171c2-dd7f-40ed-83ad-d65eec3751f1",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 1587,
+					"y": 541
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			},
+			{
+				"id": "9c4ae2b9-e646-4dbf-b694-af56e6f861a7",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 1825,
+					"y": 513
+				},
+				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
+			}
+		],
+		"edges": [
+			{
+				"id": "20f398e4-298c-49f9-afe5-d683c7873a8d",
+				"source": "98fcd439-4dbc-40db-8d36-13c2051e3e81",
+				"sourceHandle": "9d21d72c-3034-49b5-9e18-52e2675e982b",
+				"target": "7e6ab405-40a2-49f7-b9a5-0be0bf3a1c31",
+				"targetHandle": "49baba9b-7336-42a2-8c4d-0b2f8c0e705a"
+			},
+			{
+				"id": "9bf07473-0d0f-4f60-b9ca-fbd73fad7f74",
+				"source": "98fcd439-4dbc-40db-8d36-13c2051e3e81",
+				"sourceHandle": "3236578c-4428-401c-aaf5-dff96040a81a",
+				"target": "7e6ab405-40a2-49f7-b9a5-0be0bf3a1c31",
+				"targetHandle": "234e1c11-3490-43ca-ba22-0c7635da849e"
+			},
+			{
+				"id": "6f4bbba2-839b-44fa-96ac-7539ddf32f9c",
+				"source": "1fc905d6-691a-4425-a67a-8564c9a5e75f",
+				"sourceHandle": "out",
+				"target": "5c4ac1ce-34d1-4cb5-b4fa-d0e59760f283",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "89596de1-ffb9-47c5-bedb-ca592a1f8b21",
+				"source": "1fc905d6-691a-4425-a67a-8564c9a5e75f",
+				"sourceHandle": "out",
+				"target": "5c4ac1ce-34d1-4cb5-b4fa-d0e59760f283",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "7e920ee7-0218-4baf-b755-b4d3e1e8d502",
+				"source": "5c4ac1ce-34d1-4cb5-b4fa-d0e59760f283",
+				"sourceHandle": "result",
+				"target": "cffd88b0-6a63-4833-a3a8-00c1e7db8bcf",
+				"targetHandle": "057032dd-a989-4617-a3be-7aff2e16b578"
+			},
+			{
+				"id": "2bd5cfe8-ac97-4445-bd60-ad07f3a49d3e",
+				"source": "76ca4700-113f-488b-ba23-607e0b38a23a",
+				"sourceHandle": "8741d726-eeb0-4fb0-94d4-fbd6df06b420",
+				"target": "f5ff6c85-be0a-489c-975f-6bef8deef7ff",
+				"targetHandle": "a"
+			},
+			{
+				"id": "b4b13b1e-c2f5-4e44-8fc2-c1c44d6942f2",
+				"source": "cffd88b0-6a63-4833-a3a8-00c1e7db8bcf",
+				"sourceHandle": "65886007-d50c-4193-bfba-1f07ed200d36",
+				"target": "f5ff6c85-be0a-489c-975f-6bef8deef7ff",
+				"targetHandle": "b"
+			},
+			{
+				"id": "1a603f06-7717-417d-a78c-3c72d8999f33",
+				"source": "f5ff6c85-be0a-489c-975f-6bef8deef7ff",
+				"sourceHandle": "result",
+				"target": "07bcaeae-75ac-4ee0-88c5-d7327ad2fdde",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "445ac771-3468-4a04-a359-26829072349e",
+				"source": "72adfe1d-2e17-46d4-8210-1827b7e3afe9",
+				"sourceHandle": "value",
+				"target": "07bcaeae-75ac-4ee0-88c5-d7327ad2fdde",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "64927610-b9f3-40d4-8419-75c70dcc7272",
+				"source": "9b1171c2-dd7f-40ed-83ad-d65eec3751f1",
+				"sourceHandle": "out",
+				"target": "6ea6710a-75be-40a2-9550-b153573c97c4",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "93d0b238-b427-48ab-85cb-609516b68d08",
+				"source": "9b1171c2-dd7f-40ed-83ad-d65eec3751f1",
+				"sourceHandle": "out",
+				"target": "6ea6710a-75be-40a2-9550-b153573c97c4",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "8e82c126-91e4-4e25-a935-3891b5454d96",
+				"source": "7e6ab405-40a2-49f7-b9a5-0be0bf3a1c31",
+				"sourceHandle": "48119c6a-f416-452f-8e46-a0835625f194",
+				"target": "8c675fd8-a6eb-4800-b822-53c9dfbf2630",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "b3de4e36-ad23-41c6-a46a-10cd63969a60",
+				"source": "1fc905d6-691a-4425-a67a-8564c9a5e75f",
+				"sourceHandle": "out",
+				"target": "8c675fd8-a6eb-4800-b822-53c9dfbf2630",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "6b14000e-65ae-4587-97fc-4184ee0f96b7",
+				"source": "8c675fd8-a6eb-4800-b822-53c9dfbf2630",
+				"sourceHandle": "result",
+				"target": "2ed8863c-3e08-4879-afa3-b3ee062a78d0",
+				"targetHandle": "057032dd-a989-4617-a3be-7aff2e16b578"
+			},
+			{
+				"id": "9dbee6f6-82d5-4255-b83d-156cca47e183",
+				"source": "9c4ae2b9-e646-4dbf-b694-af56e6f861a7",
+				"sourceHandle": "out",
+				"target": "536b8844-8276-44bf-95fb-ec14045f8c15",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "aaa6f65e-c702-49ae-ad35-0211bb1f8a3a",
+				"source": "9c4ae2b9-e646-4dbf-b694-af56e6f861a7",
+				"sourceHandle": "out",
+				"target": "536b8844-8276-44bf-95fb-ec14045f8c15",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "ccecef57-a446-4bfc-b2e2-7914b496b6c2",
+				"source": "2ed8863c-3e08-4879-afa3-b3ee062a78d0",
+				"sourceHandle": "65886007-d50c-4193-bfba-1f07ed200d36",
+				"target": "536b8844-8276-44bf-95fb-ec14045f8c15",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "f2b148f4-5079-4f1c-9b0c-c85d0d92e5d5",
+				"source": "536b8844-8276-44bf-95fb-ec14045f8c15",
+				"sourceHandle": "result",
+				"target": "d2515f86-100c-487a-ad9d-0cd59d7dfb9c",
+				"targetHandle": "059fbb89-471c-4b83-82f6-43522580f07f"
+			},
+			{
+				"id": "ca7d7777-47ed-45e2-86a9-4ccb9a1e2992",
+				"source": "76ca4700-113f-488b-ba23-607e0b38a23a",
+				"sourceHandle": "e66439b3-befc-4c46-afd0-ba7266945cc0",
+				"target": "1fc905d6-691a-4425-a67a-8564c9a5e75f",
+				"targetHandle": "in"
+			},
+			{
+				"id": "dc5e60a7-43d4-4ea1-a778-19bcc1661197",
+				"source": "07bcaeae-75ac-4ee0-88c5-d7327ad2fdde",
+				"sourceHandle": "result",
+				"target": "9b1171c2-dd7f-40ed-83ad-d65eec3751f1",
+				"targetHandle": "in"
+			},
+			{
+				"id": "58b9882e-2b44-4dcf-adff-6153b7794da5",
+				"source": "6ea6710a-75be-40a2-9550-b153573c97c4",
+				"sourceHandle": "result",
+				"target": "9c4ae2b9-e646-4dbf-b694-af56e6f861a7",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "9d21d72c-3034-49b5-9e18-52e2675e982b",
+				"label": "Vertex",
+				"type": {
+					"variable": "9db4066d-1104-4cf5-927a-ffbd80bab92b"
+				}
+			},
+			{
+				"id": "e66439b3-befc-4c46-afd0-ba7266945cc0",
+				"label": "Offset",
+				"type": {
+					"variable": "9db4066d-1104-4cf5-927a-ffbd80bab92b"
+				}
+			},
+			{
+				"id": "8741d726-eeb0-4fb0-94d4-fbd6df06b420",
+				"label": "Radius²",
+				"type": "f32"
+			},
+			{
+				"id": "3236578c-4428-401c-aaf5-dff96040a81a",
+				"label": "Seed",
+				"type": "i32"
+			}
+		],
+		"outputs": [
+			{
+				"id": "059fbb89-471c-4b83-82f6-43522580f07f",
+				"label": "Value",
+				"type": "f32"
+			}
+		],
+		"defaults": {
+			"8741d726-eeb0-4fb0-94d4-fbd6df06b420": 0.5,
+			"3236578c-4428-401c-aaf5-dff96040a81a": 0
+		},
+		"typeVariables": [
+			{
+				"id": "9db4066d-1104-4cf5-927a-ffbd80bab92b",
+				"name": "T",
+				"types": ["vec2f", "vec3f", "vec4f", "f32"]
+			}
+		]
+	}
+}

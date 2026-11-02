@@ -1,0 +1,193 @@
+{
+	"id": "std-octave-shift",
+	"name": "Octave Shift",
+	"aliases": ["Octave Offset", "Decorrelate Octaves"],
+	"category": "texture",
+	"section": ["Helpers", "OpenSimplex"],
+	"searchSection": "Helpers",
+	"dependencies": ["std-hash@1b6519412c054e"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "8f603841-aad7-4612-a044-6fdcdc44a772",
+				"type": "layout-frame",
+				"data": {
+					"label": "Shift",
+					"note": "Moved by a random amount per octave, so the octaves' lattices\ndon't line up at the origin, nor along their axes."
+				},
+				"position": {
+					"x": 0,
+					"y": 0
+				}
+			},
+			{
+				"id": "1709273d-8772-4577-aec6-07ea209e9b0c",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 224,
+					"y": 90
+				},
+				"group": {
+					"definitionRef": "std-hash@1b6519412c054e",
+					"locked": true
+				},
+				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"
+			},
+			{
+				"id": "089542e4-ca2c-4018-8241-7d286f79eb55",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 24,
+					"y": 162
+				},
+				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"
+			},
+			{
+				"id": "ec3d3420-07b9-4152-a947-4b761ca8c3ff",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 424,
+					"y": 303
+				},
+				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"
+			},
+			{
+				"id": "d3e2a33e-2150-4b0b-98dc-d1b86629c6d4",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "f32"
+					},
+					"values": {
+						"x": 128,
+						"y": 128,
+						"z": 128,
+						"w": 128
+					}
+				},
+				"position": {
+					"x": 224,
+					"y": 331
+				},
+				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"
+			},
+			{
+				"id": "0eb18861-858c-424d-afca-44b73fdc1a58",
+				"type": "add",
+				"data": {},
+				"position": {
+					"x": 624,
+					"y": 275
+				},
+				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"
+			},
+			{
+				"id": "97eff21c-0014-44b3-8531-455fdceda9ad",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 824,
+					"y": 307
+				},
+				"frame": "8f603841-aad7-4612-a044-6fdcdc44a772"
+			}
+		],
+		"edges": [
+			{
+				"id": "2ba99418-298b-491d-b7f9-48e935c34aab",
+				"source": "089542e4-ca2c-4018-8241-7d286f79eb55",
+				"sourceHandle": "c422faac-1d6b-4545-bce8-8cf72c339550",
+				"target": "1709273d-8772-4577-aec6-07ea209e9b0c",
+				"targetHandle": "4de0afc6-7aba-4846-b22f-152e825964c3"
+			},
+			{
+				"id": "acd35bd9-647c-4b88-988c-b9ca44c8284f",
+				"source": "089542e4-ca2c-4018-8241-7d286f79eb55",
+				"sourceHandle": "897ee6f4-a707-4c23-9c9a-52f8c8136935",
+				"target": "1709273d-8772-4577-aec6-07ea209e9b0c",
+				"targetHandle": "57df1ede-3658-49de-ab04-8eb051ac6f5d"
+			},
+			{
+				"id": "eb5e815e-f4f4-470e-94cf-bc595bb28d04",
+				"source": "1709273d-8772-4577-aec6-07ea209e9b0c",
+				"sourceHandle": "5ba21c73-6e6c-4a11-8432-3bdde0dda177",
+				"target": "ec3d3420-07b9-4152-a947-4b761ca8c3ff",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "e232ff8e-c584-4e9b-8cce-5d9bba0e9102",
+				"source": "d3e2a33e-2150-4b0b-98dc-d1b86629c6d4",
+				"sourceHandle": "value",
+				"target": "ec3d3420-07b9-4152-a947-4b761ca8c3ff",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "dd4cfac0-ff4c-49a2-a97c-d837f2d17c6c",
+				"source": "089542e4-ca2c-4018-8241-7d286f79eb55",
+				"sourceHandle": "fc727a66-0f82-48fa-a277-ad9d9950f1cb",
+				"target": "0eb18861-858c-424d-afca-44b73fdc1a58",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "4ae22665-fa85-4fdf-8219-74102205e9ed",
+				"source": "ec3d3420-07b9-4152-a947-4b761ca8c3ff",
+				"sourceHandle": "result",
+				"target": "0eb18861-858c-424d-afca-44b73fdc1a58",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "3a12214e-68b4-4ea7-bfb8-a5590cc89e8b",
+				"source": "0eb18861-858c-424d-afca-44b73fdc1a58",
+				"sourceHandle": "result",
+				"target": "97eff21c-0014-44b3-8531-455fdceda9ad",
+				"targetHandle": "31f4c2fe-6c34-446c-afd4-1ca61665bef0"
+			}
+		],
+		"inputs": [
+			{
+				"id": "fc727a66-0f82-48fa-a277-ad9d9950f1cb",
+				"label": "Vector",
+				"type": {
+					"variable": "e40502e7-8684-46cd-b3f8-55341824a869"
+				}
+			},
+			{
+				"id": "c422faac-1d6b-4545-bce8-8cf72c339550",
+				"label": "Octave",
+				"type": "i32"
+			},
+			{
+				"id": "897ee6f4-a707-4c23-9c9a-52f8c8136935",
+				"label": "Seed",
+				"type": "i32"
+			}
+		],
+		"outputs": [
+			{
+				"id": "31f4c2fe-6c34-446c-afd4-1ca61665bef0",
+				"label": "Shifted",
+				"type": {
+					"variable": "e40502e7-8684-46cd-b3f8-55341824a869"
+				}
+			}
+		],
+		"defaults": {
+			"c422faac-1d6b-4545-bce8-8cf72c339550": 0,
+			"897ee6f4-a707-4c23-9c9a-52f8c8136935": 0
+		},
+		"typeVariables": [
+			{
+				"id": "e40502e7-8684-46cd-b3f8-55341824a869",
+				"name": "T",
+				"types": ["vec2f", "vec3f", "vec4f", "f32"]
+			}
+		]
+	}
+}
