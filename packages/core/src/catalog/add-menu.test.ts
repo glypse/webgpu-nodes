@@ -184,7 +184,11 @@ describe("adding from a dropped link", () => {
 
 	it("offers Declares of vectors of the dragged scalar to combine it", () => {
 		const graph = managerFor([{ id: "t", type: "time" }], []);
-		const fromTime: PendingConnection = { nodeId: "t", handleId: "time", handleType: "source" };
+		const fromTime: PendingConnection = {
+			nodeId: "t",
+			handleId: "seconds",
+			handleType: "source",
+		};
 		const entries = graph.connectableEntries(addMenuEntries(graph), fromTime);
 		const declares = entries.filter((e) => e.type === "declare");
 		expect(declares.map((e) => e.data?.types?.declare)).toEqual(["vec2f", "vec3f", "vec4f"]);
@@ -217,7 +221,11 @@ describe("adding from a dropped link", () => {
 
 	it("prefers handles of the same scalar kind", () => {
 		const graph = managerFor([{ id: "t", type: "time" }], []);
-		const fromTime: PendingConnection = { nodeId: "t", handleId: "time", handleType: "source" };
+		const fromTime: PendingConnection = {
+			nodeId: "t",
+			handleId: "seconds",
+			handleType: "source",
+		};
 		const switchEntry = addMenuEntries(graph).find((e) => e.key === "node:switch");
 		if (!switchEntry) throw new Error("missing switch");
 		expect(graph.entryHandleFor(switchEntry, fromTime)).toBe("false");
@@ -230,7 +238,11 @@ describe("adding from a dropped link", () => {
 		const zoneEntry = entries.find((e) => e.key === "zone:repeat");
 		if (!sinEntry || !zoneEntry) throw new Error("missing entries");
 
-		const fromTime: PendingConnection = { nodeId: "t", handleId: "time", handleType: "source" };
+		const fromTime: PendingConnection = {
+			nodeId: "t",
+			handleId: "seconds",
+			handleType: "source",
+		};
 		const sin = graph.addMenuEntryConnected(sinEntry, { x: 0, y: 0 }, fromTime);
 		expect(graph.root.edges).toContainEqual(
 			containing({ source: "t", target: sin, targetHandle: "e" }),
@@ -258,14 +270,14 @@ describe("adding from a dropped link", () => {
 			],
 			[],
 		);
-		graph.connect({ source: "a", sourceHandle: "time", target: "s", targetHandle: "e" });
+		graph.connect({ source: "a", sourceHandle: "seconds", target: "s", targetHandle: "e" });
 		graph.connect({ source: "b", sourceHandle: "delta", target: "s", targetHandle: "e" });
 		expect(graph.root.edges.filter((e) => e.target === "s").map((e) => e.source)).toEqual([
 			"b",
 		]);
 		graph.connect({
 			source: "a",
-			sourceHandle: "time",
+			sourceHandle: "seconds",
 			target: "sum",
 			targetHandle: "operands",
 		});

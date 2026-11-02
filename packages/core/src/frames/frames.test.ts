@@ -68,10 +68,10 @@ describe("GraphModel frames", () => {
 				{ id: "f", type: LAYOUT_FRAME },
 				{ id: "t", type: "time", frame: "f" },
 			],
-			[["t", "time", "out", "color"]],
+			[["t", "seconds", "out", "color"]],
 		);
 		expect(framed).toBe(
-			shaderFor([{ id: "t", type: "time" }], [["t", "time", "out", "color"]]),
+			shaderFor([{ id: "t", type: "time" }], [["t", "seconds", "out", "color"]]),
 		);
 	});
 
@@ -171,8 +171,8 @@ describe("GraphModel frames", () => {
 				{ id: "c", type: "add" },
 			],
 			[
-				["t", "time", "a", "e"],
-				["t", "time", "b", "e"],
+				["t", "seconds", "a", "e"],
+				["t", "seconds", "b", "e"],
 				["a", "result", "c", "operands"],
 				["b", "result", "c", "operands"],
 				["c", "result", "out", "color"],

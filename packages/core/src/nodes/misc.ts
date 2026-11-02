@@ -1,6 +1,5 @@
 import { LAYOUT_FRAME } from "../frames/analysis";
-import type { NodeData, NodeDescriptor } from "../types";
-import { WGSL_TYPES } from "../types";
+import { defineNode, type NodeData, WGSL_TYPES } from "../types";
 
 // ── Standalone nodes (unique patterns) ───────────────────────────────────────
 
@@ -17,7 +16,7 @@ export function hidesLinks(node: { type?: string; data: NodeData } | undefined):
  * A bare handle to route links through: forwards whatever it receives,
  * keeping its type.
  */
-export const rerouteNode: NodeDescriptor = {
+export const rerouteNode = defineNode({
 	type: "reroute",
 	label: "Reroute",
 	aliases: ["Null", "Knot", "Dot", "Passthrough"],
@@ -26,10 +25,10 @@ export const rerouteNode: NodeDescriptor = {
 	outputs: [{ id: "out", label: "out", type: "f32" }],
 	defaultData: {},
 	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("in")};`],
-};
+});
 
 /** A labelled box around other nodes; it computes nothing. */
-export const layoutFrameNode: NodeDescriptor = {
+export const layoutFrameNode = defineNode({
 	type: LAYOUT_FRAME,
 	label: "Frame",
 	aliases: ["Comment", "Box", "Region", "Note"],
@@ -38,9 +37,9 @@ export const layoutFrameNode: NodeDescriptor = {
 	outputs: [],
 	defaultData: {},
 	wgsl: () => [],
-};
+});
 
-export const outputNode: NodeDescriptor = {
+export const outputNode = defineNode({
 	type: "frag-output",
 	label: "Output",
 	category: "misc",
@@ -57,4 +56,4 @@ export const outputNode: NodeDescriptor = {
 		const rgba = ctx.inputTypes.color === "vec3f" ? `vec4f(${color}, 1.0)` : color;
 		return [`let ${ctx.varName} = ${rgba};`];
 	},
-};
+});

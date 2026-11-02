@@ -170,11 +170,11 @@ describe("enum inputs and fallbacks", () => {
 		const shader = shaderFor(
 			[{ id: "t", type: "time" }, aspectUv()],
 			[
-				["t", "time", "a", MODE],
+				["t", "seconds", "a", MODE],
 				["a", OUT, "out", "color"],
 			],
 		);
-		expect(shader).toContain("u32(v_t))");
+		expect(shader).toContain("u32(v_t_seconds))");
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 
@@ -185,11 +185,11 @@ describe("enum inputs and fallbacks", () => {
 				{ id: "t", type: "time" },
 			],
 			[
-				["t", "time", "f", "default"],
+				["t", "seconds", "f", "default"],
 				["f", "result", "out", "color"],
 			],
 		);
-		expect(shader).toContain("let v_f = v_t;");
+		expect(shader).toContain("let v_f = v_t_seconds;");
 	});
 });
 

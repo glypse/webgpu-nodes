@@ -30,7 +30,6 @@ const DESCRIPTORS = {
 	uv: nodes.uvNode,
 	time: nodes.timeNode,
 	delta: nodes.deltaNode,
-	frame: nodes.frameNode,
 	resolution: nodes.resolutionNode,
 
 	// Math
@@ -116,6 +115,9 @@ const DESCRIPTORS = {
 } as const satisfies Record<string, NodeDescriptor>;
 
 export const nodeRegistry: Readonly<Record<string, NodeDescriptor>> = DESCRIPTORS;
+
+/** The registered descriptors, each with its own sockets' and settings' types. */
+export type NodeDescriptors = typeof DESCRIPTORS;
 
 /** Node types whose descriptor is built from their node, not registered. */
 export const DYNAMIC_NODE_TYPES = ["group-input", "group-output", ...ZONE_NODE_TYPES] as const;

@@ -62,7 +62,7 @@ function project(
 						["in", "mode", "m", "selector"],
 						["one", "value", "m", caseHandle(0)],
 						["in", "x", "m", caseHandle(2)],
-						["t", "time", "m", caseHandle(5)],
+						["t", "seconds", "m", caseHandle(5)],
 						["m", "result", "go", "result"],
 					] satisfies TestEdge[]
 				).map(edge),
@@ -99,16 +99,18 @@ describe("Match node", () => {
 
 	it("selects among every case when the value is only known in the shader", () => {
 		const { shader } = generateShader(
-			new GraphModel(project({}, [node("ft", "time")], [["ft", "time", "g", "mode"]])),
+			new GraphModel(project({}, [node("ft", "time")], [["ft", "seconds", "g", "mode"]])),
 		);
-		expect(shader).toContain("select(select(v_one, h_x, h_mode == 2u), v_t, h_mode == 5u)");
+		expect(shader).toContain(
+			"select(select(v_one, h_x, h_mode == 2u), v_t_seconds, h_mode == 5u)",
+		);
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
 	});
 
 	it("only lets an enum pick its case", () => {
 		const graph = new GraphModel(project());
 		graph.enterGroup("g");
-		const link = { target: "m", targetHandle: "selector", sourceHandle: "time" };
+		const link = { target: "m", targetHandle: "selector", sourceHandle: "seconds" };
 		expect(graph.isValidConnection({ ...link, source: "t" })).toBe(false);
 		expect(graph.isValidConnection({ ...link, source: "in", sourceHandle: "mode" })).toBe(true);
 	});
@@ -139,10 +141,10 @@ describe("Match node", () => {
 		expect(hidden({ values: { mode: 0 } })).toEqual(["x"]);
 		expect(hidden({ values: { mode: 2 } })).toEqual([]);
 		// Unknown while compiling: every variant's inputs.
-		expect(hidden({}, [node("ft", "time")], [["ft", "time", "g", "mode"]])).toEqual([]);
+		expect(hidden({}, [node("ft", "time")], [["ft", "seconds", "g", "mode"]])).toEqual([]);
 		// Linked or not: its link stays, unused.
 		expect(
-			hidden({ values: { mode: 0 } }, [node("ft", "time")], [["ft", "time", "g", "x"]]),
+			hidden({ values: { mode: 0 } }, [node("ft", "time")], [["ft", "seconds", "g", "x"]]),
 		).toEqual(["x"]);
 	});
 

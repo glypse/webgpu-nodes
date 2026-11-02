@@ -66,7 +66,7 @@ describe("analyzeZones", () => {
 			[...accumulate.nodes, { id: "t", type: "time" }, { id: "k", type: "mul" }],
 			[
 				...accumulate.edges,
-				["t", "time", "k", "operands"],
+				["t", "seconds", "k", "operands"],
 				["k", "result", "body", "operands"],
 			],
 		);
@@ -179,7 +179,7 @@ describe("repeat zone codegen", () => {
 			[...accumulate.nodes, { id: "t", type: "time" }, { id: "k", type: "mul" }],
 			[
 				...accumulate.edges,
-				["t", "time", "k", "operands"],
+				["t", "seconds", "k", "operands"],
 				["k", "result", "body", "operands"],
 			],
 		);
@@ -192,12 +192,12 @@ describe("repeat zone codegen", () => {
 		const shader = shaderFor(
 			[...zone("z", [ACC], { maxIterations: 64 }), { id: "t", type: "time" }],
 			[
-				["t", "time", "z_in", "iterations"],
+				["t", "seconds", "z_in", "iterations"],
 				["z_in", "acc", "z_out", "acc"],
 				["z_out", "acc", "out", "color"],
 			],
 		);
-		expect(shader).toContain("clamp(i32(v_t), 0, 64)");
+		expect(shader).toContain("clamp(i32(v_t_seconds), 0, 64)");
 		expectValid(shader);
 	});
 

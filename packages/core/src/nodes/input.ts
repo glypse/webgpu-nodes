@@ -1,11 +1,10 @@
 import { FRAGMENT_VAR, FRAME_VAR } from "../codegen/program";
-import type { NodeDescriptor } from "../types";
-import { makeType, typeComponents, typeKind, WGSL_TYPES, wgslTypeName } from "../types";
+import { defineNode, makeType, typeComponents, typeKind, WGSL_TYPES, wgslTypeName } from "../types";
 import { uniformReader } from "./builders";
 
-const DECLARE_COMPONENTS = ["x", "y", "z", "w"];
+const DECLARE_COMPONENTS = ["x", "y", "z", "w"] as const;
 
-export const declareNode: NodeDescriptor = {
+export const declareNode = defineNode({
 	type: "declare",
 	label: "Declare",
 	aliases: [
@@ -37,28 +36,37 @@ export const declareNode: NodeDescriptor = {
 		if (typeComponents(ctx.outputType) === 1) return [`let ${ctx.varName} = ${args};`];
 		return [`let ${ctx.varName} = ${wgslTypeName(ctx.outputType)}(${args});`];
 	},
-};
+});
 
 // Input — uniforms
-export const timeNode: NodeDescriptor = {
-	...uniformReader("time", "Time", "time", "f32", `${FRAME_VAR}.time`),
-	aliases: ["Scene Time", "Absolute Time", "Seconds", "iTime"],
-};
-export const deltaNode: NodeDescriptor = {
+export const timeNode = defineNode({
+	type: "time",
+	label: "Time",
+	aliases: ["Scene Time", "Absolute Time", "Seconds", "Frame", "Frame Index", "iTime", "iFrame"],
+	category: "input",
+	staticOutputTypes: true,
+	inputs: [],
+	outputs: [
+		{ id: "seconds", label: "seconds", type: "f32" },
+		{ id: "frame", label: "frame", type: "u32" },
+	],
+	defaultData: {},
+	wgsl: (ctx) => [
+		`let ${ctx.outputVars.seconds ?? "seconds"} = ${FRAME_VAR}.time;`,
+		`let ${ctx.outputVars.frame ?? "frame"} = ${FRAME_VAR}.frame;`,
+	],
+});
+export const deltaNode = defineNode({
 	...uniformReader("delta", "Delta", "delta", "f32", `${FRAME_VAR}.delta`),
 	aliases: ["Delta Time", "Frame Time", "iTimeDelta"],
-};
-export const frameNode: NodeDescriptor = {
-	...uniformReader("frame", "Frame", "frame", "u32", `${FRAME_VAR}.frame`),
-	aliases: ["Frame Index", "Frame Number", "iFrame"],
-};
-export const resolutionNode: NodeDescriptor = {
+});
+export const resolutionNode = defineNode({
 	...uniformReader("resolution", "Resolution", "resolution", "vec2f", `${FRAME_VAR}.resolution`),
 	aliases: ["Screen Size", "View Size", "Canvas Size", "iResolution"],
-};
+});
 // The per-fragment context, readable from any function (unlike frag()'s
 // own `uv` parameter), so UV nodes also work inside groups.
-export const uvNode: NodeDescriptor = {
+export const uvNode = defineNode({
 	...uniformReader("uv", "UV", "uv", "vec2f", `${FRAGMENT_VAR}.uv`),
 	aliases: [
 		"Texture Coordinate",
@@ -67,4 +75,4 @@ export const uvNode: NodeDescriptor = {
 		"Fragment Coordinate",
 		"fragCoord",
 	],
-};
+});

@@ -1,8 +1,8 @@
 import {
 	BOOL_TYPES,
+	defineNode,
+	defineSetting,
 	makeType,
-	type NodeDescriptor,
-	type NodeSetting,
 	NUMERIC_TYPES,
 	settingValue,
 	typeComponents,
@@ -10,7 +10,7 @@ import {
 } from "../types";
 import { binaryNode, unaryFn } from "./builders";
 
-const COMPARE_SETTING: NodeSetting = {
+const COMPARE_SETTING = defineSetting({
 	key: "op",
 	label: "Operation",
 	options: [
@@ -21,9 +21,9 @@ const COMPARE_SETTING: NodeSetting = {
 		{ value: ">=", label: "Greater Than or Equal" },
 		{ value: ">", label: "Greater Than" },
 	],
-};
+});
 
-export const compareNode: NodeDescriptor = {
+export const compareNode = defineNode({
 	type: "compare",
 	label: "Compare",
 	aliases: ["Greater Than", "Less Than", "Equal", "Not Equal", "Comparison", "If"],
@@ -40,9 +40,9 @@ export const compareNode: NodeDescriptor = {
 		const op = settingValue(ctx.data, COMPARE_SETTING);
 		return [`let ${ctx.varName} = ${ctx.promoteInput("a")} ${op} ${ctx.promoteInput("b")};`];
 	},
-};
+});
 
-export const switchNode: NodeDescriptor = {
+export const switchNode = defineNode({
 	type: "switch",
 	label: "Switch",
 	aliases: ["If", "Select", "Branch", "Conditional", "Ternary", "Static Switch"],
@@ -68,9 +68,9 @@ export const switchNode: NodeDescriptor = {
 			`let ${ctx.varName} = select(${ctx.promoteInput("false")}, ${ctx.promoteInput("true")}, ${condition});`,
 		];
 	},
-};
+});
 
-const BOOLEAN_MATH_SETTING: NodeSetting = {
+const BOOLEAN_MATH_SETTING = defineSetting({
 	key: "op",
 	label: "Operation",
 	options: [
@@ -81,7 +81,7 @@ const BOOLEAN_MATH_SETTING: NodeSetting = {
 		{ value: "nor", label: "Nor" },
 		{ value: "xnor", label: "Xnor" },
 	],
-};
+});
 
 const BOOLEAN_MATH_EXPR: Record<string, (a: string, b: string) => string> = {
 	and: (a, b) => `${a} & ${b}`,
@@ -92,7 +92,7 @@ const BOOLEAN_MATH_EXPR: Record<string, (a: string, b: string) => string> = {
 	xnor: (a, b) => `${a} == ${b}`,
 };
 
-export const booleanMathNode: NodeDescriptor = {
+export const booleanMathNode = defineNode({
 	...binaryNode(
 		"boolean-math",
 		"Boolean Math",
@@ -105,25 +105,25 @@ export const booleanMathNode: NodeDescriptor = {
 	aliases: ["And", "Or", "Xor", "Nand", "Nor", "Logic"],
 	defaultData: { values: { a: false, b: false }, settings: { op: "and" } },
 	settings: [BOOLEAN_MATH_SETTING],
-};
+});
 
-export const notNode: NodeDescriptor = {
+export const notNode = defineNode({
 	...unaryFn("not", "Not", "", BOOL_TYPES, "logic"),
 	aliases: ["Logical Not", "Boolean Not", "Invert Boolean"],
 	defaultData: { values: { e: false } },
 	wgsl: (ctx) => [`let ${ctx.varName} = !(${ctx.promoteInput("e")});`],
-};
+});
 
-const REDUCE_SETTING: NodeSetting = {
+const REDUCE_SETTING = defineSetting({
 	key: "op",
 	label: "Operation",
 	options: [
 		{ value: "any", label: "Any" },
 		{ value: "all", label: "All" },
 	],
-};
+});
 
-export const reduceBooleanNode: NodeDescriptor = {
+export const reduceBooleanNode = defineNode({
 	...unaryFn("reduce-boolean", "Any / All", "", BOOL_TYPES, "logic"),
 	aliases: ["Reduce"],
 	defaultData: { values: { e: false }, settings: { op: "any" } },
@@ -132,7 +132,7 @@ export const reduceBooleanNode: NodeDescriptor = {
 	wgsl: (ctx) => [
 		`let ${ctx.varName} = ${settingValue(ctx.data, REDUCE_SETTING)}(${ctx.promoteInput("e")});`,
 	],
-};
+});
 
 /**
  * Use `value` if it carries one, `default` otherwise. Presence is known while
@@ -141,7 +141,7 @@ export const reduceBooleanNode: NodeDescriptor = {
  * group node left unlinked. Only the chosen branch is used, so a group can
  * compute its own default (e.g. the fragment's UV) for an unlinked input.
  */
-export const fallbackNode: NodeDescriptor = {
+export const fallbackNode = defineNode({
 	type: "fallback",
 	label: "Fallback",
 	aliases: ["Default Value", "Coalesce", "Optional"],
@@ -156,7 +156,7 @@ export const fallbackNode: NodeDescriptor = {
 		const chosen = ctx.isPresent("value") ? "value" : "default";
 		return [`let ${ctx.varName} = ${ctx.promoteInput(chosen)};`];
 	},
-};
+});
 
 type FallbackDocument = {
 	nodes: readonly { id: string; type?: string; group?: { definitionRef: string } }[];

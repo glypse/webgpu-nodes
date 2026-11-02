@@ -12,7 +12,7 @@ describe("GraphModel layout", () => {
 				{ id: "b", type: "sin" },
 			],
 			[
-				["t", "time", "a", "e"],
+				["t", "seconds", "a", "e"],
 				["a", "result", "b", "e"],
 				["b", "result", "out", "color"],
 			],
@@ -85,7 +85,7 @@ describe("GraphModel layout", () => {
 			target: outputId,
 			targetHandle: item,
 		});
-		graph.connect({ source: "t", sourceHandle: "time", target: zoneId, targetHandle: item });
+		graph.connect({ source: "t", sourceHandle: "seconds", target: zoneId, targetHandle: item });
 		expect(graph.activeZones.nodeZone.get("body")).toBe(zoneId);
 
 		await graph.layoutDocument();
@@ -104,8 +104,8 @@ describe("GraphModel layout", () => {
 				{ id: "c", type: "add" },
 			],
 			[
-				["t", "time", "a", "e"],
-				["t", "time", "b", "e"],
+				["t", "seconds", "a", "e"],
+				["t", "seconds", "b", "e"],
 				["a", "result", "c", "operands"],
 				["b", "result", "c", "operands"],
 				["c", "result", "out", "color"],

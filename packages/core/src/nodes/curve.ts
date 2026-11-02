@@ -1,6 +1,5 @@
 import { CURVE_SOLVE_STEPS, curveSegments, LINEAR_CURVE } from "../curve";
-import type { NodeDescriptor } from "../types";
-import { FLOAT_TYPES, typeComponents, wgslTypeName } from "../types";
+import { defineNode, FLOAT_TYPES, typeComponents, wgslTypeName } from "../types";
 
 const SEGMENT_FN = "curveSegment";
 
@@ -47,7 +46,7 @@ function curveSource(name: string, count: number): string {
  * Maps each component of a value through a curve drawn on the node, mixed
  * with the value by a factor (past 1, the mapping is exaggerated).
  */
-export const curveNode: NodeDescriptor = {
+export const curveNode = defineNode({
 	type: "curve",
 	label: "Curve",
 	aliases: [
@@ -111,4 +110,4 @@ export const curveNode: NodeDescriptor = {
 		lines.push(`let ${ctx.varName} = mix(${value}, ${mapped}, ${ctx.promoteInput("factor")});`);
 		return lines;
 	},
-};
+});

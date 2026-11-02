@@ -66,7 +66,7 @@ describe("Index Switch", () => {
 				{ id: "s", type: INDEX_SWITCH, data: { cases: 3, values: { [caseHandle(2)]: 5 } } },
 				{ id: "t", type: "time" },
 			],
-			[["t", "time", "s", caseHandle(1)]],
+			[["t", "seconds", "s", caseHandle(1)]],
 		);
 		graph.setIndexSwitchCases("s", 1);
 		const node = graph.activeDocument.nodesById.get("s");

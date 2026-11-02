@@ -1,15 +1,15 @@
 import {
+	defineNode,
+	defineSetting,
 	INTEGER_TYPES,
 	makeType,
-	type NodeDescriptor,
-	type NodeSetting,
 	settingValue,
 	typeComponents,
 	UINT_TYPES,
 } from "../types";
 import { binaryNode, unaryFn } from "./builders";
 
-const BITWISE_SETTING: NodeSetting = {
+const BITWISE_SETTING = defineSetting({
 	key: "op",
 	label: "Operation",
 	options: [
@@ -17,9 +17,9 @@ const BITWISE_SETTING: NodeSetting = {
 		{ value: "|", label: "Or" },
 		{ value: "^", label: "Xor" },
 	],
-};
+});
 
-export const bitwiseNode: NodeDescriptor = {
+export const bitwiseNode = defineNode({
 	...binaryNode(
 		"bitwise",
 		"Bitwise",
@@ -29,24 +29,24 @@ export const bitwiseNode: NodeDescriptor = {
 	aliases: ["Bitwise And", "Bitwise Or", "Bitwise Xor"],
 	defaultData: { values: { a: 0, b: 0 }, settings: { op: "&" } },
 	settings: [BITWISE_SETTING],
-};
+});
 
-export const bitwiseNotNode: NodeDescriptor = {
+export const bitwiseNotNode = defineNode({
 	...unaryFn("bitwise-not", "Bitwise Not", "", INTEGER_TYPES, "integer"),
 	aliases: ["Complement", "Bit Invert"],
 	wgsl: (ctx) => [`let ${ctx.varName} = ~(${ctx.promoteInput("e")});`],
-};
+});
 
-const SHIFT_SETTING: NodeSetting = {
+const SHIFT_SETTING = defineSetting({
 	key: "op",
 	label: "Direction",
 	options: [
 		{ value: "<<", label: "Left" },
 		{ value: ">>", label: "Right" },
 	],
-};
+});
 
-export const bitShiftNode: NodeDescriptor = {
+export const bitShiftNode = defineNode({
 	type: "bit-shift",
 	label: "Bit Shift",
 	aliases: ["Shift Left", "Shift Right", "Left Shift", "Right Shift"],
@@ -67,4 +67,4 @@ export const bitShiftNode: NodeDescriptor = {
 		const op = settingValue(ctx.data, SHIFT_SETTING);
 		return [`let ${ctx.varName} = ${ctx.promoteInput("a")} ${op} (${amount} & ${mask});`];
 	},
-};
+});

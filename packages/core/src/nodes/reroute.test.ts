@@ -12,7 +12,7 @@ describe("named reroutes", () => {
 				{ id: "plain", type: "reroute" },
 				{ id: "s", type: "sin" },
 			],
-			[["t", "time", "scale", "in"]],
+			[["t", "seconds", "scale", "in"]],
 		);
 	const entryOf = (g: ReturnType<typeof graph>) =>
 		addMenuEntries(g).find((e) => e.kind === "link" && e.source === "scale");

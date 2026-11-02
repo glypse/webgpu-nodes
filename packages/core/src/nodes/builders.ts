@@ -1,12 +1,15 @@
 import type {
+	InputDef,
 	NodeCategory,
 	NodeDescriptor,
 	NodeInputDef,
-	NodeSetting,
+	OutputDef,
+	VariadicInputDef,
 	WgslCtx,
 	WgslType,
 } from "../types";
 import {
+	defineSetting,
 	FLOAT_TYPES,
 	makeType,
 	NUMERIC_TYPES,
@@ -26,7 +29,7 @@ export function unaryFn(
 	wgslFn: string,
 	types: readonly WgslType[] = FLOAT_TYPES,
 	category: NodeCategory = "math",
-): NodeDescriptor {
+): NodeDescriptor<[InputDef<"e">], [OutputDef<"result">], []> {
 	return {
 		type,
 		label,
@@ -40,7 +43,11 @@ export function unaryFn(
 
 // ── Factory: variadic join operator (add, mul) ───────────────────────────────
 
-export function variadicOp(type: string, label: string, joiner: string): NodeDescriptor {
+export function variadicOp(
+	type: string,
+	label: string,
+	joiner: string,
+): NodeDescriptor<[VariadicInputDef<"operands">], [OutputDef<"result">], []> {
 	return {
 		type,
 		label,
@@ -60,7 +67,11 @@ export function variadicOp(type: string, label: string, joiner: string): NodeDes
 
 // ── Factory: variadic function call (min, max) ─────────────────────────────
 
-export function variadicFn(type: string, label: string, wgslFn: string): NodeDescriptor {
+export function variadicFn(
+	type: string,
+	label: string,
+	wgslFn: string,
+): NodeDescriptor<[VariadicInputDef<"operands">], [OutputDef<"result">], []> {
 	return {
 		type,
 		label,
@@ -80,18 +91,19 @@ export function variadicFn(type: string, label: string, wgslFn: string): NodeDes
 
 // ── Factory: binary node (sub, step, atan2, ...) ─────────────────────────────
 
-export function binaryNode(
+export function binaryNode<A extends string = "a", B extends string = "b">(
 	type: string,
 	label: string,
 	emit: (a: string, b: string, ctx: WgslCtx) => string,
 	opts: {
 		types?: readonly WgslType[];
 		labels?: [string, string];
-		ids?: [string, string];
+		ids?: [A, B];
 		category?: NodeCategory;
 	} = {},
-): NodeDescriptor {
-	const [idA, idB] = opts.ids ?? ["a", "b"];
+): NodeDescriptor<[InputDef<A>, InputDef<B>], [OutputDef<"result">], []> {
+	// Without `ids`, A and B are their defaults.
+	const [idA, idB] = opts.ids ?? (["a", "b"] as [A, B]);
 	const [labelA, labelB] = opts.labels ?? [idA, idB];
 	const types = opts.types ?? NUMERIC_TYPES;
 	return {
@@ -112,13 +124,13 @@ export function binaryNode(
 
 // ── Factory: N-ary function call (clamp, mix) ────────────────────────────────
 
-export function nAryFn(
+export function nAryFn<const In extends NodeInputDef[]>(
 	type: string,
 	label: string,
 	wgslFn: string,
-	inputDefs: NodeInputDef[],
-	defaults: Record<string, number>,
-): NodeDescriptor {
+	inputDefs: In,
+	defaults: Record<In[number]["id"], number>,
+): NodeDescriptor<In, [OutputDef<"result">], []> {
 	return {
 		type,
 		label,
@@ -135,13 +147,13 @@ export function nAryFn(
 
 // ── Factory: built-in uniform reader (time, delta, resolution, uv) ───────────
 
-export function uniformReader(
+export function uniformReader<O extends string>(
 	type: string,
 	label: string,
-	outputName: string,
+	outputName: O,
 	outputType: WgslType,
 	wgslExpr: string,
-): NodeDescriptor {
+): NodeDescriptor<[], [OutputDef<O>], []> {
 	return {
 		type,
 		label,
@@ -155,7 +167,7 @@ export function uniformReader(
 
 // ── Factory: conversion to a scalar kind (To Float, To Integer, ...) ─────────
 
-const ROUNDING_SETTING: NodeSetting = {
+const ROUNDING_SETTING = defineSetting({
 	key: "rounding",
 	label: "Rounding",
 	options: [
@@ -164,14 +176,34 @@ const ROUNDING_SETTING: NodeSetting = {
 		{ value: "ceil", label: "Ceil" },
 		{ value: "round", label: "Round" },
 	],
-};
+});
+
+type ConvertDescriptor<S extends (typeof ROUNDING_SETTING)[]> = NodeDescriptor<
+	[InputDef<"e">],
+	[OutputDef<"result">],
+	S
+>;
+
+type ConvertKind = "f32" | "i32" | "u32" | "bool";
 
 export function convertNode(
 	type: string,
 	label: string,
-	kind: "f32" | "i32" | "u32" | "bool",
+	kind: ConvertKind,
+	rounding: true,
+): ConvertDescriptor<[typeof ROUNDING_SETTING]>;
+export function convertNode(
+	type: string,
+	label: string,
+	kind: ConvertKind,
+	rounding: false,
+): ConvertDescriptor<[]>;
+export function convertNode(
+	type: string,
+	label: string,
+	kind: ConvertKind,
 	rounding: boolean,
-): NodeDescriptor {
+): ConvertDescriptor<[typeof ROUNDING_SETTING] | []> {
 	return {
 		type,
 		label,

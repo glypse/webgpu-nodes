@@ -170,6 +170,11 @@ export type NodeSetting = {
 	options: readonly { value: string; label: string }[];
 };
 
+/** `setting`, its key and options' values kept in its type. */
+export function defineSetting<const S extends NodeSetting>(setting: S): S {
+	return setting;
+}
+
 /** Read an enum setting from node data, falling back to the first option. */
 export function settingValue(data: NodeData, setting: NodeSetting): string {
 	const value = data.settings?.[setting.key];
@@ -288,7 +293,16 @@ export type WgslCtx = {
 	fn: (name: string, source: string) => string;
 };
 
-export type NodeDescriptor = {
+/**
+ * A node type's behaviour. Its sockets and settings are type parameters, so
+ * a descriptor made with `defineNode` (or a typed factory) keeps their ids
+ * in its type: graph code written against a node type is checked by them.
+ */
+export type NodeDescriptor<
+	In extends NodeInputDef[] = NodeInputDef[],
+	Out extends NodeOutputDef[] = NodeOutputDef[],
+	S extends NodeSetting[] = NodeSetting[],
+> = {
 	type: string;
 	label: string;
 	/**
@@ -301,11 +315,11 @@ export type NodeDescriptor = {
 	hidden?: boolean;
 	/** A debugging aid: only offered while developer tools are enabled. */
 	dev?: boolean;
-	inputs: NodeInputDef[];
-	outputs: NodeOutputDef[];
+	inputs: In;
+	outputs: Out;
 	defaultData: NodeData;
 	/** Enum settings rendered on the node; their values live in node data. */
-	settings?: NodeSetting[];
+	settings?: S;
 	/**
 	 * The input whose family drives the node's "representative" type.
 	 * Defaults to the first input.
@@ -346,6 +360,24 @@ export type NodeDescriptor = {
 	 *  The `let ` / `var ` prefix is the node's own choice. */
 	wgsl: (ctx: WgslCtx) => string[];
 };
+
+/** `descriptor`, its sockets' and settings' ids and values kept in its type. */
+export function defineNode<
+	const In extends NodeInputDef[],
+	const Out extends NodeOutputDef[],
+	const S extends NodeSetting[] = [],
+>(descriptor: NodeDescriptor<In, Out, S>): NodeDescriptor<In, Out, S> {
+	return descriptor;
+}
+
+/** An input socket with the id `I`. */
+export type InputDef<I extends string> = NodeInputDef & { id: I };
+
+/** A variadic input socket with the id `I`. */
+export type VariadicInputDef<I extends string> = InputDef<I> & { variadic: true };
+
+/** An output socket with the id `O`. */
+export type OutputDef<O extends string> = NodeOutputDef & { id: O };
 
 /**
  * The types a node's type picker offers and the key its pick is stored

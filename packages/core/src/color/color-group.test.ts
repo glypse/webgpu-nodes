@@ -115,7 +115,7 @@ describe("Color group", () => {
 		const [hue = ""] = inputsOf("hsv");
 		const graph = managerFor(
 			[{ id: "t", type: "time" }, color(components("hsv", [0.6, 0.5, 0.7]))],
-			[["t", "time", "c", hue]],
+			[["t", "seconds", "c", hue]],
 		);
 		graph.setInputValue("c", MODE, MODES.rgb);
 		expect(graph.root.nodesById.get("c")?.data.values?.[inputsOf("rgb")[0] ?? ""]).toBe(

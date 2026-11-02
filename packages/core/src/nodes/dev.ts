@@ -1,9 +1,8 @@
-import type { NodeDescriptor } from "../types";
-import { FLOAT_TYPES } from "../types";
+import { defineNode, FLOAT_TYPES } from "../types";
 
 // Nodes producing shader errors on purpose, to exercise the error reporting.
 
-export const testInvalidWgslNode: NodeDescriptor = {
+export const testInvalidWgslNode = defineNode({
 	type: "test-invalid-wgsl",
 	label: "⚠ Test: Bad WGSL",
 	category: "misc",
@@ -12,9 +11,9 @@ export const testInvalidWgslNode: NodeDescriptor = {
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: {},
 	wgsl: (ctx) => [`let ${ctx.varName} = this_is_not_valid_wgsl;`],
-};
+});
 
-export const testRuntimeErrorNode: NodeDescriptor = {
+export const testRuntimeErrorNode = defineNode({
 	type: "test-runtime-error",
 	label: "⚠ Test: Runtime Error",
 	category: "misc",
@@ -23,4 +22,4 @@ export const testRuntimeErrorNode: NodeDescriptor = {
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { values: { e: 0 } },
 	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("e")} / f32(0.0);`],
-};
+});

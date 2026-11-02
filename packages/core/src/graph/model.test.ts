@@ -62,7 +62,9 @@ describe("GraphModel zones", () => {
 		expect(graph.isValidConnection(connection(outputId, item.id, zoneId, item.id))).toBe(false);
 		expect(graph.isValidConnection(connection(zoneId, item.id, "out", "color"))).toBe(false);
 		expect(graph.isValidConnection(connection(outputId, item.id, "out", "color"))).toBe(true);
-		expect(graph.isValidConnection(connection("t", "time", zoneId, "iterations"))).toBe(true);
+		expect(graph.isValidConnection(connection("t", "seconds", zoneId, "iterations"))).toBe(
+			true,
+		);
 		// A vec2 can't feed the scalar iteration count.
 		expect(graph.isValidConnection(connection("uv", "uv", zoneId, "iterations"))).toBe(false);
 	});

@@ -5,7 +5,6 @@ import { inputControl } from "./controls";
 
 describe("inputControl", () => {
 	const [input] = outputNode.inputs;
-	if (!input) throw new Error("missing color input");
 
 	it("edits RGB and RGBA inputs as colours", () => {
 		expect(inputControl(input, "vec3f")).toEqual({ kind: "color" });

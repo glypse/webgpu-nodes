@@ -470,7 +470,7 @@
 					"id": "2dda9154-81fc-43f5-89a3-f157eaf33d02",
 					"source": "2f3b478c-d83a-456c-945e-d942c4a1a8c7",
 					"target": "be85f254-5c06-4d2b-82cc-4805c48c9e9d",
-					"sourceHandle": "time",
+					"sourceHandle": "seconds",
 					"targetHandle": "operands"
 				},
 				{

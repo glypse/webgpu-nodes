@@ -1,6 +1,6 @@
 import { COMPONENT_COUNT, COMPONENT_COUNT_INPUT } from "../enums";
-import type { NodeDescriptor } from "../types";
 import {
+	defineNode,
 	FLOAT_VEC_TYPES,
 	makeType,
 	typeComponents,
@@ -15,7 +15,7 @@ import { binaryNode, unaryFn } from "./builders";
 const MEASURED_TYPES: readonly WgslType[] = [...FLOAT_VEC_TYPES, "f32"];
 
 // Vector
-export const dotNode: NodeDescriptor = {
+export const dotNode = defineNode({
 	...binaryNode("dot", "Dot Product", (a, b) => `dot(${a}, ${b})`, {
 		types: FLOAT_VEC_TYPES,
 		ids: ["e1", "e2"],
@@ -23,8 +23,8 @@ export const dotNode: NodeDescriptor = {
 	}),
 	aliases: ["Scalar Product", "Inner Product", "Vector Math"],
 	resolveOutputType: () => "f32",
-};
-export const distanceNode: NodeDescriptor = {
+});
+export const distanceNode = defineNode({
 	...binaryNode("distance", "Distance", (a, b) => `distance(${a}, ${b})`, {
 		types: MEASURED_TYPES,
 		ids: ["e1", "e2"],
@@ -32,8 +32,8 @@ export const distanceNode: NodeDescriptor = {
 	}),
 	aliases: ["Vector Math"],
 	resolveOutputType: () => "f32",
-};
-export const lengthNode: NodeDescriptor = {
+});
+export const lengthNode = defineNode({
 	type: "length",
 	label: "Length",
 	aliases: ["Magnitude", "Norm", "Vector Math"],
@@ -43,12 +43,12 @@ export const lengthNode: NodeDescriptor = {
 	defaultData: { values: { e1: 0 } },
 	resolveOutputType: () => "f32",
 	wgsl: (ctx) => [`let ${ctx.varName} = length(${ctx.promoteInput("e1")});`],
-};
-export const normalizeNode: NodeDescriptor = {
+});
+export const normalizeNode = defineNode({
 	...unaryFn("normalize", "Normalize", "normalize", FLOAT_VEC_TYPES, "vector"),
 	aliases: ["Normalise", "Unit Vector", "Vector Math"],
-};
-export const crossNode: NodeDescriptor = {
+});
+export const crossNode = defineNode({
 	...binaryNode("cross", "Cross Product", (a, b) => `cross(${a}, ${b})`, {
 		types: ["vec3f"],
 		ids: ["e1", "e2"],
@@ -56,8 +56,8 @@ export const crossNode: NodeDescriptor = {
 	}),
 	aliases: ["Vector Product", "Vector Math"],
 	resolveOutputType: () => "vec3f",
-};
-export const reflectNode: NodeDescriptor = {
+});
+export const reflectNode = defineNode({
 	...binaryNode("reflect", "Reflect", (a, b) => `reflect(${a}, ${b})`, {
 		types: FLOAT_VEC_TYPES,
 		ids: ["e1", "e2"],
@@ -65,14 +65,14 @@ export const reflectNode: NodeDescriptor = {
 		category: "vector",
 	}),
 	aliases: ["Reflection", "Vector Math"],
-};
+});
 
 /**
  * How many components its input's type has, known while compiling: an enum
  * a Match node or a group's enum input can branch on, so a group generic
  * over vector widths can take each width's path.
  */
-export const componentCountNode: NodeDescriptor = {
+export const componentCountNode = defineNode({
 	type: COMPONENT_COUNT,
 	label: "Component Count",
 	aliases: ["Dimensions", "Vector Size", "Vector Width", "Length of Type"],
@@ -85,11 +85,11 @@ export const componentCountNode: NodeDescriptor = {
 		const type = ctx.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32";
 		return [`let ${ctx.varName} = ${String(typeComponents(type))}u;`];
 	},
-};
+});
 
-const SEPARATE_COMPONENTS = ["x", "y", "z", "w"];
+const SEPARATE_COMPONENTS = ["x", "y", "z", "w"] as const;
 
-export const separateVectorNode: NodeDescriptor = {
+export const separateVectorNode = defineNode({
 	type: "separate-vector",
 	label: "Separate Vector",
 	aliases: [
@@ -121,4 +121,4 @@ export const separateVectorNode: NodeDescriptor = {
 			return `let ${varName} = ${src}.${o.id};`;
 		});
 	},
-};
+});
