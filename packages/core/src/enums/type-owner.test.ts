@@ -1,10 +1,12 @@
 import { describe, expect, it } from "bun:test";
 
+import { generateShader } from "../codegen";
 import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import type { NodeType } from "../nodes/registry";
 import { edge, type TestEdge } from "../testing/graph";
 import type { NodeData, WgslType } from "../types";
+import { caseHandle } from "./analysis";
 
 const node = (id: string, type: NodeType, data: NodeData = {}): GraphDocumentNode => ({
 	id,
@@ -122,5 +124,108 @@ describe("inputs owned by types", () => {
 		const copy = new GraphModel(project("vec2f"));
 		expect(await copy.loadFromString(graph.getProjectJson())).toBe(true);
 		expect(hidden(copy)).toEqual(["o2"]);
+	});
+});
+
+/**
+ * A group generic over "T" (vec2f or vec3f) whose "o" enum offers A for
+ * vec2f, B for both and C for vec3f, "k" being under C. Its instance "g"
+ * forces T to `type` and holds `value`.
+ */
+function variantProject(type: WgslType, value: number): GraphProject {
+	return {
+		definitions: {
+			[ROOT_ID]: {
+				nodes: [
+					node("out", "frag-output"),
+					{
+						...node("g", "node-group", { types: { T: type }, values: { o: value } }),
+						group: { definitionRef: "def", locked: false },
+					},
+				],
+				edges: [["g", "result", "out", "color"] satisfies TestEdge].map(edge),
+			},
+			def: {
+				typeVariables: [{ id: "T", name: "T", types: ["vec2f", "vec3f"] }],
+				inputs: [
+					{ id: "v", label: "Vector", type: { variable: "T" } },
+					{
+						id: "o",
+						label: "Option",
+						type: "u32",
+						variants: [
+							{
+								value: 0,
+								label: "A",
+								typeOwner: { variable: "T", types: ["vec2f"] },
+							},
+							{ value: 1, label: "B" },
+							{
+								value: 2,
+								label: "C",
+								typeOwner: { variable: "T", types: ["vec3f"] },
+							},
+						],
+					},
+					{ id: "k", label: "K", type: "f32", owner: { enumId: "o", value: 2 } },
+				],
+				outputs: [{ id: "result", label: "Result", type: "f32" }],
+				nodes: [
+					node("in", "group-input"),
+					node("go", "group-output"),
+					node("m", "match"),
+					...["a", "b", "c"].map((id, i) =>
+						node(id, "declare", { types: { declare: "f32" }, values: { x: i } }),
+					),
+				],
+				edges: (
+					[
+						["in", "o", "m", "selector"],
+						["a", "value", "m", caseHandle(0)],
+						["b", "value", "m", caseHandle(1)],
+						["c", "value", "m", caseHandle(2)],
+						["m", "result", "go", "result"],
+					] satisfies TestEdge[]
+				).map(edge),
+			},
+		},
+	};
+}
+
+const offered = (graph: GraphModel) => {
+	const control = graph.resolveNodeInputs("g").find((i) => i.id === "o")?.control;
+	return control?.kind === "enum" ? control.variants.map((v) => v.label) : [];
+};
+
+describe("variants owned by types", () => {
+	it("are offered only while their variable has one of their types", () => {
+		expect(offered(new GraphModel(variantProject("vec2f", 1)))).toEqual(["A", "B"]);
+		expect(offered(new GraphModel(variantProject("vec3f", 1)))).toEqual(["B", "C"]);
+	});
+
+	it("aren't picked with other types: the first variant offered is", () => {
+		// C, under which "k" is, isn't offered for vec2f: A is picked.
+		expect(hidden(new GraphModel(variantProject("vec2f", 2)))).toEqual(["k"]);
+		expect(hidden(new GraphModel(variantProject("vec3f", 2)))).toEqual([]);
+	});
+
+	it("compile as the first variant offered with other types", () => {
+		const shader = (type: WgslType) =>
+			generateShader(new GraphModel(variantProject(type, 2))).shader;
+		expect(shader("vec2f")).toContain("let v_m = v_a;");
+		expect(shader("vec3f")).toContain("let v_m = v_c;");
+	});
+
+	it("follow their variable's types", () => {
+		const graph = new GraphModel(variantProject("vec2f", 1));
+		const owners = () =>
+			graph.project.definitions
+				.get("def")
+				?.inputs.find((h) => h.id === "o")
+				?.variants?.map((v) => v.typeOwner?.types);
+		graph.setVariantTypeOwner("def", "o", 1, { variable: "T", types: ["vec3f"] });
+		expect(owners()).toEqual([["vec2f"], ["vec3f"], ["vec3f"]]);
+		graph.removeTypeVariable("def", "T");
+		expect(owners()).toEqual([undefined, undefined, undefined]);
 	});
 });

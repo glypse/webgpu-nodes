@@ -1,4 +1,4 @@
-import type { HandleDef, InputOwner, TypeBindings, TypeOwner } from "../types";
+import type { EnumVariant, HandleDef, InputOwner, TypeBindings, TypeOwner } from "../types";
 
 /** What enums need of a handle, whatever its type. */
 type Owned = Pick<HandleDef, "id" | "owner" | "variants" | "typeOwner">;
@@ -32,6 +32,20 @@ export function ownerExists(handles: readonly Owned[], owner: InputOwner | undef
 	return !!enumHandle?.variants?.some((v) => v.value === owner?.value);
 }
 
+/** Whether bindings leave something owned by `owner` (or by none) shown. */
+function ownedBy(owner: TypeOwner | undefined, bindings: TypeBindings): boolean {
+	const type = owner && bindings[owner.variable];
+	return type === undefined || !!owner?.types.includes(type);
+}
+
+/** The variants of an enum offered with its group's variables bound to `bindings`. */
+export function availableVariants(
+	variants: readonly EnumVariant[],
+	bindings: TypeBindings,
+): EnumVariant[] {
+	return variants.filter((v) => ownedBy(v.typeOwner, bindings));
+}
+
 /** The type owners of `handle` and of the enums it lies under. */
 function typeOwners(handles: readonly Owned[], handle: Owned): TypeOwner[] {
 	const enums = ownerChain(handles, handle).map((o) => handles.find((h) => h.id === o.enumId));
@@ -56,10 +70,7 @@ export function hiddenInputsOf(
 			const value = values.get(o.enumId);
 			return value !== undefined && value !== o.value;
 		});
-		const offType = typeOwners(handles, handle).some((o) => {
-			const type = bindings[o.variable];
-			return type !== undefined && !o.types.includes(type);
-		});
+		const offType = typeOwners(handles, handle).some((o) => !ownedBy(o, bindings));
 		if (offVariant || offType) hidden.add(handle.id);
 	}
 	return hidden;

@@ -18,6 +18,7 @@ import {
 	type InputValue,
 	type NodeData,
 	type SocketType,
+	type TypeBindings,
 	type TypeOwner,
 	type TypeVariable,
 	type WgslType,
@@ -869,10 +870,10 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/** The enum values a group node sets itself (see `groupConstants`), by handle id. */
-	protected instanceEnumValues(node: GraphNode): Map<string, number> {
+	protected instanceEnumValues(node: GraphNode, bindings: TypeBindings): Map<string, number> {
 		const doc = this.documentOf(node.id);
 		return doc
-			? groupConstants(doc, node, this.project.definitions)
+			? groupConstants(doc, node, this.project.definitions, bindings)
 			: new Map<string, number>();
 	}
 
@@ -887,11 +888,8 @@ export abstract class GroupModel extends ZoneModel {
 		const def = node?.group && this.project.definitions.get(node.group.definitionRef);
 		const doc = this.documentOf(nodeId);
 		if (node?.type !== "node-group" || !def || !doc) return new Set();
-		return hiddenInputsOf(
-			def.inputs,
-			this.instanceEnumValues(node),
-			this.typesOf(node, path).bindings,
-		);
+		const bindings = this.typesOf(node, path).bindings ?? {};
+		return hiddenInputsOf(def.inputs, this.instanceEnumValues(node, bindings), bindings);
 	}
 
 	// ── Boundary handles ────────────────────────────────────────────────────────
@@ -981,26 +979,59 @@ export abstract class GroupModel extends ZoneModel {
 		const variable = def?.typeVariables.find((v) => v.id === typeOwner?.variable);
 		if (!def || (typeOwner && !variable)) return;
 		const owner = typeOwner && fitTypeOwner(typeOwner, variable?.types ?? []);
-		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
-			const rest = { ...h };
-			delete rest.typeOwner;
-			return owner ? { ...rest, typeOwner: owner } : rest;
-		});
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) =>
+			withTypeOwner(h, owner),
+		);
 		if (changed) this.rebuildTypeCache();
 	}
 
-	/** Fit the inputs' type owners to the group's type variables, as they now are. */
+	/**
+	 * Offer a variant of a group's enum input only while one of the group's
+	 * type variables has one of some types, or whatever the types with
+	 * `undefined`.
+	 */
+	setVariantTypeOwner(
+		definitionRef: string,
+		handleId: string,
+		value: number,
+		typeOwner: TypeOwner | undefined,
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		const variable = def?.typeVariables.find((v) => v.id === typeOwner?.variable);
+		if (!def || (typeOwner && !variable)) return;
+		const owner = typeOwner && fitTypeOwner(typeOwner, variable?.types ?? []);
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => ({
+			...h,
+			...(h.variants
+				? {
+						variants: h.variants.map((v) =>
+							v.value === value ? withTypeOwner(v, owner) : v,
+						),
+					}
+				: {}),
+		}));
+		if (changed) this.rebuildTypeCache();
+	}
+
+	/** Fit the type owners of inputs and variants to the group's type variables, as they now are. */
 	private fitTypeOwners(def: HydratedGraphDocument) {
-		const fitted = (h: GroupHandleDef): GroupHandleDef => {
-			if (!h.typeOwner) return h;
-			const variable = def.typeVariables.find((v) => v.id === h.typeOwner?.variable);
-			const owner = variable && fitTypeOwner(h.typeOwner, variable.types);
-			const rest = { ...h };
-			delete rest.typeOwner;
-			return owner ? { ...rest, typeOwner: owner } : rest;
+		const fit = <T extends { typeOwner?: TypeOwner }>(owned: T): T => {
+			if (!owned.typeOwner) return owned;
+			const variable = def.typeVariables.find((v) => v.id === owned.typeOwner?.variable);
+			return withTypeOwner(owned, variable && fitTypeOwner(owned.typeOwner, variable.types));
 		};
-		if (def.inputs.some((h) => h.typeOwner)) {
-			this.setInterface(def, "input", def.inputs.map(fitted));
+		const owned = def.inputs.some(
+			(h) => h.typeOwner !== undefined || h.variants?.some((v) => v.typeOwner) === true,
+		);
+		if (owned) {
+			this.setInterface(
+				def,
+				"input",
+				def.inputs.map((h) => {
+					const fitted = fit(h);
+					return h.variants ? { ...fitted, variants: h.variants.map(fit) } : fitted;
+				}),
+			);
 		}
 	}
 
@@ -1403,6 +1434,16 @@ export abstract class GroupModel extends ZoneModel {
  * `owner` within the types its variable may take, or undefined once it
  * owns none of them, or all: either way it hides nothing.
  */
+/** `owned` with `typeOwner`, or without one. */
+function withTypeOwner<T extends { typeOwner?: TypeOwner }>(
+	owned: T,
+	typeOwner: TypeOwner | undefined,
+): T {
+	const rest = { ...owned };
+	delete rest.typeOwner;
+	return typeOwner ? { ...rest, typeOwner } : rest;
+}
+
 function fitTypeOwner(owner: TypeOwner, allowed: readonly WgslType[]): TypeOwner | undefined {
 	const types = allowed.filter((t) => owner.types.includes(t));
 	return types.length === 0 || types.length === allowed.length

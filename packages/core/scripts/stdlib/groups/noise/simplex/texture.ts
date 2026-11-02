@@ -14,12 +14,7 @@ import { fractal, fractalInputs } from "../fractal";
 import { hash } from "../lattice";
 import { SIMPLEX_HELPERS } from "./kernel";
 import { gradientNoise1d, openSimplex2d, openSimplex3d, openSimplex4d } from "./lattices";
-import {
-	type OrientationInputs,
-	orientationInputs,
-	simplexOrientation,
-	variantInput,
-} from "./orientation";
+import { orientationInput, simplexOrientation, variantInput } from "./orientation";
 
 /** XORed into the seed for Color's second and third components. */
 const COLOR_SALTS = [1540483477, 668265263] as const;
@@ -28,20 +23,20 @@ const DISTORTION_SALT = 1103515245;
 /** How far apart, at most, the octaves are moved, in their own scale. */
 const OCTAVE_SPREAD = 128;
 
-type NoiseOptions = OrientationInputs & { variant: EnumRef; seed: Operand };
+type NoiseOptions = { variant: EnumRef; orientation: EnumRef; seed: Operand };
 
 /** The noise's options, on a group whose coordinates are `t`. */
 function noiseOptions(g: GroupBuilder, t: VariableType): NoiseOptions {
 	return {
 		variant: variantInput(g, t),
-		...orientationInputs(g, t),
+		orientation: orientationInput(g, t),
 		seed: g.input("seed", "i32", { label: "Seed", default: 0 }),
 	};
 }
 
 export const openSimplexNoise = group({
 	id: "std-opensimplex-noise",
-	inputs: ["vector", "variant", "orientation2d", "orientation3d", "orientation4d", "seed"],
+	inputs: ["vector", "variant", "orientation", "seed"],
 	outputs: ["value"],
 	name: "OpenSimplex Noise",
 	aliases: ["Simplex Noise", "OpenSimplex2", "SuperSimplex", "Gradient Noise", "Perlin"],
@@ -49,12 +44,12 @@ export const openSimplexNoise = group({
 	...SIMPLEX_HELPERS,
 	build: (g) => {
 		const { t, vector } = coordinatesInput(g);
-		const { variant, seed, ...orientations } = noiseOptions(g, t);
+		const { variant, orientation, seed } = noiseOptions(g, t);
 		const { coordinates } = g.call(noiseCoordinates, { vector });
 		const { lattice } = g.call(simplexOrientation, {
 			vector: coordinates,
 			variant,
-			...orientations,
+			orientation,
 		});
 		const options = { lattice, variant, seed };
 		const value = g.frame(
@@ -79,15 +74,7 @@ const noise = (g: GroupBuilder, vector: Operand, options: NoiseOptions) =>
 
 export const noiseDistortion = group({
 	id: "std-noise-distortion",
-	inputs: [
-		"vector",
-		"amount",
-		"variant",
-		"orientation2d",
-		"orientation3d",
-		"orientation4d",
-		"seed",
-	],
+	inputs: ["vector", "amount", "variant", "orientation", "seed"],
 	outputs: ["distorted"],
 	name: "Noise Distortion",
 	aliases: ["Domain Warp", "Warp", "Distort Coordinates"],
@@ -221,9 +208,7 @@ export const fractalNoiseOctaves = group({
 		"ridgedOffset",
 		"ridgedGain",
 		"variant",
-		"orientation2d",
-		"orientation3d",
-		"orientation4d",
+		"orientation",
 		"seed",
 	],
 	outputs: ["value"],
@@ -406,9 +391,7 @@ export const fractalNoise = group({
 		"ridgedGain",
 		"distortion",
 		"variant",
-		"orientation2d",
-		"orientation3d",
-		"orientation4d",
+		"orientation",
 		"seed",
 	],
 	outputs: ["fac", "color"],

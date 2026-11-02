@@ -579,18 +579,19 @@ class BodyEmitter {
 				.map((i) => i.id),
 		);
 		const defaults = descriptor.defaultData.values;
-		// Enum values known here are compiled into the call's function.
-		const constants = groupConstants(
-			this.enumDocument,
-			node,
-			this.state.graph.project.definitions,
-			this.constants,
-		);
 		const resolved = this.typeResolver.resolveNodeTypes(
 			node,
 			this.incoming(node.id),
 			this.resolveNode,
 			this.bindings,
+		);
+		// Enum values known here are compiled into the call's function.
+		const constants = groupConstants(
+			this.enumDocument,
+			node,
+			this.state.graph.project.definitions,
+			resolved.bindings ?? {},
+			this.constants,
 		);
 		const decl = emitGroupFunction(
 			this.state,

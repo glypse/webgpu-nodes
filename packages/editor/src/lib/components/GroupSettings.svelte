@@ -498,6 +498,39 @@
 					{/if}
 				</div>
 				<div class="flex flex-col gap-1.5 pl-3">
+					{#each variables as variable (variable.id)}
+						{@const owner = variant.typeOwner}
+						<div class="flex flex-col gap-1">
+							<span class="text-muted-foreground text-xs">
+								Offered while {variable.name} is
+							</span>
+							<ToggleGroup.Root
+								type="multiple"
+								size="sm"
+								disabled={locked ||
+									(owner !== undefined && owner.variable !== variable.id)}
+								value={owner?.variable === variable.id
+									? owner.types
+									: [...variable.types]}
+								onValueChange={(types: string[]) => {
+									if (!definitionRef) return;
+									graph.setVariantTypeOwner(
+										definitionRef,
+										handle.id,
+										variant.value,
+										{
+											variable: variable.id,
+											types: variable.types.filter((t) => types.includes(t)),
+										},
+									);
+								}}
+							>
+								{#each variable.types as type (type)}
+									<ToggleGroup.Item value={type}>{type}</ToggleGroup.Item>
+								{/each}
+							</ToggleGroup.Root>
+						</div>
+					{/each}
 					{@render inputList(side, { enumId: handle.id, value: variant.value })}
 					{#if !locked}
 						{@render addInputPicker({ enumId: handle.id, value: variant.value })}

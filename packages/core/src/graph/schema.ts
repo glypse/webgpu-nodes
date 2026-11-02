@@ -18,14 +18,25 @@ const GroupSchema = v.object({
 	locked: v.boolean(),
 });
 
+const TypeOwnerSchema = v.object({
+	variable: v.string(),
+	types: v.array(v.picklist(WGSL_TYPES)),
+});
+
 const HandleFields = {
 	id: v.string(),
 	label: v.string(),
-	variants: v.optional(v.array(v.object({ value: v.number(), label: v.string() }))),
-	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
-	typeOwner: v.optional(
-		v.object({ variable: v.string(), types: v.array(v.picklist(WGSL_TYPES)) }),
+	variants: v.optional(
+		v.array(
+			v.object({
+				value: v.number(),
+				label: v.string(),
+				typeOwner: v.optional(TypeOwnerSchema),
+			}),
+		),
 	),
+	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
+	typeOwner: v.optional(TypeOwnerSchema),
 	min: v.optional(v.number()),
 	max: v.optional(v.number()),
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),

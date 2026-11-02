@@ -19,25 +19,27 @@ const VARIANTS = [
 export const FAST = 0;
 export const SMOOTH = 1;
 
-/** Each dimension count's orientations, in the order its maps are listed below. */
-const ORIENTATIONS = {
-	2: [
-		[0, "Standard"],
-		[1, "Y Vertical"],
-	],
-	3: [
-		[0, "XY Plane"],
-		[1, "XZ Plane"],
-		[2, "Classic"],
-	],
-	4: [
-		[0, "XY Plane"],
-		[1, "XZ Plane"],
-		[2, "XYZ Volume"],
-		[3, "XY and ZW Planes"],
-		[4, "Classic"],
-	],
-} as const;
+const STANDARD = 0;
+const Y_VERTICAL = 1;
+const XY_PLANE = 2;
+const XZ_PLANE = 3;
+const XYZ_VOLUME = 4;
+const XY_ZW_PLANES = 5;
+const CLASSIC = 6;
+
+/**
+ * The orientations, each offered for the dimension counts it has a map in:
+ * those of 3D and 4D share a name where they favour the same slices.
+ */
+const ORIENTATIONS = [
+	[STANDARD, "Standard", ["vec2f"]],
+	[Y_VERTICAL, "Y Vertical", ["vec2f"]],
+	[XY_PLANE, "XY Plane", ["vec3f", "vec4f"]],
+	[XZ_PLANE, "XZ Plane", ["vec3f", "vec4f"]],
+	[XYZ_VOLUME, "XYZ Volume", ["vec4f"]],
+	[XY_ZW_PLANES, "XY and ZW Planes", ["vec4f"]],
+	[CLASSIC, "Classic", ["vec3f", "vec4f"]],
+] as const;
 
 /**
  * Variant, on a group whose coordinates are `t`: shown for 2D and up, as
@@ -50,27 +52,17 @@ export function variantInput(g: GroupBuilder, t?: VariableType): EnumRef {
 	});
 }
 
-export type OrientationInputs = {
-	orientation2d: EnumRef;
-	orientation3d: EnumRef;
-	orientation4d: EnumRef;
-};
-
 /**
- * An Orientation per dimension count, each shown only for coordinates `t`
- * of its own, as the slices worth favouring differ (and 1D has none).
+ * Orientation, on a group whose coordinates are `t`: offering those of
+ * their dimension count, as the slices worth favouring differ (and 1D has
+ * none, nor the input).
  */
-export function orientationInputs(g: GroupBuilder, t: VariableType): OrientationInputs {
-	const input = (n: 2 | 3 | 4, type: WgslType) =>
-		g.enum(`orientation${String(n)}d`, ORIENTATIONS[n], 0, {
-			label: "Orientation",
-			typeOwner: { variable: t, types: [type] },
-		});
-	return {
-		orientation2d: input(2, "vec2f"),
-		orientation3d: input(3, "vec3f"),
-		orientation4d: input(4, "vec4f"),
-	};
+export function orientationInput(g: GroupBuilder, t: VariableType): EnumRef {
+	return g.enum("orientation", ORIENTATIONS, XY_PLANE, {
+		label: "Orientation",
+		typeOwner: { variable: t, types: ["vec2f", "vec3f", "vec4f"] },
+		variantsBy: t,
+	});
 }
 
 type Vector = number[];
@@ -110,8 +102,8 @@ const spaceClassic: Map = ([x = 0, y = 0, z = 0]) => {
 	return [r - x, r - y, r - z];
 };
 
-/** The 4D orientations of a variant, whose lattices differ. */
-function hyper(variant: number) {
+/** The 4D orientations of a variant, whose lattices differ, by orientation. */
+function hyper(variant: number): Record<number, Map> {
 	const fast = variant === FAST;
 	const wScale = fast ? 0.2236067977499788 : 1.118033988749894;
 	const improveXYZ_XY: Map = ([x = 0, y = 0, z = 0, w = 0]) => {
@@ -148,18 +140,28 @@ function hyper(variant: number) {
 		const s = skew * v.reduce((sum, n) => sum + n, 0);
 		return v.map((n) => n + s);
 	};
-	return [improveXYZ_XY, improveXYZ_XZ, improveXYZ, improveXY_ZW, classic];
+	return {
+		[XY_PLANE]: improveXYZ_XY,
+		[XZ_PLANE]: improveXYZ_XZ,
+		[XYZ_VOLUME]: improveXYZ,
+		[XY_ZW_PLANES]: improveXY_ZW,
+		[CLASSIC]: classic,
+	};
 }
 
-const PLANE = [planeStandard, planeImproveX];
-const SPACE = [spaceImproveXY, spaceImproveXZ, spaceClassic];
+const PLANE: Record<number, Map> = { [STANDARD]: planeStandard, [Y_VERTICAL]: planeImproveX };
+const SPACE: Record<number, Map> = {
+	[XY_PLANE]: spaceImproveXY,
+	[XZ_PLANE]: spaceImproveXZ,
+	[CLASSIC]: spaceClassic,
+};
 
 const TYPES: Record<number, WgslType> = { 2: "vec2f", 3: "vec3f", 4: "vec4f" };
 const COMPONENTS = ["x", "y", "z", "w"] as const;
 
 export const simplexOrientation = group({
 	id: "std-opensimplex-orientation",
-	inputs: ["vector", "variant", "orientation2d", "orientation3d", "orientation4d"],
+	inputs: ["vector", "variant", "orientation"],
 	outputs: ["lattice"],
 	name: "OpenSimplex Orientation",
 	aliases: ["Lattice Orientation", "Simplex Skew", "Lattice Space", "Slice Orientation"],
@@ -169,7 +171,7 @@ export const simplexOrientation = group({
 		const t = coordinatesType(g);
 		const vector = g.input("vector", t, { label: "Vector" });
 		const variant = variantInput(g, t);
-		const { orientation2d, orientation3d, orientation4d } = orientationInputs(g, t);
+		const orientation = orientationInput(g, t);
 		// Split padded so every width finds its components on the same node.
 		const { padded } = g.call(padVector, { vector });
 		const components = g.separateVector(padded);
@@ -192,21 +194,24 @@ export const simplexOrientation = group({
 			applied.set(map, ref);
 			return ref;
 		};
-		const pick = (orientation: EnumRef, maps: Map[], n: number) =>
-			g.match(orientation, Object.fromEntries(maps.map((m, i) => [i, apply(m, n)])));
+		const pick = (maps: Record<number, Map>, n: number) =>
+			g.match(
+				orientation,
+				Object.fromEntries(Object.entries(maps).map(([value, m]) => [value, apply(m, n)])),
+			);
 		const plane = g.frame(
 			"2D",
 			{
 				note: "Skewed onto the triangular lattice; Y Vertical turns it so Y runs\nalong a diagonal, for side views where Y is up.",
 			},
-			() => pick(orientation2d, PLANE, 2),
+			() => pick(PLANE, 2),
 		);
 		const space = g.frame(
 			"3D",
 			{
 				note: "Rotated, never skewed. XY Plane puts Z up the cubes' diagonal,\nso XY slices (Z as time or height) look their best; XZ Plane\ndoes it for Y; Classic is the diagonal rotation, more biased.",
 			},
-			() => pick(orientation3d, SPACE, 3),
+			() => pick(SPACE, 3),
 		);
 		const fourD = g.frame(
 			"4D",
@@ -215,8 +220,8 @@ export const simplexOrientation = group({
 			},
 			() =>
 				g.match(variant, {
-					[FAST]: pick(orientation4d, hyper(FAST), 4),
-					[SMOOTH]: pick(orientation4d, hyper(SMOOTH), 4),
+					[FAST]: pick(hyper(FAST), 4),
+					[SMOOTH]: pick(hyper(SMOOTH), 4),
 				}),
 		);
 		const lattice = g.widthSwitch(vector, { 1: vector, 2: plane, 3: space, 4: fourD });

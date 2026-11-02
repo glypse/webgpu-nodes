@@ -97,7 +97,16 @@ export type ColorDisplay = (typeof COLOR_DISPLAYS)[number];
  * same when cases are renamed or reordered, so saved choices and links to a
  * Match node's cases keep pointing at the same case.
  */
-export type EnumVariant = { value: number; label: string };
+export type EnumVariant = {
+	value: number;
+	label: string;
+	/**
+	 * On a group's enum input: the types of one of its type variables the
+	 * variant is offered for. With others, group nodes neither offer nor
+	 * pick it: a value it holds then picks the first variant offered.
+	 */
+	typeOwner?: TypeOwner;
+};
 
 /** A variant of a group's enum input, by the input's handle id and the variant's value. */
 export type InputOwner = { enumId: string; value: number };

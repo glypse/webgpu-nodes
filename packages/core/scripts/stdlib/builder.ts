@@ -455,13 +455,23 @@ class Builder<I extends string, O extends string> {
 	}
 
 	/** An enum input choosing among `variants` (`[value, label]`), picking `initial` by default. */
+	/**
+	 * An enum input of `variants` (value, label, and the types of
+	 * `options.variantsBy` a variant is offered for, all without), `initial`
+	 * by default.
+	 */
 	enum(
 		key: I,
-		variants: readonly (readonly [number, string])[],
+		variants: readonly (readonly [number, string, (readonly WgslType[])?])[],
 		initial: number,
-		options: { label?: string; typeOwner?: TypeOwnerOption } = {},
+		options: { label?: string; typeOwner?: TypeOwnerOption; variantsBy?: VariableType } = {},
 	): EnumRef {
-		const list = variants.map(([value, label]) => ({ value, label }));
+		const by = options.variantsBy;
+		const list: EnumVariant[] = variants.map(([value, label, types]) => ({
+			value,
+			label,
+			...(by && types ? { typeOwner: { variable: by.variable, types: [...types] } } : {}),
+		}));
 		const id = this.addInput(key, {
 			label: options.label ?? key,
 			type: "u32",

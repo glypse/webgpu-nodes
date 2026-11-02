@@ -8,6 +8,7 @@ import type {
 	WgslType,
 } from ".";
 import { boundType, highestType, inputDefaultType, inputFamilyKey } from ".";
+import { availableVariants } from "../enums/shape";
 import type {
 	GraphDocumentEdge,
 	GraphNode,
@@ -254,7 +255,19 @@ function resolveGroupNodeTypes(
 		label: h.label,
 		type: boundType(h.type, def.typeVariables, bindings) ?? innerType(h.id) ?? "f32",
 	}));
-	return { ...resolved, resolvedOutputs, bindings };
+	// Enums offer the variants their types have.
+	const resolvedInputs = resolved.resolvedInputs.map((input) =>
+		input.control?.kind === "enum"
+			? {
+					...input,
+					control: {
+						...input.control,
+						variants: availableVariants(input.control.variants, bindings),
+					},
+				}
+			: input,
+	);
+	return { ...resolved, resolvedInputs, resolvedOutputs, bindings };
 }
 
 /**

@@ -353,9 +353,10 @@ describe("the OpenSimplex groups", () => {
 				"vec3f",
 			);
 		const diagonal = 1 / Math.sqrt(3);
-		for (const n of turned([0, 0, 1], 0)) expect(n).toBeCloseTo(diagonal, 9);
-		for (const n of turned([0, 1, 0], 1)) expect(n).toBeCloseTo(diagonal, 9);
-		for (const orientation of [0, 1, 2]) {
+		// XY Plane, XZ Plane and Classic.
+		for (const n of turned([0, 0, 1], 2)) expect(n).toBeCloseTo(diagonal, 9);
+		for (const n of turned([0, 1, 0], 3)) expect(n).toBeCloseTo(diagonal, 9);
+		for (const orientation of [2, 3, 6]) {
 			const [v = []] = positions(3, 1, orientation);
 			const length = Math.hypot(...turned(v, orientation));
 			expect(length).toBeCloseTo(Math.hypot(...v), 6);
