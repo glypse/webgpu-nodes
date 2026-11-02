@@ -1,3 +1,4 @@
+import { caseHandle } from "../enums";
 import {
 	CUSTOM_WGSL,
 	type CustomSockets,
@@ -6,12 +7,16 @@ import {
 	newSocketLabel,
 	type SocketSide,
 } from "../nodes/custom";
+import { INDEX_SWITCH, indexSwitchCases } from "../nodes/index-switch";
 import type { HandleDef, WgslType } from "../types";
 import type { GraphNode } from "./document";
 import { indexDocument } from "./hydrate";
 import { GroupModel } from "./model-groups";
 
-/** Editing Custom WGSL nodes: their code and their sockets. */
+/**
+ * Editing nodes whose sockets are their own data: Custom WGSL nodes' code
+ * and sockets, Index Switches' cases.
+ */
 export abstract class CustomWgslModel extends GroupModel {
 	private customNode(nodeId: string): GraphNode | undefined {
 		const node = this.activeDocument.nodesById.get(nodeId);
@@ -109,5 +114,24 @@ export abstract class CustomWgslModel extends GroupModel {
 			moved.splice(Math.max(0, Math.min(moved.length, index + offset)), 0, socket);
 			return moved;
 		});
+	}
+
+	/** Give an Index Switch `count` cases, dropping the links and values of those removed. */
+	setIndexSwitchCases(nodeId: string, count: number) {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		if (node?.type !== INDEX_SWITCH || this.isLocked) return;
+		const cases = Math.max(1, Math.trunc(count));
+		if (cases === indexSwitchCases(node.data)) return;
+		const kept = new Set(Array.from({ length: cases }, (_, i) => caseHandle(i)));
+		const removed = (handle: string) => handle.startsWith("case-") && !kept.has(handle);
+		const values = Object.fromEntries(
+			Object.entries(node.data.values ?? {}).filter(([handle]) => !removed(handle)),
+		);
+		this.patchNodeData(new Map([[node.id, { ...node.data, cases, values }]]));
+		const doc = this.activeDocument;
+		doc.edges = doc.edges.filter((e) => e.target !== node.id || !removed(e.targetHandle));
+		indexDocument(doc);
+		this.invalidateTypes([node.id]);
+		this.rebuildTypeCache();
 	}
 }

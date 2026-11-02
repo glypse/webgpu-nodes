@@ -14,6 +14,7 @@ import {
 import { type FrameTint, LAYOUT_FRAME } from "../../src/frames";
 import { rerouteBranches } from "../../src/graph/branches";
 import type { GraphDocument, GraphDocumentEdge, GraphDocumentNode } from "../../src/graph/document";
+import { INDEX_SWITCH, INDEX_SWITCH_INDEX } from "../../src/nodes/index-switch";
 import type { NodeType } from "../../src/nodes/registry";
 import {
 	type ColorDisplay,
@@ -447,6 +448,19 @@ export class GroupBuilder {
 		for (const [value, operand] of Object.entries(cases)) {
 			this.feed(ref.node, caseHandle(Number(value)), operand);
 		}
+		return ref;
+	};
+
+	/** The case of `cases` at `index` (a table read at runtime), all of them `type`. */
+	indexSwitch = (index: Operand, cases: readonly Operand[], type: WgslType): Ref => {
+		const ref = this.node(
+			INDEX_SWITCH,
+			{ [INDEX_SWITCH_INDEX]: index },
+			{ data: { cases: cases.length, types: { [familyKey(WGSL_TYPES)]: type } } },
+		);
+		cases.forEach((operand, i) => {
+			this.feed(ref.node, caseHandle(i), operand);
+		});
 		return ref;
 	};
 

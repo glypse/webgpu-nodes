@@ -81,6 +81,7 @@ const NodeDataSchema = v.strictObject({
 	items: v.optional(v.array(ZoneItemSchema)),
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
+	cases: v.optional(v.number()),
 	curve: v.optional(v.array(CurvePointSchema)),
 	code: v.optional(v.string()),
 	sockets: v.optional(
@@ -153,4 +154,5 @@ export const NodeWidgetSchema = v.variant("kind", [
 	}),
 	v.object({ kind: v.literal("curve") }),
 	v.object({ kind: v.literal("code") }),
+	v.object({ kind: v.literal("cases") }),
 ]) satisfies v.GenericSchema<unknown, NodeWidget>;

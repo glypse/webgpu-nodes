@@ -81,6 +81,7 @@ const DESCRIPTORS = {
 	"reduce-boolean": nodes.reduceBooleanNode,
 	fallback: nodes.fallbackNode,
 	match: nodes.matchNode,
+	[nodes.INDEX_SWITCH]: nodes.buildIndexSwitchDescriptor({}),
 
 	// Integer
 	bitwise: nodes.bitwiseNode,

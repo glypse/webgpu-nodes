@@ -171,7 +171,7 @@ export function settingValue(data: NodeData, setting: NodeSetting): string {
  * A larger editor drawn in a node's body, editing the node's data. Each kind
  * has its own component in a front end.
  */
-export type NodeWidget = NodeColorWidget | NodeCurveWidget | NodeCodeWidget;
+export type NodeWidget = NodeColorWidget | NodeCurveWidget | NodeCodeWidget | NodeCasesWidget;
 
 /** A hue / saturation wheel and a value ramp, editing the values of a colour's inputs. */
 export type NodeColorWidget = {
@@ -190,6 +190,9 @@ export type NodeCurveWidget = { kind: "curve" };
 
 /** A code editor for the node's WGSL (`NodeData.code`) and its sockets (`NodeData.sockets`). */
 export type NodeCodeWidget = { kind: "code" };
+
+/** How many cases the node has (`NodeData.cases`), added and removed at the end. */
+export type NodeCasesWidget = { kind: "cases" };
 
 export type ColorWidgetMode = {
 	space: ColorMode;

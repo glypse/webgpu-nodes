@@ -5,6 +5,7 @@ import {
 	buildGroupInputDescriptor,
 	buildGroupOutputDescriptor,
 } from "../nodes/groups";
+import { buildIndexSwitchDescriptor, INDEX_SWITCH } from "../nodes/index-switch";
 import { buildMatchDescriptor } from "../nodes/match";
 import { nodeRegistry } from "../nodes/registry";
 import { type NodeDescriptor, withDefaults } from "../types";
@@ -50,6 +51,9 @@ export function resolveDescriptor(
 	}
 	if (node.type === CUSTOM_WGSL) {
 		return buildCustomWgslDescriptor(node.data);
+	}
+	if (node.type === INDEX_SWITCH) {
+		return buildIndexSwitchDescriptor(node.data);
 	}
 	if (node.type === MATCH) {
 		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));

@@ -46,6 +46,8 @@ const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
 	curve: 10,
 	// The signature line and the code editor's default height.
 	code: 5,
+	// The case count and its buttons.
+	cases: 1,
 };
 
 export type TypeChoice = {

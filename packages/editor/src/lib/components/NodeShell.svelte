@@ -25,6 +25,7 @@
 	import { getGraphManager } from "../graph-manager.svelte";
 	import TypePicker from "./TypePicker.svelte";
 	import InputEditor from "./controls/InputEditor.svelte";
+	import CasesWidget from "./widgets/CasesWidget.svelte";
 	import CodeWidget from "./widgets/CodeWidget.svelte";
 	import ColorWidget from "./widgets/ColorWidget.svelte";
 	import CurveWidget from "./widgets/CurveWidget.svelte";
@@ -396,6 +397,8 @@
 			<CurveWidget {id} curve={data.curve} disabled={isLocked} />
 		{:else if descriptor.widget?.kind === "code"}
 			<CodeWidget {id} {data} disabled={isLocked} />
+		{:else if descriptor.widget?.kind === "cases"}
+			<CasesWidget {id} {data} disabled={isLocked} />
 		{/if}
 
 		<div class="node-shell__inputs">

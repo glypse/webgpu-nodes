@@ -37,6 +37,8 @@ export type NodeData = {
 	code?: string;
 	/** A Custom WGSL node's sockets; their labels name them in `code`. */
 	sockets?: { inputs: HandleDef[]; outputs: HandleDef[] };
+	/** How many cases an Index Switch picks among. */
+	cases?: number;
 	/** A frame's note, shown under its label. */
 	note?: string;
 	/** A frame's colour; neutral when absent. */

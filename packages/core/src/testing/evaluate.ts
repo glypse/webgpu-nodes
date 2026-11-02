@@ -5,6 +5,7 @@ import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
+import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
 import {
 	enumValue,
 	type ResolvedNodeTypes,
@@ -82,6 +83,8 @@ const UNARY: Record<string, (n: number) => number> = {
 	sqrt: Math.sqrt,
 	log: Math.log,
 	exp: Math.exp,
+	// WGSL rounds halves to even.
+	round: (n) => (Math.abs(n % 1) === 0.5 ? 2 * Math.round(n / 2) : Math.round(n)),
 	negate: (n) => -n,
 	"to-float": (n) => n,
 };
@@ -363,6 +366,11 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 				values.map((v) => ({ value: v, label: "" })),
 			);
 			return get(caseHandle(value ?? 0));
+		}
+		case INDEX_SWITCH: {
+			const last = indexSwitchCases(node.data) - 1;
+			const index = Math.min(Math.max(get(INDEX_SWITCH_INDEX)[0] ?? 0, 0), last);
+			return get(caseHandle(index));
 		}
 		default:
 			throw new Error(`can't evaluate a "${type}" node`);
