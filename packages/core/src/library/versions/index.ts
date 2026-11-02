@@ -50,8 +50,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-voronoi-radius/02232c18bc6868.json").then((m) => m.default),
 	"std-aspect-uv@1b256db7053e2f": () =>
 		import("./std-aspect-uv/1b256db7053e2f.json").then((m) => m.default),
-	"std-fractal-noise-octaves@127fc4234582ae": () =>
-		import("./std-fractal-noise-octaves/127fc4234582ae.json").then((m) => m.default),
+	"std-fractal-noise-octaves@1f664f6a44917c": () =>
+		import("./std-fractal-noise-octaves/1f664f6a44917c.json").then((m) => m.default),
 	"std-opensimplex-orientation@050fe4e12d9be7": () =>
 		import("./std-opensimplex-orientation/050fe4e12d9be7.json").then((m) => m.default),
 	"std-voronoi-edges@1ad79f4231c545": () =>
@@ -74,8 +74,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-component-sum/19655c913fca94.json").then((m) => m.default),
 	"std-remap@18bb11b8c3230a": () =>
 		import("./std-remap/18bb11b8c3230a.json").then((m) => m.default),
-	"std-fractal-noise@02e9ec23d858ba": () =>
-		import("./std-fractal-noise/02e9ec23d858ba.json").then((m) => m.default),
+	"std-fractal-noise@0398c17b77473c": () =>
+		import("./std-fractal-noise/0398c17b77473c.json").then((m) => m.default),
 	"std-gradient-noise-1d@03d35b22435124": () =>
 		import("./std-gradient-noise-1d/03d35b22435124.json").then((m) => m.default),
 	"std-voronoi-texture@14125cf8ec73fb": () =>

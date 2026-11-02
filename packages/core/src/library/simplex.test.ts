@@ -279,11 +279,13 @@ function run(
 				group: { definitionRef: entry.ref, locked: true },
 				data: {
 					...(variable && type ? { types: { [variable]: type } } : {}),
+					// Every input of a label, as variants of an enum may each have their own.
 					values: Object.fromEntries(
-						Object.entries(inputs).map(([label, value]) => [
-							libraryHandle(entry, "group-input", label),
-							value,
-						]),
+						Object.entries(inputs).flatMap(([label, value]) =>
+							(entry.definition.inputs ?? [])
+								.filter((h) => h.label === label)
+								.map((h) => [h.id, value]),
+						),
 					),
 				},
 			},

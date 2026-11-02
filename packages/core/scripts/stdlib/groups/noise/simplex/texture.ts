@@ -155,18 +155,32 @@ const HYBRID = 2;
 const HETERO = 3;
 const RIDGED = 4;
 
-/** Fractal Noise's inputs, keyed as `std-fractal-noise-octaves` takes them. */
+/**
+ * Fractal Noise's inputs, keyed as `std-fractal-noise-octaves` takes them.
+ * Each type has an Offset and Gain of its own, where it uses them: Blender's
+ * shared defaults (0 and 1) leave Hybrid and Heterogeneous weighting their
+ * octaves by the noise itself, and Ridged at the square of it, near black.
+ */
 function octaveInputs(g: GroupBuilder) {
 	const type = g.enum("type", TYPES, FBM, { label: "Type" });
 	const octaves = fractalInputs(g);
-	const offset = g.input("offset", "f32", { label: "Offset", default: 0 });
-	const gain = g.input("gain", "f32", { label: "Gain", default: 1 });
 	const normalize = g.input("normalize", "bool", {
 		label: "Normalize",
 		default: true,
 		owner: { enum: type, value: FBM },
 	});
-	return { type, ...octaves, offset, gain, normalize };
+	const owned = (key: string, label: string, value: number, owner: number) =>
+		g.input(key, "f32", { label, default: value, owner: { enum: type, value: owner } });
+	return {
+		type,
+		...octaves,
+		normalize,
+		hybridOffset: owned("hybridOffset", "Offset", 0.5, HYBRID),
+		hybridGain: owned("hybridGain", "Gain", 1, HYBRID),
+		heteroOffset: owned("heteroOffset", "Offset", 0.5, HETERO),
+		ridgedOffset: owned("ridgedOffset", "Offset", 1, RIDGED),
+		ridgedGain: owned("ridgedGain", "Gain", 2, RIDGED),
+	};
 }
 
 export const fractalNoiseOctaves: GroupSpec = {
@@ -178,7 +192,16 @@ export const fractalNoiseOctaves: GroupSpec = {
 	build: (g) => {
 		const t = coordinatesType(g);
 		const coordinates = g.input("coordinates", t, { label: "Coordinates" });
-		const { type, offset, gain, normalize, ...octaves } = octaveInputs(g);
+		const {
+			type,
+			normalize,
+			hybridOffset,
+			hybridGain,
+			heteroOffset,
+			ridgedOffset,
+			ridgedGain,
+			...octaves
+		} = octaveInputs(g);
 		const options = noiseOptions(g);
 		const pick = (cases: Record<number, Operand>) => g.match(type, cases);
 		const sum = g.frame(
@@ -212,7 +235,6 @@ export const fractalNoiseOctaves: GroupSpec = {
 						});
 						const n = g.wireless("Octave", noise(g, shifted, options));
 						const first = g.compare(iteration, "==", g.constant("i32", 0));
-						const raised = g.add(n, offset);
 						const fbm = g.frame("fBm", { note: "The octaves' sum." }, () =>
 							g.add(s.Value, g.mul(n, amplitude)),
 						);
@@ -229,6 +251,7 @@ export const fractalNoiseOctaves: GroupSpec = {
 							() => {
 								const active = g.compare(s.Weight, ">", 0.001);
 								const weight = g.min(s.Weight, 1);
+								const raised = g.add(n, hybridOffset);
 								const signal = g.mul(raised, power);
 								return {
 									value: g.select(
@@ -236,7 +259,11 @@ export const fractalNoiseOctaves: GroupSpec = {
 										s.Value,
 										g.add(s.Value, g.mul(weight, raised, amplitude)),
 									),
-									weight: g.select(active, s.Weight, g.mul(weight, gain, signal)),
+									weight: g.select(
+										active,
+										s.Weight,
+										g.mul(weight, hybridGain, signal),
+									),
 								};
 							},
 						);
@@ -245,12 +272,14 @@ export const fractalNoiseOctaves: GroupSpec = {
 							{
 								note: "The first octave plus Offset, then each octave scaled by the\nheight so far: smooth lowlands, rough peaks.",
 							},
-							() =>
-								g.select(
+							() => {
+								const raised = g.add(n, heteroOffset);
+								return g.select(
 									first,
 									g.add(s.Value, g.mul(raised, amplitude, s.Value)),
 									raised,
-								),
+								);
+							},
 						);
 						const ridged = g.frame(
 							"Ridged Multifractal",
@@ -258,9 +287,12 @@ export const fractalNoiseOctaves: GroupSpec = {
 								note: "Ridges where the noise crosses zero, (Offset − |noise|)², each octave\nweighted by the last one's ridge (times Gain, within [0, 1]).",
 							},
 							() => {
-								const ridge = g.sub(offset, g.abs(n));
+								const ridge = g.sub(ridgedOffset, g.abs(n));
 								const squared = g.mul(ridge, ridge);
-								const signal = g.mul(squared, g.clamp(g.mul(s.Weight, gain), 0, 1));
+								const signal = g.mul(
+									squared,
+									g.clamp(g.mul(s.Weight, ridgedGain), 0, 1),
+								);
 								return {
 									value: g.select(
 										first,
