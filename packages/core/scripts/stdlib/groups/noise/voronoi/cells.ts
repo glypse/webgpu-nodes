@@ -1,6 +1,6 @@
 // Voronoi's cells: one point per lattice cell, moved at random, and the
 // searches through the cells around a position.
-import type { GroupBuilder, GroupSpec, Ref } from "../../../builder";
+import { group, type GroupBuilder, type Ref } from "../../../builder";
 import { coordinatesType } from "../coordinates";
 import { hash, latticeNeighbor } from "../lattice";
 import { metricInputs, VORONOI_HELPERS, voronoiBisector, voronoiDistance } from "./metric";
@@ -10,11 +10,13 @@ export const COLOR_SALT = 1540483477;
 
 /** Hash's components in [0, 1] for the cell at `cell` (a float vector of whole numbers). */
 export function cellHash(g: GroupBuilder, cell: Ref, seed: Ref): Ref {
-	return g.call<"hash">(hash, { value: g.toInt(cell), seed }).hash;
+	return g.call(hash, { value: g.toInt(cell), seed }).hash;
 }
 
-export const voronoiPoint: GroupSpec = {
+export const voronoiPoint = group({
 	id: "std-voronoi-point",
+	inputs: ["cell", "offset", "randomness", "seed"],
+	outputs: ["point", "neighbor"],
 	name: "Voronoi Point",
 	aliases: ["Feature Point", "Jittered Point", "Cell Point"],
 	category: "texture",
@@ -30,7 +32,7 @@ export const voronoiPoint: GroupSpec = {
 		g.output("point", g.add(offset, g.mul(jitter, randomness)), t, { label: "Point" });
 		g.output("neighbor", neighbor, t, { label: "Neighbor Cell" });
 	},
-};
+});
 
 /** How the points of the cells around `cell` are placed. */
 export type PointInputs = { cell: Ref; randomness: Ref; seed: Ref };
@@ -54,13 +56,12 @@ function cellInputs(g: GroupBuilder) {
 
 /** Looking around a cell: its neighbours and their points. */
 function lattice(g: GroupBuilder, { cell, randomness, seed }: PointInputs) {
-	const pointAt = (offset: Ref) =>
-		g.call<"point">(voronoiPoint, { cell, offset, randomness, seed }).point;
+	const pointAt = (offset: Ref) => g.call(voronoiPoint, { cell, offset, randomness, seed }).point;
 	return {
-		neighbors: (radius: number) => g.call<"count">(latticeNeighbor, { cell, radius }).count,
+		neighbors: (radius: number) => g.call(latticeNeighbor, { cell, radius }).count,
 		pointAt,
 		neighborPoint: (iteration: Ref, radius = 1) => {
-			const { offset } = g.call<"offset">(latticeNeighbor, {
+			const { offset } = g.call(latticeNeighbor, {
 				index: iteration,
 				cell,
 				radius,
@@ -70,8 +71,10 @@ function lattice(g: GroupBuilder, { cell, randomness, seed }: PointInputs) {
 	};
 }
 
-export const voronoiNearest: GroupSpec = {
+export const voronoiNearest = group({
 	id: "std-voronoi-nearest",
+	inputs: ["cell", "local", "randomness", "seed", "metric", "exponent"],
+	outputs: ["f1-distance", "f2-distance", "f1-point", "f2-point", "f1-offset", "f2-offset"],
 	name: "Voronoi Nearest Points",
 	aliases: ["F1 F2", "Closest Points", "Nearest Cells"],
 	category: "texture",
@@ -99,31 +102,31 @@ export const voronoiNearest: GroupSpec = {
 					},
 					(iteration, s) => {
 						const { offset, point } = neighborPoint(iteration);
-						const d = g.call<"distance">(voronoiDistance, {
+						const d = g.call(voronoiDistance, {
 							a: point,
 							b: inputs.local,
 							metric,
 							exponent,
 						}).distance;
-						const closer1 = g.compare(d, "<", s["F1 Distance"]);
-						const closer2 = g.compare(d, "<", s["F2 Distance"]);
+						const closer1 = g.compare(d, s["F1 Distance"], { op: "<" });
+						const closer2 = g.compare(d, s["F2 Distance"], { op: "<" });
 						return {
 							"F1 Distance": g.min(s["F1 Distance"], d),
-							"F2 Distance": g.select(
+							"F2 Distance": g.switch(
 								closer1,
 								g.min(s["F2 Distance"], d),
 								s["F1 Distance"],
 							),
-							"F1 Point": g.select(closer1, s["F1 Point"], point),
-							"F2 Point": g.select(
+							"F1 Point": g.switch(closer1, s["F1 Point"], point),
+							"F2 Point": g.switch(
 								closer1,
-								g.select(closer2, s["F2 Point"], point),
+								g.switch(closer2, s["F2 Point"], point),
 								s["F1 Point"],
 							),
-							"F1 Offset": g.select(closer1, s["F1 Offset"], offset),
-							"F2 Offset": g.select(
+							"F1 Offset": g.switch(closer1, s["F1 Offset"], offset),
+							"F2 Offset": g.switch(
 								closer1,
-								g.select(closer2, s["F2 Offset"], offset),
+								g.switch(closer2, s["F2 Offset"], offset),
 								s["F1 Offset"],
 							),
 						};
@@ -137,10 +140,23 @@ export const voronoiNearest: GroupSpec = {
 		g.output("f1-offset", closest["F1 Offset"], t, { label: "F1 Offset" });
 		g.output("f2-offset", closest["F2 Offset"], t, { label: "F2 Offset" });
 	},
-};
+});
 
-export const voronoiEdges: GroupSpec = {
+export const voronoiEdges = group({
 	id: "std-voronoi-edges",
+	inputs: [
+		"cell",
+		"local",
+		"randomness",
+		"seed",
+		"metric",
+		"exponent",
+		"f1-point",
+		"f1-offset",
+		"f2-point",
+		"f2-offset",
+	],
+	outputs: ["edge", "f2-edge"],
 	name: "Voronoi Edges",
 	aliases: ["Distance to Edge", "Cell Edges", "Bisectors"],
 	category: "texture",
@@ -163,20 +179,20 @@ export const voronoiEdges: GroupSpec = {
 		const closestBisector = (point: Ref, offset: Ref) => {
 			const from = g.sub(point, local);
 			return g.repeat(neighbors(2), { Distance: ["f32", 1e10] }, (iteration, s) => {
-				const neighbor = g.call<"offset">(latticeNeighbor, {
+				const neighbor = g.call(latticeNeighbor, {
 					index: iteration,
 					cell,
 					radius: 2,
 				}).offset;
 				const toPoint = g.sub(pointAt(g.add(offset, neighbor)), local);
-				const distinct = g.compare(g.length(g.sub(toPoint, from)), ">", 0.01);
-				const d = g.call<"distance">(voronoiBisector, {
+				const distinct = g.compare(g.length(g.sub(toPoint, from)), 0.01, { op: ">" });
+				const d = g.call(voronoiBisector, {
 					a: from,
 					b: toPoint,
 					metric,
 					exponent,
 				}).distance;
-				return { Distance: g.select(distinct, s.Distance, g.min(s.Distance, d)) };
+				return { Distance: g.switch(distinct, s.Distance, g.min(s.Distance, d)) };
 			}).Distance;
 		};
 		g.frame(
@@ -200,10 +216,12 @@ export const voronoiEdges: GroupSpec = {
 			},
 		);
 	},
-};
+});
 
-export const voronoiRadius: GroupSpec = {
+export const voronoiRadius = group({
 	id: "std-voronoi-radius",
+	inputs: ["cell", "randomness", "seed", "metric", "exponent", "f1-point", "f1-offset"],
+	outputs: ["radius"],
 	name: "Voronoi Radius",
 	aliases: ["N-Sphere Radius", "Cell Radius", "Inscribed Radius"],
 	category: "texture",
@@ -220,19 +238,19 @@ export const voronoiRadius: GroupSpec = {
 			{ note: "The points of the cells around F1's, its own aside, in the metric." },
 			() =>
 				g.repeat(neighbors(1), { Distance: ["f32", 1e10] }, (iteration, s) => {
-					const { offset } = g.call<"offset">(latticeNeighbor, {
+					const { offset } = g.call(latticeNeighbor, {
 						index: iteration,
 						cell: inputs.cell,
 					});
-					const itself = g.compare(g.length(offset), "<", 0.5);
+					const itself = g.compare(g.length(offset), 0.5, { op: "<" });
 					const point = pointAt(g.add(f1Offset, offset));
-					const d = g.call<"distance">(voronoiDistance, {
+					const d = g.call(voronoiDistance, {
 						a: f1Point,
 						b: point,
 						metric,
 						exponent,
 					}).distance;
-					return { Distance: g.select(itself, g.min(s.Distance, d), s.Distance) };
+					return { Distance: g.switch(itself, g.min(s.Distance, d), s.Distance) };
 				}),
 		);
 		g.frame(
@@ -243,10 +261,12 @@ export const voronoiRadius: GroupSpec = {
 			},
 		);
 	},
-};
+});
 
-export const voronoiSmooth: GroupSpec = {
+export const voronoiSmooth = group({
 	id: "std-voronoi-smooth",
+	inputs: ["cell", "local", "randomness", "seed", "metric", "exponent", "smoothness"],
+	outputs: ["distance", "color", "point"],
 	name: "Voronoi Smooth F1",
 	aliases: ["Smooth Minimum", "Smooth Voronoi", "Smooth F1"],
 	category: "texture",
@@ -262,7 +282,7 @@ export const voronoiSmooth: GroupSpec = {
 		});
 		const { neighborPoint, neighbors } = lattice(g, inputs);
 		const { t, cell, local, seed } = inputs;
-		const colorSeed = g.bitwise(seed, "^", COLOR_SALT);
+		const colorSeed = g.bitwise(seed, COLOR_SALT, { op: "^" });
 		const smooth = g.frame(
 			"Smooth minimum",
 			{
@@ -278,7 +298,7 @@ export const voronoiSmooth: GroupSpec = {
 					},
 					(iteration, s) => {
 						const { offset, point } = neighborPoint(iteration, 2);
-						const d = g.call<"distance">(voronoiDistance, {
+						const d = g.call(voronoiDistance, {
 							a: point,
 							b: local,
 							metric,
@@ -292,7 +312,7 @@ export const voronoiSmooth: GroupSpec = {
 								g.mul(0.5, g.div(g.sub(s["Smooth Distance"], d), smoothness)),
 							),
 						);
-						const h = g.select(g.compare(iteration, "==", 0), blend, 1);
+						const h = g.switch(g.compare(iteration, 0, { op: "==" }), blend, 1);
 						const correction = g.mul(smoothness, h, g.sub(1, h));
 						const shared = g.div(correction, g.add(1, g.mul(3, smoothness)));
 						const color = cellHash(g, g.add(cell, offset), colorSeed);
@@ -308,4 +328,4 @@ export const voronoiSmooth: GroupSpec = {
 		g.output("color", smooth["Smooth Color"], "vec3f", { label: "Smooth Color" });
 		g.output("point", smooth["Smooth Point"], t, { label: "Smooth Point" });
 	},
-};
+});

@@ -1,7 +1,7 @@
 // Fractal noise (fBm): octaves of a noise, each finer and fainter, summed.
 import {
+	group,
 	type GroupBuilder,
-	type GroupSpec,
 	helpers,
 	type ItemType,
 	type Operand,
@@ -27,8 +27,10 @@ export function fractalInputs(g: GroupBuilder): FractalInputs {
 	};
 }
 
-export const fractalOctave: GroupSpec = {
+export const fractalOctave = group({
 	id: "std-fractal-octave",
+	inputs: ["iteration", "detail", "roughness", "lacunarity"],
+	outputs: ["scale", "amplitude", "power", "octaves"],
 	name: "Fractal Octave",
 	aliases: ["fBm Octave", "Octave", "Fractal Brownian Motion"],
 	category: "texture",
@@ -76,14 +78,14 @@ export const fractalOctave: GroupSpec = {
 				const needed = g.toInt(
 					g.max(g.ceil(g.div(g.log(g.mul(g.sub(1, r), INAUDIBLE)), g.log(r))), 1),
 				);
-				const fading = g.compare(roughness, "<", 1);
-				g.output("octaves", g.select(fading, detailed, g.min(detailed, needed)), "i32", {
+				const fading = g.compare(roughness, 1, { op: "<" });
+				g.output("octaves", g.switch(fading, detailed, g.min(detailed, needed)), "i32", {
 					label: "Octaves",
 				});
 			},
 		);
 	},
-};
+});
 
 /** An octave as `fractal` hands it over: its index, and `std-fractal-octave`'s outputs. */
 export type Octave = { iteration: Ref; scale: Ref; amplitude: Ref; power: Ref };
@@ -99,9 +101,9 @@ export function fractal<K extends string>(
 	items: Record<K, readonly [ItemType, Operand]>,
 	octave: (octave: Octave, state: Record<K, Ref>) => Record<K, Operand>,
 ): Record<K, Ref> {
-	const { octaves } = g.call<"octaves">(fractalOctave, { ...inputs });
+	const { octaves } = g.call(fractalOctave, { ...inputs });
 	return g.repeat(octaves, items, (iteration, state) => {
-		const outputs = g.call<"scale" | "amplitude" | "power">(fractalOctave, {
+		const outputs = g.call(fractalOctave, {
 			iteration,
 			...inputs,
 		});

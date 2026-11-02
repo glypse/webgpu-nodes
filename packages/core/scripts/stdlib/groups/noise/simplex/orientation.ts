@@ -1,7 +1,13 @@
 // OpenSimplex2's variants and lattice orientations: how coordinates are
 // turned into lattice space, so the slices one looks at avoid its axes.
 import type { WgslType } from "../../../../../src/types";
-import type { EnumRef, GroupBuilder, GroupSpec, Ref, VariableType } from "../../../builder";
+import {
+	type EnumRef,
+	group,
+	type GroupBuilder,
+	type Ref,
+	type VariableType,
+} from "../../../builder";
 import { padVector } from "../../vector";
 import { coordinatesType } from "../coordinates";
 import { SIMPLEX_HELPERS } from "./kernel";
@@ -151,8 +157,10 @@ const SPACE = [spaceImproveXY, spaceImproveXZ, spaceClassic];
 const TYPES: Record<number, WgslType> = { 2: "vec2f", 3: "vec3f", 4: "vec4f" };
 const COMPONENTS = ["x", "y", "z", "w"] as const;
 
-export const simplexOrientation: GroupSpec = {
+export const simplexOrientation = group({
 	id: "std-opensimplex-orientation",
+	inputs: ["vector", "variant", "orientation2d", "orientation3d", "orientation4d"],
+	outputs: ["lattice"],
 	name: "OpenSimplex Orientation",
 	aliases: ["Lattice Orientation", "Simplex Skew", "Lattice Space", "Slice Orientation"],
 	category: "texture",
@@ -163,8 +171,8 @@ export const simplexOrientation: GroupSpec = {
 		const variant = variantInput(g, t);
 		const { orientation2d, orientation3d, orientation4d } = orientationInputs(g, t);
 		// Split padded so every width finds its components on the same node.
-		const { padded } = g.call<"padded">(padVector, { vector });
-		const components = g.split(padded);
+		const { padded } = g.call(padVector, { vector });
+		const components = g.separateVector(padded);
 		// Each map once, however many orientations share it.
 		const applied = new Map<Map, Ref>();
 		/** `map` as a sum of its columns, each scaled by a component of the vector. */
@@ -218,4 +226,4 @@ export const simplexOrientation: GroupSpec = {
 		);
 		g.output("lattice", lattice, t, { label: "Lattice Position" });
 	},
-};
+});

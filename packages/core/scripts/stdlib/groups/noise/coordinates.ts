@@ -1,12 +1,6 @@
 // Noise coordinates: their type decides a noise's dimensions, one per
 // component, and every helper working on them is generic over it.
-import {
-	type GroupBuilder,
-	type GroupSpec,
-	helpers,
-	type Ref,
-	type VariableType,
-} from "../../builder";
+import { group, type GroupBuilder, helpers, type Ref, type VariableType } from "../../builder";
 
 /**
  * The types noise coordinates take, one per dimension count: 2D first, the
@@ -30,8 +24,10 @@ export function coordinatesInput(g: GroupBuilder): CoordinatesInput {
 	return { t, vector: g.input("vector", t, { label: "Vector" }) };
 }
 
-export const noiseCoordinates: GroupSpec = {
+export const noiseCoordinates = group({
 	id: "std-noise-coordinates",
+	inputs: ["vector"],
+	outputs: ["coordinates"],
 	name: "Noise Coordinates",
 	aliases: ["Texture Coordinates", "Noise Vector"],
 	category: "texture",
@@ -40,4 +36,4 @@ export const noiseCoordinates: GroupSpec = {
 		const { t, vector } = coordinatesInput(g);
 		g.output("coordinates", g.fallback(vector, g.uv()), t, { label: "Coordinates" });
 	},
-};
+});

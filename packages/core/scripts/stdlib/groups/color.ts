@@ -1,6 +1,6 @@
 // Colour spaces (linear RGB, XYZ, OKLab, OKLch), gamut mapping and the Color
 // group they serve, after Björn Ottosson's OKLab and CSS Color 4.
-import type { GroupBuilder, GroupSpec, Ref } from "../builder";
+import { group, type GroupBuilder, type Ref } from "../builder";
 
 type Row = { x: number; y: number; z: number };
 type Matrix = readonly [Row, Row, Row];
@@ -59,8 +59,10 @@ const OKLAB_TO_LMS: Matrix = [
 
 const CONVERSION = ["Color Space Conversion"];
 
-const linearRgbToXyz: GroupSpec = {
+const linearRgbToXyz = group({
 	id: "std-linear-rgb-to-xyz",
+	inputs: ["rgb"],
+	outputs: ["xyz"],
 	name: "Linear RGB to XYZ",
 	aliases: ["sRGB to XYZ", "RGB to XYZ", ...CONVERSION],
 	category: "color",
@@ -68,10 +70,12 @@ const linearRgbToXyz: GroupSpec = {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
 		g.output("xyz", transform(g, rgb, LINEAR_RGB_TO_XYZ), "vec3f", { label: "XYZ" });
 	},
-};
+});
 
-const xyzToLinearRgb: GroupSpec = {
+const xyzToLinearRgb = group({
 	id: "std-xyz-to-linear-rgb",
+	inputs: ["xyz"],
+	outputs: ["rgb"],
 	name: "XYZ to Linear RGB",
 	aliases: ["XYZ to sRGB", "XYZ to RGB", ...CONVERSION],
 	category: "color",
@@ -79,7 +83,7 @@ const xyzToLinearRgb: GroupSpec = {
 		const xyz = g.input("xyz", "vec3f", { label: "XYZ" });
 		g.output("rgb", transform(g, xyz, XYZ_TO_LINEAR_RGB), "vec3f", { label: "Linear RGB" });
 	},
-};
+});
 
 /** To OKLab from a space `toLms` takes to the cones' responses (LMS). */
 function toOklab(g: GroupBuilder, from: Ref, toLms: Matrix, space: string): Ref {
@@ -113,8 +117,10 @@ function fromOklab(g: GroupBuilder, lab: Ref, fromLms: Matrix, space: string): R
 	);
 }
 
-const xyzToOklab: GroupSpec = {
+const xyzToOklab = group({
 	id: "std-xyz-to-oklab",
+	inputs: ["xyz"],
+	outputs: ["oklab"],
 	name: "XYZ to OKLab",
 	aliases: [...CONVERSION, "Perceptual Color"],
 	category: "color",
@@ -122,10 +128,12 @@ const xyzToOklab: GroupSpec = {
 		const xyz = g.input("xyz", "vec3f", { label: "XYZ" });
 		g.output("oklab", toOklab(g, xyz, XYZ_TO_LMS, "XYZ"), "vec3f", { label: "OKLab" });
 	},
-};
+});
 
-const oklabToXyz: GroupSpec = {
+const oklabToXyz = group({
 	id: "std-oklab-to-xyz",
+	inputs: ["oklab"],
+	outputs: ["xyz"],
 	name: "OKLab to XYZ",
 	aliases: [...CONVERSION, "Perceptual Color"],
 	category: "color",
@@ -133,10 +141,12 @@ const oklabToXyz: GroupSpec = {
 		const lab = g.input("oklab", "vec3f", { label: "OKLab" });
 		g.output("xyz", fromOklab(g, lab, LMS_TO_XYZ, "XYZ"), "vec3f", { label: "XYZ" });
 	},
-};
+});
 
-const linearRgbToOklab: GroupSpec = {
+const linearRgbToOklab = group({
 	id: "std-linear-rgb-to-oklab",
+	inputs: ["rgb"],
+	outputs: ["oklab"],
 	name: "Linear RGB to OKLab",
 	aliases: ["sRGB to OKLab", "RGB to OKLab", ...CONVERSION, "Perceptual Color"],
 	category: "color",
@@ -146,10 +156,12 @@ const linearRgbToOklab: GroupSpec = {
 			label: "OKLab",
 		});
 	},
-};
+});
 
-const oklabToLinearRgb: GroupSpec = {
+const oklabToLinearRgb = group({
 	id: "std-oklab-to-linear-rgb",
+	inputs: ["oklab"],
+	outputs: ["rgb"],
 	name: "OKLab to Linear RGB",
 	aliases: ["OKLab to sRGB", "OKLab to RGB", ...CONVERSION, "Perceptual Color"],
 	category: "color",
@@ -159,16 +171,18 @@ const oklabToLinearRgb: GroupSpec = {
 			label: "Linear RGB",
 		});
 	},
-};
+});
 
-const oklabToOklch: GroupSpec = {
+const oklabToOklch = group({
 	id: "std-oklab-to-oklch",
+	inputs: ["oklab"],
+	outputs: ["oklch"],
 	name: "OKLab to OKLch",
 	aliases: ["Lab to LCh", "Polar", ...CONVERSION],
 	category: "color",
 	build: (g) => {
 		const lab = g.input("oklab", "vec3f", { label: "OKLab" });
-		const { x: lightness, y: a, z: b } = g.split(lab);
+		const { x: lightness, y: a, z: b } = g.separateVector(lab);
 		const chroma = g.frame("Chroma", { note: "How far from grey: the length of (a, b)." }, () =>
 			g.length(g.vec("vec2f", a, b)),
 		);
@@ -177,16 +191,18 @@ const oklabToOklch: GroupSpec = {
 		);
 		g.output("oklch", g.vec("vec3f", lightness, chroma, hue), "vec3f", { label: "OKLch" });
 	},
-};
+});
 
-const oklchToOklab: GroupSpec = {
+const oklchToOklab = group({
 	id: "std-oklch-to-oklab",
+	inputs: ["oklch"],
+	outputs: ["oklab"],
 	name: "OKLch to OKLab",
 	aliases: ["LCh to Lab", "Polar", ...CONVERSION],
 	category: "color",
 	build: (g) => {
 		const lch = g.input("oklch", "vec3f", { label: "OKLch" });
-		const { x: lightness, y: chroma, z: hue } = g.split(lch);
+		const { x: lightness, y: chroma, z: hue } = g.separateVector(lch);
 		const { a, b } = g.frame(
 			"a and b",
 			{ note: "Chroma along the hue's direction (hue in degrees)." },
@@ -197,53 +213,63 @@ const oklchToOklab: GroupSpec = {
 		);
 		g.output("oklab", g.vec("vec3f", lightness, a, b), "vec3f", { label: "OKLab" });
 	},
-};
+});
 
-const linearRgbToOklch: GroupSpec = {
+const linearRgbToOklch = group({
 	id: "std-linear-rgb-to-oklch",
+	inputs: ["rgb"],
+	outputs: ["oklch"],
 	name: "Linear RGB to OKLch",
 	aliases: ["sRGB to OKLch", "RGB to OKLch", ...CONVERSION, "Perceptual Color"],
 	category: "color",
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
-		const { oklab } = g.call<"oklab">(linearRgbToOklab, { rgb });
-		g.output("oklch", g.call<"oklch">(oklabToOklch, { oklab }).oklch, "vec3f", {
+		const { oklab } = g.call(linearRgbToOklab, { rgb });
+		g.output("oklch", g.call(oklabToOklch, { oklab }).oklch, "vec3f", {
 			label: "OKLch",
 		});
 	},
-};
+});
 
-const oklchToLinearRgb: GroupSpec = {
+const oklchToLinearRgb = group({
 	id: "std-oklch-to-linear-rgb",
+	inputs: ["oklch"],
+	outputs: ["rgb"],
 	name: "OKLch to Linear RGB",
 	aliases: ["OKLch to sRGB", "OKLch to RGB", ...CONVERSION, "Perceptual Color"],
 	category: "color",
 	build: (g) => {
 		const oklch = g.input("oklch", "vec3f", { label: "OKLch" });
-		const { oklab } = g.call<"oklab">(oklchToOklab, { oklch });
-		g.output("rgb", g.call<"rgb">(oklabToLinearRgb, { oklab }).rgb, "vec3f", {
+		const { oklab } = g.call(oklchToOklab, { oklch });
+		g.output("rgb", g.call(oklabToLinearRgb, { oklab }).rgb, "vec3f", {
 			label: "Linear RGB",
 		});
 	},
-};
+});
 
-const inDisplayGamut: GroupSpec = {
+const inDisplayGamut = group({
 	id: "std-in-display-gamut",
+	inputs: ["rgb"],
+	outputs: ["in-gamut"],
 	name: "In Display Gamut",
 	aliases: ["Gamut Check", "Out of Gamut", "In sRGB Gamut", "In Display P3 Gamut", ...CONVERSION],
 	category: "color",
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
 		const moved = g.distance(rgb, g.displayGamutClip(rgb));
-		g.output("in-gamut", g.compare(moved, "<=", 0.00001), "bool", { label: "In Gamut" });
+		g.output("in-gamut", g.compare(moved, 0.00001, { op: "<=" }), "bool", {
+			label: "In Gamut",
+		});
 	},
-};
+});
 
 /** How far apart (in OKLab) a colour and its clipped self may be for the clip to pass. */
 const JUST_NOTICEABLE = 0.02;
 
-const oklchGamutMap: GroupSpec = {
+const oklchGamutMap = group({
 	id: "std-oklch-gamut-map",
+	inputs: ["oklch"],
+	outputs: ["rgb"],
 	name: "OKLch Gamut Map",
 	aliases: [
 		"Gamut Mapping",
@@ -256,16 +282,19 @@ const oklchGamutMap: GroupSpec = {
 	category: "color",
 	build: (g) => {
 		const oklch = g.input("oklch", "vec3f", { label: "OKLch" });
-		const { x: lightness, y: chroma, z: hue } = g.split(oklch);
+		const { x: lightness, y: chroma, z: hue } = g.separateVector(oklch);
 		const toRgb = (lch: Ref) => {
-			const { oklab } = g.call<"oklab">(oklchToOklab, { oklch: lch });
-			return { oklab, rgb: g.call<"rgb">(oklabToLinearRgb, { oklab }).rgb };
+			const { oklab } = g.call(oklchToOklab, { oklch: lch });
+			return { oklab, rgb: g.call(oklabToLinearRgb, { oklab }).rgb };
 		};
 		/** Whether clipping `rgb` to the display keeps it within notice of `oklab`. */
 		const clipsUnnoticed = (oklab: Ref, rgb: Ref) => {
 			const clipped = g.displayGamutClip(rgb);
-			const back = g.call<"oklab">(linearRgbToOklab, { rgb: clipped }).oklab;
-			return { clipped, close: g.compare(g.distance(back, oklab), "<", JUST_NOTICEABLE) };
+			const back = g.call(linearRgbToOklab, { rgb: clipped }).oklab;
+			return {
+				clipped,
+				close: g.compare(g.distance(back, oklab), JUST_NOTICEABLE, { op: "<" }),
+			};
 		};
 
 		const direct = g.frame(
@@ -293,13 +322,21 @@ const oklchGamutMap: GroupSpec = {
 					(_, s) => {
 						const middle = g.mul(g.add(s.Low, s.High), 0.5);
 						const { oklab, rgb } = toRgb(g.vec("vec3f", lightness, middle, hue));
-						const inGamut = g.call<"in-gamut">(inDisplayGamut, { rgb })["in-gamut"];
+						const inGamut = g.call(inDisplayGamut, { rgb })["in-gamut"];
 						const { close } = clipsUnnoticed(oklab, rgb);
-						const raise = g.or(g.and(s["Low In Gamut"], inGamut), close);
+						const raise = g.booleanMath(
+							g.booleanMath(s["Low In Gamut"], inGamut, { op: "and" }),
+							close,
+							{ op: "or" },
+						);
 						return {
-							Low: g.select(raise, s.Low, middle),
-							High: g.select(raise, middle, s.High),
-							"Low In Gamut": g.and(s["Low In Gamut"], g.or(inGamut, g.not(close))),
+							Low: g.switch(raise, s.Low, middle),
+							High: g.switch(raise, middle, s.High),
+							"Low In Gamut": g.booleanMath(
+								s["Low In Gamut"],
+								g.booleanMath(inGamut, g.not(close), { op: "or" }),
+								{ op: "and" },
+							),
 						};
 					},
 				),
@@ -310,13 +347,21 @@ const oklchGamutMap: GroupSpec = {
 		);
 
 		g.frame("Extremes", { note: "White past full lightness, black at none." }, () => {
-			const fitted = g.select(direct.close, mapped, direct.clipped);
-			const white = g.select(g.compare(lightness, ">=", 1), fitted, g.constant("vec3f", 1));
-			const color = g.select(g.compare(lightness, "<=", 0), white, g.constant("vec3f", 0));
+			const fitted = g.switch(direct.close, mapped, direct.clipped);
+			const white = g.switch(
+				g.compare(lightness, 1, { op: ">=" }),
+				fitted,
+				g.constant("vec3f", 1),
+			);
+			const color = g.switch(
+				g.compare(lightness, 0, { op: "<=" }),
+				white,
+				g.constant("vec3f", 0),
+			);
 			g.output("rgb", color, "vec3f", { label: "Linear RGB" });
 		});
 	},
-};
+});
 
 const MODES = [
 	[0, "RGB"],
@@ -324,8 +369,22 @@ const MODES = [
 	[2, "OKLch"],
 ] as const;
 
-const color: GroupSpec = {
+const color = group({
 	id: "std-color",
+	inputs: [
+		"mode",
+		"red",
+		"green",
+		"blue",
+		"hue",
+		"saturation",
+		"value",
+		"lightness",
+		"chroma",
+		"oklch-hue",
+		"alpha",
+	],
+	outputs: ["color", "rgba"],
 	name: "Color",
 	aliases: [
 		"RGB",
@@ -357,7 +416,7 @@ const color: GroupSpec = {
 				x: h,
 				y: s,
 				z: v,
-			} = g.split(
+			} = g.separateVector(
 				g.vec(
 					"vec3f",
 					g.input("hue", "f32", { label: "Hue", default: 0, ...unit, ...owned(1) }),
@@ -392,8 +451,8 @@ const color: GroupSpec = {
 				"To linear",
 				{ note: "sRGB's transfer function undone: HSV picks display colours." },
 				() =>
-					g.select(
-						g.compare(srgb, "<=", 0.04045),
+					g.switch(
+						g.compare(srgb, 0.04045, { op: "<=" }),
 						g.pow(g.div(g.add(srgb, 0.055), 1.055), 2.4),
 						g.div(srgb, 12.92),
 					),
@@ -421,14 +480,14 @@ const color: GroupSpec = {
 						...owned(2),
 					}),
 				);
-				return g.call<"rgb">(oklchGamutMap, { oklch: lch }).rgb;
+				return g.call(oklchGamutMap, { oklch: lch }).rgb;
 			},
 		);
 
 		const chosen = g.match(mode, { 0: rgb, 1: hsv, 2: oklch });
 		g.output("color", chosen, "vec3f", { label: "Color" });
 		g.frame("Alpha", {}, () => {
-			const { x, y, z } = g.split(chosen);
+			const { x, y, z } = g.separateVector(chosen);
 			const alpha = g.input("alpha", "f32", { label: "Alpha", default: 1, ...unit });
 			g.output("rgba", g.vec("vec4f", x, y, z, alpha), "vec4f", { label: "RGBA" });
 		});
@@ -445,7 +504,7 @@ const color: GroupSpec = {
 			},
 		},
 	}),
-};
+});
 
 export default [
 	linearRgbToXyz,

@@ -1,12 +1,6 @@
 // What every OpenSimplex lattice adds up: a random gradient per lattice
 // point, faded out within a radius of it.
-import {
-	type GroupBuilder,
-	type GroupSpec,
-	helpers,
-	type Operand,
-	type Ref,
-} from "../../../builder";
+import { group, type GroupBuilder, helpers, type Operand, type Ref } from "../../../builder";
 import { componentSum } from "../../vector";
 import { coordinatesType } from "../coordinates";
 import { hash } from "../lattice";
@@ -19,8 +13,10 @@ export const SIMPLEX_HELPERS = helpers("OpenSimplex");
  */
 export const LATTICE_SALT = 461845907;
 
-export const latticeGradient: GroupSpec = {
+export const latticeGradient = group({
 	id: "std-lattice-gradient",
+	inputs: ["vertex", "seed"],
+	outputs: ["gradient"],
 	name: "Lattice Gradient",
 	aliases: ["Random Gradient", "Gradient Vector", "Random Direction"],
 	category: "texture",
@@ -29,8 +25,8 @@ export const latticeGradient: GroupSpec = {
 		const t = coordinatesType(g);
 		const vertex = g.input("vertex", t, { label: "Vertex" });
 		const seed = g.input("seed", "i32", { label: "Seed", default: 0 });
-		const h = g.call<"hash">(hash, { value: g.toInt(vertex), seed }).hash;
-		const { x, y, z } = g.split(h);
+		const h = g.call(hash, { value: g.toInt(vertex), seed }).hash;
+		const { x, y, z } = g.separateVector(h);
 		const turn = (n: Ref) => g.mul(n, 2 * Math.PI);
 		const line = g.frame("1D", { note: "A slope in [-1, 1]." }, () => g.sub(g.mul(x, 2), 1));
 		const plane = g.frame("2D", { note: "A direction at a random angle." }, () =>
@@ -92,10 +88,12 @@ export const latticeGradient: GroupSpec = {
 		);
 		g.output("gradient", gradient, t, { label: "Gradient" });
 	},
-};
+});
 
-export const simplexKernel: GroupSpec = {
+export const simplexKernel = group({
 	id: "std-simplex-kernel",
+	inputs: ["vertex", "offset", "radius", "seed"],
+	outputs: ["value"],
 	name: "Simplex Kernel",
 	aliases: ["Surflet", "Gradient Kernel", "Simplex Contribution"],
 	category: "texture",
@@ -106,8 +104,8 @@ export const simplexKernel: GroupSpec = {
 		const offset = g.input("offset", t, { label: "Offset" });
 		const radius = g.input("radius", "f32", { label: "Radius²", default: 0.5 });
 		const seed = g.input("seed", "i32", { label: "Seed", default: 0 });
-		const sum = (vector: Ref) => g.call<"sum">(componentSum, { vector }).sum;
-		const { gradient } = g.call<"gradient">(latticeGradient, { vertex, seed });
+		const sum = (vector: Ref) => g.call(componentSum, { vector }).sum;
+		const { gradient } = g.call(latticeGradient, { vertex, seed });
 		g.frame(
 			"Kernel",
 			{
@@ -122,7 +120,7 @@ export const simplexKernel: GroupSpec = {
 			},
 		);
 	},
-};
+});
 
 /** A kernel's value at `offset` from the lattice point `vertex`. */
 export function kernel(
@@ -132,7 +130,7 @@ export function kernel(
 	radius: number,
 	seed: Operand,
 ): Ref {
-	return g.call<"value">(simplexKernel, { vertex, offset, radius, seed }).value;
+	return g.call(simplexKernel, { vertex, offset, radius, seed }).value;
 }
 
 /** `seed` for the lattice copy `copy`. */

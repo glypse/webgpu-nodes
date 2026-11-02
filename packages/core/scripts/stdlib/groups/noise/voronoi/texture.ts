@@ -1,5 +1,5 @@
 // Voronoi Texture and Fractal Voronoi, after Blender's (cycles/kernel/svm/voronoi.h).
-import type { GroupBuilder, GroupSpec, Ref } from "../../../builder";
+import { group, type GroupBuilder, type Ref } from "../../../builder";
 import { coordinatesInput, noiseCoordinates } from "../coordinates";
 import { fractal, fractalInputs } from "../fractal";
 import {
@@ -36,8 +36,24 @@ function voronoiInputs(g: GroupBuilder) {
 	return { t, vector, scale, randomness, smoothness, metric, exponent, seed };
 }
 
-export const voronoiTexture: GroupSpec = {
+export const voronoiTexture = group({
 	id: "std-voronoi-texture",
+	inputs: ["vector", "scale", "randomness", "smoothness", "metric", "exponent", "seed"],
+	outputs: [
+		"distance",
+		"color",
+		"position",
+		"cell",
+		"f2-distance",
+		"f2-color",
+		"f2-position",
+		"smooth-distance",
+		"smooth-color",
+		"smooth-position",
+		"edge",
+		"f2-edge",
+		"radius",
+	],
 	name: "Voronoi Texture",
 	aliases: ["Voronoi", "Worley", "Cellular Noise", "Cells", "Voronoi Noise", "F1", "F2"],
 	category: "texture",
@@ -52,7 +68,7 @@ export const voronoiTexture: GroupSpec = {
 				note: "Space is cut into cells of side 1 / Scale, each holding one point\nmoved at random by up to Randomness, in as many dimensions\nas Vector has components.",
 			},
 			() => {
-				const { coordinates } = g.call<"coordinates">(noiseCoordinates, { vector });
+				const { coordinates } = g.call(noiseCoordinates, { vector });
 				const position = g.mul(coordinates, scale);
 				const floor = g.floor(position);
 				return {
@@ -60,7 +76,7 @@ export const voronoiTexture: GroupSpec = {
 					local: g.wireless("Local Position", g.sub(position, floor)),
 					randomness: g.wireless("Randomness", g.clamp(inputs.randomness, 0, 1)),
 					smoothness: g.clamp(g.mul(inputs.smoothness, 0.5), 0, 0.5),
-					colorSeed: g.wireless("Color Seed", g.bitwise(seed, "^", COLOR_SALT)),
+					colorSeed: g.wireless("Color Seed", g.bitwise(seed, COLOR_SALT, { op: "^" })),
 				};
 			},
 		);
@@ -72,14 +88,7 @@ export const voronoiTexture: GroupSpec = {
 			"F1 and F2",
 			{ note: "The closest point (F1) and the one after it (F2)." },
 			() => {
-				const nearest = g.call<
-					| "f1-distance"
-					| "f2-distance"
-					| "f1-point"
-					| "f2-point"
-					| "f1-offset"
-					| "f2-offset"
-				>(voronoiNearest, { ...lattice, metric, exponent });
+				const nearest = g.call(voronoiNearest, { ...lattice, metric, exponent });
 				const f1Point = g.wireless("F1 Point", nearest["f1-point"]);
 				const f1Offset = g.wireless("F1 Offset", nearest["f1-offset"]);
 				const f2Point = g.wireless("F2 Point", nearest["f2-point"]);
@@ -109,28 +118,28 @@ export const voronoiTexture: GroupSpec = {
 			"Smooth F1",
 			{ note: "F1 blended with the points around it, or F1 itself at no smoothness." },
 			() => {
-				const smooth = g.call<"distance" | "color" | "point">(voronoiSmooth, {
+				const smooth = g.call(voronoiSmooth, {
 					...lattice,
 					metric,
 					exponent,
 					smoothness,
 				});
-				const smoothed = g.compare(smoothness, ">", 0);
+				const smoothed = g.compare(smoothness, 0, { op: ">" });
 				g.output(
 					"smooth-distance",
-					g.select(smoothed, nearest.f1, smooth.distance),
+					g.switch(smoothed, nearest.f1, smooth.distance),
 					"f32",
 					{ label: "Smooth Distance" },
 				);
 				g.output(
 					"smooth-color",
-					g.select(smoothed, nearest.f1Color, smooth.color),
+					g.switch(smoothed, nearest.f1Color, smooth.color),
 					"vec3f",
 					{ label: "Smooth Color" },
 				);
 				g.output(
 					"smooth-position",
-					g.select(smoothed, nearest.f1Position, positionOf(smooth.point)),
+					g.switch(smoothed, nearest.f1Position, positionOf(smooth.point)),
 					t,
 					{ label: "Smooth Position" },
 				);
@@ -138,7 +147,7 @@ export const voronoiTexture: GroupSpec = {
 		);
 
 		g.frame("Edges", { note: "How far the cells' edges are." }, () => {
-			const edges = g.call<"edge" | "f2-edge">(voronoiEdges, {
+			const edges = g.call(voronoiEdges, {
 				...lattice,
 				metric,
 				exponent,
@@ -152,7 +161,7 @@ export const voronoiTexture: GroupSpec = {
 		});
 
 		g.frame("Radius", { note: "The largest ball of the metric inside F1's cell." }, () => {
-			const { radius } = g.call<"radius">(voronoiRadius, {
+			const { radius } = g.call(voronoiRadius, {
 				metric,
 				exponent,
 				cell,
@@ -164,24 +173,38 @@ export const voronoiTexture: GroupSpec = {
 			g.output("radius", radius, "f32", { label: "Radius" });
 		});
 	},
-};
+});
 
-/** The outputs of Voronoi Texture each octave adds up. */
-type TextureOutput =
-	| "distance"
-	| "color"
-	| "position"
-	| "f2-distance"
-	| "f2-color"
-	| "f2-position"
-	| "smooth-distance"
-	| "smooth-color"
-	| "smooth-position"
-	| "edge"
-	| "f2-edge";
-
-export const fractalVoronoi: GroupSpec = {
+export const fractalVoronoi = group({
 	id: "std-fractal-voronoi",
+	inputs: [
+		"vector",
+		"scale",
+		"randomness",
+		"smoothness",
+		"metric",
+		"exponent",
+		"seed",
+		"detail",
+		"roughness",
+		"lacunarity",
+		"normalize",
+	],
+	outputs: [
+		"distance",
+		"color",
+		"position",
+		"f2-distance",
+		"f2-color",
+		"f2-position",
+		"smooth-distance",
+		"smooth-color",
+		"smooth-position",
+		"edge",
+		"f2-edge",
+		"cell",
+		"radius",
+	],
 	name: "Fractal Voronoi",
 	aliases: ["Voronoi fBm", "Voronoi FBM", "Fractal Worley", "Voronoi Texture", "Cellular fBm"],
 	category: "texture",
@@ -231,7 +254,7 @@ export const fractalVoronoi: GroupSpec = {
 						"Edge Max": ["f32", reach],
 					},
 					({ scale, amplitude }, s) => {
-						const v = g.call<TextureOutput>(voronoiTexture, {
+						const v = g.call(voronoiTexture, {
 							...inputs,
 							scale: g.mul(inputs.scale, scale),
 						});
@@ -277,7 +300,7 @@ export const fractalVoronoi: GroupSpec = {
 		);
 
 		const total = g.wireless("Total Amplitude", sum["Total Amplitude"]);
-		const normalized = (value: Ref, by: Ref) => g.select(normalize, value, g.div(value, by));
+		const normalized = (value: Ref, by: Ref) => g.switch(normalize, value, g.div(value, by));
 		const distanceRange = g.wireless("Distance Range", g.mul(total, farthest));
 		g.frame("F1", { note: "Divided by their greatest, when normalized." }, () => {
 			g.output("distance", normalized(sum.Distance, distanceRange), "f32", {
@@ -319,9 +342,9 @@ export const fractalVoronoi: GroupSpec = {
 			});
 		});
 		g.frame("First octave", { note: "Not fractal: the first octave's." }, () => {
-			const first = g.call<"cell" | "radius">(voronoiTexture, inputs);
+			const first = g.call(voronoiTexture, inputs);
 			g.output("cell", first.cell, t, { label: "Cell" });
 			g.output("radius", first.radius, "f32", { label: "Radius" });
 		});
 	},
-};
+});

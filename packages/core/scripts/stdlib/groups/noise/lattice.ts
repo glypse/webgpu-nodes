@@ -1,13 +1,15 @@
 // Lattice noises cut space into unit cells: the cells around a point, and
 // random values per cell.
-import { type GroupSpec, helpers, type Ref } from "../../builder";
+import { group, helpers, type Ref } from "../../builder";
 import { coordinatesType } from "./coordinates";
 
 /** The integer types Hash takes, one per dimension count. */
 const CELL_TYPES = ["vec4i", "vec3i", "vec2i", "i32"] as const;
 
-export const hash: GroupSpec = {
+export const hash = group({
 	id: "std-hash",
+	inputs: ["value", "seed"],
+	outputs: ["hash"],
 	name: "Hash",
 	aliases: ["Random", "White Noise", "PCG", "Integer Hash", "Random Vector"],
 	category: "texture",
@@ -18,7 +20,7 @@ export const hash: GroupSpec = {
 		const seed = g.input("seed", "i32", { label: "Seed", default: 0 });
 		const int = (n: number) => g.constant("i32", n);
 		const round = (v: Ref): Ref => {
-			const { x, y, z, w } = g.split(v);
+			const { x, y, z, w } = g.separateVector(v);
 			const x1 = g.add(x, g.mul(y, w));
 			const y1 = g.add(y, g.mul(z, x1));
 			const z1 = g.add(z, g.mul(x1, y1));
@@ -49,7 +51,7 @@ export const hash: GroupSpec = {
 			},
 			() => {
 				const first = round(start);
-				return g.bitwise(first, "^", g.shift(first, ">>", 16));
+				return g.bitwise(first, g.bitShift(first, 16, { op: ">>" }), { op: "^" });
 			},
 		);
 		g.frame(
@@ -57,17 +59,19 @@ export const hash: GroupSpec = {
 			{ note: "Again, then the sign bit dropped and scaled to [0, 1]." },
 			() => {
 				const second = round(mixed);
-				const positive = g.bitwise(second, "&", 2147483647);
+				const positive = g.bitwise(second, 2147483647, { op: "&" });
 				g.output("hash", g.mul(g.toFloat(positive), 1 / 2147483647), "vec4f", {
 					label: "Hash",
 				});
 			},
 		);
 	},
-};
+});
 
-export const latticeNeighbor: GroupSpec = {
+export const latticeNeighbor = group({
 	id: "std-lattice-neighbor",
+	inputs: ["index", "cell", "radius"],
+	outputs: ["offset", "neighbor", "count"],
 	name: "Lattice Neighbor",
 	aliases: ["Neighbor Cell", "Cell Offset", "Grid Neighbor"],
 	category: "texture",
@@ -97,4 +101,4 @@ export const latticeNeighbor: GroupSpec = {
 		g.output("neighbor", g.add(cell, offset), t, { label: "Neighbor" });
 		g.output("count", count, "i32", { label: "Count" });
 	},
-};
+});

@@ -2,7 +2,7 @@
 // are close enough to a position to count, found without branching, and
 // their kernels summed. 1D is plain gradient noise. Each output is scaled
 // to [-1, 1], measured on these gradients.
-import type { GroupBuilder, GroupSpec, Operand, Ref } from "../../../builder";
+import { group, type GroupBuilder, type Operand, type Ref } from "../../../builder";
 import { copySeed, kernel, SIMPLEX_HELPERS } from "./kernel";
 import { FAST, SMOOTH, variantInput } from "./orientation";
 
@@ -33,8 +33,10 @@ function unskew(g: GroupBuilder, q: Ref, factor: number): Ref {
 	return g.add(q, g.mul(g.dot(q, 1), factor));
 }
 
-export const gradientNoise1d: GroupSpec = {
+export const gradientNoise1d = group({
 	id: "std-gradient-noise-1d",
+	inputs: ["value", "seed"],
+	outputs: ["value"],
 	name: "Gradient Noise 1D",
 	aliases: ["1D Noise", "Perlin 1D", "Simplex 1D", "Line Noise"],
 	category: "texture",
@@ -58,10 +60,12 @@ export const gradientNoise1d: GroupSpec = {
 			},
 		);
 	},
-};
+});
 
-export const openSimplex2d: GroupSpec = {
+export const openSimplex2d = group({
 	id: "std-opensimplex-2d",
+	inputs: ["lattice", "variant", "seed"],
+	outputs: ["value"],
 	name: "OpenSimplex 2D",
 	aliases: ["Simplex 2D", "OpenSimplex2 2D", "SuperSimplex 2D"],
 	category: "texture",
@@ -95,14 +99,14 @@ export const openSimplex2d: GroupSpec = {
 					);
 				}),
 			);
-		const { x, y } = g.split(local);
+		const { x, y } = g.separateVector(local);
 		const fast = g.frame(
 			"Fast",
 			{
 				note: "The 3 corners of the triangle the position is in: the square's\ntwo ends of its diagonal, and the corner on the position's side.",
 			},
 			() => {
-				const third = g.select(g.compare(y, ">", x), at(1, 0), at(0, 1));
+				const third = g.switch(g.compare(y, x, { op: ">" }), at(1, 0), at(0, 1));
 				const sum = vertexSum([at(0, 0), at(1, 1), third], RADII[2][FAST]);
 				return g.mul(sum, NORMALIZERS[2][FAST]);
 			},
@@ -113,17 +117,17 @@ export const openSimplex2d: GroupSpec = {
 				note: "The square's diagonal ends, and the 2 points across the triangle's\nother edges that its larger kernels reach, past the square when\nthe position is near a corner.",
 			},
 			() => {
-				const far = g.compare(g.add(x, y), ">", 1);
+				const far = g.compare(g.add(x, y), 1, { op: ">" });
 				const xmy = g.sub(x, y);
-				const third = g.select(
+				const third = g.switch(
 					far,
-					g.select(g.compare(g.add(x, xmy), "<", 0), at(1, 0), at(-1, 0)),
-					g.select(g.compare(g.add(x, xmy), ">", 1), at(0, 1), at(2, 1)),
+					g.switch(g.compare(g.add(x, xmy), 0, { op: "<" }), at(1, 0), at(-1, 0)),
+					g.switch(g.compare(g.add(x, xmy), 1, { op: ">" }), at(0, 1), at(2, 1)),
 				);
-				const fourth = g.select(
+				const fourth = g.switch(
 					far,
-					g.select(g.compare(y, "<", xmy), at(0, 1), at(0, -1)),
-					g.select(g.compare(g.sub(y, xmy), ">", 1), at(1, 0), at(1, 2)),
+					g.switch(g.compare(y, xmy, { op: "<" }), at(0, 1), at(0, -1)),
+					g.switch(g.compare(g.sub(y, xmy), 1, { op: ">" }), at(1, 0), at(1, 2)),
 				);
 				const sum = vertexSum([at(0, 0), at(1, 1), third, fourth], RADII[2][SMOOTH]);
 				return g.mul(sum, NORMALIZERS[2][SMOOTH]);
@@ -133,10 +137,12 @@ export const openSimplex2d: GroupSpec = {
 			label: "Value",
 		});
 	},
-};
+});
 
-export const bccHalfLattice: GroupSpec = {
+export const bccHalfLattice = group({
 	id: "std-opensimplex-3d-half",
+	inputs: ["lattice", "variant", "seed"],
+	outputs: ["value"],
 	name: "OpenSimplex 3D Half-Lattice",
 	aliases: ["BCC Half-Lattice", "Cubic Lattice Half"],
 	category: "texture",
@@ -155,7 +161,7 @@ export const bccHalfLattice: GroupSpec = {
 				const closest = g.node("round", { e: position });
 				const offset = g.sub(position, closest);
 				const distance = g.abs(offset);
-				const { x, y, z } = g.split(distance);
+				const { x, y, z } = g.separateVector(distance);
 				const others = g.vec("vec3f", g.max(y, z), g.max(z, x), g.max(x, y));
 				const along = g.step(others, distance);
 				const next = g.add(closest, g.mul(along, g.sign(offset)));
@@ -198,10 +204,12 @@ export const bccHalfLattice: GroupSpec = {
 			label: "Value",
 		});
 	},
-};
+});
 
-export const openSimplex3d: GroupSpec = {
+export const openSimplex3d = group({
 	id: "std-opensimplex-3d",
+	inputs: ["lattice", "variant", "seed"],
+	outputs: ["value"],
 	name: "OpenSimplex 3D",
 	aliases: ["Simplex 3D", "OpenSimplex2 3D", "SuperSimplex 3D", "BCC Noise"],
 	category: "texture",
@@ -217,7 +225,7 @@ export const openSimplex3d: GroupSpec = {
 			},
 			() => {
 				const half = (lattice: Ref, copy: number) =>
-					g.call<"value">(bccHalfLattice, {
+					g.call(bccHalfLattice, {
 						lattice,
 						variant,
 						seed: copySeed(g, seed, copy),
@@ -231,7 +239,7 @@ export const openSimplex3d: GroupSpec = {
 			},
 		);
 	},
-};
+});
 
 /**
  * The canonical vertices Smooth 4D looks at, for a position whose cell
@@ -266,8 +274,10 @@ const SORTED_VERTICES: [number, number, number, number][] = [
 
 const AXES = ["x", "y", "z", "w"] as const;
 
-export const openSimplex4d: GroupSpec = {
+export const openSimplex4d = group({
 	id: "std-opensimplex-4d",
+	inputs: ["lattice", "variant", "seed"],
+	outputs: ["value"],
 	name: "OpenSimplex 4D",
 	aliases: ["Simplex 4D", "OpenSimplex2 4D", "SuperSimplex 4D"],
 	category: "texture",
@@ -320,10 +330,10 @@ export const openSimplex4d: GroupSpec = {
 								note: "The axis the position is furthest along (the first on a tie),\nstepped once it's past the simplex's far face.",
 							},
 							() => {
-								const { x, y, z, w } = g.split(s.Local);
+								const { x, y, z, w } = g.separateVector(s.Local);
 								const lead = g.max(x, y, z, w);
 								const isLead = g.step(lead, s.Local);
-								const e = g.split(isLead);
+								const e = g.separateVector(isLead);
 								const before = g.vec(
 									"vec4f",
 									0,
@@ -333,7 +343,7 @@ export const openSimplex4d: GroupSpec = {
 								);
 								const first = g.mul(isLead, g.sub(1, g.min(before, 1)));
 								const face = g.sub(1, g.div(s.Diagonal, u));
-								const moves = g.select(g.compare(lead, ">=", face), 0, 1);
+								const moves = g.switch(g.compare(lead, face, { op: ">=" }), 0, 1);
 								return { moved: g.mul(first, moves), lead: moves };
 							},
 						);
@@ -358,7 +368,7 @@ export const openSimplex4d: GroupSpec = {
 								Diagonal: g.add(diagonal, 0.8 * u),
 								Vertex: g.sub(
 									vertex,
-									g.select(g.compare(iteration, "==", start), 0, 1),
+									g.switch(g.compare(iteration, start, { op: "==" }), 0, 1),
 								),
 								Value: g.add(s.Value, value),
 							}),
@@ -382,8 +392,11 @@ export const openSimplex4d: GroupSpec = {
 					},
 					() => {
 						const cell = g.sub(position, base);
-						const flipped = g.wireless("Flipped", g.compare(g.dot(cell, 1), ">", 2));
-						return { flipped, cell: g.select(flipped, cell, g.sub(1, cell)) };
+						const flipped = g.wireless(
+							"Flipped",
+							g.compare(g.dot(cell, 1), 2, { op: ">" }),
+						);
+						return { flipped, cell: g.switch(flipped, cell, g.sub(1, cell)) };
 					},
 				);
 				const picks = g.frame(
@@ -392,7 +405,7 @@ export const openSimplex4d: GroupSpec = {
 						note: "Each axis's rank among the coordinates, largest first (the first\naxis on a tie), and which axis has each rank.",
 					},
 					() => {
-						const q = g.split(cell);
+						const q = g.separateVector(cell);
 						const rank = g.add(
 							...AXES.map((axis, j) => {
 								const after = v4(
@@ -411,8 +424,8 @@ export const openSimplex4d: GroupSpec = {
 										number,
 									]),
 								);
-								const atLeast = g.toFloat(g.compare(q[axis], ">=", cell));
-								const above = g.toFloat(g.compare(q[axis], ">", cell));
+								const atLeast = g.toFloat(g.compare(q[axis], cell, { op: ">=" }));
+								const above = g.toFloat(g.compare(q[axis], cell, { op: ">" }));
 								return g.add(g.mul(atLeast, after), g.mul(above, before));
 							}),
 						);
@@ -428,11 +441,11 @@ export const openSimplex4d: GroupSpec = {
 							SORTED_VERTICES.map(([x, y, z, w]) => ({ x, y, z, w })),
 							"vec4f",
 						);
-						const c = g.split(sorted);
+						const c = g.separateVector(sorted);
 						const offset = g.add(
 							...AXES.map((axis, r) => g.mul(c[axis], picks[r] ?? 0)),
 						);
-						const vertex = g.add(base, g.select(flipped, offset, g.sub(1, offset)));
+						const vertex = g.add(base, g.switch(flipped, offset, g.sub(1, offset)));
 						const value = kernel(
 							g,
 							vertex,
@@ -450,4 +463,4 @@ export const openSimplex4d: GroupSpec = {
 			label: "Value",
 		});
 	},
-};
+});

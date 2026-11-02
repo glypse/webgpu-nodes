@@ -1,12 +1,12 @@
 // OpenSimplex Noise in any dimension count, and Fractal Noise: its octaves
 // summed in Blender's fractal types (cycles/kernel/svm/fractal_noise.h).
-import type {
-	EnumRef,
-	GroupBuilder,
-	GroupSpec,
-	Operand,
-	Ref,
-	VariableType,
+import {
+	type EnumRef,
+	group,
+	type GroupBuilder,
+	type Operand,
+	type Ref,
+	type VariableType,
 } from "../../../builder";
 import { padVector } from "../../vector";
 import { coordinatesInput, coordinatesType, noiseCoordinates } from "../coordinates";
@@ -39,8 +39,10 @@ function noiseOptions(g: GroupBuilder, t: VariableType): NoiseOptions {
 	};
 }
 
-export const openSimplexNoise: GroupSpec = {
+export const openSimplexNoise = group({
 	id: "std-opensimplex-noise",
+	inputs: ["vector", "variant", "orientation2d", "orientation3d", "orientation4d", "seed"],
+	outputs: ["value"],
 	name: "OpenSimplex Noise",
 	aliases: ["Simplex Noise", "OpenSimplex2", "SuperSimplex", "Gradient Noise", "Perlin"],
 	category: "texture",
@@ -48,8 +50,8 @@ export const openSimplexNoise: GroupSpec = {
 	build: (g) => {
 		const { t, vector } = coordinatesInput(g);
 		const { variant, seed, ...orientations } = noiseOptions(g, t);
-		const { coordinates } = g.call<"coordinates">(noiseCoordinates, { vector });
-		const { lattice } = g.call<"lattice">(simplexOrientation, {
+		const { coordinates } = g.call(noiseCoordinates, { vector });
+		const { lattice } = g.call(simplexOrientation, {
 			vector: coordinates,
 			variant,
 			...orientations,
@@ -64,23 +66,33 @@ export const openSimplexNoise: GroupSpec = {
 				g.match(
 					g.componentCount(coordinates),
 					{
-						1: g.call<"value">(gradientNoise1d, { value: coordinates, seed }).value,
-						2: g.call<"value">(openSimplex2d, options).value,
-						3: g.call<"value">(openSimplex3d, options).value,
-						4: g.call<"value">(openSimplex4d, options).value,
+						1: g.call(gradientNoise1d, { value: coordinates, seed }).value,
+						2: g.call(openSimplex2d, options).value,
+						3: g.call(openSimplex3d, options).value,
+						4: g.call(openSimplex4d, options).value,
 					},
 					"f32",
 				),
 		);
 		g.output("value", value, "f32", { label: "Value" });
 	},
-};
+});
 
 const noise = (g: GroupBuilder, vector: Operand, options: NoiseOptions) =>
-	g.call<"value">(openSimplexNoise, { vector, ...options }).value;
+	g.call(openSimplexNoise, { vector, ...options }).value;
 
-export const noiseDistortion: GroupSpec = {
+export const noiseDistortion = group({
 	id: "std-noise-distortion",
+	inputs: [
+		"vector",
+		"amount",
+		"variant",
+		"orientation2d",
+		"orientation3d",
+		"orientation4d",
+		"seed",
+	],
+	outputs: ["distorted"],
 	name: "Noise Distortion",
 	aliases: ["Domain Warp", "Warp", "Distort Coordinates"],
 	category: "texture",
@@ -90,9 +102,13 @@ export const noiseDistortion: GroupSpec = {
 		const vector = g.input("vector", t, { label: "Vector" });
 		const amount = g.input("amount", "f32", { label: "Amount", default: 0 });
 		const options = noiseOptions(g, t);
-		const { padded } = g.call<"padded">(padVector, { vector });
+		const { padded } = g.call(padVector, { vector });
 		const distorted = g.repeat(
-			g.select(g.compare(amount, "!=", 0), g.constant("i32", 0), g.constant("i32", 1)),
+			g.switch(
+				g.compare(amount, 0, { op: "!=" }),
+				g.constant("i32", 0),
+				g.constant("i32", 1),
+			),
 			{ Distorted: ["vec4f", padded] },
 			() =>
 				g.frame(
@@ -106,8 +122,8 @@ export const noiseDistortion: GroupSpec = {
 								...options,
 								seed: g.bitwise(
 									options.seed,
-									"^",
 									g.constant("i32", (DISTORTION_SALT * (i + 1)) | 0),
+									{ op: "^" },
 								),
 							});
 						const [x, y, z, w] = [0, 1, 2, 3].map(axis);
@@ -127,10 +143,12 @@ export const noiseDistortion: GroupSpec = {
 		);
 		g.output("distorted", distorted.Distorted, t, { label: "Distorted" });
 	},
-};
+});
 
-export const octaveShift: GroupSpec = {
+export const octaveShift = group({
 	id: "std-octave-shift",
+	inputs: ["vector", "octave", "seed"],
+	outputs: ["shifted"],
 	name: "Octave Shift",
 	aliases: ["Octave Offset", "Decorrelate Octaves"],
 	category: "texture",
@@ -146,14 +164,14 @@ export const octaveShift: GroupSpec = {
 				note: "Moved by a random amount per octave, so the octaves' lattices\ndon't line up at the origin, nor along their axes.",
 			},
 			() => {
-				const { hash: random } = g.call<"hash">(hash, { value: octave, seed });
+				const { hash: random } = g.call(hash, { value: octave, seed });
 				g.output("shifted", g.add(vector, g.mul(random, OCTAVE_SPREAD)), t, {
 					label: "Shifted",
 				});
 			},
 		);
 	},
-};
+});
 
 const TYPES = [
 	[0, "fBm"],
@@ -196,8 +214,27 @@ function octaveInputs(g: GroupBuilder) {
 	};
 }
 
-export const fractalNoiseOctaves: GroupSpec = {
+export const fractalNoiseOctaves = group({
 	id: "std-fractal-noise-octaves",
+	inputs: [
+		"coordinates",
+		"type",
+		"detail",
+		"roughness",
+		"lacunarity",
+		"normalize",
+		"hybridOffset",
+		"hybridGain",
+		"heteroOffset",
+		"ridgedOffset",
+		"ridgedGain",
+		"variant",
+		"orientation2d",
+		"orientation3d",
+		"orientation4d",
+		"seed",
+	],
+	outputs: ["value"],
 	name: "Fractal Noise Octaves",
 	aliases: ["fBm Octaves", "Fractal Sum", "Multifractal"],
 	category: "texture",
@@ -241,13 +278,13 @@ export const fractalNoiseOctaves: GroupSpec = {
 						"Total Amplitude": ["f32", 0],
 					},
 					({ iteration, scale, amplitude, power }, s) => {
-						const { shifted } = g.call<"shifted">(octaveShift, {
+						const { shifted } = g.call(octaveShift, {
 							vector: g.mul(coordinates, scale),
 							octave: iteration,
 							seed: options.seed,
 						});
 						const n = g.wireless("Octave", noise(g, shifted, options));
-						const first = g.compare(iteration, "==", g.constant("i32", 0));
+						const first = g.compare(iteration, g.constant("i32", 0), { op: "==" });
 						const fbm = g.frame("fBm", { note: "The octaves' sum." }, () =>
 							g.add(s.Value, g.mul(n, amplitude)),
 						);
@@ -262,17 +299,17 @@ export const fractalNoiseOctaves: GroupSpec = {
 								note: "Each octave weighted by the ones before (times Gain, at most 1),\nstopping once that weight is negligible.",
 							},
 							() => {
-								const active = g.compare(s.Weight, ">", 0.001);
+								const active = g.compare(s.Weight, 0.001, { op: ">" });
 								const weight = g.min(s.Weight, 1);
 								const raised = g.add(n, hybridOffset);
 								const signal = g.mul(raised, power);
 								return {
-									value: g.select(
+									value: g.switch(
 										active,
 										s.Value,
 										g.add(s.Value, g.mul(weight, raised, amplitude)),
 									),
-									weight: g.select(
+									weight: g.switch(
 										active,
 										s.Weight,
 										g.mul(weight, hybridGain, signal),
@@ -287,7 +324,7 @@ export const fractalNoiseOctaves: GroupSpec = {
 							},
 							() => {
 								const raised = g.add(n, heteroOffset);
-								return g.select(
+								return g.switch(
 									first,
 									g.add(s.Value, g.mul(raised, amplitude, s.Value)),
 									raised,
@@ -307,12 +344,12 @@ export const fractalNoiseOctaves: GroupSpec = {
 									g.clamp(g.mul(s.Weight, ridgedGain), 0, 1),
 								);
 								return {
-									value: g.select(
+									value: g.switch(
 										first,
 										g.add(s.Value, g.mul(signal, amplitude)),
 										squared,
 									),
-									weight: g.select(first, signal, squared),
+									weight: g.switch(first, signal, squared),
 								};
 							},
 						);
@@ -342,7 +379,7 @@ export const fractalNoiseOctaves: GroupSpec = {
 			() => {
 				const value = sum.Value;
 				const normalized = g.add(g.mul(g.div(value, sum["Total Amplitude"]), 0.5), 0.5);
-				const fbm = g.select(normalize, value, normalized);
+				const fbm = g.switch(normalize, value, normalized);
 				g.output(
 					"value",
 					pick({
@@ -358,10 +395,31 @@ export const fractalNoiseOctaves: GroupSpec = {
 			},
 		);
 	},
-};
+});
 
-export const fractalNoise: GroupSpec = {
+export const fractalNoise = group({
 	id: "std-fractal-noise",
+	inputs: [
+		"vector",
+		"scale",
+		"type",
+		"detail",
+		"roughness",
+		"lacunarity",
+		"normalize",
+		"hybridOffset",
+		"hybridGain",
+		"heteroOffset",
+		"ridgedOffset",
+		"ridgedGain",
+		"distortion",
+		"variant",
+		"orientation2d",
+		"orientation3d",
+		"orientation4d",
+		"seed",
+	],
+	outputs: ["fac", "color"],
 	name: "Fractal Noise",
 	aliases: [
 		"Noise Texture",
@@ -386,9 +444,9 @@ export const fractalNoise: GroupSpec = {
 				note: "Vector (the UV when unlinked) times Scale, moved by a noise\nof its own along each axis, times Distortion.",
 			},
 			() => {
-				const { coordinates } = g.call<"coordinates">(noiseCoordinates, { vector });
+				const { coordinates } = g.call(noiseCoordinates, { vector });
 				const scaled = g.mul(coordinates, scale);
-				const { distorted } = g.call<"distorted">(noiseDistortion, {
+				const { distorted } = g.call(noiseDistortion, {
 					vector: scaled,
 					amount: distortion,
 					...options,
@@ -397,7 +455,7 @@ export const fractalNoise: GroupSpec = {
 			},
 		);
 		const sum = (seed: Operand): Ref =>
-			g.call<"value">(fractalNoiseOctaves, {
+			g.call(fractalNoiseOctaves, {
 				coordinates: distorted,
 				...octaves,
 				...options,
@@ -410,11 +468,11 @@ export const fractalNoise: GroupSpec = {
 		});
 		g.frame("Color", { note: "Fac and two more fractal noises, seeded apart." }, () => {
 			const [green, blue] = COLOR_SALTS.map((salt) =>
-				sum(g.bitwise(options.seed, "^", g.constant("i32", salt))),
+				sum(g.bitwise(options.seed, g.constant("i32", salt), { op: "^" })),
 			);
 			g.output("color", g.vec("vec3f", fac, green ?? 0, blue ?? 0), "vec3f", {
 				label: "Color",
 			});
 		});
 	},
-};
+});

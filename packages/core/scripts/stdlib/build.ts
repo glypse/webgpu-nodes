@@ -2,15 +2,18 @@
 // JSON files: checks the WGSL they compile to, lays them out (with the
 // editor's measured layout when a browser is given) and registers them.
 //
-//   bun run stdlib:build [description.ts] [--browser <path>] [--editor <url>] [--dry]
+//   bun run stdlib:build [group-id…] [--all] [--browser <path>] [--editor <url>] [--dry]
 //
-// The description's default export is the `GroupSpec`s to build, every group
-// of groups/ by default. Without --browser, the editor address to open is
-// printed instead.
+// Every group of groups/ is described, but only those whose library file no
+// longer matches its description are built (a group calling one that changed
+// changes too), with the groups named, or all of them with --all. Without
+// --browser, the editor address to open is printed instead.
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { join } from "node:path";
 import { parseArgs } from "node:util";
+
+import * as v from "valibot";
 
 import { generateShader } from "../../src/codegen";
 import {
@@ -22,14 +25,16 @@ import {
 import { GraphModel } from "../../src/graph/model";
 import {
 	type LibraryFile,
+	LibraryFileSchema,
 	libraryRef,
 	libraryVersion,
 	parseLibraryRef,
 	standardLibrary,
 } from "../../src/library";
 import { nagaBin, validateFragment } from "../../src/testing/wgsl";
-import type { GroupHandleDef, NodeWidget } from "../../src/types";
-import { GroupBuilder, type GroupSpec, type GroupTarget, type ResolvedGroup } from "./builder";
+import type { NodeWidget } from "../../src/types";
+import { groupBuilder, type GroupSpec, type ResolvedGroup } from "./builder";
+import described from "./groups";
 
 const coreDir = join(import.meta.dirname, "../..");
 const libraryDir = join(coreDir, "src/library");
@@ -43,34 +48,34 @@ export type BuiltGroup = ResolvedGroup & {
 	enums: Map<string, number[]>;
 };
 
+/** Keys `spec` declares but `built` lacks, or the other way round. */
+function undeclared(side: string, declared: readonly string[], built: Iterable<string>): string[] {
+	const keys = new Set(built);
+	return [
+		...declared.filter((k) => !keys.has(k)).map((k) => `declares ${side} "${k}" but adds none`),
+		...[...keys]
+			.filter((k) => !declared.includes(k))
+			.map((k) => `adds undeclared ${side} "${k}"`),
+	];
+}
+
 /** Build `specs` and the specs they call, dependencies first. */
 export function buildGroups(specs: readonly GroupSpec[]): BuiltGroup[] {
-	const byId = new Map(specs.map((s) => [s.id, s]));
 	const built = new Map<string, BuiltGroup>();
 	const building = new Set<string>();
-
-	const resolveTarget = (target: GroupTarget): ResolvedGroup => {
-		if (typeof target !== "string") return build(target);
-		const spec = byId.get(target);
-		if (spec) return build(spec);
-		const entry = standardLibrary.find((e) => e.id === target);
-		if (!entry) throw new Error(`no standard-library entry "${target}"`);
-		const handles = (list: GroupHandleDef[] = []) => new Map(list.map((h) => [h.label, h.id]));
-		return {
-			ref: entry.ref,
-			inputs: handles(entry.definition.inputs),
-			outputs: handles(entry.definition.outputs),
-		};
-	};
 
 	const build = (spec: GroupSpec): BuiltGroup => {
 		const done = built.get(spec.id);
 		if (done) return done;
 		if (building.has(spec.id)) throw new Error(`"${spec.id}" calls itself`);
 		building.add(spec.id);
-		byId.set(spec.id, spec);
-		const g = new GroupBuilder(spec.id, resolveTarget);
+		const g = groupBuilder<string, string>(spec.id, build);
 		spec.build(g);
+		const mismatches = [
+			...undeclared("input", spec.inputs, g.inputKeys.keys()),
+			...undeclared("output", spec.outputs, g.outputKeys.keys()),
+		];
+		if (mismatches.length > 0) throw new Error(`${spec.id}: ${mismatches.join(", ")}`);
 		const definition = g.document();
 		const inputId = (key: string) => {
 			const id = g.inputKeys.get(key);
@@ -86,7 +91,7 @@ export function buildGroups(specs: readonly GroupSpec[]): BuiltGroup[] {
 			outputs: g.outputKeys,
 			dependencies: [...g.dependencies],
 			enums: new Map(
-				g.inputs.flatMap((h) =>
+				g.handles.inputs.flatMap((h) =>
 					h.variants ? [[h.id, h.variants.map((v) => v.value)]] : [],
 				),
 			),
@@ -107,7 +112,8 @@ const aliasOf = (group: BuiltGroup) => `build-${group.spec.id}`;
 
 /**
  * A project holding `groups` as user groups (the standard library may hold
- * other versions of them), and `root` as its root document.
+ * other versions of them), and `root` as its root document. The groups they
+ * call are the library's own unless among them.
  */
 function projectOf(groups: readonly BuiltGroup[], root: GraphDocument): GraphProject {
 	const aliases = new Map(groups.map((g) => [g.ref, aliasOf(g)]));
@@ -299,8 +305,9 @@ async function layoutInBrowser(
 
 // ── Files ────────────────────────────────────────────────────────────────
 
-function writeGroup(group: BuiltGroup) {
-	const file: LibraryFile = {
+/** The library file `group` is built into. */
+function libraryFileOf(group: BuiltGroup): LibraryFile {
+	return {
 		id: group.spec.id,
 		name: group.spec.name,
 		aliases: group.spec.aliases ?? [],
@@ -311,9 +318,41 @@ function writeGroup(group: BuiltGroup) {
 		definition: group.definition,
 		...(group.widget ? { widget: group.widget } : {}),
 	};
+}
+
+/** The library's file for `id`, if there's one. */
+export function readLibraryFile(id: string): LibraryFile | undefined {
+	const path = join(libraryDir, `${id}.json`);
+	if (!existsSync(path)) return undefined;
+	return v.parse(LibraryFileSchema, JSON.parse(readFileSync(path, "utf8")));
+}
+
+/** `file` as described: where its nodes are is the layout's business. */
+export function unplaced(file: LibraryFile): LibraryFile {
+	return {
+		...file,
+		definition: {
+			...file.definition,
+			nodes: file.definition.nodes.map((n) => ({ ...n, position: { x: 0, y: 0 } })),
+		},
+	};
+}
+
+/** The library file `group` is built into, as the library reads it, its nodes unplaced. */
+export function describedFile(group: BuiltGroup): LibraryFile {
+	return unplaced(v.parse(LibraryFileSchema, structuredClone(libraryFileOf(group))));
+}
+
+/** Whether the library's file for `group` is as it's described. */
+function isCurrent(group: BuiltGroup): boolean {
+	const file = readLibraryFile(group.spec.id);
+	return file !== undefined && Bun.deepEquals(describedFile(group), unplaced(file));
+}
+
+function writeGroup(group: BuiltGroup) {
 	writeFileSync(
 		join(libraryDir, `${group.spec.id}.json`),
-		`${JSON.stringify(file, null, "\t")}\n`,
+		`${JSON.stringify(libraryFileOf(group), null, "\t")}\n`,
 	);
 }
 
@@ -356,23 +395,30 @@ function staleDependents(groups: readonly BuiltGroup[]): string[] {
 // ── CLI ──────────────────────────────────────────────────────────────────
 
 if (import.meta.main) {
+	const usage =
+		"usage: bun run stdlib:build [group-id…] [--all] [--browser <path>] [--editor <url>] [--dry]";
 	const { values, positionals } = parseArgs({
 		allowPositionals: true,
 		options: {
+			all: { type: "boolean", default: false },
 			browser: { type: "string" },
 			editor: { type: "string", default: "http://localhost:5173/editor" },
 			dry: { type: "boolean", default: false },
 		},
 	});
-	const specPath = positionals[0] ?? join(import.meta.dirname, "groups/index.ts");
-	if (!existsSync(specPath)) {
-		console.error(
-			"usage: bun run stdlib:build [description.ts] [--browser <path>] [--editor <url>] [--dry]",
-		);
+	const all = buildGroups(described);
+	const unknown = positionals.filter((id) => !all.some((g) => g.spec.id === id));
+	if (unknown.length > 0) {
+		console.error(`no group described as ${unknown.join(", ")}\n${usage}`);
 		process.exit(1);
 	}
-	const module = (await import(resolve(specPath))) as { default: GroupSpec[] };
-	const groups = buildGroups(module.default);
+	const groups = all.filter(
+		(g) => values.all || positionals.includes(g.spec.id) || !isCurrent(g),
+	);
+	if (groups.length === 0) {
+		console.log("Every library file matches its description: nothing to build.");
+		process.exit(0);
+	}
 	for (const g of groups) {
 		console.log(
 			`${g.ref}: ${String(g.definition.nodes.length)} nodes, ${String(g.definition.edges.length)} links`,

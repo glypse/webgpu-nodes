@@ -1,5 +1,5 @@
 // Groups reshaping coordinates and ranges.
-import type { GroupSpec } from "../builder";
+import { group } from "../builder";
 
 const ASPECT_MODES = [
 	[0, "Contain (Fit)"],
@@ -7,8 +7,10 @@ const ASPECT_MODES = [
 	[2, "Stretch"],
 ] as const;
 
-const aspectUv: GroupSpec = {
+const aspectUv = group({
 	id: "std-aspect-uv",
+	inputs: ["coordinates", "mode"],
+	outputs: ["coordinates"],
 	name: "Aspect UV",
 	aliases: ["Aspect Ratio", "Aspect Correction", "Square UV"],
 	category: "input",
@@ -19,9 +21,9 @@ const aspectUv: GroupSpec = {
 			"Aspect ratio",
 			{ note: "The canvas' width over its height, guarded against zero." },
 			() => {
-				const { x: width, y: height } = g.split(g.resolution());
+				const { x: width, y: height } = g.separateVector(g.resolution());
 				const aspect = g.max(g.div(width, g.max(height, 1)), 0.000001);
-				return { aspect, wide: g.compare(aspect, ">=", 1) };
+				return { aspect, wide: g.compare(aspect, 1, { op: ">=" }) };
 			},
 		);
 		const scale = g.frame(
@@ -33,8 +35,8 @@ const aspectUv: GroupSpec = {
 				const shrinkY = g.vec("vec2f", 1, g.div(1, aspect));
 				const stretchX = g.vec("vec2f", aspect, 1);
 				return g.match(mode, {
-					0: g.select(wide, shrinkY, stretchX),
-					1: g.select(wide, stretchX, shrinkY),
+					0: g.switch(wide, shrinkY, stretchX),
+					1: g.switch(wide, stretchX, shrinkY),
 					2: 1,
 				});
 			},
@@ -43,10 +45,12 @@ const aspectUv: GroupSpec = {
 			label: "Coordinates",
 		});
 	},
-};
+});
 
-const remap: GroupSpec = {
+const remap = group({
 	id: "std-remap",
+	inputs: ["value", "from-min", "from-max", "to-min", "to-max"],
+	outputs: ["result"],
 	name: "Remap",
 	aliases: ["Map Range", "Fit", "Range", "Rescale", "Remap Value Range", "Linear"],
 	category: "math",
@@ -62,6 +66,6 @@ const remap: GroupSpec = {
 			label: "Result",
 		});
 	},
-};
+});
 
 export default [aspectUv, remap];

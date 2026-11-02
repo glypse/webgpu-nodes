@@ -1,12 +1,6 @@
 // How Voronoi measures: distances between points and to the bisector of
 // two, in each of its metrics.
-import {
-	type EnumRef,
-	type GroupBuilder,
-	type GroupSpec,
-	helpers,
-	type Ref,
-} from "../../../builder";
+import { type EnumRef, group, type GroupBuilder, helpers, type Ref } from "../../../builder";
 import { componentSum, maxComponent, padVector } from "../../vector";
 import { coordinatesType } from "../coordinates";
 
@@ -47,10 +41,12 @@ export function farthestInCell(
 	return g.mul(reach, across);
 }
 
-const sum = (g: GroupBuilder, vector: Ref) => g.call<"sum">(componentSum, { vector }).sum;
+const sum = (g: GroupBuilder, vector: Ref) => g.call(componentSum, { vector }).sum;
 
-export const voronoiDistance: GroupSpec = {
+export const voronoiDistance = group({
 	id: "std-voronoi-distance",
+	inputs: ["a", "b", "metric", "exponent"],
+	outputs: ["distance"],
 	name: "Voronoi Distance",
 	aliases: ["Distance Metric", "Minkowski Distance", "Manhattan Distance", "Chebyshev Distance"],
 	category: "texture",
@@ -64,15 +60,17 @@ export const voronoiDistance: GroupSpec = {
 		const distance = g.match(metric, {
 			0: g.length(d),
 			1: sum(g, d),
-			2: g.call<"max">(maxComponent, { vector: d }).max,
+			2: g.call(maxComponent, { vector: d }).max,
 			3: g.pow(sum(g, g.pow(d, exponent)), g.div(1, exponent)),
 		});
 		g.output("distance", distance, "f32", { label: "Distance" });
 	},
-};
+});
 
-export const voronoiBisector: GroupSpec = {
+export const voronoiBisector = group({
 	id: "std-voronoi-bisector",
+	inputs: ["a", "b", "metric", "exponent"],
+	outputs: ["distance"],
 	name: "Voronoi Bisector Distance",
 	aliases: ["Bisector", "Distance to Bisector", "Cell Border Distance"],
 	category: "texture",
@@ -84,17 +82,17 @@ export const voronoiBisector: GroupSpec = {
 		const { metric, exponent } = metricInputs(g);
 		const dimensions = g.componentCount(a);
 		const int = (n: number) => g.constant("i32", n);
-		const toA = g.call<"distance">(voronoiDistance, { a, b: 0, metric, exponent }).distance;
-		const toB = g.call<"distance">(voronoiDistance, { a: b, b: 0, metric, exponent }).distance;
+		const toA = g.call(voronoiDistance, { a, b: 0, metric, exponent }).distance;
+		const toB = g.call(voronoiDistance, { a: b, b: 0, metric, exponent }).distance;
 		const { near, far } = g.frame(
 			"Sides",
 			{
 				note: "A and B relative to the position: which of them it's closer to,\npadded with zeros for the axis-by-axis metrics.",
 			},
 			() => {
-				const swapped = g.compare(toB, "<", toA);
-				const pad = (vector: Ref) => g.call<"padded">(padVector, { vector }).padded;
-				return { near: pad(g.select(swapped, a, b)), far: pad(g.select(swapped, b, a)) };
+				const swapped = g.compare(toB, toA, { op: "<" });
+				const pad = (vector: Ref) => g.call(padVector, { vector }).padded;
+				return { near: pad(g.switch(swapped, a, b)), far: pad(g.switch(swapped, b, a)) };
 			},
 		);
 		const euclidean = g.frame(
@@ -121,9 +119,9 @@ export const voronoiBisector: GroupSpec = {
 				return g.repeat(patterns, { Distance: ["f32", 1e10] }, (iteration, s) => {
 					const bits = g.mod(g.div(iteration, g.vec("vec4i", 1, 2, 4, 8)), int(2));
 					const sigma = g.sub(g.mul(g.toFloat(bits), 2), 1);
-					const ahead = g.compare(g.dot(sigma, g.sub(far, near)), ">=", 0);
+					const ahead = g.compare(g.dot(sigma, g.sub(far, near)), 0, { op: ">=" });
 					const d = g.mul(g.add(farLength, g.dot(sigma, near)), 0.5);
-					return { Distance: g.select(ahead, s.Distance, g.min(s.Distance, d)) };
+					return { Distance: g.switch(ahead, s.Distance, g.min(s.Distance, d)) };
 				}).Distance;
 			},
 		);
@@ -143,11 +141,11 @@ export const voronoiBisector: GroupSpec = {
 					);
 					const nearK = g.dot(near, along);
 					const farK = g.dot(far, along);
-					const ahead = g.compare(g.mul(sign, g.sub(farK, nearK)), ">=", 0);
-					const { x, y, z, w } = g.split(g.mul(g.abs(far), g.sub(1, along)));
+					const ahead = g.compare(g.mul(sign, g.sub(farK, nearK)), 0, { op: ">=" });
+					const { x, y, z, w } = g.separateVector(g.mul(g.abs(far), g.sub(1, along)));
 					const others = g.mul(g.add(g.max(x, y, z, w), g.mul(sign, nearK)), 0.5);
 					const d = g.max(g.mul(sign, g.add(nearK, farK), 0.5), others, 0);
-					return { Distance: g.select(ahead, s.Distance, g.min(s.Distance, d)) };
+					return { Distance: g.switch(ahead, s.Distance, g.min(s.Distance, d)) };
 				}).Distance;
 			},
 		);
@@ -165,4 +163,4 @@ export const voronoiBisector: GroupSpec = {
 			{ label: "Distance" },
 		);
 	},
-};
+});
