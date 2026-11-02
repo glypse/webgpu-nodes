@@ -33,19 +33,18 @@ const HandleFields = {
 
 const HandleSchema = v.object({ ...HandleFields, type: v.picklist(WGSL_TYPES) });
 
-const ZoneItemSchema = v.object({
-	...HandleFields,
-	type: v.union([v.picklist(WGSL_TYPES), v.strictObject({ variable: v.string() })]),
-});
+const SocketTypeSchema = v.union([
+	v.picklist(WGSL_TYPES),
+	v.strictObject({ variable: v.string() }),
+	v.strictObject({ inferred: v.literal(true) }),
+]);
+
+const ZoneItemSchema = v.object({ ...HandleFields, type: SocketTypeSchema });
 
 const GroupHandleSchema = v.object({
 	...HandleFields,
 	viewer: v.optional(v.literal(true)),
-	type: v.union([
-		v.picklist(WGSL_TYPES),
-		v.strictObject({ variable: v.string() }),
-		v.strictObject({ inferred: v.literal(true) }),
-	]),
+	type: SocketTypeSchema,
 });
 
 const TypeVariableSchema = v.object({

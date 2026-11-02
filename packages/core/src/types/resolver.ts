@@ -14,6 +14,15 @@ import type {
 	HydratedGraphDocument,
 	HydratedGraphProject,
 } from "../graph/document";
+import {
+	inferredItemFamily,
+	isInferredItem,
+	pairedInput,
+	pairedOutputId,
+	REPEAT_INPUT,
+	REPEAT_OUTPUT,
+	zoneItems,
+} from "../zones";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -110,18 +119,16 @@ function resolveNodeTypesForNode(
 		}));
 		return { ...resolved, resolvedOutputs };
 	}
-	if (descriptor.category === "zone") {
-		const variables = definitionOf(node.id, env.definitions())?.typeVariables ?? [];
-		if (variables.length > 0)
-			return resolveZoneNodeTypes(
-				descriptor,
-				incoming,
-				nodeData,
-				resolveNode,
-				env,
-				bindings,
-				variables,
-			);
+	if (node.type === REPEAT_INPUT || node.type === REPEAT_OUTPUT) {
+		return resolveZoneNodeTypes(
+			node,
+			descriptor,
+			incoming,
+			nodeData,
+			resolveNode,
+			env,
+			bindings,
+		);
 	}
 	const resolved = resolveRegularNodeTypes(
 		descriptor,
@@ -135,20 +142,52 @@ function resolveNodeTypesForNode(
 }
 
 /**
- * A Repeat Input or Output in a generic group: items typed by a variable
- * take its bound type, and each item's output carries its input's type.
+ * A Repeat Input or Output: items typed by a variable take its bound type,
+ * and each item's output carries its input's type. An inferred item takes
+ * the type of its initial value on the Repeat Input (the type picked there
+ * while it's unlinked), which the Repeat Output's sockets are forced to:
+ * its next value would make the type depend on itself, through the loop.
  */
 function resolveZoneNodeTypes(
+	node: GraphNode,
 	descriptor: NodeDescriptor,
 	incoming: GraphDocumentEdge[],
 	nodeData: NodeData,
 	resolveNode: ResolveNode,
 	env: Env,
 	bindings: TypeBindings,
-	variables: readonly TypeVariable[],
 ): ResolvedNodeTypes {
-	const bound = completeBindings(variables, bindings);
-	const data = { ...nodeData, types: { ...nodeData.types, ...bound } };
+	const doc = definitionOf(node.id, env.definitions());
+	const bound = completeBindings(doc?.typeVariables ?? [], bindings);
+	let types: Record<string, WgslType> = { ...nodeData.types, ...bound };
+	if (node.type === REPEAT_INPUT) {
+		const linked = new Set(incoming.map((e) => e.targetHandle));
+		const output = doc?.nodesById.get(pairedOutputId(node) ?? "");
+		const ignored = new Set(
+			zoneItems(output)
+				.filter((item) => isInferredItem(item) && linked.has(item.id))
+				.map((item) => inferredItemFamily(item.id)),
+		);
+		types = Object.fromEntries(Object.entries(types).filter(([key]) => !ignored.has(key)));
+	} else {
+		const input = doc && pairedInput(doc.nodes, node.id);
+		const paired =
+			input &&
+			resolveNodeTypesForNode(
+				input,
+				env.resolveDescriptor(input),
+				env.getIncomingEdges(input.id),
+				input.data,
+				resolveNode,
+				env,
+				bindings,
+			);
+		for (const item of zoneItems(node)) {
+			const type = paired?.inputTypes[item.id];
+			if (isInferredItem(item) && type) types[inferredItemFamily(item.id)] = type;
+		}
+	}
+	const data = { ...nodeData, types };
 	const resolved = resolveRegularNodeTypes(
 		descriptor,
 		incoming,
@@ -659,6 +698,16 @@ export class TypeResolver {
 		while (queue.length > 0) {
 			const nodeId = queue.shift();
 			if (nodeId === undefined) break;
+
+			// A Repeat Output takes its items' types from its Repeat Input,
+			// linked to it or not.
+			const node = resolveNode(nodeId);
+			const paired = node?.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
+			if (paired && !invalidated.has(paired) && resolveNode(paired)) {
+				invalidated.add(paired);
+				this.cache.delete(paired);
+				queue.push(paired);
+			}
 
 			// Find all nodes that consume this node's output
 			for (const edge of allEdges) {

@@ -9,9 +9,11 @@
 		type NodeSetting,
 		settingValue as storedSetting,
 		sideOf,
+		type SocketType,
 		typeKind,
 		WGSL_TYPES,
 		type WgslType,
+		zoneItems,
 	} from "$core";
 	import { Button, Select } from "$theme";
 	import { Handle, Position, useNodeConnections, useUpdateNodeInternals } from "@xyflow/svelte";
@@ -116,25 +118,6 @@
 			: [],
 	);
 
-	/**
-	 * On a group's boundary node: what decides the type of each socket not of
-	 * a fixed type (its shared type, or "inferred"), by handle id.
-	 */
-	const sharedTypes: Record<string, string> = $derived.by(() => {
-		const side = sideOf({ type: nodeType });
-		if (!side) return {};
-		const variables = view.document.typeVariables;
-		return Object.fromEntries(
-			interfaceOf(view.document, side).flatMap((handle) => {
-				const type = handle.type;
-				if (typeof type === "string") return [];
-				if ("inferred" in type) return [[handle.id, "inferred"]];
-				const variable = variables.find((v) => v.id === type.variable);
-				return variable ? [[handle.id, variable.name]] : [];
-			}),
-		);
-	});
-
 	function pickType(type: WgslType) {
 		graph.setNodeType(id, type);
 	}
@@ -169,6 +152,28 @@
 	const zoneId = $derived(
 		isZoneNode ? graph.zoneAnalysis(view.document).zoneOfBoundary.get(id) : undefined,
 	);
+
+	/**
+	 * On a group's boundary node or a zone node: what decides the type of each
+	 * socket not of a fixed type (its shared type, or "inferred"), by handle id.
+	 */
+	const sharedTypes: Record<string, string> = $derived.by(() => {
+		const side = sideOf({ type: nodeType });
+		const zoneOutput = zoneId && graph.zoneAnalysis(view.document).zones.get(zoneId)?.outputId;
+		const handles: readonly { id: string; type: SocketType }[] = side
+			? interfaceOf(view.document, side)
+			: zoneItems(view.document.nodesById.get(zoneOutput ?? ""));
+		const variables = view.document.typeVariables;
+		return Object.fromEntries(
+			handles.flatMap((handle) => {
+				const type = handle.type;
+				if (typeof type === "string") return [];
+				if ("inferred" in type) return [[handle.id, "inferred"]];
+				const variable = variables.find((v) => v.id === type.variable);
+				return variable ? [[handle.id, variable.name]] : [];
+			}),
+		);
+	});
 
 	function addZoneItem(type: WgslType) {
 		if (zoneId) graph.addZoneItem(zoneId, type);

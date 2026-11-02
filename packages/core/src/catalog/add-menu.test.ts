@@ -256,7 +256,11 @@ describe("adding from a dropped link", () => {
 		};
 		const zone = graph.addMenuEntryConnected(zoneEntry, { x: 0, y: 0 }, toColor) ?? "";
 		const items = graph.getZoneItems(zone);
-		expect(items.map((i) => i.type)).toEqual(["f32", "vec4f"]);
+		expect(items.map((i) => i.type)).toEqual([{ inferred: true }, { inferred: true }]);
+		expect(items.map((i) => graph.resolveOutputHandleType(zone, i.id))).toEqual([
+			"f32",
+			"vec4f",
+		]);
 		expect(graph.root.edges.find((e) => e.target === "out")?.sourceHandle).toBe(items[1]?.id);
 	});
 

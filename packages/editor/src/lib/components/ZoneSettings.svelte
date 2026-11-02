@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		DEFAULT_MAX_ITERATIONS,
+		isInferredItem,
 		WGSL_TYPES,
 		type WgslType,
 		type ZoneItem,
@@ -31,7 +32,9 @@
 
 	function variableOf(item: ZoneItem) {
 		const type = item.type;
-		return typeof type === "string" ? undefined : variables.find((v) => v.id === type.variable);
+		return typeof type === "object" && "variable" in type
+			? variables.find((v) => v.id === type.variable)
+			: undefined;
 	}
 
 	// Local buffer for label inputs: commit on blur so typing doesn't
@@ -88,6 +91,7 @@
 		<span class="text-sm font-medium">State items</span>
 		{#each items as item, i (item.id)}
 			{@const shared = variableOf(item)}
+			{@const inferred = isInferredItem(item)}
 			<div class="flex items-center gap-1">
 				<Input
 					value={labelBuffer[item.id] ?? item.label}
@@ -101,16 +105,30 @@
 				<TypePicker
 					types={WGSL_TYPES}
 					value={typeof item.type === "string" ? item.type : undefined}
-					label={shared?.name}
+					label={shared?.name ?? (inferred ? "Inferred" : undefined)}
 					disabled={locked}
 					class="w-24 shrink-0"
-					title={shared ? `Shares the type ${shared.name}` : "Item type"}
+					title={shared
+						? `Shares the type ${shared.name}`
+						: inferred
+							? "Takes the type of its initial value"
+							: "Item type"}
 					onpick={(type: WgslType) => {
 						graph.setZoneItemType(zoneId, item.id, type);
 					}}
 				>
 					{#snippet extra()}
+						<DropdownMenu.Item
+							onSelect={() => {
+								graph.setZoneItemType(zoneId, item.id, { inferred: true });
+							}}
+						>
+							Inferred
+							<span class="text-muted-foreground ml-auto text-xs">Initial value</span>
+							<CheckIcon class={inferred ? "" : "invisible"} />
+						</DropdownMenu.Item>
 						{#if variables.length > 0}
+							<DropdownMenu.Separator />
 							<DropdownMenu.Label>Shared types</DropdownMenu.Label>
 							{#each variables as variable (variable.id)}
 								<DropdownMenu.Item
@@ -167,7 +185,18 @@
 				onpick={(type: WgslType) => {
 					graph.addZoneItem(zoneId, type);
 				}}
-			/>
+			>
+				{#snippet extra()}
+					<DropdownMenu.Item
+						onSelect={() => {
+							graph.addZoneItem(zoneId, { inferred: true });
+						}}
+					>
+						Inferred
+						<span class="text-muted-foreground ml-auto text-xs">Initial value</span>
+					</DropdownMenu.Item>
+				{/snippet}
+			</TypePicker>
 		{/if}
 	</div>
 </div>

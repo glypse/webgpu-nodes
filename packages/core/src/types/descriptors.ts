@@ -60,10 +60,11 @@ export type TypeVariable = {
 export type SocketType = WgslType | { variable: string } | { inferred: true };
 
 /**
- * A repeat zone's state item: a fixed type, or in a group, the type of one
- * of its type variables, so a loop carries values as wide as the group's.
+ * A repeat zone's state item: a fixed type; in a group, the type of one of
+ * its type variables, so a loop carries values as wide as the group's; or
+ * (inferred) the type of its initial value.
  */
-export type ZoneItem = Omit<HandleDef, "type"> & { type: WgslType | { variable: string } };
+export type ZoneItem = Omit<HandleDef, "type"> & { type: SocketType };
 
 /** A socket of a group's boundary node: a handle whose type may be decided per group node. */
 export type GroupHandleDef = Omit<HandleDef, "type"> & {

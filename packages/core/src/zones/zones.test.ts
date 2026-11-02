@@ -1,15 +1,24 @@
 import { describe, expect, it } from "bun:test";
 
-import { analyzeZones, wouldCreateCycle } from ".";
+import { analyzeZones, inferredItemFamily, wouldCreateCycle } from ".";
 import { generateShader } from "../codegen";
-import { ROOT_ID } from "../graph/document";
+import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "../graph/document";
 import { GraphModel } from "../graph/model";
-import { edge, rootProject, shaderFor, type TestEdge, type TestNode } from "../testing/graph";
+import type { NodeType } from "../nodes/registry";
+import { evaluate } from "../testing/evaluate";
+import {
+	edge,
+	managerFor,
+	rootProject,
+	shaderFor,
+	type TestEdge,
+	type TestNode,
+} from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
-import type { HandleDef, NodeData } from "../types";
+import { FLOAT_TYPES, type HandleDef, type NodeData, type WgslType, type ZoneItem } from "../types";
 
 /** A repeat zone `<id>_in` / `<id>_out` with the given state items. */
-function zone(id: string, items: HandleDef[], inputData: NodeData = {}): TestNode[] {
+function zone(id: string, items: ZoneItem[], inputData: NodeData = {}): TestNode[] {
 	return [
 		{
 			id: `${id}_in`,
@@ -379,6 +388,183 @@ describe("repeat zone codegen", () => {
 		const shader = generateShader(new GraphModel(project)).shader;
 		expect(shader).not.toContain("for (");
 		expect(shader).toContain("fn group_h_def__u1(");
+		expectValid(shader);
+	});
+});
+
+describe("inferred zone items", () => {
+	const ITEM: ZoneItem = { id: "acc", label: "Accumulator", type: { inferred: true } };
+
+	const declare = (id: string, type: WgslType): TestNode => ({
+		id,
+		type: "declare",
+		data: { types: { declare: type }, values: { x: 1, y: 2, z: 3, w: 4 } },
+	});
+
+	/** acc = acc + iteration, starting from a `type` value, output as the colour. */
+	function accumulating(type: WgslType) {
+		return managerFor(
+			[...zone("z", [ITEM]), declare("init", type), { id: "body", type: "add" }],
+			[
+				["init", "value", "z_in", "acc"],
+				["z_in", "acc", "body", "operands"],
+				["z_in", "iteration", "body", "operands"],
+				["body", "result", "z_out", "acc"],
+				["z_out", "acc", "out", "color"],
+			],
+		);
+	}
+
+	it("take the type of their initial value", () => {
+		const graph = accumulating("vec3f");
+		expect(graph.resolveOutputHandleType("z_in", "acc")).toBe("vec3f");
+		expect(graph.resolveInputType("z_out", "acc")).toBe("vec3f");
+		expect(graph.resolveOutputHandleType("z_out", "acc")).toBe("vec3f");
+		expect(evaluate(graph, "z_out", "acc")).toEqual([4, 5, 6]);
+		const { shader } = generateShader(graph);
+		expect(shader).toContain("var z_z_in_s0: vec3f = v_init;");
+		expectValid(shader);
+	});
+
+	it("are f32 while unlinked, or the type picked on the Repeat Input", () => {
+		const passthrough: TestEdge[] = [
+			["z_in", "acc", "z_out", "acc"],
+			["z_out", "acc", "out", "color"],
+		];
+		const unlinked = managerFor(zone("z", [ITEM]), passthrough);
+		expect(unlinked.resolveOutputHandleType("z_out", "acc")).toBe("f32");
+
+		const picked: NodeData = { types: { [inferredItemFamily("acc")]: "vec2f" } };
+		const graph = managerFor(
+			[...zone("z", [ITEM], picked), declare("init", "vec4f")],
+			passthrough,
+		);
+		expect(graph.resolveOutputHandleType("z_out", "acc")).toBe("vec2f");
+		expectValid(generateShader(graph).shader);
+		// A linked initial value decides, whatever was picked.
+		const link = edge(["init", "value", "z_in", "acc"]);
+		expect(graph.isValidConnection(link)).toBe(true);
+		graph.connect(link);
+		expect(graph.resolveOutputHandleType("z_out", "acc")).toBe("vec4f");
+	});
+
+	it("convert their next value to their type", () => {
+		const graph = managerFor(
+			[...zone("z", [ITEM]), declare("init", "vec3f")],
+			[
+				["init", "value", "z_in", "acc"],
+				["z_in", "iteration", "z_out", "acc"],
+				["z_out", "acc", "out", "color"],
+			],
+		);
+		expect(graph.resolveInputType("z_out", "acc")).toBe("vec3f");
+		expect(evaluate(graph, "z_out", "acc")).toEqual([2, 2, 2]);
+		const { shader } = generateShader(graph);
+		expect(shader).toContain("let z_z_in_next0 = vec3f(f32(z_z_in_i));");
+		expectValid(shader);
+	});
+
+	it("only take next values their type can hold", () => {
+		const graph = managerFor(
+			[...zone("z", [ITEM]), declare("init", "vec2f"), declare("wide", "vec4f")],
+			[["init", "value", "z_in", "acc"]],
+		);
+		expect(graph.isValidConnection(edge(["wide", "value", "z_out", "acc"]))).toBe(false);
+		expect(graph.isValidConnection(edge(["init", "value", "z_out", "acc"]))).toBe(true);
+	});
+
+	it("follow their initial value's type when it changes", () => {
+		// Nothing links the Repeat Input to its output here.
+		const graph = managerFor(
+			[...zone("z", [ITEM]), declare("init", "vec3f")],
+			[
+				["init", "value", "z_in", "acc"],
+				["z_out", "acc", "out", "color"],
+			],
+		);
+		expect(graph.resolveOutputHandleType("z_out", "acc")).toBe("vec3f");
+		graph.setNodeType("init", "vec2f");
+		expect(graph.resolveOutputHandleType("z_in", "acc")).toBe("vec2f");
+		expect(graph.resolveInputType("z_out", "acc")).toBe("vec2f");
+		expect(graph.resolveOutputHandleType("z_out", "acc")).toBe("vec2f");
+	});
+
+	it("take the types each group node binds in a generic group", () => {
+		const T = "t";
+		const at = { x: 0, y: 0 };
+		const node = (id: string, type: NodeType, data: NodeData = {}): GraphDocumentNode => ({
+			id,
+			type,
+			data,
+			position: at,
+		});
+		const instance = (id: string): GraphDocumentNode => ({
+			...node(id, "node-group"),
+			group: { definitionRef: "def", locked: false },
+		});
+		const project: GraphProject = {
+			definitions: {
+				[ROOT_ID]: {
+					nodes: [
+						node("out", "frag-output"),
+						instance("g3"),
+						instance("g2"),
+						node("s3", "declare", { types: { declare: "vec3f" } }),
+						node("s2", "declare", { types: { declare: "vec2f" } }),
+						node("mix", "add"),
+					],
+					edges: (
+						[
+							["s3", "value", "g3", "a"],
+							["s2", "value", "g2", "a"],
+							["g3", "sum", "mix", "operands"],
+							["g2", "sum", "mix", "operands"],
+							["mix", "result", "out", "color"],
+						] satisfies TestEdge[]
+					).map(edge),
+				},
+				def: {
+					label: "Zoned",
+					typeVariables: [{ id: T, name: "T", types: FLOAT_TYPES }],
+					inputs: [{ id: "a", label: "A", type: { variable: T } }],
+					outputs: [{ id: "sum", label: "Sum", type: { inferred: true } }],
+					nodes: [
+						node("in", "group-input"),
+						node("ri", "repeat-input", {
+							pairedOutput: "ro",
+							values: { iterations: 2 },
+						}),
+						node("add", "add"),
+						node("ro", "repeat-output", { items: [ITEM] }),
+						node("outs", "group-output"),
+					],
+					edges: (
+						[
+							["in", "a", "ri", "acc"],
+							["ri", "acc", "add", "operands"],
+							["in", "a", "add", "operands"],
+							["add", "result", "ro", "acc"],
+							["ro", "acc", "outs", "sum"],
+						] satisfies TestEdge[]
+					).map(edge),
+				},
+			},
+		};
+		const graph = new GraphModel(project);
+		expect(graph.resolveOutputHandleType("g3", "sum")).toBe("vec3f");
+		expect(graph.resolveOutputHandleType("g2", "sum")).toBe("vec2f");
+		for (const [instanceId, type] of [
+			["g3", "vec3f"],
+			["g2", "vec2f"],
+		] as const) {
+			graph.enterGroup(instanceId);
+			expect(graph.resolveOutputHandleType("ri", "acc")).toBe(type);
+			expect(graph.resolveOutputHandleType("ro", "acc")).toBe(type);
+			graph.exitGroup();
+		}
+		const { shader } = generateShader(graph);
+		expect(shader).toMatch(/var z_\w+: vec3f = /);
+		expect(shader).toMatch(/var z_\w+: vec2f = /);
 		expectValid(shader);
 	});
 });

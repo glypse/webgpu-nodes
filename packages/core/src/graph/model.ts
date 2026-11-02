@@ -21,7 +21,7 @@ import {
 	type WgslType,
 	withDefaults,
 } from "../types";
-import { NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
+import { isZoneNodeType, NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
 import { rerouteBranches } from "./branches";
 import {
 	type GraphEdge,
@@ -541,8 +541,14 @@ export class GraphModel extends PreviewModel {
 	 */
 	typeChoice(nodeId: string, path?: readonly string[]): TypeChoice | undefined {
 		const node = this.resolveNode(nodeId);
-		// Group nodes and their boundaries take their types from the group's variables.
-		if (!node || node.type === "node-group" || BOUNDARY_TYPES.has(node.type)) {
+		// Group nodes and their boundaries take their types from the group's
+		// variables, zone nodes from their items.
+		if (
+			!node ||
+			node.type === "node-group" ||
+			BOUNDARY_TYPES.has(node.type) ||
+			isZoneNodeType(node.type)
+		) {
 			return undefined;
 		}
 		const descriptor = this.resolveDescriptor(node);

@@ -1136,7 +1136,9 @@ export abstract class GroupModel extends ZoneModel {
 			);
 		}
 		const typedBy = (item: ZoneItem) =>
-			typeof item.type === "object" && item.type.variable === variableId;
+			typeof item.type === "object" &&
+			"variable" in item.type &&
+			item.type.variable === variableId;
 		if (def.nodes.some((n) => n.data.items?.some(typedBy))) {
 			def.nodes = def.nodes.map((n) =>
 				n.data.items?.some(typedBy)

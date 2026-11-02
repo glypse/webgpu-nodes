@@ -6,6 +6,7 @@ import {
 	type NodeInputDef,
 	type NodeOutputDef,
 	type TypeVariable,
+	WGSL_TYPES,
 	type ZoneItem,
 } from "../types";
 
@@ -52,6 +53,14 @@ export function pairedOutputId(node: MinimalNode): string | undefined {
 	return node.data.pairedOutput;
 }
 
+/** The Repeat Input paired with the Repeat Output `outputId`, among its document's `nodes`. */
+export function pairedInput<N extends MinimalNode>(
+	nodes: readonly N[],
+	outputId: string,
+): N | undefined {
+	return nodes.find((n) => n.type === REPEAT_INPUT && pairedOutputId(n) === outputId);
+}
+
 /** The state items declared on a Repeat Output node. */
 export function zoneItems(outputNode: MinimalNode | undefined): ZoneItem[] {
 	return outputNode?.data.items ?? [];
@@ -76,10 +85,27 @@ function findNode(
 	return undefined;
 }
 
-/** An item's input: a variable's items share its family, which takes the type it's bound to. */
+export function isInferredItem(item: ZoneItem): boolean {
+	return typeof item.type === "object" && "inferred" in item.type;
+}
+
+/**
+ * The family of an inferred item's sockets, in the `types` of both zone
+ * nodes: the Repeat Input's takes the type of the item's initial value,
+ * the Repeat Output's is forced to it.
+ */
+export function inferredItemFamily(itemId: string): string {
+	return `inferred:${itemId}`;
+}
+
+/**
+ * An item's input: a variable's items share its family, which takes the type
+ * it's bound to; an inferred item's is in a family of its own.
+ */
 function itemInput(item: ZoneItem, variables: readonly TypeVariable[]): NodeInputDef {
 	const { id, label, type } = item;
 	if (typeof type === "string") return { id, label, types: [type] };
+	if ("inferred" in type) return { id, label, types: WGSL_TYPES, family: inferredItemFamily(id) };
 	const variable = variables.find((v) => v.id === type.variable);
 	return { id, label, types: variable?.types ?? ["f32"], family: type.variable };
 }

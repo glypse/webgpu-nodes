@@ -3,6 +3,7 @@ import {
 	analyzeZones,
 	DEFAULT_ITERATIONS,
 	DEFAULT_MAX_ITERATIONS,
+	inferredItemFamily,
 	ITERATIONS_HANDLE,
 	NEW_ITEM_HANDLE,
 	pairedOutputId,
@@ -12,7 +13,7 @@ import {
 } from "../zones";
 import { type GraphEdge, type GraphNode, type HydratedGraphDocument } from "./document";
 import { indexDocument } from "./hydrate";
-import { GraphModelBase } from "./model-base";
+import { GraphModelBase, withEntry } from "./model-base";
 
 /** Horizontal distance between a new zone's input and output nodes. */
 export const ZONE_SPACING = 450;
@@ -51,14 +52,18 @@ export abstract class ZoneModel extends GraphModelBase {
 
 	/**
 	 * Add a new repeat zone (paired input/output nodes) to the active document,
-	 * with one f32 state item passed straight through.
+	 * with one inferred state item passed straight through.
 	 * Returns the Repeat Input's id, or undefined if the document is locked.
 	 */
 	createRepeatZone(position: { x: number; y: number }): string | undefined {
 		if (this.isLocked) return undefined;
 		const inputId = crypto.randomUUID();
 		const outputId = crypto.randomUUID();
-		const item: ZoneItem = { id: crypto.randomUUID(), label: "Value", type: "f32" };
+		const item: ZoneItem = {
+			id: crypto.randomUUID(),
+			label: "Value",
+			type: { inferred: true },
+		};
 
 		const nodes: GraphNode[] = [
 			{
@@ -161,6 +166,7 @@ export abstract class ZoneModel extends GraphModelBase {
 
 	removeZoneItem(zoneId: string, itemId: string) {
 		const items = this.getZoneItems(zoneId).filter((i) => i.id !== itemId);
+		this.pickItemType(zoneId, itemId, undefined);
 		this.setZoneItems(zoneId, items);
 	}
 
@@ -176,9 +182,18 @@ export abstract class ZoneModel extends GraphModelBase {
 		return true;
 	}
 
-	/** Change a state item's type; links that no longer fit are removed. */
+	/**
+	 * Change a state item's type; links that no longer fit are removed. An
+	 * item becoming inferred keeps its type until its initial value is linked.
+	 */
 	setZoneItemType(zoneId: string, itemId: string, type: ZoneItem["type"]) {
 		const items = this.getZoneItems(zoneId);
+		const inferred = typeof type === "object" && "inferred" in type;
+		this.pickItemType(
+			zoneId,
+			itemId,
+			inferred ? this.resolveOutputHandleType(zoneId, itemId) : undefined,
+		);
 		this.setZoneItems(
 			zoneId,
 			items.map((i) => (i.id === itemId ? { ...i, type } : i)),
@@ -198,6 +213,19 @@ export abstract class ZoneModel extends GraphModelBase {
 		this.setZoneItems(zoneId, items);
 	}
 
+	/**
+	 * Pick the type an inferred item takes while its initial value is
+	 * unlinked (or forget it, with `undefined`).
+	 */
+	private pickItemType(zoneId: string, itemId: string, type: WgslType | undefined) {
+		const zone = this.zoneNodes(zoneId);
+		if (!zone || this.isLocked) return;
+		const key = inferredItemFamily(itemId);
+		if (zone.input.data.types?.[key] === type) return;
+		const types = withEntry(zone.input.data.types, key, type);
+		this.patchNodeData(new Map([[zone.input.id, { ...zone.input.data, types }]]));
+	}
+
 	/** Set a zone's iteration safety cap. */
 	setZoneMaxIterations(zoneId: string, max: number) {
 		const zone = this.zoneNodes(zoneId);
@@ -210,7 +238,8 @@ export abstract class ZoneModel extends GraphModelBase {
 
 	/**
 	 * Complete a connection dropped on a zone's virtual "new item" handle:
-	 * create an item typed after the other end, then link to it.
+	 * create an inferred item, then link to it. Unless the link is its initial
+	 * value, the item takes the type at the other end until one is linked.
 	 * Returns false when the connection doesn't involve the virtual handle.
 	 */
 	connectNewZoneItem(connection: {
@@ -240,8 +269,9 @@ export abstract class ZoneModel extends GraphModelBase {
 				(i) => i.id === connection.targetHandle,
 			)?.label;
 		}
-		const item = this.addZoneItem(zoneId, type, label);
+		const item = this.addZoneItem(zoneId, { inferred: true }, label);
 		if (!item) return true;
+		if (!(toNew && connection.target === zoneId)) this.pickItemType(zoneId, item.id, type);
 
 		const edge: GraphEdge = {
 			id: crypto.randomUUID(),

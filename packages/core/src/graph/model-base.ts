@@ -39,7 +39,7 @@ import {
 	TypeResolver,
 	unavailableEdges,
 } from "../types/resolver";
-import { analyzeZones, type ZoneAnalysis } from "../zones";
+import { analyzeZones, inferredItemFamily, REPEAT_INPUT, type ZoneAnalysis } from "../zones";
 import {
 	createPlainDocument,
 	type GraphDocument,
@@ -506,6 +506,18 @@ export abstract class GraphModelBase {
 
 		const targetInputDef = targetDescriptor.inputs.find((i) => i.id === targetHandle);
 		if (!targetInputDef) return false;
+
+		// An inferred zone item takes the type of any initial value, and its
+		// next value converts to that type.
+		if (targetInputDef.family === inferredItemFamily(targetHandle)) {
+			return (
+				targetNode.type === REPEAT_INPUT ||
+				isConnectionCompatible(
+					sourceType,
+					this.resolveInputType(targetNode.id, targetHandle, []),
+				)
+			);
+		}
 
 		// If the target has a node-wide override, validate against that specific type
 		const overrideType = targetNode.data.types?.[inputFamilyKey(targetInputDef)];

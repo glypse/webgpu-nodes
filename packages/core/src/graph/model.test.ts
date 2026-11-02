@@ -69,16 +69,35 @@ describe("GraphModel zones", () => {
 		expect(graph.isValidConnection(connection("uv", "uv", zoneId, "iterations"))).toBe(false);
 	});
 
-	it("creates typed items from links dropped on the virtual handle", () => {
-		const { graph, zoneId } = setup();
+	it("creates inferred items from links dropped on the virtual handle", () => {
+		const { graph, zoneId, outputId } = setup();
 		expect(graph.isValidConnection(connection("uv", "uv", zoneId, NEW_ITEM_HANDLE))).toBe(true);
 		graph.connectNewZoneItem(connection("uv", "uv", zoneId, NEW_ITEM_HANDLE));
 		const items = graph.getZoneItems(zoneId);
 		const created = items[items.length - 1];
-		expect(created?.type).toBe("vec2f");
+		expect(created?.type).toEqual({ inferred: true });
+		expect(graph.resolveOutputHandleType(zoneId, created?.id ?? "")).toBe("vec2f");
 		expect(graph.root.edges).toContainEqual(
 			containing({ source: "uv", target: zoneId, targetHandle: created?.id }),
 		);
+
+		// Linked from its next value, an item keeps the type it came with
+		// until its initial value is linked.
+		graph.connectNewZoneItem(connection("uv", "uv", outputId, NEW_ITEM_HANDLE));
+		const next = graph.getZoneItems(zoneId).at(-1)?.id ?? "";
+		expect(graph.resolveOutputHandleType(outputId, next)).toBe("vec2f");
+		expect(graph.isValidConnection(connection("t", "seconds", zoneId, next))).toBe(true);
+		graph.connect(connection("t", "seconds", zoneId, next));
+		expect(graph.resolveOutputHandleType(zoneId, next)).toBe("f32");
+		expect(graph.resolveOutputHandleType(outputId, next)).toBe("f32");
+	});
+
+	it("keeps an item's type when it becomes inferred", () => {
+		const { graph, zoneId, outputId, item } = setup();
+		graph.setZoneItemType(zoneId, item.id, "vec3f");
+		graph.setZoneItemType(zoneId, item.id, { inferred: true });
+		expect(graph.resolveOutputHandleType(outputId, item.id)).toBe("vec3f");
+		expect(graph.root.edges.some((e) => e.target === outputId)).toBe(true);
 	});
 
 	it("drops links that no longer fit when an item changes type or disappears", () => {
