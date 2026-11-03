@@ -326,7 +326,8 @@
 			}
 			return;
 		}
-		if (!hovered) return;
+		// Handled already, e.g. Enter picking a menu item, which mustn't then enter a group.
+		if (!hovered || event.defaultPrevented) return;
 		const target = event.target as HTMLElement | null;
 		if (target?.closest("input, textarea, select, [contenteditable]")) return;
 		view.activate();
