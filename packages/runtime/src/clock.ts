@@ -21,7 +21,7 @@ export class Clock implements FrameInputs {
 	time = 0;
 	delta = 0;
 	frame = 0;
-	/** Wall-clock seconds accumulated towards the next fixed-rate frame. */
+	/** Wall-clock seconds since the current fixed-rate frame was due; negative when it was drawn early. */
 	private carry = 0;
 
 	constructor(public timing: Timing) {}
@@ -38,11 +38,17 @@ export class Clock implements FrameInputs {
 			this.frame += 1;
 			return true;
 		}
-		this.carry = Math.min(this.carry + Math.max(elapsed, 0), MAX_FIXED_CATCH_UP);
+		const wall = Math.max(elapsed, 0);
+		this.carry = Math.min(this.carry + wall, MAX_FIXED_CATCH_UP);
+		// Draw the frame due nearest this animation frame, not the last one already due:
+		// when animation frames come as often as frames are due, their jitter would
+		// otherwise leave some just short of a frame, skipping that draw and doubling the
+		// next step. Leading by half an interval keeps the phase away from that edge.
+		const lead = Math.min(wall, this.frameDuration) / 2;
 		// The epsilon absorbs float error in elapsed times summing to exactly a frame.
-		const steps = Math.floor(this.carry * this.timing.fps + 1e-6);
+		const steps = Math.floor((this.carry + lead) * this.timing.fps + 1e-6);
 		if (steps === 0) return false;
-		this.carry = Math.max(0, this.carry - steps / this.timing.fps);
+		this.carry -= steps / this.timing.fps;
 		this.setFrame(this.frame + steps);
 		return true;
 	}

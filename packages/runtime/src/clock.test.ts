@@ -12,6 +12,14 @@ describe("Clock", () => {
 		expect(clock.delta).toBe(1 / 30);
 	});
 
+	it("draws on every animation frame when they come at the frame rate, despite jitter", () => {
+		const clock = new Clock({ fps: 60, realtime: false });
+		for (let i = 1; i <= 120; i++) {
+			expect(clock.tick(i % 2 === 0 ? 0.0164 : 0.0169)).toBe(true);
+			expect(clock.frame).toBe(i);
+		}
+	});
+
 	it("skips frames when wall time runs ahead", () => {
 		const clock = new Clock({ fps: 24, realtime: false });
 		clock.tick(0.25);
