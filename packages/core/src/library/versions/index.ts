@@ -54,6 +54,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-fractal-noise-octaves/08724997071465.json").then((m) => m.default),
 	"std-opensimplex-orientation@095289db2a643c": () =>
 		import("./std-opensimplex-orientation/095289db2a643c.json").then((m) => m.default),
+	"std-fit-uv@04724b476ccb14": () =>
+		import("./std-fit-uv/04724b476ccb14.json").then((m) => m.default),
 	"std-voronoi-edges@170764a71f4576": () =>
 		import("./std-voronoi-edges/170764a71f4576.json").then((m) => m.default),
 	"std-color@1c6bb6de3a1d20": () =>

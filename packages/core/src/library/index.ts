@@ -6,6 +6,7 @@ import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
 import color from "./std-color.json";
 import componentSum from "./std-component-sum.json";
+import fitUv from "./std-fit-uv.json";
 import fractalNoiseOctaves from "./std-fractal-noise-octaves.json";
 import fractalNoise from "./std-fractal-noise.json";
 import fractalOctave from "./std-fractal-octave.json";
@@ -124,6 +125,7 @@ const files: unknown[] = [
 	octaveShift,
 	fractalNoiseOctaves,
 	fractalNoise,
+	fitUv,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

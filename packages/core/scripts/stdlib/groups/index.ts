@@ -4,6 +4,7 @@ import type { GroupSpec } from "../builder";
 import color from "./color";
 import coordinates from "./coordinates";
 import noise from "./noise";
+import texture from "./texture/fit-uv";
 import vector from "./vector";
 
-export default [...coordinates, ...color, ...vector, ...noise] satisfies GroupSpec[];
+export default [...coordinates, ...color, ...vector, ...noise, ...texture] satisfies GroupSpec[];

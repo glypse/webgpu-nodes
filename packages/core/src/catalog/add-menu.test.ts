@@ -343,6 +343,7 @@ describe("add menu sections", () => {
 			"Texture Size",
 			"Fractal Voronoi",
 			"Fractal Noise",
+			"Fit UV",
 		]);
 		const helpers = texture?.sections.find((s) => s.name === "Helpers");
 		expect(helpers?.entries.map((e) => e.label)).toContain("Hash");
