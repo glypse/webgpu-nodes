@@ -1,5 +1,6 @@
 import type { ColorSpace } from "$core";
 
+import type { FrameTiming } from "./gpu-timer";
 import type { CompiledProgram, FrameInputs, Renderer, Size } from "./renderer";
 
 let nextSlot = 0;
@@ -42,12 +43,12 @@ export class CanvasTarget {
 		return true;
 	}
 
-	render(program: CompiledProgram, frame: FrameInputs) {
+	render(program: CompiledProgram, frame: FrameInputs, timing?: FrameTiming) {
 		const { width, height } = this.canvas;
 		if (width === 0 || height === 0 || !this.colorSpace) return;
 		const linear = this.renderer.linearTexture(this.slot, { width, height });
 		const encoder = this.renderer.device.createCommandEncoder();
-		program.encode(encoder, linear, frame, this.colorSpace);
+		program.encode(encoder, linear, frame, this.colorSpace, timing);
 		this.renderer.presenter.encode(
 			encoder,
 			linear,

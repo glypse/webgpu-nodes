@@ -1,4 +1,5 @@
 import { Clock, type Timing } from "./clock";
+import { FrameMeter } from "./frame-meter";
 import type { FrameInputs } from "./renderer";
 
 /**
@@ -8,6 +9,8 @@ import type { FrameInputs } from "./renderer";
  */
 export class Player {
 	readonly clock: Clock;
+	/** The rate frames are drawn at while playing; reset on play and pause. */
+	readonly meter = new FrameMeter();
 	private playingState = false;
 	private request: number | undefined;
 	private lastTimestamp: number | undefined;
@@ -29,11 +32,13 @@ export class Player {
 		if (this.playingState) return;
 		this.playingState = true;
 		this.lastTimestamp = undefined;
+		this.meter.reset();
 		this.schedule();
 	}
 
 	pause() {
 		this.playingState = false;
+		this.meter.reset();
 	}
 
 	toggle() {
@@ -90,6 +95,7 @@ export class Player {
 		}
 		if (this.dirty) {
 			this.dirty = false;
+			if (this.playingState) this.meter.record(timestamp);
 			this.onFrame(this.clock);
 		}
 	};

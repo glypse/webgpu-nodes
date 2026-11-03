@@ -12,10 +12,37 @@
 
 	let { areaId }: { areaId: string } = $props();
 
+	const SLOW_RATIO = 0.95;
+
 	const graph = getGraphManager();
 	const preview = getPreview();
 
 	const timing = $derived(graph.settings.timing);
+	const rate = $derived(preview.frameRate);
+	const refreshRate = $derived(
+		preview.refreshRate === undefined ? undefined : Math.round(preview.refreshRate),
+	);
+	/** The rate playback should draw at: the display's in real time, the project's otherwise. */
+	const target = $derived(timing.realtime ? (refreshRate ?? timing.fps) : timing.fps);
+	/** Whether playback falls behind its target, past what timing jitter explains. */
+	const slow = $derived(rate !== undefined && rate.fps < target * SLOW_RATIO);
+	/** Whether the GPU alone takes longer than a frame lasts at the target rate. */
+	const gpuSlow = $derived(rate?.gpuTime !== undefined && rate.gpuTime > 1 / target);
+	const hint = $derived.by(() => {
+		const lines: string[] = [];
+		if (rate) lines.push(`Longest frame: ${formatMs(rate.worstFrameTime)} ms`);
+		if (refreshRate !== undefined) {
+			if (timing.realtime) lines.push(`Drawing at the display's ${String(refreshRate)} Hz`);
+			else if (timing.fps > refreshRate)
+				lines.push(`The display refreshes at only ${String(refreshRate)} Hz`);
+		}
+		lines.push("Time settings");
+		return lines.join("\n");
+	});
+
+	function formatMs(seconds: number): string {
+		return (seconds * 1000).toFixed(1);
+	}
 
 	function formatTime(seconds: number): string {
 		const minutes = Math.floor(seconds / 60);
@@ -91,12 +118,24 @@
 			variant="ghost"
 			size="xs"
 			class="text-muted-foreground tabular-nums"
-			title="Time settings"
+			title={hint}
 			onclick={() => {
 				graph.settingsPage = "time";
 			}}
 		>
-			{timing.fps} fps{timing.realtime ? " · real time" : ""}
+			{#if rate}
+				<span class={{ "text-destructive": slow }}>{Math.round(rate.fps)}</span>/{target}
+				fps ·
+				<span class={{ "text-destructive": slow }}>{formatMs(rate.frameTime)} ms</span>
+				{#if rate.gpuTime !== undefined}
+					·
+					<span class={{ "text-destructive": gpuSlow }}
+						>GPU {formatMs(rate.gpuTime)} ms</span
+					>
+				{/if}
+			{:else}
+				{timing.fps} fps
+			{/if}{timing.realtime ? " · real time" : ""}
 		</Button>
 	</AreaHeader>
 </div>

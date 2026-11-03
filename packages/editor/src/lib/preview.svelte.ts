@@ -3,6 +3,8 @@ import {
 	CanvasTarget,
 	type CompiledProgram,
 	type FrameInputs,
+	type FrameRate,
+	measureRefreshRate,
 	Player,
 	ProgramError,
 	Renderer,
@@ -58,6 +60,10 @@ export class Preview {
 	playing = $state(false);
 	time = $state(0);
 	frame = $state(0);
+	/** The rate frames are drawn at while playing, once measured. */
+	frameRate = $state.raw<FrameRate | undefined>();
+	/** The display's refresh rate in Hz, once measured: what real-time playback can reach. */
+	refreshRate = $state<number | undefined>();
 
 	readonly player: Player;
 
@@ -80,11 +86,17 @@ export class Preview {
 	/** The code of the newest program asked for, compiled or not. */
 	private programCode: string | undefined;
 	private destroyed = false;
+	private measuringRefreshRate = false;
+	/** Whether a pause came while measuring the refresh rate, which then measures again. */
+	private remeasureRefreshRate = false;
+	/** Times playback started, telling whether it did during a measure. */
+	private playStarts = 0;
 
 	constructor(timing: Timing = { fps: 60, realtime: true }) {
 		this.player = new Player(timing, (frame) => {
 			this.draw(frame);
 		});
+		this.measureRefreshRate();
 	}
 
 	/**
@@ -311,15 +323,48 @@ export class Preview {
 	private draw(frame: FrameInputs) {
 		this.time = frame.time;
 		this.frame = frame.frame;
+		this.frameRate = this.player.meter.rate;
 		const program = this.program;
 		if (!program) return;
-		for (const target of this.targets.values()) target?.render(program, frame);
+		const timing = this.player.playing ? this.renderer?.timer?.begin() : undefined;
+		for (const target of this.targets.values()) target?.render(program, frame, timing);
+		void timing?.end().then((seconds) => {
+			if (seconds !== undefined) this.player.meter.recordGpuTime(seconds);
+		});
+	}
+
+	/**
+	 * Measure the display's refresh rate. Playback holds animation frames back
+	 * when the GPU falls behind, so a measure taken while playing only stands
+	 * until one taken while paused (e.g. when the window moved to another display).
+	 */
+	private measureRefreshRate() {
+		if (this.measuringRefreshRate) {
+			this.remeasureRefreshRate = true;
+			return;
+		}
+		this.measuringRefreshRate = true;
+		const playing = this.player.playing;
+		const playStarts = this.playStarts;
+		void measureRefreshRate().then((rate) => {
+			this.measuringRefreshRate = false;
+			if (this.destroyed) return;
+			const played = playing || this.player.playing || this.playStarts !== playStarts;
+			if (!played || this.refreshRate === undefined) this.refreshRate = rate;
+			if (this.remeasureRefreshRate) {
+				this.remeasureRefreshRate = false;
+				this.measureRefreshRate();
+			}
+		});
 	}
 
 	private syncPlayback() {
+		if (this.playing && !this.player.playing) this.measureRefreshRate();
+		if (!this.playing && this.player.playing) this.playStarts += 1;
 		this.playing = this.player.playing;
 		this.time = this.player.clock.time;
 		this.frame = this.player.clock.frame;
+		this.frameRate = this.player.meter.rate;
 	}
 }
 

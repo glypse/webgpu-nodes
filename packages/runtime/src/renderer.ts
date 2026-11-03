@@ -1,5 +1,6 @@
 import { type ColorSpace, DISPLAY_P3_FIELD, type ShaderProgram, type UniformValue } from "$core";
 
+import { type FrameTiming, GpuTimer } from "./gpu-timer";
 import { Presenter } from "./present";
 import { packBlock } from "./uniforms";
 
@@ -87,6 +88,7 @@ export class CompiledProgram {
 		target: GPUTexture,
 		frame: FrameInputs,
 		colorSpace: ColorSpace,
+		timing?: FrameTiming,
 	) {
 		packBlock(
 			this.program.frame,
@@ -98,8 +100,10 @@ export class CompiledProgram {
 			this.frameData,
 		);
 		this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameData);
+		const timestampWrites = timing?.pass();
 		const pass = encoder.beginRenderPass({
 			colorAttachments: [{ view: target.createView(), loadOp: "clear", storeOp: "store" }],
+			...(timestampWrites ? { timestampWrites } : {}),
 		});
 		pass.setPipeline(this.pipeline);
 		pass.setBindGroup(0, this.bindGroup);
@@ -120,6 +124,8 @@ export class CompiledProgram {
  */
 export class Renderer {
 	readonly presenter: Presenter;
+	/** Times the programs' passes, when the device can. */
+	readonly timer: GpuTimer | undefined;
 	private layout: GPUBindGroupLayout;
 	private pipelineLayout: GPUPipelineLayout;
 	private pipelines = new Map<string, Promise<GPURenderPipeline>>();
@@ -127,6 +133,7 @@ export class Renderer {
 
 	private constructor(readonly device: GPUDevice) {
 		this.presenter = new Presenter(device);
+		this.timer = GpuTimer.create(device);
 		const uniform = {
 			visibility: GPUShaderStage.FRAGMENT,
 			buffer: { type: "uniform" },
@@ -146,7 +153,12 @@ export class Renderer {
 		if (!("gpu" in navigator)) throw new Error("This browser doesn't support WebGPU.");
 		const adapter = await navigator.gpu.requestAdapter();
 		if (!adapter) throw new Error("No WebGPU adapter is available.");
-		return new Renderer(await adapter.requestDevice());
+		const timestamps = adapter.features.has("timestamp-query");
+		return new Renderer(
+			await adapter.requestDevice({
+				requiredFeatures: timestamps ? ["timestamp-query"] : [],
+			}),
+		);
 	}
 
 	/** Resolves when the device is lost (e.g. a driver reset); create a new renderer then. */
