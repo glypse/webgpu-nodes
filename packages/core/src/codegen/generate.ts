@@ -1,12 +1,23 @@
+import type { Asset } from "../assets/assets";
 import { constantAt, type EnumDocument, groupConstants, liveEdges } from "../enums";
 import { type GraphEdge, ROOT_ID } from "../graph/document";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { componentKeys, readComponent } from "../graph/values";
+import {
+	MEDIA_NODE_TYPES,
+	SAMPLE_TEXTURE,
+	TEXTURE_SIZE,
+	textureCoordinates,
+} from "../nodes/texture";
+import { readSource, type TextureSource, TextureSources } from "../passes/sources";
 import type {
 	GroupHandleDef,
 	InputValue,
 	NodeData,
+	SamplerAddress,
+	SamplerFilter,
+	SocketType,
 	TypeBindings,
 	WgslType,
 	ZoneItem,
@@ -17,10 +28,13 @@ import {
 	convertVar,
 	inputControl,
 	inputDefaultType,
+	isTexture,
 	isUniformControl,
 	makeType,
 	typeKind,
 	unavailableEdges,
+	valueType,
+	valueTypes,
 	WGSL_DEFAULTS,
 	wgslTypeName,
 } from "../types";
@@ -39,7 +53,7 @@ import {
 } from "../zones";
 import { HelperRegistry } from "./helpers";
 import { formatWgslLiteral, scalarNumber } from "./literals";
-import { UNIFORMS_VAR } from "./program";
+import { FRAGMENT_VAR, type SamplerBinding, type TextureBinding, UNIFORMS_VAR } from "./program";
 
 // ── Graph walking ────────────────────────────────────────────────────────────
 
@@ -219,7 +233,10 @@ function hashDoc(doc: HashedDocument) {
  * Changes to disconnected nodes or unused group definitions won't change
  * this hash, avoiding unnecessary shader regeneration.
  */
-export function reachableShaderHash(project: { definitions: Map<string, HashedDocument> }): string {
+export function reachableShaderHash(
+	project: { definitions: Map<string, HashedDocument> },
+	assets: readonly Asset[] = [],
+): string {
 	const root = project.definitions.get(ROOT_ID);
 	if (!root) return "";
 
@@ -252,6 +269,8 @@ export function reachableShaderHash(project: { definitions: Map<string, HashedDo
 	}
 
 	return JSON.stringify({
+		// Their metadata (e.g. a video's duration) may be compiled in.
+		assets,
 		root: hashDoc({
 			nodes: root.nodes.filter((n) => reachableRootIds.has(n.id)),
 			edges: root.edges.filter(
@@ -266,12 +285,15 @@ export function reachableShaderHash(project: { definitions: Map<string, HashedDo
 
 export type CodegenGraph = Pick<
 	GraphModel,
-	"root" | "project" | "typeResolver" | "resolveDescriptor" | "resolveNode"
+	"root" | "project" | "typeResolver" | "resolveDescriptor" | "resolveNode" | "assets"
 >;
 
 type LineMap = Map<string, { start: number; end: number }>;
 
-/** A group's generated function: its source, name and parameters' types by handle id. */
+/**
+ * A group's generated function: its source, name and parameters' types by
+ * handle id (its value inputs: a Texture input is no parameter).
+ */
 type GroupDecl = { decl: string; fnName: string; paramTypes: Record<string, WgslType> };
 
 type ShaderState = {
@@ -289,6 +311,15 @@ type ShaderState = {
 	/** The definitions whose input values are uniforms (see `ShaderOptions`). */
 	uniformScopes: ReadonlySet<string>;
 	uniforms: Map<string, UniformValue>;
+	sources: TextureSources;
+	/** The textures the shader reads, by `TextureSource.id`. */
+	textures: Map<string, TextureBinding>;
+	/** The samplers the shader uses, by filter and address. */
+	samplers: Map<string, SamplerBinding>;
+	/** How many variants of each group differ by the textures they read. */
+	textureVariants: Map<string, number>;
+	/** Whether each definition reads textures, itself or through groups it nests. */
+	readsTextures: Map<string, boolean>;
 };
 
 /**
@@ -298,8 +329,13 @@ type ShaderState = {
 export type UniformValue =
 	number | [number, number] | [number, number, number] | [number, number, number, number];
 
-/** A generated fragment and the uniform values it reads. */
-export type ShaderSource = { fragment: string; uniforms: Record<string, UniformValue> };
+/** A generated fragment, the uniform values it reads and the textures it samples. */
+export type ShaderSource = {
+	fragment: string;
+	uniforms: Record<string, UniformValue>;
+	textures: readonly TextureBinding[];
+	samplers: readonly SamplerBinding[];
+};
 
 export type ShaderOptions = {
 	/**
@@ -341,6 +377,8 @@ class BodyEmitter {
 		readonly bindings: TypeBindings = {},
 		/** The state items each zone computes, by Repeat Output id (see `neededEdges`). */
 		readonly liveItems: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
+		/** The group nodes the document is computed through, from the root. */
+		readonly path: readonly string[] = [],
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		this.inputs = doc.inputs ?? [];
@@ -391,7 +429,7 @@ class BodyEmitter {
 			this.incoming(input.id),
 			this.bindings,
 		);
-		return new Map(resolvedOutputs.map((o) => [o.id, o.type]));
+		return new Map(resolvedOutputs.map((o) => [o.id, valueType(o.type)]));
 	}
 
 	private get typeResolver() {
@@ -415,6 +453,11 @@ class BodyEmitter {
 	}
 
 	sourceExpr(edge: GraphEdge): string {
+		if (isTexture(this.typeResolver.inferHandleType(edge, this.bindings))) {
+			return this.sampleAtPixel(
+				readSource(this.state.sources.output(this.path, edge.source, edge.sourceHandle)),
+			);
+		}
 		const sourceNode = this.nodeMap.get(edge.source);
 		if (sourceNode?.type === "group-input") {
 			const constant = this.constants.get(edge.sourceHandle);
@@ -432,8 +475,38 @@ class BodyEmitter {
 		return base;
 	}
 
+	/** The type of an edge's source; a texture's is its colour's, sampled at the pixel. */
 	sourceType(edge: GraphEdge): WgslType {
-		return this.typeResolver.inferHandleType(edge, this.bindings);
+		return valueType(this.typeResolver.inferHandleType(edge, this.bindings));
+	}
+
+	/** A texture linked to a value: its colour at the pixel, stretched over the canvas. */
+	private sampleAtPixel(source: TextureSource): string {
+		const texture = this.textureVar(source);
+		const sampler = this.samplerVar("linear", "clamp");
+		return `textureSampleLevel(${texture}, ${sampler}, ${textureCoordinates(`${FRAGMENT_VAR}.uv`)}, 0.0)`;
+	}
+
+	/** The module-scope texture reading `source`. */
+	textureVar(source: TextureSource): string {
+		const textures = this.state.textures;
+		let binding = textures.get(source.id);
+		if (!binding) {
+			binding = { name: `runtime_texture_${String(textures.size)}`, source };
+			textures.set(source.id, binding);
+		}
+		return binding.name;
+	}
+
+	/** The module-scope sampler filtering and addressing as asked. */
+	samplerVar(filter: SamplerFilter, address: SamplerAddress): string {
+		const key = `${filter}_${address}`;
+		let binding = this.state.samplers.get(key);
+		if (!binding) {
+			binding = { name: `runtime_sampler_${key}`, filter, address };
+			this.state.samplers.set(key, binding);
+		}
+		return binding.name;
 	}
 
 	convertedSource(edge: GraphEdge, target: WgslType): string {
@@ -502,6 +575,13 @@ class BodyEmitter {
 	}
 
 	emitNode(node: GraphNode, indent: string) {
+		const incoming = this.incoming(node.id);
+		const resolved = this.typeResolver.resolveNodeTypes(node, incoming, this.bindings);
+		// A node only textures are read from computes nothing: they're read where they're used.
+		const outputs = resolved.resolvedOutputs;
+		const read = [...(this.readHandles.get(node.id) ?? [])];
+		const texture = (id: string) => isTexture(outputs.find((o) => o.id === id)?.type);
+		if (outputs.length > 0 && read.every(texture)) return;
 		if (node.type === "node-group") {
 			this.emitGroupCall(node, indent);
 			return;
@@ -510,9 +590,17 @@ class BodyEmitter {
 		const graph = this.state.graph;
 		const descriptor = graph.resolveDescriptor(node);
 		const varName = getVarName(node.id);
-		const incoming = this.incoming(node.id);
-		const { inputTypes, outputType, resolvedInputs, resolvedOutputs } =
-			this.typeResolver.resolveNodeTypes(node, incoming, this.bindings);
+		const { resolvedInputs, resolvedOutputs } = resolved;
+		const inputTypes = valueTypes(resolved.inputTypes);
+		const outputType = valueType(resolved.outputType);
+		const textureOf = (id: string) =>
+			this.textureVar(
+				readSource(
+					resolvedInputs.some((i) => i.id === id)
+						? this.state.sources.input(this.path, node.id, id)
+						: this.state.sources.output(this.path, node.id, id),
+				),
+			);
 
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of resolvedOutputs) {
@@ -522,14 +610,17 @@ class BodyEmitter {
 
 		const typeOf = (id: string): WgslType => {
 			const def = resolvedInputs.find((i) => i.id === id);
-			return inputTypes[id] ?? (def ? inputDefaultType(def) : "f32");
+			return inputTypes[id] ?? valueType(def ? inputDefaultType(def) : "f32");
 		};
 
-		// Variadic inputs are pre-converted, non-variadic ones are raw.
+		// Variadic inputs are pre-converted, non-variadic ones are raw; a
+		// Texture input gives its texture.
 		const ctxInputs: Record<string, string[]> = {};
 		for (const inputDef of resolvedInputs) {
 			const edgesForHandle = incoming.filter((e) => e.targetHandle === inputDef.id);
-			if (inputDef.variadic) {
+			if (isTexture(resolved.inputTypes[inputDef.id])) {
+				ctxInputs[inputDef.id] = edgesForHandle.length > 0 ? [textureOf(inputDef.id)] : [];
+			} else if (inputDef.variadic) {
 				ctxInputs[inputDef.id] = edgesForHandle.map((e) =>
 					this.convertedSource(e, typeOf(inputDef.id)),
 				);
@@ -541,6 +632,7 @@ class BodyEmitter {
 
 		const promoteInput = (id: string): string => {
 			const inputDef = resolvedInputs.find((i) => i.id === id);
+			if (isTexture(resolved.inputTypes[id])) return textureOf(id);
 			if (inputDef?.variadic) return (ctxInputs[id] ?? []).join(", ");
 			return this.inputExpr(node, id, typeOf(id), descriptor.defaultData.values?.[id]);
 		};
@@ -561,6 +653,9 @@ class BodyEmitter {
 			constant: (id) => this.constantOf(node, id),
 			param: (key, value) => this.paramExpr(node, key, value),
 			fn: (name, source) => this.state.helpers.define(name, source),
+			texture: textureOf,
+			sampler: (filter, address) => this.samplerVar(filter, address),
+			asset: () => graph.assets.find((a) => a.id === node.data.asset),
 		});
 		this.push(node.id, statements, indent);
 	}
@@ -596,17 +691,16 @@ class BodyEmitter {
 			constants,
 			resolved.bindings,
 			this.readHandles.get(node.id) ?? new Set(),
+			[...this.path, node.id],
 		);
 		if (!decl) return;
 		// Converted to the function's parameters, which its body was emitted for.
-		const args = descriptor.inputs.map((inputDef) =>
-			this.inputExpr(
-				node,
-				inputDef.id,
-				decl.paramTypes[inputDef.id] ?? inputDefaultType(inputDef),
-				defaults?.[inputDef.id],
-			),
-		);
+		const args = descriptor.inputs.flatMap((inputDef) => {
+			const type = decl.paramTypes[inputDef.id];
+			return type === undefined
+				? []
+				: [this.inputExpr(node, inputDef.id, type, defaults?.[inputDef.id])];
+		});
 		this.push(
 			node.id,
 			[`let ${getVarName(node.id)} = ${decl.fnName}(${args.join(", ")});`],
@@ -635,11 +729,12 @@ function inputTypeIn(
 	return (nodeId, inputId) => {
 		const node = nodeMap.get(nodeId);
 		if (!node) return undefined;
-		return state.graph.typeResolver.resolveNodeTypes(
+		const type = state.graph.typeResolver.resolveNodeTypes(
 			node,
 			edgesByTarget.get(nodeId) ?? [],
 			bindings,
 		).inputTypes[inputId];
+		return type === undefined || isTexture(type) ? undefined : type;
 	};
 }
 
@@ -663,6 +758,8 @@ function emitDocumentBody(
 	bindings: TypeBindings = {},
 	/** The seed's input handles to compute; all of them when undefined. */
 	seedHandles?: ReadonlySet<string>,
+	/** The group nodes the document is computed through, from the root. */
+	path: readonly string[] = [],
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -709,6 +806,7 @@ function emitDocumentBody(
 		uniforms,
 		bindings,
 		liveItems,
+		path,
 	);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
@@ -796,6 +894,72 @@ function emitDocumentBody(
 	return emitter;
 }
 
+/** Node types reading or giving textures of their own. */
+const TEXTURE_NODE_TYPES: ReadonlySet<string> = new Set([
+	...MEDIA_NODE_TYPES,
+	SAMPLE_TEXTURE,
+	TEXTURE_SIZE,
+]);
+
+/** Whether a definition reads textures: itself, through its sockets or the groups it nests. */
+function readsTextures(state: ShaderState, definitionRef: string): boolean {
+	const known = state.readsTextures.get(definitionRef);
+	if (known !== undefined) return known;
+	// A group nesting itself reads none through itself.
+	state.readsTextures.set(definitionRef, false);
+	const def = state.graph.project.definitions.get(definitionRef);
+	const texture = (h: GroupHandleDef) => h.type === "texture";
+	const reads =
+		!!def &&
+		(def.inputs.some(texture) ||
+			def.outputs.some(texture) ||
+			def.nodes.some(
+				(n) =>
+					TEXTURE_NODE_TYPES.has(n.type) ||
+					(n.type === "node-group" &&
+						!!n.group &&
+						readsTextures(state, n.group.definitionRef)),
+			));
+	state.readsTextures.set(definitionRef, reads);
+	return reads;
+}
+
+/**
+ * What the textures read by a group instance at `path` are (its own nodes'
+ * and those of the groups it nests): its variants reading other textures
+ * are other functions. Empty for a group reading none.
+ */
+function textureFingerprint(state: ShaderState, definitionRef: string, path: readonly string[]) {
+	if (!readsTextures(state, definitionRef)) return "";
+	const def = state.graph.project.definitions.get(definitionRef);
+	const instance = state.sources.instance(path);
+	if (!def || !instance) return "";
+	const parts: string[] = [];
+	for (const node of def.nodes) {
+		if (node.type === "node-group" && node.group) {
+			const nested = textureFingerprint(state, node.group.definitionRef, [...path, node.id]);
+			if (nested !== "") parts.push(`${node.id}(${nested})`);
+		}
+		const types = state.graph.typeResolver.resolveNodeTypes(
+			node,
+			def.edgesByTarget.get(node.id) ?? [],
+			instance.bindings,
+		);
+		for (const [id, type] of Object.entries(types.inputTypes)) {
+			if (isTexture(type))
+				parts.push(`${node.id}.${id}=${state.sources.input(path, node.id, id).id}`);
+		}
+		for (const output of types.resolvedOutputs) {
+			if (isTexture(output.type)) {
+				parts.push(
+					`${node.id}:${output.id}=${state.sources.output(path, node.id, output.id).id}`,
+				);
+			}
+		}
+	}
+	return parts.join(",");
+}
+
 /** Generate one group's `struct` + `fn` (recursively for nested groups). */
 function emitGroupFunction(
 	state: ShaderState,
@@ -805,6 +969,8 @@ function emitGroupFunction(
 	given: TypeBindings = {},
 	/** The outputs the caller reads; all of them when undefined. */
 	readOutputs?: ReadonlySet<string>,
+	/** The group nodes it's computed through, from the root, the caller last. */
+	path: readonly string[] = [],
 ): GroupDecl | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
@@ -832,6 +998,7 @@ function emitGroupFunction(
 	const unreadIndices = outputHandles.flatMap((h, i) =>
 		readOutputs && !readOutputs.has(h.id) ? [i] : [],
 	);
+	const textures = textureFingerprint(state, definitionRef, path);
 	const key = [
 		definitionRef,
 		...absentIndices,
@@ -841,15 +1008,22 @@ function emitGroupFunction(
 		typeSuffix,
 		"u",
 		...unreadIndices,
+		"x",
+		textures,
 	].join("|");
 	const existing = state.groupDecls.get(key);
 	if (existing) return existing;
 
 	const ident = sanitizeIdent(definitionRef);
+	// Variants reading other textures are numbered, their reads being too long for a name.
+	const textureVariant =
+		textures === "" ? undefined : (state.textureVariants.get(definitionRef) ?? 0);
+	if (textureVariant !== undefined) state.textureVariants.set(definitionRef, textureVariant + 1);
 	const suffix = [
 		...(absentIndices.length > 0 ? [`d${absentIndices.join("_")}`] : []),
 		...enumValues.map((v) => `e${v}`),
 		...(unreadIndices.length > 0 ? [`u${unreadIndices.join("_")}`] : []),
+		...(textureVariant === undefined ? [] : [`x${String(textureVariant)}`]),
 	];
 	const fnName = [`group_${ident}`, ...suffix, ...(typeSuffix ? [`t_${typeSuffix}`] : [])].join(
 		"__",
@@ -868,6 +1042,7 @@ function emitGroupFunction(
 		state.uniformScopes.has(definitionRef),
 		bindings,
 		readHandles,
+		path,
 	);
 
 	// Struct fields follow the handle types; whatever feeds them is converted
@@ -880,22 +1055,36 @@ function emitGroupFunction(
 					bindings,
 				).inputTypes
 			: {};
-	const outputType = (h: GroupHandleDef): WgslType =>
-		boundType(h.type, variables, bindings) ?? outputTypes(outputNodeOf(h))[h.id] ?? "f32";
-	const inputType = (h: GroupHandleDef): WgslType =>
-		boundType(h.type, variables, bindings) ?? "f32";
+	// Textures are no WGSL values: they're read where they're used, never passed.
+	const valueHandles = (
+		handles: readonly GroupHandleDef[],
+		type: (h: GroupHandleDef) => SocketType,
+	) =>
+		handles.flatMap((h) => {
+			const t = type(h);
+			return isTexture(t) ? [] : [{ handle: h, type: t }];
+		});
+	const outputs = valueHandles(
+		outputHandles,
+		(h) =>
+			boundType(h.type, variables, bindings) ?? outputTypes(outputNodeOf(h))[h.id] ?? "f32",
+	);
+	const inputs = valueHandles(
+		inputHandles,
+		(h) => boundType(h.type, variables, bindings) ?? "f32",
+	);
 	// Outputs the caller doesn't read keep their struct field, zeroed.
-	const fieldValues = outputHandles.map((h) => {
-		const node = outputNodeOf(h);
-		return node && readHandles.has(h.id)
-			? body.inputExpr(node, h.id, outputType(h))
-			: WGSL_DEFAULTS[outputType(h)];
+	const fieldValues = outputs.map(({ handle, type }) => {
+		const node = outputNodeOf(handle);
+		return node && readHandles.has(handle.id)
+			? body.inputExpr(node, handle.id, type)
+			: WGSL_DEFAULTS[type];
 	});
-	const structFields = outputHandles
-		.map((h) => `  ${sanitizeIdent(h.id)}: ${wgslTypeName(outputType(h))},`)
+	const structFields = outputs
+		.map(({ handle, type }) => `  ${sanitizeIdent(handle.id)}: ${wgslTypeName(type)},`)
 		.join("\n");
-	const params = inputHandles
-		.map((h) => `${sanitizeIdent(h.id)}: ${wgslTypeName(inputType(h))}`)
+	const params = inputs
+		.map(({ handle, type }) => `${sanitizeIdent(handle.id)}: ${wgslTypeName(type)}`)
 		.join(", ");
 
 	// The specialisations of a definition with the same types share one output struct.
@@ -909,7 +1098,7 @@ function emitGroupFunction(
 		`}`,
 	].join("\n");
 
-	const paramTypes = Object.fromEntries(inputHandles.map((h) => [h.id, inputType(h)]));
+	const paramTypes = Object.fromEntries(inputs.map(({ handle, type }) => [handle.id, type]));
 	const entry = { decl, fnName, paramTypes };
 	state.groupDecls.set(key, entry);
 	return entry;
@@ -921,7 +1110,13 @@ function emitGroupFunction(
 export function generateShader(
 	graph: CodegenGraph,
 	{ uniformScopes = [] }: ShaderOptions = {},
-): { shader: string; lineMap: LineMap; uniforms: Record<string, UniformValue> } {
+): {
+	shader: string;
+	lineMap: LineMap;
+	uniforms: Record<string, UniformValue>;
+	textures: TextureBinding[];
+	samplers: SamplerBinding[];
+} {
 	const state: ShaderState = {
 		graph,
 		helpers: new HelperRegistry(),
@@ -929,6 +1124,11 @@ export function generateShader(
 		groupStructs: new Set(),
 		uniformScopes: new Set(uniformScopes),
 		uniforms: new Map(),
+		sources: new TextureSources(graph),
+		textures: new Map(),
+		samplers: new Map(),
+		textureVariants: new Map(),
+		readsTextures: new Map(),
 	};
 
 	const body = emitDocumentBody(
@@ -966,5 +1166,11 @@ export function generateShader(
 		"}",
 	].join("\n");
 
-	return { shader, lineMap, uniforms: Object.fromEntries(state.uniforms) };
+	return {
+		shader,
+		lineMap,
+		uniforms: Object.fromEntries(state.uniforms),
+		textures: [...state.textures.values()],
+		samplers: [...state.samplers.values()],
+	};
 }

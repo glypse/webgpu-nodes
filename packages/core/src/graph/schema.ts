@@ -1,12 +1,12 @@
 import * as v from "valibot";
 
-import { AssetSchema } from "../assets/assets";
+import { ASSET_KINDS, AssetSchema, VideoPlaybackSchema } from "../assets/assets";
 import { COLOR_MODES } from "../color/modes";
 import { CURVE_POINT_KINDS } from "../curve";
 import { FRAME_TINTS } from "../frames/analysis";
 import { NODE_TYPES } from "../nodes/registry";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
-import { COLOR_DISPLAYS, type NodeWidget, WGSL_TYPES } from "../types";
+import { COLOR_DISPLAYS, type NodeWidget, SOCKET_TYPES, WGSL_TYPES } from "../types";
 import { defaultSettings, ProjectSettingsSchema } from "./settings";
 
 const PositionSchema = v.object({
@@ -45,18 +45,22 @@ const HandleFields = {
 
 const HandleSchema = v.object({ ...HandleFields, type: v.picklist(WGSL_TYPES) });
 
-const SocketTypeSchema = v.union([
-	v.picklist(WGSL_TYPES),
+const VariableTypeSchemas = [
 	v.strictObject({ variable: v.string() }),
 	v.strictObject({ inferred: v.literal(true) }),
-]);
+] as const;
 
-const ZoneItemSchema = v.object({ ...HandleFields, type: SocketTypeSchema });
+const HandleTypeSchema = v.union([v.picklist(SOCKET_TYPES), ...VariableTypeSchemas]);
+
+const ZoneItemSchema = v.object({
+	...HandleFields,
+	type: v.union([v.picklist(WGSL_TYPES), ...VariableTypeSchemas]),
+});
 
 const GroupHandleSchema = v.object({
 	...HandleFields,
 	viewer: v.optional(v.literal(true)),
-	type: SocketTypeSchema,
+	type: HandleTypeSchema,
 });
 
 const TypeVariableSchema = v.object({
@@ -91,7 +95,7 @@ const NodeDataSchema = v.strictObject({
 	label: v.optional(v.string()),
 	values: v.optional(v.record(v.string(), InputValueSchema)),
 	settings: v.optional(v.record(v.string(), v.string())),
-	types: v.optional(v.record(v.string(), v.picklist(WGSL_TYPES))),
+	types: v.optional(v.record(v.string(), v.picklist(SOCKET_TYPES))),
 	items: v.optional(v.array(ZoneItemSchema)),
 	pairedOutput: v.optional(v.string()),
 	maxIterations: v.optional(v.number()),
@@ -106,6 +110,7 @@ const NodeDataSchema = v.strictObject({
 	hideLinks: v.optional(v.boolean()),
 	hideUnlinked: v.optional(v.boolean()),
 	asset: v.optional(v.string()),
+	playback: v.optional(VideoPlaybackSchema),
 });
 
 const GraphDocumentNodeSchema = v.object({
@@ -180,4 +185,5 @@ export const NodeWidgetSchema = v.variant("kind", [
 	v.object({ kind: v.literal("curve") }),
 	v.object({ kind: v.literal("code") }),
 	v.object({ kind: v.literal("cases") }),
+	v.object({ kind: v.literal("asset"), media: v.picklist(ASSET_KINDS) }),
 ]) satisfies v.GenericSchema<unknown, NodeWidget>;

@@ -59,6 +59,14 @@
 	/** Links breaking zone rules are drawn red and ignored by codegen. */
 	const invalid = $derived(graph.isEdgeInvalid(id));
 
+	/** Textures are drawn thicker; one linked to a value is sampled at the pixel, which a tag tells. */
+	const texture = $derived(sourceType === "texture");
+	const conversion = $derived(
+		texture && targetType !== "texture"
+			? { label: "sample", title: "Sampled at the pixel: its colour there" }
+			: undefined,
+	);
+
 	/** Length of the dashed stubs a hidden link is drawn as, at both its ends. */
 	const STUB = 14;
 	/** Vertical distance between the tags of hidden links reaching one input. */
@@ -185,7 +193,7 @@
 				d={path}
 				fill="none"
 				stroke="url(#edge-gradient-{id})"
-				stroke-width="1"
+				stroke-width={texture ? 2.5 : 1}
 				class="transition-opacity {selected ? 'opacity-100' : 'opacity-60'}"
 			/>
 		{/if}
@@ -208,6 +216,14 @@
 					? 'opacity-100'
 					: 'opacity-80'}"
 			/>
+		{/if}
+
+		{#if conversion && !invalid}
+			<g transform="translate({midX} {midY})" class="link-conversion">
+				<title>{conversion.title}</title>
+				<rect x="-18" y="-7" width="36" height="14" rx="7" />
+				<text text-anchor="middle" dominant-baseline="central">{conversion.label}</text>
+			</g>
 		{/if}
 
 		<!-- Invisible interaction path for click/hover detection -->

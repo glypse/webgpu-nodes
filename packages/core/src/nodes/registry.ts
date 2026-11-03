@@ -96,6 +96,12 @@ const DESCRIPTORS = {
 	// Color
 	"display-gamut-clip": nodes.displayGamutClipNode,
 
+	// Texture
+	[nodes.IMAGE]: nodes.imageNode,
+	[nodes.VIDEO]: nodes.videoNode,
+	[nodes.SAMPLE_TEXTURE]: nodes.sampleTextureNode,
+	[nodes.TEXTURE_SIZE]: nodes.textureSizeNode,
+
 	// Misc
 	reroute: nodes.rerouteNode,
 	[nodes.CUSTOM_WGSL]: nodes.buildCustomWgslDescriptor({}),

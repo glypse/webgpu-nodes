@@ -7,9 +7,9 @@ import {
 	type InputValue,
 	type NodeDescriptor,
 	type NodeInputDef,
+	SOCKET_TYPES,
+	type SocketType,
 	type TypeVariable,
-	WGSL_TYPES,
-	type WgslType,
 } from "../types";
 import { fallbackHandleIds } from "./logic";
 
@@ -25,13 +25,13 @@ function socketTypes(
 ): Pick<NodeInputDef, "types" | "family"> {
 	const type = handle.type;
 	if (typeof type === "string") return { types: [type] };
-	if ("inferred" in type) return { types: WGSL_TYPES, family: `inferred:${handle.id}` };
+	if ("inferred" in type) return { types: SOCKET_TYPES, family: `inferred:${handle.id}` };
 	const variable = variables.find((v) => v.id === type.variable);
 	return { types: variable?.types ?? ["f32"], family: type.variable };
 }
 
 /** The type a socket has where nothing decides it: a variable's first type. */
-function defaultType(handle: GroupHandleDef, variables: readonly TypeVariable[]): WgslType {
+function defaultType(handle: GroupHandleDef, variables: readonly TypeVariable[]): SocketType {
 	return boundType(handle.type, variables, {}) ?? "f32";
 }
 

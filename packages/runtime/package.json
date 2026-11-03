@@ -20,7 +20,8 @@
 	},
 	"dependencies": {
 		"$core": "workspace:*",
-		"@webgpu/types": "^0.1.74"
+		"@webgpu/types": "^0.1.74",
+		"mediabunny": "^1.62.1"
 	},
 	"devDependencies": {
 		"@types/bun": "catalog:",

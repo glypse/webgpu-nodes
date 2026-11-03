@@ -5,6 +5,7 @@ import {
 	type FrameInputs,
 	type FrameRate,
 	measureRefreshRate,
+	type MediaFiles,
 	Player,
 	ProgramError,
 	Renderer,
@@ -83,8 +84,9 @@ export class Preview {
 
 	private source: ShaderSource | undefined;
 	private program: CompiledProgram | undefined;
-	/** The code of the newest program asked for, compiled or not. */
+	/** The code and textures of the newest program asked for, compiled or not. */
 	private programCode: string | undefined;
+	private mediaFiles: MediaFiles = () => undefined;
 	private destroyed = false;
 	private measuringRefreshRate = false;
 	/** Whether a pause came while measuring the refresh rate, which then measures again. */
@@ -176,21 +178,30 @@ export class Preview {
 		this.syncPlayback();
 	}
 
+	/** Read the files of the project's assets from `files`, and draw again with them. */
+	setMediaFiles(files: MediaFiles) {
+		this.mediaFiles = files;
+		this.renderer?.media.setFiles(files);
+		this.player.invalidate();
+	}
+
 	/** Show a newly generated shader; uniform-only changes skip recompiling. */
 	setSource(source: ShaderSource) {
 		this.source = source;
-		const program = buildProgram(source.fragment, source.uniforms);
-		if (program.code === this.programCode) {
+		const program = buildProgram(source.fragment, source.uniforms, source);
+		// The same code may read other textures, which its bindings are made for.
+		const key = `${program.code}\n${program.textures.map((t) => t.source.id).join("\n")}`;
+		if (key === this.programCode) {
 			this.program?.setUniforms(source.uniforms);
 			this.player.invalidate();
 			return;
 		}
-		this.programCode = program.code;
+		this.programCode = key;
 		void this.ensureRenderer()
 			.then((renderer) => renderer.compile(program))
 			.then(
 				(compiled) => {
-					if (this.programCode !== program.code || this.destroyed) {
+					if (this.programCode !== key || this.destroyed) {
 						compiled.destroy();
 						return;
 					}
@@ -201,7 +212,7 @@ export class Preview {
 					this.player.invalidate();
 				},
 				(error: unknown) => {
-					if (this.programCode !== program.code) return;
+					if (this.programCode !== key) return;
 					this.error = describeError(error);
 				},
 			);
@@ -277,6 +288,10 @@ export class Preview {
 		this.rendererRequest ??= Renderer.create().then(
 			(renderer) => {
 				this.renderer = renderer;
+				renderer.media.setFiles(this.mediaFiles);
+				renderer.media.onChange = () => {
+					this.player.invalidate();
+				};
 				void renderer.lost.then((info) => {
 					this.recover(info);
 				});

@@ -23,7 +23,7 @@ export type GraphDocument = {
 	/** Per-document camera (pan + zoom), persisted so navigating between
 	 *  subgraphs restores the previous view instead of sharing one global viewport. */
 	viewport?: Viewport;
-	/** Types the group's sockets share, each group node deciding which (see `SocketType`). */
+	/** Types the group's sockets share, each group node deciding which (see `HandleType`). */
 	typeVariables?: TypeVariable[];
 	/** A group's inputs, which its Group Input nodes show. */
 	inputs?: GroupHandleDef[];

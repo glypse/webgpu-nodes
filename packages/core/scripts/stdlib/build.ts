@@ -31,7 +31,7 @@ import {
 	parseLibraryRef,
 	standardLibrary,
 } from "../../src/library";
-import { nagaBin, validateFragment } from "../../src/testing/wgsl";
+import { fragmentOf, nagaBin, validateFragment } from "../../src/testing/wgsl";
 import type { NodeWidget } from "../../src/types";
 import { groupBuilder, type GroupSpec, type ResolvedGroup } from "./builder";
 import described from "./groups";
@@ -224,8 +224,10 @@ export function validateGroups(groups: readonly BuiltGroup[]): string[] {
 		}
 		for (const { name, root } of cases) {
 			try {
-				const { shader } = generateShader(new GraphModel(projectOf(groups, root)));
-				const error = nagaBin ? validateFragment(shader) : null;
+				const { fragment, uniforms, ...resources } = fragmentOf(
+					generateShader(new GraphModel(projectOf(groups, root))),
+				);
+				const error = nagaBin ? validateFragment(fragment, uniforms, resources) : null;
 				if (error) errors.push(`${group.spec.id}, ${name}:\n${error}`);
 			} catch (error) {
 				errors.push(`${group.spec.id}, ${name}: ${String(error)}`);

@@ -9,6 +9,7 @@ import {
 	WGSL_TYPES,
 } from "../types";
 import { binaryNode, unaryFn } from "./builders";
+import { SAMPLE_TEXTURE, SAMPLE_TEXTURE_UV } from "./texture";
 
 const COMPARE_SETTING = defineSetting({
 	key: "op",
@@ -187,6 +188,7 @@ export function fallbackHandleIds(
 	const isFallback = (target: string, handle: string): boolean => {
 		const node = nodesById.get(target);
 		if (node?.type === "fallback") return handle === "value";
+		if (node?.type === SAMPLE_TEXTURE) return handle === SAMPLE_TEXTURE_UV;
 		if (node?.type === "reroute") {
 			return definition.edges.some(
 				(e) => e.source === target && isFallback(e.target, e.targetHandle),

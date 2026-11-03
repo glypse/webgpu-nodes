@@ -1,18 +1,20 @@
 <script lang="ts">
 	import {
+		type HandleType,
 		inputControl,
 		type InputValue,
 		interfaceOf,
+		isTexture,
 		isZoneNodeType,
 		NEW_ITEM_HANDLE,
 		type NodeData,
 		type NodeSetting,
 		settingValue as storedSetting,
 		sideOf,
+		SOCKET_TYPES,
+		socketKind,
 		type SocketType,
-		typeKind,
 		WGSL_TYPES,
-		type WgslType,
 		zoneItems,
 	} from "$core";
 	import { Button, Select } from "$theme";
@@ -27,6 +29,7 @@
 	import { getGraphManager } from "../graph-manager.svelte";
 	import TypePicker from "./TypePicker.svelte";
 	import InputEditor from "./controls/InputEditor.svelte";
+	import AssetWidget from "./widgets/AssetWidget.svelte";
 	import CasesWidget from "./widgets/CasesWidget.svelte";
 	import CodeWidget from "./widgets/CodeWidget.svelte";
 	import ColorWidget from "./widgets/ColorWidget.svelte";
@@ -52,6 +55,9 @@
 	const nodeLocked = $derived(fullNode?.group?.locked ?? false);
 
 	const outdated = $derived(graph.outdatedLibraryVersion(id));
+	const missingFile = $derived(
+		graph.missingAsset(id, (asset) => graph.assetFiles.get(asset) !== undefined),
+	);
 	const outdatedMessage = $derived(
 		outdated?.archived
 			? `Uses an older version of ${outdated.label}, kept as it was saved. Add a new ${outdated.label} node for the latest version.`
@@ -118,7 +124,7 @@
 			: [],
 	);
 
-	function pickType(type: WgslType) {
+	function pickType(type: SocketType) {
 		graph.setNodeType(id, type);
 	}
 
@@ -139,11 +145,11 @@
 		graph.setSetting(id, setting.key, value);
 	}
 
-	function resolvedInputType(inputDef: { id: string }): WgslType {
+	function resolvedInputType(inputDef: { id: string }): SocketType {
 		return graph.resolveInputType(id, inputDef.id, view.path);
 	}
 
-	function handleStyle(type: WgslType): string {
+	function handleStyle(type: SocketType): string {
 		return `--handle-color: var(--color-${type})`;
 	}
 
@@ -160,7 +166,7 @@
 	const sharedTypes: Record<string, string> = $derived.by(() => {
 		const side = sideOf({ type: nodeType });
 		const zoneOutput = zoneId && graph.zoneAnalysis(view.document).zones.get(zoneId)?.outputId;
-		const handles: readonly { id: string; type: SocketType }[] = side
+		const handles: readonly { id: string; type: HandleType }[] = side
 			? interfaceOf(view.document, side)
 			: zoneItems(view.document.nodesById.get(zoneOutput ?? ""));
 		const variables = view.document.typeVariables;
@@ -175,17 +181,20 @@
 		);
 	});
 
-	function addZoneItem(type: WgslType) {
-		if (zoneId) graph.addZoneItem(zoneId, type);
+	function addZoneItem(type: SocketType) {
+		if (zoneId && type !== "texture") graph.addZoneItem(zoneId, type);
 	}
 
-	function addHandle(type: WgslType) {
+	function addHandle(type: SocketType) {
 		graph.addBoundaryHandle(id, type);
 	}
 </script>
 
-{#snippet addHandleButton(onPick: (type: WgslType) => void = addHandle)}
-	<TypePicker types={WGSL_TYPES} label="+" class="w-full" title="Add a value" onpick={onPick} />
+{#snippet addHandleButton(
+	onPick: (type: SocketType) => void = addHandle,
+	types: readonly SocketType[] = SOCKET_TYPES,
+)}
+	<TypePicker {types} label="+" class="w-full" title="Add a socket" onpick={onPick} />
 {/snippet}
 
 {#if nodeType === "reroute"}
@@ -210,14 +219,14 @@
 			type="target"
 			position={Position.Left}
 			id="in"
-			class="node-shell__handle reroute__handle kind-{typeKind(rerouteType)}"
+			class="node-shell__handle reroute__handle kind-{socketKind(rerouteType)}"
 			style={handleStyle(rerouteType)}
 		/>
 		<Handle
 			type="source"
 			position={Position.Right}
 			id="out"
-			class="node-shell__handle reroute__handle reroute__handle--out kind-{typeKind(
+			class="node-shell__handle reroute__handle reroute__handle--out kind-{socketKind(
 				rerouteType,
 			)}"
 			style={handleStyle(rerouteType)}
@@ -245,6 +254,14 @@
 				{/if}
 				{#if outdated}
 					<span class="text-amber-500" title={outdatedMessage}>
+						<WarningIcon class="size-4" weight="fill" />
+					</span>
+				{/if}
+				{#if missingFile}
+					<span
+						class="text-amber-500"
+						title="Its file is missing: it reads a transparent image. Pick another one, or replace the asset's file in the Assets area."
+					>
 						<WarningIcon class="size-4" weight="fill" />
 					</span>
 				{/if}
@@ -320,7 +337,8 @@
 					disabled={isLocked}
 					class="flex-1"
 					title="The type of {choice.variable.name}"
-					onpick={(type: WgslType) => graph.setVariableType(id, choice.variable.id, type)}
+					onpick={(type: SocketType) =>
+						type !== "texture" && graph.setVariableType(id, choice.variable.id, type)}
 					onreset={() => graph.setVariableType(id, choice.variable.id, undefined)}
 				/>
 			</div>
@@ -364,7 +382,7 @@
 						type="source"
 						position={Position.Right}
 						id={outputDef.id}
-						class="node-shell__handle kind-{typeKind(outputDef.type)}"
+						class="node-shell__handle kind-{socketKind(outputDef.type)}"
 						style={handleStyle(outputDef.type)}
 					/>
 				</div>
@@ -404,6 +422,8 @@
 			<CodeWidget {id} {data} disabled={isLocked} />
 		{:else if descriptor.widget?.kind === "cases"}
 			<CasesWidget {id} {data} disabled={isLocked} />
+		{:else if descriptor.widget?.kind === "asset"}
+			<AssetWidget {id} media={descriptor.widget.media} {data} disabled={isLocked} />
 		{/if}
 
 		<div class="node-shell__inputs">
@@ -427,9 +447,9 @@
 						type="target"
 						position={Position.Left}
 						id={inputDef.id}
-						class="node-shell__handle kind-{typeKind(effectiveType)} {inputDef.variadic
-							? 'variadic'
-							: ''}"
+						class="node-shell__handle kind-{socketKind(
+							effectiveType,
+						)} {inputDef.variadic ? 'variadic' : ''}"
 						style={handleStyle(effectiveType)}
 					/>
 					{#if inputDef.variadic}
@@ -458,6 +478,11 @@
 						<span class="node-shell__handle-label">
 							{inputLabel}: {effectiveType}
 							<span class="opacity-60">(default)</span>
+						</span>
+					{:else if isTexture(effectiveType)}
+						<span class="node-shell__handle-label">
+							{inputLabel}: {effectiveType}
+							<span class="opacity-60">(none)</span>
 						</span>
 					{:else}
 						{@const control = inputControl(inputDef, effectiveType)}
@@ -495,7 +520,7 @@
 					/>
 					<span class="node-shell__handle-label opacity-60">new item</span>
 				</div>
-				{@render addHandleButton(addZoneItem)}
+				{@render addHandleButton(addZoneItem, WGSL_TYPES)}
 			{/if}
 		</div>
 	</div>

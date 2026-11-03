@@ -26,11 +26,11 @@ import {
 	type ColorDisplay,
 	type EnumVariant,
 	type GroupHandleDef,
+	type HandleType,
 	type InputValue,
 	type NodeData,
 	type NodeInputDef,
 	type NodeWidget,
-	type SocketType,
 	type TypeVariable,
 	type WgslType,
 	type ZoneItem,
@@ -437,7 +437,7 @@ class Builder<I extends string, O extends string> {
 		return id;
 	}
 
-	input(key: I, type: SocketType, options: InputOptions = {}): Ref {
+	input(key: I, type: HandleType, options: InputOptions = {}): Ref {
 		const id = this.addInput(key, {
 			label: options.label ?? key,
 			type,
@@ -481,7 +481,7 @@ class Builder<I extends string, O extends string> {
 		return { node: GROUP_INPUT, handle: id, variants: list };
 	}
 
-	output(key: O, source: Operand, type: SocketType, options: { label?: string } = {}): void {
+	output(key: O, source: Operand, type: HandleType, options: { label?: string } = {}): void {
 		if (this.outputKeys.has(key)) throw new Error(`${this.id}: output "${key}" added twice`);
 		const id = handleId(this.id, "out", key);
 		this.outputKeys.set(key, id);

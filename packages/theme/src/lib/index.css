@@ -63,6 +63,7 @@
 	--color-vec2b: var(--color-vec2f);
 	--color-vec3b: var(--color-vec3f);
 	--color-vec4b: var(--color-vec4f);
+	--color-texture: var(--color-sky-500);
 
 	/* Zones (loops): bubble drawn under the nodes they enclose. */
 	--color-zone-repeat: oklch(0.55 0 0);
@@ -152,6 +153,7 @@
 	--color-vec2f: var(--color-vec2f);
 	--color-vec3f: var(--color-vec3f);
 	--color-vec4f: var(--color-vec4f);
+	--color-texture: var(--color-texture);
 	--color-zone-repeat: var(--color-zone-repeat);
 }
 

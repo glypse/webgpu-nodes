@@ -65,7 +65,7 @@
 	);
 
 	$effect(() => {
-		const hash = `${uniformScopes.join(",")}|${reachableShaderHash(graph.project)}`;
+		const hash = `${uniformScopes.join(",")}|${reachableShaderHash(graph.project, graph.assets)}`;
 		if (hash === prevHash) return;
 		prevHash = hash;
 		let generated: ReturnType<typeof generateShader>;
@@ -76,13 +76,25 @@
 			console.error("[shader] generation failed", error);
 			return;
 		}
-		preview.setSource({ fragment: generated.shader, uniforms: generated.uniforms });
+		preview.setSource({
+			fragment: generated.shader,
+			uniforms: generated.uniforms,
+			textures: generated.textures,
+			samplers: generated.samplers,
+		});
 		if (devTools.enabled && generated.shader !== prevFragment) {
 			console.groupCollapsed("[shader debug]");
 			console.log("// Compiled fragment shader:\n", generated.shader);
 			console.groupEnd();
 		}
 		prevFragment = generated.shader;
+	});
+
+	// Media are decoded from the assets' files, which change outside the model.
+	$effect(() => {
+		const files = graph.assetFiles;
+		for (const asset of graph.assets) files.get(asset.id);
+		preview.setMediaFiles((id) => files.get(id));
 	});
 
 	// A node's sheet goes with it.

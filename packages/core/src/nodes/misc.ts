@@ -1,5 +1,5 @@
 import { LAYOUT_FRAME } from "../frames/analysis";
-import { defineNode, type NodeData, WGSL_TYPES } from "../types";
+import { defineNode, type NodeData, SOCKET_TYPES } from "../types";
 
 // ── Standalone nodes (unique patterns) ───────────────────────────────────────
 
@@ -21,7 +21,7 @@ export const rerouteNode = defineNode({
 	label: "Reroute",
 	aliases: ["Null", "Knot", "Dot", "Passthrough"],
 	category: "misc",
-	inputs: [{ id: "in", label: "in", types: WGSL_TYPES }],
+	inputs: [{ id: "in", label: "in", types: SOCKET_TYPES }],
 	outputs: [{ id: "out", label: "out", type: "f32" }],
 	defaultData: {},
 	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("in")};`],

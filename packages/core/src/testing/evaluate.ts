@@ -13,6 +13,7 @@ import {
 	type TypeBindings,
 	typeComponents,
 	typeKind,
+	valueType,
 	type WgslType,
 } from "../types";
 import {
@@ -171,7 +172,7 @@ function typesIn(model: GraphModel, frame: Frame, node: GraphNode): ResolvedNode
 }
 
 function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value {
-	const type = typesIn(model, frame, node).inputTypes[inputId] ?? "f32";
+	const type = valueType(typesIn(model, frame, node).inputTypes[inputId] ?? "f32");
 	const width = typeComponents(type);
 	const edge = frame.doc.edgesByTarget.get(node.id)?.find((e) => e.targetHandle === inputId);
 	if (edge)
@@ -202,8 +203,9 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 	const type = node.type;
 	const get = (id: string) => input(model, frame, node, id);
 	const resolved = typesIn(model, frame, node);
-	const outputType =
-		resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType;
+	const outputType = valueType(
+		resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType,
+	);
 	const width = typeComponents(outputType);
 	const integer = typeKind(outputType) === "i32" || typeKind(outputType) === "u32";
 
@@ -270,10 +272,12 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		case "separate-vector":
 			return [get("v")["xyzw".indexOf(handleId)] ?? 0];
 		case COMPONENT_COUNT:
-			return [typeComponents(resolved.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32")];
+			return [typeComponents(valueType(resolved.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32"))];
 		case "width-switch":
 			return get(
-				caseHandle(typeComponents(resolved.inputTypes[WIDTH_SWITCH_VALUE] ?? "f32")),
+				caseHandle(
+					typeComponents(valueType(resolved.inputTypes[WIDTH_SWITCH_VALUE] ?? "f32")),
+				),
 			);
 		case "distance":
 			return [Math.hypot(...zip([get("e1"), get("e2")], (a, b) => a - b))];

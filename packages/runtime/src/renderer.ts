@@ -1,6 +1,14 @@
-import { type ColorSpace, DISPLAY_P3_FIELD, type ShaderProgram, type UniformValue } from "$core";
+import {
+	type ColorSpace,
+	DISPLAY_P3_FIELD,
+	type SamplerAddress,
+	type SamplerFilter,
+	type ShaderProgram,
+	type UniformValue,
+} from "$core";
 
 import { type FrameTiming, GpuTimer } from "./gpu-timer";
+import { MediaLibrary } from "./media";
 import { Presenter } from "./present";
 import { packBlock } from "./uniforms";
 
@@ -40,18 +48,31 @@ const READBACK_FORMAT: GPUTextureFormat = "rgba8unorm";
 /** Compiled pipelines kept for programs not in use, e.g. while switching between documents. */
 const PIPELINE_CACHE_SIZE = 8;
 
+const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
+	clamp: "clamp-to-edge",
+	repeat: "repeat",
+	mirror: "mirror-repeat",
+};
+
+/** A compiled pipeline, and the layout of the resources its program reads. */
+type Pipeline = { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout };
+
 /** A compiled program with its own uniform buffers. */
 export class CompiledProgram {
 	private frameData: ArrayBuffer;
 	private frameBuffer: GPUBuffer;
 	private uniformBuffer: GPUBuffer;
-	private bindGroup: GPUBindGroup;
+	private bindGroup: GPUBindGroup | undefined;
+	/** The textures `bindGroup` binds, in the program's order. */
+	private bound: GPUTexture[] = [];
 
 	constructor(
 		private device: GPUDevice,
 		readonly program: ShaderProgram,
 		readonly pipeline: GPURenderPipeline,
-		layout: GPUBindGroupLayout,
+		private layout: GPUBindGroupLayout,
+		private media: MediaLibrary,
+		private samplers: readonly GPUSampler[],
 	) {
 		this.frameData = new ArrayBuffer(program.frame.size);
 		this.frameBuffer = device.createBuffer({
@@ -62,13 +83,41 @@ export class CompiledProgram {
 			size: program.uniforms.size,
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
-		this.bindGroup = device.createBindGroup({
-			layout,
+	}
+
+	/** The bind group reading the textures shown at `time`, made anew when they change. */
+	private bindGroupAt(time: number): GPUBindGroup {
+		const textures = this.program.textures.map((t) => this.media.texture(t.source, time));
+		if (this.bindGroup && textures.every((t, i) => t === this.bound[i])) return this.bindGroup;
+		this.bound = textures;
+		this.bindGroup = this.device.createBindGroup({
+			layout: this.layout,
 			entries: [
-				{ binding: program.frame.binding, resource: { buffer: this.frameBuffer } },
-				{ binding: program.uniforms.binding, resource: { buffer: this.uniformBuffer } },
+				{ binding: this.program.frame.binding, resource: { buffer: this.frameBuffer } },
+				{
+					binding: this.program.uniforms.binding,
+					resource: { buffer: this.uniformBuffer },
+				},
+				...this.program.textures.map((t, i) => ({
+					binding: t.binding,
+					resource: (textures[i] ?? this.media.emptyTexture).createView(),
+				})),
+				...this.program.samplers.map((s, i) => ({
+					binding: s.binding,
+					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- one per program sampler
+					resource: this.samplers[i]!,
+				})),
 			],
 		});
+		return this.bindGroup;
+	}
+
+	/** Decode the media the program reads at `time` (see `MediaLibrary.prepare`). */
+	prepare(time: number): Promise<void> {
+		return this.media.prepare(
+			this.program.textures.map((t) => t.source),
+			time,
+		);
 	}
 
 	setUniforms(values: Readonly<Record<string, UniformValue>>) {
@@ -106,7 +155,7 @@ export class CompiledProgram {
 			...(timestampWrites ? { timestampWrites } : {}),
 		});
 		pass.setPipeline(this.pipeline);
-		pass.setBindGroup(0, this.bindGroup);
+		pass.setBindGroup(0, this.bindGroupAt(frame.time));
 		pass.draw(3);
 		pass.end();
 	}
@@ -126,26 +175,32 @@ export class Renderer {
 	readonly presenter: Presenter;
 	/** Times the programs' passes, when the device can. */
 	readonly timer: GpuTimer | undefined;
-	private layout: GPUBindGroupLayout;
-	private pipelineLayout: GPUPipelineLayout;
-	private pipelines = new Map<string, Promise<GPURenderPipeline>>();
+	/** The images and videos programs read. */
+	readonly media: MediaLibrary;
+	private pipelines = new Map<string, Promise<Pipeline>>();
+	private samplers = new Map<string, GPUSampler>();
 	private linearTextures = new Map<string, GPUTexture>();
 
 	private constructor(readonly device: GPUDevice) {
 		this.presenter = new Presenter(device);
 		this.timer = GpuTimer.create(device);
-		const uniform = {
-			visibility: GPUShaderStage.FRAGMENT,
-			buffer: { type: "uniform" },
-		} as const;
-		// Bindings 0 and 1 are the frame and uniform blocks of every `ShaderProgram`.
-		this.layout = device.createBindGroupLayout({
-			entries: [
-				{ binding: 0, ...uniform },
-				{ binding: 1, ...uniform },
-			],
-		});
-		this.pipelineLayout = device.createPipelineLayout({ bindGroupLayouts: [this.layout] });
+		this.media = new MediaLibrary(device);
+	}
+
+	private sampler(filter: SamplerFilter, address: SamplerAddress): GPUSampler {
+		const key = `${filter}|${address}`;
+		let sampler = this.samplers.get(key);
+		if (!sampler) {
+			const mode = ADDRESS_MODES[address];
+			sampler = this.device.createSampler({
+				magFilter: filter,
+				minFilter: filter,
+				addressModeU: mode,
+				addressModeV: mode,
+			});
+			this.samplers.set(key, sampler);
+		}
+		return sampler;
 	}
 
 	/** Request a device; throws when WebGPU isn't available. */
@@ -184,10 +239,39 @@ export class Renderer {
 				this.pipelines.delete(old);
 			}
 		}
-		return new CompiledProgram(this.device, program, await pipeline, this.layout);
+		const { pipeline: compiled, layout } = await pipeline;
+		return new CompiledProgram(
+			this.device,
+			program,
+			compiled,
+			layout,
+			this.media,
+			program.samplers.map((s) => this.sampler(s.filter, s.address)),
+		);
 	}
 
-	private async createPipeline(program: ShaderProgram): Promise<GPURenderPipeline> {
+	/** The layout of what `program` reads: its frame and uniform blocks, textures and samplers. */
+	private bindGroupLayout(program: ShaderProgram): GPUBindGroupLayout {
+		const visibility = GPUShaderStage.FRAGMENT;
+		return this.device.createBindGroupLayout({
+			entries: [
+				{ binding: program.frame.binding, visibility, buffer: { type: "uniform" } },
+				{ binding: program.uniforms.binding, visibility, buffer: { type: "uniform" } },
+				...program.textures.map((t) => ({
+					binding: t.binding,
+					visibility,
+					texture: { sampleType: "float" as const },
+				})),
+				...program.samplers.map((s) => ({
+					binding: s.binding,
+					visibility,
+					sampler: { type: "filtering" as const },
+				})),
+			],
+		});
+	}
+
+	private async createPipeline(program: ShaderProgram): Promise<Pipeline> {
 		const module = this.device.createShaderModule({ code: program.code });
 		const info = await module.getCompilationInfo();
 		const errors = info.messages.filter((m) => m.type === "error");
@@ -201,8 +285,9 @@ export class Renderer {
 			);
 		}
 		try {
-			return await this.device.createRenderPipelineAsync({
-				layout: this.pipelineLayout,
+			const layout = this.bindGroupLayout(program);
+			const pipeline = await this.device.createRenderPipelineAsync({
+				layout: this.device.createPipelineLayout({ bindGroupLayouts: [layout] }),
 				vertex: { module, entryPoint: program.vertexEntry },
 				fragment: {
 					module,
@@ -210,6 +295,7 @@ export class Renderer {
 					targets: [{ format: LINEAR_FORMAT }],
 				},
 			});
+			return { pipeline, layout };
 		} catch (error) {
 			const message = error instanceof Error ? error.message : String(error);
 			throw new ProgramError([{ message }], program.code);
@@ -259,6 +345,7 @@ export class Renderer {
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
 		});
 		try {
+			await program.prepare(frame.time);
 			const encoder = this.device.createCommandEncoder();
 			program.encode(encoder, linear, frame, colorSpace);
 			this.presenter.encode(encoder, linear, output.createView(), {
@@ -287,6 +374,7 @@ export class Renderer {
 	destroy() {
 		for (const texture of this.linearTextures.values()) texture.destroy();
 		this.linearTextures.clear();
+		this.media.destroy();
 		this.device.destroy();
 	}
 }

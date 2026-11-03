@@ -13,12 +13,13 @@ import {
 } from "../layout";
 import { defaultDataForType, nodeRegistry, type NodeType } from "../nodes/registry";
 import {
-	isConnectionCompatible,
+	isSocketCompatible,
+	isTexture,
 	type NodeData,
 	type NodeWidget,
 	pickableTypes,
-	typeKind,
-	type WgslType,
+	socketKind,
+	type SocketType,
 	withDefaults,
 } from "../types";
 import { isZoneNodeType, NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
@@ -48,16 +49,18 @@ const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
 	code: 5,
 	// The case count and its buttons.
 	cases: 1,
+	// The thumbnail and the asset picker.
+	asset: 5,
 };
 
 export type TypeChoice = {
-	types: readonly WgslType[];
+	types: readonly SocketType[];
 	/** Whether links can decide the type (otherwise it's always picked). */
 	inferable: boolean;
 	/** The type the user picked, if any. */
-	forced: WgslType | undefined;
+	forced: SocketType | undefined;
 	/** The type the node has without a pick. */
-	inferred: WgslType;
+	inferred: SocketType;
 };
 
 /**
@@ -179,6 +182,15 @@ export class GraphModel extends AssetModel {
 			if (!this.isTypeCompatible(sourceNode, sourceHandle, targetNode, targetHandle)) {
 				return false;
 			}
+		} else if (
+			isTexture(
+				targetHandle === NEW_ITEM_HANDLE
+					? this.resolveOutputHandleType(sourceNode.id, sourceHandle)
+					: this.resolveInputType(targetNode.id, targetHandle),
+			)
+		) {
+			// A zone can't carry a texture.
+			return false;
 		}
 		// A Match node's cases come from its enum: nothing else can pick one.
 		if (
@@ -299,12 +311,16 @@ export class GraphModel extends AssetModel {
 
 		const fresh = this.freshNodeTypes(entry);
 		if (!fresh) return undefined;
-		const rank = (candidates: readonly WgslType[], value: WgslType, valueIsSource: boolean) => {
+		const rank = (
+			candidates: readonly SocketType[],
+			value: SocketType,
+			valueIsSource: boolean,
+		) => {
 			const fits = candidates.filter((t) =>
-				valueIsSource ? isConnectionCompatible(value, t) : isConnectionCompatible(t, value),
+				valueIsSource ? isSocketCompatible(value, t) : isSocketCompatible(t, value),
 			);
 			if (fits.length === 0) return 2;
-			return fits.some((t) => typeKind(t) === typeKind(value)) ? 0 : 1;
+			return fits.some((t) => socketKind(t) === socketKind(value)) ? 0 : 1;
 		};
 		const best = <T extends { id: string }>(items: T[], score: (item: T) => number) => {
 			let found: T | undefined;
@@ -572,7 +588,7 @@ export class GraphModel extends AssetModel {
 	}
 
 	/** Force a node's type (see `typeChoice`), or go back to inference with `undefined`. */
-	setNodeType(nodeId: string, type: WgslType | undefined) {
+	setNodeType(nodeId: string, type: SocketType | undefined) {
 		const node = this.resolveNode(nodeId);
 		if (!node || !this.typeChoice(nodeId)) return;
 		const pickable = pickableTypes(this.resolveDescriptor(node));

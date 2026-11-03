@@ -3,11 +3,12 @@ import type {
 	NodeDescriptor,
 	NodeInputDef,
 	NodeOutputDef,
+	SocketType,
 	TypeBindings,
 	TypeVariable,
 	WgslType,
 } from ".";
-import { boundType, highestType, inputDefaultType, inputFamilyKey } from ".";
+import { boundType, highestType, inputDefaultType, inputFamilyKey, isTexture } from ".";
 import { availableVariants } from "../enums/shape";
 import type {
 	GraphDocumentEdge,
@@ -28,8 +29,8 @@ import {
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export type ResolvedNodeTypes = {
-	inputTypes: Record<string, WgslType>;
-	outputType: WgslType;
+	inputTypes: Record<string, SocketType>;
+	outputType: SocketType;
 	resolvedInputs: NodeInputDef[];
 	resolvedOutputs: NodeOutputDef[];
 	/** On a group node: the types its definition's variables take for it. */
@@ -138,7 +139,7 @@ function resolveZoneNodeTypes(
 ): ResolvedNodeTypes {
 	const doc = definitionOf(node.id, env.definitions());
 	const bound = completeBindings(doc?.typeVariables ?? [], bindings);
-	let types: Record<string, WgslType> = { ...nodeData.types, ...bound };
+	let types: Record<string, SocketType> = { ...nodeData.types, ...bound };
 	if (node.type === REPEAT_INPUT) {
 		const linked = new Set(incoming.map((e) => e.targetHandle));
 		const output = doc?.nodesById.get(pairedOutputId(node) ?? "");
@@ -182,13 +183,15 @@ function resolveGroupNodeTypes(
 		const socket = resolved.resolvedInputs.find((i) => i.family === variable.id);
 		const type = socket ? resolved.inputTypes[socket.id] : node.data.types?.[variable.id];
 		bindings[variable.id] =
-			type && variable.types.includes(type) ? type : (variable.types[0] ?? "f32");
+			type && !isTexture(type) && variable.types.includes(type)
+				? type
+				: (variable.types[0] ?? "f32");
 	}
 	// An inferred output takes the type of what reaches it, on the Group
 	// Output node it's linked on.
 	const outputs = def.nodes.filter((n) => n.type === "group-output");
 	const inferable = def.outputs.some((h) => typeof h.type === "object" && "inferred" in h.type);
-	const innerType = (handleId: string): WgslType | undefined => {
+	const innerType = (handleId: string): SocketType | undefined => {
 		if (!inferable) return undefined;
 		const output =
 			outputs.find((n) =>
@@ -232,8 +235,11 @@ function resolveRegularNodeTypes(
 	// decides which inputs are active, so resolve it before the inputs.
 	let familyOutputType: WgslType | undefined;
 	if (descriptor.typeFamily) {
+		const forced = nodeData.types?.[descriptor.typeFamily.key];
 		familyOutputType =
-			nodeData.types?.[descriptor.typeFamily.key] ?? descriptor.typeFamily.types[0] ?? "f32";
+			(forced && !isTexture(forced) ? forced : undefined) ??
+			descriptor.typeFamily.types[0] ??
+			"f32";
 	}
 	const activeInputs =
 		familyOutputType && descriptor.resolveInputs
@@ -244,8 +250,8 @@ function resolveRegularNodeTypes(
 	const family = (input: NodeInputDef) => familyOf.get(input.id) ?? input.id;
 
 	// Links from outputs their source doesn't have with these bindings don't count.
-	const linkedTypes = new Map<string, WgslType[]>();
-	const sourceTypesOf = (inputId: string): WgslType[] => {
+	const linkedTypes = new Map<string, SocketType[]>();
+	const sourceTypesOf = (inputId: string): SocketType[] => {
 		let types = linkedTypes.get(inputId);
 		if (!types) {
 			types = incoming
@@ -257,7 +263,7 @@ function resolveRegularNodeTypes(
 	};
 
 	// Phase 1: infer each input independently
-	const rawInferred: Record<string, WgslType> = {};
+	const rawInferred: Record<string, SocketType> = {};
 	for (const inputDef of activeInputs) {
 		const familyOverride = nodeOverrides?.[family(inputDef)];
 		if (familyOverride) {
@@ -275,7 +281,10 @@ function resolveRegularNodeTypes(
 	// Phase 2: join every input of a family. Unconnected inputs only count when
 	// the family is overridden, so a lone i32 source isn't widened to f32 by its
 	// unconnected (default-typed) siblings.
-	const familyCandidates = new Map<string, { types: readonly WgslType[]; found: WgslType[] }>();
+	const familyCandidates = new Map<
+		string,
+		{ types: readonly SocketType[]; found: SocketType[] }
+	>();
 	for (const inputDef of activeInputs) {
 		const key = family(inputDef);
 		const entry = familyCandidates.get(key) ?? { types: inputDef.types, found: [] };
@@ -289,48 +298,58 @@ function resolveRegularNodeTypes(
 		if (inferred && (connected || overridden)) entry.found.push(inferred);
 		familyCandidates.set(key, entry);
 	}
-	const familyResolved = new Map<string, WgslType>();
+	const familyResolved = new Map<string, SocketType>();
 	for (const [key, { types, found }] of familyCandidates) {
 		familyResolved.set(key, highestType(found, types));
 	}
 
 	// Phase 3: all inputs in the same family get the family's resolved type
-	const inputTypes: Record<string, WgslType> = {};
+	const inputTypes: Record<string, SocketType> = {};
 	for (const inputDef of activeInputs) {
 		inputTypes[inputDef.id] =
 			familyResolved.get(family(inputDef)) ?? inputDefaultType(inputDef);
 	}
 
-	// Phase 4: resolve output type from the primary input
+	// Phase 4: resolve output type from the primary input. A texture passes
+	// through as it is (reroutes, switches): only values have callbacks.
 	const primary = activeInputs.find((i) => i.id === descriptor.primaryInput) ?? activeInputs[0];
 	const representativeType = primary
 		? (inputTypes[primary.id] ?? inputDefaultType(primary))
 		: (descriptor.outputs[0]?.type ?? "f32");
+	const representative = isTexture(representativeType) ? undefined : representativeType;
 
 	const outputType =
 		familyOutputType ??
-		(descriptor.resolveOutputType
-			? descriptor.resolveOutputType(representativeType, inputTypes)
+		(descriptor.resolveOutputType && representative
+			? descriptor.resolveOutputType(representative, valueTypes(inputTypes))
 			: representativeType);
 
 	// Phase 5: resolve dynamic inputs and outputs. Outputs carry their concrete
 	// type so downstream consumers can read per-handle types directly.
-	const rawOutputs = descriptor.resolveOutputs
-		? descriptor.resolveOutputs(representativeType)
-		: descriptor.outputs;
+	const rawOutputs =
+		descriptor.resolveOutputs && representative
+			? descriptor.resolveOutputs(representative)
+			: descriptor.outputs;
 	const resolvedOutputs = descriptor.staticOutputTypes
 		? rawOutputs
 		: rawOutputs.map((o) => ({ ...o, type: outputType }));
 	const resolvedInputs =
-		familyOutputType === undefined && descriptor.resolveInputs
+		familyOutputType === undefined && descriptor.resolveInputs && !isTexture(outputType)
 			? descriptor.resolveInputs(outputType, nodeData)
 			: activeInputs;
 
 	return { inputTypes, outputType, resolvedInputs, resolvedOutputs };
 }
 
+/** `types` without its textures, which aren't values. */
+export function valueTypes(types: Readonly<Record<string, SocketType>>): Record<string, WgslType> {
+	const values: Record<string, WgslType> = {};
+	for (const [id, type] of Object.entries(types)) if (!isTexture(type)) values[id] = type;
+	return values;
+}
+
 /** The type carried by one output handle of a resolved node. */
-function outputHandleType(resolved: ResolvedNodeTypes, handleId: string): WgslType {
+function outputHandleType(resolved: ResolvedNodeTypes, handleId: string): SocketType {
 	return resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType;
 }
 
@@ -343,7 +362,7 @@ function sourceHandleType(
 	edge: GraphDocumentEdge,
 	env: Env,
 	bindings: TypeBindings,
-): WgslType | undefined {
+): SocketType | undefined {
 	const sourceNode = env.resolveNode(edge.source);
 	if (!sourceNode) return undefined;
 	const resolved = env.resolve(sourceNode, bindings);
@@ -461,7 +480,7 @@ export class TypeResolver {
 	}
 
 	/** The type of an edge's source handle. */
-	inferHandleType(edge: GraphDocumentEdge, bindings: TypeBindings = NO_BINDINGS): WgslType {
+	inferHandleType(edge: GraphDocumentEdge, bindings: TypeBindings = NO_BINDINGS): SocketType {
 		const source = this.env.resolveNode(edge.source);
 		if (!source) return "f32";
 		return outputHandleType(this.env.resolve(source, bindings), edge.sourceHandle);

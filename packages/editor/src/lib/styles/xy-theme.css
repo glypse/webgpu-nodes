@@ -100,12 +100,14 @@
    Each shape is drawn by two layers: ::before is the outline (the card colour,
    like a plain handle's border), ::after the fill, inset by about a pixel.
    Clip-paths can't have borders and rotations would skew SvelteFlow's
-   centring translate, hence the layers. */
+   centring translate, hence the layers. A texture's is a rounded square,
+   larger than a value's. */
 .node-shell__handle {
 	&.kind-f32,
 	&.kind-i32,
 	&.kind-u32,
-	&.kind-bool {
+	&.kind-bool,
+	&.kind-texture {
 		border: none;
 		border-radius: 0;
 		background: transparent;
@@ -141,6 +143,19 @@
 		&::before,
 		&::after {
 			border-radius: 9999px;
+		}
+	}
+
+	&.kind-texture {
+		width: 11px;
+		height: 11px;
+
+		&::before {
+			border-radius: 3px;
+		}
+
+		&::after {
+			border-radius: 2px;
 		}
 	}
 
@@ -310,4 +325,18 @@
 	stroke: var(--background);
 	stroke-width: 3px;
 	stroke-linejoin: round;
+}
+
+/* A link converting what it carries (a texture sampled, a value rendered): a pill at its middle. */
+.link-conversion {
+	rect {
+		fill: var(--card);
+		stroke: var(--color-texture);
+		stroke-width: 1;
+	}
+
+	text {
+		fill: var(--muted-foreground);
+		font-size: 9px;
+	}
 }

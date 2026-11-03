@@ -1,3 +1,5 @@
+import type { TextureSource } from "../passes/sources";
+import type { SamplerAddress, SamplerFilter } from "../types";
 import type { UniformValue } from "./generate";
 
 /** What the generated code reads per draw: the frame's timing and the target's size and gamut. */
@@ -26,6 +28,12 @@ export type UniformBlock = {
 	fields: Readonly<Record<string, UniformField>>;
 };
 
+/** A module-scope `texture_2d<f32>` of a generated fragment, and the image it reads. */
+export type TextureBinding = { name: string; source: TextureSource };
+
+/** A module-scope `sampler` of a generated fragment. */
+export type SamplerBinding = { name: string; filter: SamplerFilter; address: SamplerAddress };
+
 /**
  * A complete WGSL module drawing the graph over a fullscreen triangle, and the
  * buffers it reads. The fragment entry returns a linear, straight-alpha colour.
@@ -41,6 +49,12 @@ export type ShaderProgram = {
 	frame: UniformBlock;
 	/** Fields named after the uniforms `generateShader` returns. */
 	uniforms: UniformBlock;
+	/**
+	 * The textures it reads at `@group(0) @binding(binding)`: linear,
+	 * straight-alpha, filterable float images.
+	 */
+	textures: readonly { binding: number; source: TextureSource }[];
+	samplers: readonly { binding: number; filter: SamplerFilter; address: SamplerAddress }[];
 };
 
 type FieldDecl = { name: string; scalar: UniformScalar; components: 1 | 2 | 3 | 4 };
@@ -82,6 +96,10 @@ function struct(name: string, decls: readonly FieldDecl[]): string {
 export function buildProgram(
 	fragment: string,
 	uniforms: Readonly<Record<string, UniformValue>>,
+	{
+		textures = [],
+		samplers = [],
+	}: { textures?: readonly TextureBinding[]; samplers?: readonly SamplerBinding[] } = {},
 ): ShaderProgram {
 	const uniformDecls: FieldDecl[] = Object.entries(uniforms).map(([name, value]) => ({
 		name,
@@ -92,16 +110,29 @@ export function buildProgram(
 
 	const frame = layout(0, FRAME_FIELDS);
 	const uniformBlock = layout(1, uniformDecls);
+	const textureBindings = textures.map((t, i) => ({ ...t, binding: 2 + i }));
+	const samplerBindings = samplers.map((s, i) => ({ ...s, binding: 2 + textures.length + i }));
+	const resources = [
+		...textureBindings.map(
+			(t) => `@group(0) @binding(${String(t.binding)}) var ${t.name}: texture_2d<f32>;`,
+		),
+		...samplerBindings.map(
+			(s) => `@group(0) @binding(${String(s.binding)}) var ${s.name}: sampler;`,
+		),
+	];
 
 	// uv's origin is the bottom-left corner, y pointing up.
 	const code = `${struct("RuntimeFrame", FRAME_FIELDS)}
 ${struct("RuntimeUniforms", uniformDecls)}
 struct RuntimeFragment {
 	uv: vec2f,
+	/** The pixel's centre, in pixels from the top-left corner. */
+	position: vec2f,
 };
 
 @group(0) @binding(${String(frame.binding)}) var<uniform> ${FRAME_VAR}: RuntimeFrame;
 @group(0) @binding(${String(uniformBlock.binding)}) var<uniform> ${UNIFORMS_VAR}: RuntimeUniforms;
+${resources.join("\n")}
 var<private> ${FRAGMENT_VAR}: RuntimeFragment;
 
 ${fragment}
@@ -120,6 +151,7 @@ fn runtime_vertex(@builtin(vertex_index) index: u32) -> RuntimeVarying {
 @fragment
 fn runtime_fragment_main(in: RuntimeVarying) -> @location(0) vec4f {
 	${FRAGMENT_VAR}.uv = in.uv;
+	${FRAGMENT_VAR}.position = in.position.xy;
 	return frag(in.uv);
 }
 `;
@@ -130,5 +162,11 @@ fn runtime_fragment_main(in: RuntimeVarying) -> @location(0) vec4f {
 		fragmentEntry: "runtime_fragment_main",
 		frame,
 		uniforms: uniformBlock,
+		textures: textureBindings.map(({ binding, source }) => ({ binding, source })),
+		samplers: samplerBindings.map(({ binding, filter, address }) => ({
+			binding,
+			filter,
+			address,
+		})),
 	};
 }

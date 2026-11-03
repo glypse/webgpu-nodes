@@ -8,17 +8,20 @@
 		type GroupHandleDef,
 		groupInputDef,
 		type GroupSide,
+		type HandleType,
 		type InputControl,
 		inputControl,
 		type InputOwner,
 		type InputValue,
+		isTexture,
 		nextVariantValue,
 		ownerExists,
+		SOCKET_TYPES,
 		type SocketType,
 		TYPE_SETS,
 		typeKind,
 		type TypeVariable,
-		WGSL_TYPES,
+		valueType,
 		type WgslType,
 	} from "$core";
 	import { Button, DropdownMenu, Input, Scrubbable, Select, ToggleGroup } from "$theme";
@@ -48,9 +51,9 @@
 	const inputHandles = $derived(definition?.inputs ?? []);
 	const variables = $derived(definition?.typeVariables ?? []);
 
-	/** The type a handle has where nothing decides it (see `boundType`). */
+	/** The value type a handle has where nothing decides it (see `boundType`). */
 	function typeOf(handle: GroupHandleDef): WgslType {
-		return boundType(handle.type, variables, {}) ?? "f32";
+		return valueType(boundType(handle.type, variables, {}) ?? "f32");
 	}
 
 	function variableOf(handle: GroupHandleDef): TypeVariable | undefined {
@@ -78,7 +81,7 @@
 		return typeof handle.type === "object" && "inferred" in handle.type;
 	}
 
-	function setSocketType(side: GroupSide, handle: GroupHandleDef, type: SocketType) {
+	function setSocketType(side: GroupSide, handle: GroupHandleDef, type: HandleType) {
 		if (definitionRef) graph.setHandleType(definitionRef, side, handle.id, type);
 	}
 
@@ -105,7 +108,7 @@
 		{ value: 1, label: "Option 2" },
 	];
 
-	function addInput(type: WgslType, owner: InputOwner | undefined, enumInput = false) {
+	function addInput(type: SocketType, owner: InputOwner | undefined, enumInput = false) {
 		if (!definitionRef) return;
 		graph.addHandle(definitionRef, "input", type, {
 			...(owner ? { owner } : {}),
@@ -206,13 +209,13 @@
 			{@const shared = variableOf(handle)}
 			{@const inferred = isInferred(handle)}
 			<TypePicker
-				types={WGSL_TYPES}
+				types={SOCKET_TYPES}
 				value={typeof handle.type === "string" ? handle.type : undefined}
 				label={shared?.name ?? (inferred ? "Inferred" : undefined)}
 				disabled={locked}
 				class="w-20 shrink-0"
 				title={shared ? `Shares the type ${shared.name}` : "Value type"}
-				onpick={(type: WgslType) => setSocketType(side, handle, type)}
+				onpick={(type: SocketType) => setSocketType(side, handle, type)}
 			>
 				{#snippet extra()}
 					<DropdownMenu.Label>Shared types</DropdownMenu.Label>
@@ -254,7 +257,7 @@
 			onblur={() => commitHandleLabel(side, handle.id)}
 			onkeydown={handleEnterBlur}
 		/>
-		{#if side === "input"}
+		{#if side === "input" && !isTexture(handle.type)}
 			<Button
 				variant="ghost"
 				size="icon-sm"
@@ -418,11 +421,11 @@
 
 {#snippet addInputPicker(owner: InputOwner | undefined)}
 	<TypePicker
-		types={WGSL_TYPES}
+		types={SOCKET_TYPES}
 		label="Add input"
 		title="Add an input"
 		variant={owner ? "ghost" : "outline"}
-		onpick={(type: WgslType) => addInput(type, owner)}
+		onpick={(type: SocketType) => addInput(type, owner)}
 		onpickenum={() => addInput("u32", owner, true)}
 	/>
 {/snippet}
@@ -430,7 +433,7 @@
 {#snippet inputList(side: GroupSide, owner: InputOwner | undefined)}
 	{#each inputsUnder(owner) as handle (handle.id)}
 		{@render handleRow(handle, side, true)}
-		{#if expanded[handle.id]}
+		{#if expanded[handle.id] && !isTexture(handle.type)}
 			{@render inputDetails(handle)}
 		{/if}
 		{#if handle.variants}
@@ -665,10 +668,10 @@
 				{/each}
 				{#if !locked}
 					<TypePicker
-						types={WGSL_TYPES}
+						types={SOCKET_TYPES}
 						label="Add output"
 						title="Add an output"
-						onpick={(type: WgslType) => graph.addHandle(ref, "output", type)}
+						onpick={(type: SocketType) => graph.addHandle(ref, "output", type)}
 					>
 						{#snippet extra()}
 							<DropdownMenu.Item

@@ -1,5 +1,5 @@
 import { nodeRegistry } from "../nodes/registry";
-import { type GroupHandleDef, isConnectionCompatible } from "../types";
+import { type GroupHandleDef, isSocketCompatible } from "../types";
 import type { GraphEdge, HydratedGraphDocument } from "./document";
 import { FrameModel } from "./model-frames";
 
@@ -28,7 +28,7 @@ export abstract class PreviewModel extends FrameModel {
 		const fragInput = nodeRegistry[FRAG_OUTPUT]?.inputs[0];
 		if (!frag || !fragInput) return false;
 		const outputs = this.resolveNodeOutputs(nodeId, path).filter((o) =>
-			fragInput.types.some((t) => isConnectionCompatible(o.type, t)),
+			fragInput.types.some((t) => isSocketCompatible(o.type, t)),
 		);
 		if (outputs.length === 0 || !this.activeDocument.nodesById.has(nodeId)) return false;
 

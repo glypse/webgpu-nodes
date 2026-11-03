@@ -1,4 +1,4 @@
-import { type WgslType, type ZoneItem } from "../types";
+import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
 	DEFAULT_ITERATIONS,
@@ -189,11 +189,8 @@ export abstract class ZoneModel extends GraphModelBase {
 	setZoneItemType(zoneId: string, itemId: string, type: ZoneItem["type"]) {
 		const items = this.getZoneItems(zoneId);
 		const inferred = typeof type === "object" && "inferred" in type;
-		this.pickItemType(
-			zoneId,
-			itemId,
-			inferred ? this.resolveOutputHandleType(zoneId, itemId) : undefined,
-		);
+		const current = this.resolveOutputHandleType(zoneId, itemId);
+		this.pickItemType(zoneId, itemId, inferred && !isTexture(current) ? current : undefined);
 		this.setZoneItems(
 			zoneId,
 			items.map((i) => (i.id === itemId ? { ...i, type } : i)),
@@ -222,7 +219,7 @@ export abstract class ZoneModel extends GraphModelBase {
 		if (!zone || this.isLocked) return;
 		const key = inferredItemFamily(itemId);
 		if (zone.input.data.types?.[key] === type) return;
-		const types = withEntry(zone.input.data.types, key, type);
+		const types = withEntry<SocketType>(zone.input.data.types, key, type);
 		this.patchNodeData(new Map([[zone.input.id, { ...zone.input.data, types }]]));
 	}
 
@@ -256,7 +253,7 @@ export abstract class ZoneModel extends GraphModelBase {
 		const zoneId = this.activeZones.zoneOfBoundary.get(zoneNodeId);
 		if (!zoneId) return true;
 
-		let type: WgslType;
+		let type: SocketType;
 		let label: string | undefined;
 		if (toNew) {
 			type = this.resolveOutputHandleType(connection.source, connection.sourceHandle);
@@ -269,6 +266,8 @@ export abstract class ZoneModel extends GraphModelBase {
 				(i) => i.id === connection.targetHandle,
 			)?.label;
 		}
+		// A zone can't carry a texture.
+		if (isTexture(type)) return true;
 		const item = this.addZoneItem(zoneId, { inferred: true }, label);
 		if (!item) return true;
 		if (!(toNew && connection.target === zoneId)) this.pickItemType(zoneId, item.id, type);

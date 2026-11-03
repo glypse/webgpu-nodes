@@ -336,7 +336,14 @@ describe("add menu sections", () => {
 
 	it("nests entries in their sections under their heading", () => {
 		const texture = groupByHeading(entries).find((g) => g.heading === CATEGORY_LABELS.texture);
-		expect(texture?.entries.map((e) => e.label)).toEqual(["Fractal Voronoi", "Fractal Noise"]);
+		expect(texture?.entries.map((e) => e.label)).toEqual([
+			"Image",
+			"Video",
+			"Sample Texture",
+			"Texture Size",
+			"Fractal Voronoi",
+			"Fractal Noise",
+		]);
 		const helpers = texture?.sections.find((s) => s.name === "Helpers");
 		expect(helpers?.entries.map((e) => e.label)).toContain("Hash");
 		expect(helpers?.sections.map((s) => s.name)).toEqual(["Voronoi", "OpenSimplex"]);

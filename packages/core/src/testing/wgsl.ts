@@ -3,7 +3,12 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { availableParallelism, tmpdir } from "node:os";
 import { join } from "node:path";
 
-import { buildProgram, type UniformValue } from "../codegen";
+import {
+	buildProgram,
+	type SamplerBinding,
+	type TextureBinding,
+	type UniformValue,
+} from "../codegen";
 
 function findNaga(): string | null {
 	const candidates = [
@@ -29,12 +34,13 @@ export const nagaBin = findNaga();
 export function validateFragment(
 	fragment: string,
 	uniforms: Record<string, UniformValue> = {},
+	resources: Pick<Fragment, "textures" | "samplers"> = {},
 ): string | null {
 	if (!nagaBin) throw new Error("naga is not installed");
 	const dir = mkdtempSync(join(tmpdir(), "webgpu-nodes-"));
 	const file = join(dir, "shader.wgsl");
 	try {
-		writeFileSync(file, buildProgram(fragment, uniforms).code);
+		writeFileSync(file, buildProgram(fragment, uniforms, resources).code);
 		const result = spawnSync(nagaBin, [file], { encoding: "utf8" });
 		if (result.status === 0) return null;
 		return `${result.stdout}\n${result.stderr}`.trim();
@@ -43,8 +49,24 @@ export function validateFragment(
 	}
 }
 
-/** A fragment to validate, and the uniforms it reads. */
-export type Fragment = { fragment: string; uniforms?: Record<string, UniformValue> };
+/** A fragment to validate, and the uniforms, textures and samplers it reads. */
+export type Fragment = {
+	fragment: string;
+	uniforms?: Record<string, UniformValue>;
+	textures?: readonly TextureBinding[];
+	samplers?: readonly SamplerBinding[];
+};
+
+/** What `validateFragments` needs of a generated shader. */
+export function fragmentOf(generated: {
+	shader: string;
+	uniforms: Record<string, UniformValue>;
+	textures: readonly TextureBinding[];
+	samplers: readonly SamplerBinding[];
+}): Fragment {
+	const { shader, uniforms, textures, samplers } = generated;
+	return { fragment: shader, uniforms, textures, samplers };
+}
 
 /**
  * `validateFragment` for each of `fragments`, several naga processes at a
@@ -61,9 +83,9 @@ export async function validateFragments(
 	let next = 0;
 	const worker = async () => {
 		for (let i = next++; i < fragments.length; i = next++) {
-			const { fragment, uniforms = {} } = fragments[i] ?? { fragment: "" };
+			const { fragment, uniforms = {}, ...resources } = fragments[i] ?? { fragment: "" };
 			const file = join(dir, `${String(i)}.wgsl`);
-			writeFileSync(file, buildProgram(fragment, uniforms).code);
+			writeFileSync(file, buildProgram(fragment, uniforms, resources).code);
 			const child = Bun.spawn([naga, file], { stdout: "pipe", stderr: "pipe" });
 			const [stdout, stderr, status] = await Promise.all([
 				new Response(child.stdout).text(),

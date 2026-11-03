@@ -1,7 +1,8 @@
+import type { Asset, AssetKind } from "../assets/assets";
 import type { ColorMode } from "../color/modes";
 import type { InputControl } from "./controls";
 import type { NodeData } from "./node-data";
-import { type WgslType } from "./values";
+import { type SocketType, type WgslType } from "./values";
 
 // ─── Handle / descriptor types ───────────────────────────────
 
@@ -57,18 +58,21 @@ export type TypeVariable = {
  * What a group socket carries: a fixed type, the type of one of the
  * group's type variables, or (on an output) whatever reaches it inside.
  */
-export type SocketType = WgslType | { variable: string } | { inferred: true };
+export type HandleType = SocketType | { variable: string } | { inferred: true };
+
+/** A zone item's type: a group socket's, but never a texture (WGSL can't store one). */
+export type ItemType = Exclude<HandleType, "texture">;
 
 /**
  * A repeat zone's state item: a fixed type; in a group, the type of one of
  * its type variables, so a loop carries values as wide as the group's; or
  * (inferred) the type of its initial value.
  */
-export type ZoneItem = Omit<HandleDef, "type"> & { type: SocketType };
+export type ZoneItem = Omit<HandleDef, "type"> & { type: ItemType };
 
 /** A socket of a group's boundary node: a handle whose type may be decided per group node. */
 export type GroupHandleDef = Omit<HandleDef, "type"> & {
-	type: SocketType;
+	type: HandleType;
 	/** On a group output: added to preview a node inside the group, and removed by the next preview. */
 	viewer?: true;
 };
@@ -78,10 +82,10 @@ export type TypeBindings = Readonly<Record<string, WgslType>>;
 
 /** The type a socket has with `bindings`; an inferred one is undefined (it's resolved). */
 export function boundType(
-	type: SocketType,
+	type: HandleType,
 	variables: readonly TypeVariable[],
 	bindings: TypeBindings,
-): WgslType | undefined {
+): SocketType | undefined {
 	if (typeof type === "string") return type;
 	if ("inferred" in type) return undefined;
 	return (
@@ -127,7 +131,7 @@ export type NodeInputDef = {
 	 * their `family` keys are equal, or by default when their `types` are
 	 * (see `inputFamilyKey`).
 	 */
-	types: readonly WgslType[];
+	types: readonly SocketType[];
 	/**
 	 * Puts the input in a family of its own choosing (see `types`), e.g. to
 	 * keep apart inputs accepting the same types that resolve independently.
@@ -145,14 +149,14 @@ export type NodeInputDef = {
 	 */
 	control?: InputControl;
 	/**
-	 * On a group node: the group computes its own value when this socket is
-	 * unlinked (a Fallback node inside it), so no editor is shown for it.
+	 * The node computes its own value when this socket is unlinked (a group
+	 * node, by a Fallback node inside it), so no editor is shown for it.
 	 */
 	fallback?: boolean;
 };
 
 /** Default type for an input: the first type in its `types` array. */
-export function inputDefaultType(input: NodeInputDef): WgslType {
+export function inputDefaultType(input: NodeInputDef): SocketType {
 	return input.types[0] ?? "f32";
 }
 
@@ -174,7 +178,7 @@ export type NodeOutputDef = {
 	/** Stable port identifier. Doubles as the UI handle id and the key edges reference. */
 	id: string;
 	label: string;
-	type: WgslType;
+	type: SocketType;
 };
 
 /** A user-facing enum setting shown on the node (e.g. a comparison operator). */
@@ -201,7 +205,8 @@ export function settingValue(data: NodeData, setting: NodeSetting): string {
  * A larger editor drawn in a node's body, editing the node's data. Each kind
  * has its own component in a front end.
  */
-export type NodeWidget = NodeColorWidget | NodeCurveWidget | NodeCodeWidget | NodeCasesWidget;
+export type NodeWidget =
+	NodeColorWidget | NodeCurveWidget | NodeCodeWidget | NodeCasesWidget | NodeAssetWidget;
 
 /** A hue / saturation wheel and a value ramp, editing the values of a colour's inputs. */
 export type NodeColorWidget = {
@@ -223,6 +228,9 @@ export type NodeCodeWidget = { kind: "code" };
 
 /** How many cases the node has (`NodeData.cases`), added and removed at the end. */
 export type NodeCasesWidget = { kind: "cases" };
+
+/** The project asset of kind `media` the node reads (`NodeData.asset`), and how a video plays. */
+export type NodeAssetWidget = { kind: "asset"; media: AssetKind };
 
 export type ColorWidgetMode = {
 	space: ColorMode;
@@ -262,13 +270,15 @@ export type WgslCtx = {
 	 */
 	inputs: Record<string, string[]>;
 	/**
-	 * The node-wide resolved type for each input handle.
-	 * All inputs in the same TypeFamily share the same resolved type.
+	 * The node-wide resolved type for each value input handle (Texture
+	 * inputs aren't values: see `texture`). All inputs in the same
+	 * TypeFamily share the same resolved type.
 	 */
 	inputTypes: Record<string, WgslType>;
 	/**
 	 * The resolved output type for this node instance.
-	 * Determined by the node's `resolveOutputType` callback.
+	 * Determined by the node's `resolveOutputType` callback. A node whose
+	 * outputs are all textures computes nothing, so it's never emitted.
 	 */
 	outputType: WgslType;
 	/** The active outputs for this node instance (with their resolved types). */
@@ -306,7 +316,21 @@ export type WgslCtx = {
 	 * ask for it by `name`; returns `name`. Same name, same `source`.
 	 */
 	fn: (name: string, source: string) => string;
+	/**
+	 * The texture a Texture socket of the node reads (an input) or gives (an
+	 * output), as a module-scope `texture_2d<f32>` of the shader.
+	 */
+	texture: (id: string) => string;
+	/** A sampler of the shader filtering and addressing as asked. */
+	sampler: (filter: SamplerFilter, address: SamplerAddress) => string;
+	/** The project asset the node reads (`NodeData.asset`), if it exists. */
+	asset: () => Asset | undefined;
 };
+
+export const SAMPLER_FILTERS = ["linear", "nearest"] as const;
+export type SamplerFilter = (typeof SAMPLER_FILTERS)[number];
+export const SAMPLER_ADDRESSES = ["clamp", "repeat", "mirror"] as const;
+export type SamplerAddress = (typeof SAMPLER_ADDRESSES)[number];
 
 /**
  * A node type's behaviour. Its sockets and settings are type parameters, so
@@ -404,7 +428,7 @@ export type OutputDef<O extends string> = NodeOutputDef & { id: O };
  */
 export function pickableTypes(
 	descriptor: NodeDescriptor,
-): { key: string; types: readonly WgslType[]; inferable: boolean } | undefined {
+): { key: string; types: readonly SocketType[]; inferable: boolean } | undefined {
 	const family = descriptor.typeFamily;
 	if (family) return family.types.length < 2 ? undefined : { ...family, inferable: false };
 	const primary =

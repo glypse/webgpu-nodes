@@ -11,8 +11,8 @@ import {
 	type TestEdge,
 	type TestNode,
 } from "../testing/graph";
-import { nagaBin, validateFragment, validateFragments } from "../testing/wgsl";
-import { isConnectionCompatible, type NodeData, WGSL_TYPES, type WgslType } from "../types";
+import { fragmentOf, nagaBin, validateFragment, validateFragments } from "../testing/wgsl";
+import { isSocketCompatible, type NodeData, WGSL_TYPES, type WgslType } from "../types";
 import { registeredNodes } from "./registry";
 
 const SKIPPED = new Set(["frag-output", "node-group"]);
@@ -46,7 +46,7 @@ function* cases(): Generator<{ name: string; nodes: TestNode[]; edges: TestEdge[
 						data: { types: { declare: sourceType }, values: { x: 1, y: 2 } },
 					});
 					for (const input of descriptor.inputs) {
-						if (input.types.some((t) => isConnectionCompatible(sourceType, t))) {
+						if (input.types.some((t) => isSocketCompatible(sourceType, t))) {
 							edges.push(["src", "value", "n", input.id]);
 						}
 					}
@@ -68,10 +68,7 @@ describe.skipIf(!nagaBin)("every node generates valid WGSL for every input type"
 		const scoped = generateShader(model, { uniformScopes: [ROOT_ID] });
 		return {
 			name,
-			fragments: [
-				{ fragment: generateShader(model).shader },
-				{ fragment: scoped.shader, uniforms: scoped.uniforms },
-			],
+			fragments: [fragmentOf(generateShader(model)), fragmentOf(scoped)],
 		};
 	});
 	let errors: (string | null)[] = [];

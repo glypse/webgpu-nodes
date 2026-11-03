@@ -21,6 +21,27 @@ export const WGSL_TYPES = [...FLOAT_TYPES, ...INT_TYPES, ...UINT_TYPES, ...BOOL_
 
 export type WgslType = (typeof WGSL_TYPES)[number];
 
+/**
+ * A Texture socket's type. A texture isn't a WGSL value: every Texture
+ * socket resolves while compiling to one image (a media file, or a value
+ * rendered to a texture), since WGSL can't return, store or `select` one.
+ */
+export const TEXTURE = "texture";
+
+/** What a socket carries: a value of a WGSL type, or a texture. */
+export type SocketType = WgslType | typeof TEXTURE;
+
+export const SOCKET_TYPES: readonly SocketType[] = [...WGSL_TYPES, TEXTURE];
+
+export function isTexture(type: unknown): type is typeof TEXTURE {
+	return type === TEXTURE;
+}
+
+/** The value a socket gives a value input: a texture's colour at the pixel. */
+export function valueType(type: SocketType): WgslType {
+	return type === TEXTURE ? "vec4f" : type;
+}
+
 /** Types supporting arithmetic. Float first so unconnected inputs default to f32. */
 export const NUMERIC_TYPES: readonly WgslType[] = [...FLOAT_TYPES, ...INT_TYPES, ...UINT_TYPES];
 /** Types supporting negation / sign. */
@@ -67,6 +88,11 @@ const KIND_SUFFIX: Record<ScalarKind, string> = { f32: "f", i32: "i", u32: "u", 
 /** Ordering used to pick a common kind: float absorbs ints, ints absorb bools. */
 const KIND_RANK: Record<ScalarKind, number> = { bool: 0, u32: 1, i32: 2, f32: 3 };
 
+/** The kind a socket is drawn by: its scalar kind, or a texture's own. */
+export function socketKind(type: SocketType): ScalarKind | typeof TEXTURE {
+	return type === TEXTURE ? TEXTURE : typeKind(type);
+}
+
 export function isWgslType(value: unknown): value is WgslType {
 	return typeof value === "string" && value in TYPE_INFO;
 }
@@ -110,6 +136,17 @@ export const WGSL_DEFAULTS: Record<WgslType, string> = Object.fromEntries(
  */
 export function isConnectionCompatible(source: WgslType, target: WgslType): boolean {
 	return typeComponents(source) <= typeComponents(target);
+}
+
+/**
+ * `isConnectionCompatible` for sockets. A texture links to a texture, or to
+ * a float value, which samples it at the pixel (its colour, or the
+ * components a narrower value keeps).
+ */
+export function isSocketCompatible(source: SocketType, target: SocketType): boolean {
+	if (target === TEXTURE) return source === TEXTURE;
+	if (source === TEXTURE) return typeKind(target) === "f32" && target !== "vec2f";
+	return isConnectionCompatible(source, target);
 }
 
 const SWIZZLE = ["x", "y", "z", "w"];
@@ -186,10 +223,18 @@ export function fitType(wanted: WgslType, allowed: readonly WgslType[]): WgslTyp
 
 /**
  * Pick the type a family resolves to given its connected source types. With no
- * candidates, the family's default (first) type is used.
+ * candidates, the family's default (first) type is used. A family taking
+ * textures is one when every source is: mixed with values, the textures
+ * are sampled rather than the values rendered.
  */
-export function highestType(candidates: WgslType[], allowed: readonly WgslType[]): WgslType {
+export function highestType(
+	candidates: readonly SocketType[],
+	allowed: readonly SocketType[],
+): SocketType {
 	const fallback = allowed[0] ?? "f32";
 	if (candidates.length === 0) return fallback;
-	return fitType(candidates.reduce(joinTypes), allowed);
+	if (allowed.includes(TEXTURE) && candidates.every(isTexture)) return TEXTURE;
+	const values = allowed.filter((t): t is WgslType => t !== TEXTURE);
+	if (values.length === 0) return fallback;
+	return fitType(candidates.map(valueType).reduce(joinTypes), values);
 }

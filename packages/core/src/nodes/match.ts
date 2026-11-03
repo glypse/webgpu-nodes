@@ -1,5 +1,5 @@
 import { caseHandle, CASES_FAMILY, MATCH, MATCH_SELECTOR } from "../enums";
-import { type EnumVariant, type NodeDescriptor, WGSL_TYPES } from "../types";
+import { type EnumVariant, type NodeDescriptor, SOCKET_TYPES, WGSL_TYPES } from "../types";
 
 /**
  * Pick a value by an enum's variant, one input per variant: the cases follow
@@ -20,7 +20,7 @@ export function buildMatchDescriptor(variants: readonly EnumVariant[] = []): Nod
 			...variants.map((v) => ({
 				id: caseHandle(v.value),
 				label: v.label,
-				types: WGSL_TYPES,
+				types: SOCKET_TYPES,
 				family: CASES_FAMILY,
 			})),
 		],

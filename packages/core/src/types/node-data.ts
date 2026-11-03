@@ -1,7 +1,8 @@
+import type { VideoPlayback } from "../assets/assets";
 import type { CurvePoint } from "../curve/curve";
 import type { FrameTint } from "../frames/analysis";
 import type { HandleDef, ZoneItem } from "./descriptors";
-import type { WgslType } from "./values";
+import type { SocketType } from "./values";
 
 /** One component of an input value. */
 export type ScalarValue = number | boolean;
@@ -24,7 +25,7 @@ export type NodeData = {
 	/** Enum settings shown on the node, by setting key. */
 	settings?: Record<string, string>;
 	/** Types the user forced, by type family key. */
-	types?: Record<string, WgslType>;
+	types?: Record<string, SocketType>;
 	/** A Repeat Output's state items. */
 	items?: ZoneItem[];
 	/** A Repeat Input's partner. */
@@ -52,6 +53,8 @@ export type NodeData = {
 	hideUnlinked?: boolean;
 	/** The project asset the node reads, by id. */
 	asset?: string;
+	/** How a Video node plays its asset (`DEFAULT_PLAYBACK` when absent). */
+	playback?: VideoPlayback;
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

@@ -15,8 +15,10 @@ import {
 	type ColorDisplay,
 	type EnumVariant,
 	type GroupHandleDef,
+	type HandleType,
 	type InputOwner,
 	type InputValue,
+	isTexture,
 	type NodeData,
 	type SocketType,
 	type TypeBindings,
@@ -929,7 +931,7 @@ export abstract class GroupModel extends ZoneModel {
 	addHandle(
 		definitionRef: string,
 		side: GroupSide,
-		type: SocketType,
+		type: HandleType,
 		{ variants, owner }: { variants?: EnumVariant[]; owner?: InputOwner } = {},
 	): GroupHandleDef | undefined {
 		const def = this.project.definitions.get(definitionRef);
@@ -963,7 +965,7 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/** Add an input or output to the group a boundary node is in (see `addHandle`). */
-	addBoundaryHandle(nodeId: string, type: SocketType): GroupHandleDef | undefined {
+	addBoundaryHandle(nodeId: string, type: HandleType): GroupHandleDef | undefined {
 		const side = sideOf(this.resolveNode(nodeId));
 		const ref = this.definitionRefOf(nodeId);
 		return side && ref ? this.addHandle(ref, side, type) : undefined;
@@ -1098,7 +1100,7 @@ export abstract class GroupModel extends ZoneModel {
 	 * Change the type of a group's input or output. Links that no longer fit
 	 * (inside the definition, and on every instance of the group) are removed.
 	 */
-	setHandleType(definitionRef: string, side: GroupSide, handleId: string, type: SocketType) {
+	setHandleType(definitionRef: string, side: GroupSide, handleId: string, type: HandleType) {
 		const def = this.project.definitions.get(definitionRef);
 		const handles = interfaceOf(def, side);
 		if (!def || !handles.some((h) => h.id === handleId)) return;
@@ -1157,7 +1159,7 @@ export abstract class GroupModel extends ZoneModel {
 				: v,
 		);
 		if (patch.types) {
-			const allowed = new Set(patch.types);
+			const allowed = new Set<SocketType>(patch.types);
 			this.forEachInstance(definitionRef, (node) => {
 				const forced = node.data.types?.[variableId];
 				if (!forced || allowed.has(forced)) return node;
@@ -1165,7 +1167,7 @@ export abstract class GroupModel extends ZoneModel {
 					...node,
 					data: {
 						...node.data,
-						types: withEntry<WgslType>(node.data.types, variableId, undefined),
+						types: withEntry<SocketType>(node.data.types, variableId, undefined),
 					},
 				};
 			});
@@ -1221,7 +1223,7 @@ export abstract class GroupModel extends ZoneModel {
 						...node,
 						data: {
 							...node.data,
-							types: withEntry<WgslType>(node.data.types, variableId, undefined),
+							types: withEntry<SocketType>(node.data.types, variableId, undefined),
 						},
 					}
 				: node,
@@ -1271,7 +1273,7 @@ export abstract class GroupModel extends ZoneModel {
 				variable,
 				type: resolved.bindings?.[variable.id] ?? fallback,
 				inferred: inferable ? (unforced.bindings?.[variable.id] ?? fallback) : fallback,
-				forced: node.data.types?.[variable.id],
+				forced: valueTypeOrNone(node.data.types?.[variable.id]),
 				inferable,
 			};
 		});
@@ -1281,7 +1283,9 @@ export abstract class GroupModel extends ZoneModel {
 	setVariableType(nodeId: string, variableId: string, type: WgslType | undefined) {
 		const node = this.resolveNode(nodeId);
 		if (node?.type !== "node-group") return;
-		this.updateNodeData(nodeId, { types: withEntry(node.data.types, variableId, type) });
+		this.updateNodeData(nodeId, {
+			types: withEntry<SocketType>(node.data.types, variableId, type),
+		});
 	}
 
 	/** The inputs and outputs of a group typed by a variable. */
@@ -1474,4 +1478,9 @@ function fitTypeOwner(owner: TypeOwner, allowed: readonly WgslType[]): TypeOwner
 	return types.length === 0 || types.length === allowed.length
 		? undefined
 		: { variable: owner.variable, types };
+}
+
+/** `type` when it's a value's, undefined for a texture or none. */
+function valueTypeOrNone(type: SocketType | undefined): WgslType | undefined {
+	return type === undefined || isTexture(type) ? undefined : type;
 }

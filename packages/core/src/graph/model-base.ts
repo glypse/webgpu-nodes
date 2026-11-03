@@ -26,13 +26,16 @@ import {
 	inputFamilyKey,
 	type InputValue,
 	isConnectionCompatible,
+	isSocketCompatible,
+	isTexture,
 	type NodeColorWidget,
 	type NodeData,
 	type NodeDescriptor,
 	type NodeInputDef,
 	type NodeOutputDef,
+	type SocketType,
 	type TypeBindings,
-	type WgslType,
+	valueType,
 } from "../types";
 import {
 	bindingsKey,
@@ -510,7 +513,7 @@ export abstract class GraphModelBase {
 			const activeInputs = this.resolveNodeInputs(targetNode.id);
 			const targetInputDef = activeInputs.find((i) => i.id === targetHandle);
 			if (!targetInputDef) return false;
-			return isConnectionCompatible(sourceType, targetInputDef.types[0] ?? "f32");
+			return isSocketCompatible(sourceType, targetInputDef.types[0] ?? "f32");
 		}
 
 		const targetInputDef = targetDescriptor.inputs.find((i) => i.id === targetHandle);
@@ -520,21 +523,22 @@ export abstract class GraphModelBase {
 		// next value converts to that type.
 		if (targetInputDef.family === inferredItemFamily(targetHandle)) {
 			return (
-				targetNode.type === REPEAT_INPUT ||
-				isConnectionCompatible(
-					sourceType,
-					this.resolveInputType(targetNode.id, targetHandle, []),
-				)
+				!isTexture(sourceType) &&
+				(targetNode.type === REPEAT_INPUT ||
+					isConnectionCompatible(
+						sourceType,
+						valueType(this.resolveInputType(targetNode.id, targetHandle, [])),
+					))
 			);
 		}
 
 		// If the target has a node-wide override, validate against that specific type
 		const overrideType =
 			targetNode.data.types?.[inputFamilyKey(targetInputDef, targetDescriptor.inputs)];
-		if (overrideType) return isConnectionCompatible(sourceType, overrideType);
+		if (overrideType) return isSocketCompatible(sourceType, overrideType);
 
 		// Valid if the source can be converted to any type within the family
-		return targetInputDef.types.some((t) => isConnectionCompatible(sourceType, t));
+		return targetInputDef.types.some((t) => isSocketCompatible(sourceType, t));
 	}
 
 	/** Replace the data of some nodes, in whichever documents hold them (reactively). */
@@ -741,7 +745,7 @@ export abstract class GraphModelBase {
 	 * Resolve the effective type for an input handle on a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveInputType(nodeId: string, inputId: string, path?: readonly string[]): WgslType {
+	resolveInputType(nodeId: string, inputId: string, path?: readonly string[]): SocketType {
 		const node = this.resolveNode(nodeId);
 		if (!node) return "f32";
 
@@ -771,7 +775,7 @@ export abstract class GraphModelBase {
 	 * Resolve the output type for a node instance.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveNodeOutputType(nodeId: string, path?: readonly string[]): WgslType {
+	resolveNodeOutputType(nodeId: string, path?: readonly string[]): SocketType {
 		const node = this.resolveNode(nodeId);
 		return node ? this.typesOf(node, path).outputType : "f32";
 	}
@@ -780,7 +784,11 @@ export abstract class GraphModelBase {
 	 * The type an input would get from its links alone, ignoring the type the
 	 * user forced on the node.
 	 */
-	resolveInferredInputType(nodeId: string, inputId: string, path?: readonly string[]): WgslType {
+	resolveInferredInputType(
+		nodeId: string,
+		inputId: string,
+		path?: readonly string[],
+	): SocketType {
 		const forced = this.resolveInputType(nodeId, inputId, path); // also tracks the type cache
 		const node = this.resolveNode(nodeId);
 		if (!node?.data.types) return forced;
@@ -798,7 +806,11 @@ export abstract class GraphModelBase {
 	 * Resolve the type carried by one output handle of a node.
 	 * Reads from the memoised type cache (single source of truth).
 	 */
-	resolveOutputHandleType(nodeId: string, handleId: string, path?: readonly string[]): WgslType {
+	resolveOutputHandleType(
+		nodeId: string,
+		handleId: string,
+		path?: readonly string[],
+	): SocketType {
 		const outputs = this.resolveNodeOutputs(nodeId, path);
 		return (
 			outputs.find((o) => o.id === handleId)?.type ?? this.resolveNodeOutputType(nodeId, path)
