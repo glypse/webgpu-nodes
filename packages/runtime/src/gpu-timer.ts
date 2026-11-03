@@ -1,4 +1,4 @@
-/** Passes a frame can time: one per canvas it's drawn on. */
+/** Spans a frame can time: one per canvas it's drawn on, its plan's passes timed as one. */
 const MAX_PASSES = 8;
 /** Frames read back at once; a frame drawn while all are pending isn't timed. */
 const MAX_PENDING = 4;
@@ -54,8 +54,12 @@ export class FrameTiming {
 		});
 	}
 
-	/** The timestamp writes timing a pass; undefined once the frame has timed as many as it can. */
-	pass(): GPURenderPassTimestampWrites | undefined {
+	/**
+	 * The timestamp writes timing a span of passes, from the beginning of
+	 * its first to the end of its last; undefined once the frame has timed
+	 * as many as it can.
+	 */
+	pass(): Required<GPURenderPassTimestampWrites> | undefined {
 		if (this.passes === MAX_PASSES) return undefined;
 		const index = this.passes++ * 2;
 		return {

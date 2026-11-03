@@ -12,6 +12,7 @@ import {
 	type NodeRows,
 } from "../layout";
 import { defaultDataForType, nodeRegistry, type NodeType } from "../nodes/registry";
+import { PassAnalysis } from "../passes/analysis";
 import {
 	isSocketCompatible,
 	isTexture,
@@ -418,6 +419,30 @@ export class GraphModel extends AssetModel {
 				};
 		if (this.isValidConnection(connection)) this.connect(connection);
 		return created;
+	}
+
+	private passCache: { inputs: readonly unknown[]; analysis: PassAnalysis } | undefined;
+
+	/**
+	 * The graph's textures as compiled (see `PassAnalysis`), memoised on the
+	 * documents' nodes and edges, the assets and the types.
+	 */
+	passAnalysis(): PassAnalysis {
+		const inputs = [
+			this.assets,
+			this.state.typeCaches,
+			...[...this.project.definitions.values()].flatMap((d) => [d.nodes, d.edges]),
+		];
+		const cached = this.passCache;
+		if (
+			cached?.inputs.length === inputs.length &&
+			cached.inputs.every((x, i) => x === inputs[i])
+		) {
+			return cached.analysis;
+		}
+		const analysis = new PassAnalysis(this);
+		this.passCache = { inputs, analysis };
+		return analysis;
 	}
 
 	get nodes(): GraphNode[] {

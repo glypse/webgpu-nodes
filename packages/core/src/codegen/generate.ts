@@ -10,7 +10,7 @@ import {
 	TEXTURE_SIZE,
 	textureCoordinates,
 } from "../nodes/texture";
-import { readSource, type TextureSource, TextureSources } from "../passes/sources";
+import { readSource, type SocketRef, type TextureSource, TextureSources } from "../passes/sources";
 import type {
 	GroupHandleDef,
 	InputValue,
@@ -31,6 +31,7 @@ import {
 	isTexture,
 	isUniformControl,
 	makeType,
+	typeComponents,
 	typeKind,
 	unavailableEdges,
 	valueType,
@@ -58,13 +59,15 @@ import { FRAGMENT_VAR, type SamplerBinding, type TextureBinding, UNIFORMS_VAR } 
 // ── Graph walking ────────────────────────────────────────────────────────────
 
 /**
- * Walk backwards from the `seedType` nodes through edges to find every node
- * contributing to them. A Repeat Output implicitly depends on its Repeat Input.
+ * Walk backwards from the `seedType` nodes (and `seeds`) through edges to
+ * find every node contributing to them. A Repeat Output implicitly depends
+ * on its Repeat Input.
  */
 function findReachableNodeIds(
 	nodes: Map<string, GraphNode>,
 	edges: readonly { source: string; target: string }[],
 	seedType: string,
+	seeds: ReadonlySet<string> = new Set(),
 ): Set<string> {
 	const reverseAdj = new Map<string, string[]>();
 	for (const node of nodes.values()) reverseAdj.set(node.id, []);
@@ -77,7 +80,7 @@ function findReachableNodeIds(
 	const reachable = new Set<string>();
 	const queue: string[] = [];
 	for (const node of nodes.values()) {
-		if (node.type === seedType) {
+		if (node.type === seedType || seeds.has(node.id)) {
 			reachable.add(node.id);
 			queue.push(node.id);
 		}
@@ -147,8 +150,11 @@ function neededEdges(
 	nodes: Map<string, GraphNode>,
 	edges: readonly GraphEdge[],
 	seedType: string,
+	seeds: ReadonlySet<string>,
+	/** Zone items read without a link, by Repeat Output id: a viewer's. */
+	read: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 ): { edges: GraphEdge[]; reachable: Set<string>; liveItems: Map<string, Set<string>> } {
-	const liveItems = new Map<string, Set<string>>();
+	const liveItems = new Map([...read].map(([id, items]) => [id, new Set(items)]));
 	const itemOwner = (nodeId: string, handle: string): string | undefined => {
 		const node = nodes.get(nodeId);
 		if (node?.type === REPEAT_OUTPUT) return nodeId;
@@ -166,7 +172,7 @@ function neededEdges(
 	};
 	for (;;) {
 		const active = edges.filter((e) => isLive(e.target, e.targetHandle));
-		const reachable = findReachableNodeIds(nodes, active, seedType);
+		const reachable = findReachableNodeIds(nodes, active, seedType, seeds);
 		let grew = false;
 		for (const e of active) {
 			if (!reachable.has(e.target) || isLive(e.source, e.sourceHandle)) continue;
@@ -344,7 +350,48 @@ export type ShaderOptions = {
 	 * them then only changes the uniforms. Values of other documents stay literals.
 	 */
 	uniformScopes?: Iterable<string>;
+	/**
+	 * The output the shader draws, as a colour (see `fieldColor`); the
+	 * fragment output's by default.
+	 */
+	target?: SocketRef;
+	/** The graph's texture sources, shared by the shaders of one graph state. */
+	sources?: TextureSources;
 };
+
+/**
+ * An output computed in a group nested at `path` (group node ids, from the
+ * document at hand): each group on the way gives it its caller as a field
+ * of its outputs it doesn't have, like a viewer output it would have for
+ * the preview, so a shader can draw any socket of any group instance.
+ */
+type Viewer = SocketRef;
+
+/** The output struct field of a group giving its caller a `Viewer`'s value. */
+const VIEWER_FIELD = "viewer";
+
+function viewerKey({ path, node, handle }: Viewer): string {
+	return `${[...path, node].join("/")}:${handle}`;
+}
+
+/**
+ * A value drawn as a colour: a vec3f opaque, as the fragment output takes
+ * it, a scalar grey, a vec2f in red and green.
+ */
+function fieldColor(expr: string, type: WgslType): string {
+	const components = typeComponents(type);
+	const float = convertVar(expr, type, makeType("f32", components));
+	switch (components) {
+		case 1:
+			return `vec4f(vec3f(${float}), 1.0)`;
+		case 2:
+			return `vec4f(${float}, 0.0, 1.0)`;
+		case 3:
+			return `vec4f(${float}, 1.0)`;
+		case 4:
+			return float;
+	}
+}
 
 /**
  * Emits the body of one document (the root fragment or a group function).
@@ -379,6 +426,7 @@ class BodyEmitter {
 		readonly liveItems: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 		/** The group nodes the document is computed through, from the root. */
 		readonly path: readonly string[] = [],
+		readonly viewer?: Viewer,
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		this.inputs = doc.inputs ?? [];
@@ -483,11 +531,39 @@ class BodyEmitter {
 	/** A texture linked to a value: its colour at the pixel, stretched over the canvas. */
 	private sampleAtPixel(source: TextureSource): string {
 		const texture = this.textureVar(source);
+		// Rendered at the canvas' size: its pixel is read exactly.
+		if (source.kind === "render") {
+			return `textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`;
+		}
 		const sampler = this.samplerVar("linear", "clamp");
 		return `textureSampleLevel(${texture}, ${sampler}, ${textureCoordinates(`${FRAGMENT_VAR}.uv`)}, 0.0)`;
 	}
 
 	/** The module-scope texture reading `source`. */
+	/** The outputs of a node something reads, the viewer included. */
+	private readOutputs(nodeId: string): ReadonlySet<string> {
+		const read = this.readHandles.get(nodeId) ?? new Set<string>();
+		const viewer = this.viewer;
+		if (viewer?.path.length !== 0 || viewer.node !== nodeId) return read;
+		return new Set([...read, viewer.handle]);
+	}
+
+	/** The colour of the viewer's output (see `Viewer`), from where it's computed. */
+	viewerValue(): string {
+		const viewer = this.viewer;
+		if (!viewer) return WGSL_DEFAULTS.vec4f;
+		const [inner] = viewer.path;
+		if (inner) return `${getVarName(inner)}.${VIEWER_FIELD}`;
+		const edge = {
+			id: "",
+			source: viewer.node,
+			sourceHandle: viewer.handle,
+			target: "",
+			targetHandle: "",
+		};
+		return fieldColor(this.sourceExpr(edge), this.sourceType(edge));
+	}
+
 	textureVar(source: TextureSource): string {
 		const textures = this.state.textures;
 		let binding = textures.get(source.id);
@@ -581,7 +657,8 @@ class BodyEmitter {
 		const outputs = resolved.resolvedOutputs;
 		const read = [...(this.readHandles.get(node.id) ?? [])];
 		const texture = (id: string) => isTexture(outputs.find((o) => o.id === id)?.type);
-		if (outputs.length > 0 && read.every(texture)) return;
+		const seed = this.viewer && (this.viewer.path[0] ?? this.viewer.node) === node.id;
+		if (outputs.length > 0 && read.every(texture) && !seed) return;
 		if (node.type === "node-group") {
 			this.emitGroupCall(node, indent);
 			return;
@@ -690,8 +767,11 @@ class BodyEmitter {
 			absent,
 			constants,
 			resolved.bindings,
-			this.readHandles.get(node.id) ?? new Set(),
+			this.readOutputs(node.id),
 			[...this.path, node.id],
+			this.viewer?.path[0] === node.id
+				? { ...this.viewer, path: this.viewer.path.slice(1) }
+				: undefined,
 		);
 		if (!decl) return;
 		// Converted to the function's parameters, which its body was emitted for.
@@ -760,6 +840,8 @@ function emitDocumentBody(
 	seedHandles?: ReadonlySet<string>,
 	/** The group nodes the document is computed through, from the root. */
 	path: readonly string[] = [],
+	/** An output to compute besides the seeds, and give its caller (see `Viewer`). */
+	viewer?: Viewer,
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -774,8 +856,23 @@ function emitDocumentBody(
 			state.graph.typeResolver.resolveNodeTypes(node, incoming.get(id) ?? [], bindings)
 		);
 	});
+	// Links into Texture inputs compute nothing here: textures are read where
+	// they're used, and values are rendered to them by passes of their own.
+	const intoTexture = (e: GraphEdge) => {
+		const node = nodeMap.get(e.target);
+		return (
+			!!node &&
+			isTexture(
+				state.graph.typeResolver.resolveNodeTypes(
+					node,
+					incoming.get(e.target) ?? [],
+					bindings,
+				).inputTypes[e.targetHandle],
+			)
+		);
+	};
 	const validEdges = doc.edges.filter(
-		(e) => !zones.invalidEdges.has(e.id) && !unavailable.has(e.id),
+		(e) => !zones.invalidEdges.has(e.id) && !unavailable.has(e.id) && !intoTexture(e),
 	);
 	const edgesByTarget = new Map<string, GraphEdge[]>();
 	for (const e of validEdges)
@@ -795,7 +892,18 @@ function emitDocumentBody(
 			nodeMap.get(e.target)?.type !== seedType ||
 			seedHandles.has(e.targetHandle),
 	);
-	const { edges, reachable, liveItems } = neededEdges(nodeMap, usedEdges, seedType);
+	const seeds = new Set(viewer ? [viewer.path[0] ?? viewer.node] : []);
+	const viewed =
+		viewer?.path.length === 0 && nodeMap.get(viewer.node)?.type === REPEAT_OUTPUT
+			? new Map([[viewer.node, new Set([viewer.handle])]])
+			: undefined;
+	const { edges, reachable, liveItems } = neededEdges(
+		nodeMap,
+		usedEdges,
+		seedType,
+		seeds,
+		viewed,
+	);
 	const emitter = new BodyEmitter(
 		state,
 		doc,
@@ -807,6 +915,7 @@ function emitDocumentBody(
 		bindings,
 		liveItems,
 		path,
+		viewer,
 	);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
@@ -971,6 +1080,7 @@ function emitGroupFunction(
 	readOutputs?: ReadonlySet<string>,
 	/** The group nodes it's computed through, from the root, the caller last. */
 	path: readonly string[] = [],
+	viewer?: Viewer,
 ): GroupDecl | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
@@ -1010,6 +1120,8 @@ function emitGroupFunction(
 		...unreadIndices,
 		"x",
 		textures,
+		"v",
+		viewer ? viewerKey(viewer) : "",
 	].join("|");
 	const existing = state.groupDecls.get(key);
 	if (existing) return existing;
@@ -1024,11 +1136,16 @@ function emitGroupFunction(
 		...enumValues.map((v) => `e${v}`),
 		...(unreadIndices.length > 0 ? [`u${unreadIndices.join("_")}`] : []),
 		...(textureVariant === undefined ? [] : [`x${String(textureVariant)}`]),
+		...(viewer ? ["v"] : []),
 	];
 	const fnName = [`group_${ident}`, ...suffix, ...(typeSuffix ? [`t_${typeSuffix}`] : [])].join(
 		"__",
 	);
-	const structName = [`GroupOutputs_${ident}`, ...(typeSuffix ? [typeSuffix] : [])].join("__");
+	const structName = [
+		`GroupOutputs_${ident}`,
+		...(typeSuffix ? [typeSuffix] : []),
+		...(viewer ? ["v"] : []),
+	].join("__");
 
 	const readHandles = new Set(
 		outputHandles.filter((_, i) => !unreadIndices.includes(i)).map((h) => h.id),
@@ -1043,6 +1160,7 @@ function emitGroupFunction(
 		bindings,
 		readHandles,
 		path,
+		viewer,
 	);
 
 	// Struct fields follow the handle types; whatever feeds them is converted
@@ -1080,9 +1198,13 @@ function emitGroupFunction(
 			? body.inputExpr(node, handle.id, type)
 			: WGSL_DEFAULTS[type];
 	});
-	const structFields = outputs
-		.map(({ handle, type }) => `  ${sanitizeIdent(handle.id)}: ${wgslTypeName(type)},`)
-		.join("\n");
+	if (viewer) fieldValues.push(body.viewerValue());
+	const structFields = [
+		...outputs.map(
+			({ handle, type }) => `  ${sanitizeIdent(handle.id)}: ${wgslTypeName(type)},`,
+		),
+		...(viewer ? [`  ${VIEWER_FIELD}: vec4f,`] : []),
+	].join("\n");
 	const params = inputs
 		.map(({ handle, type }) => `${sanitizeIdent(handle.id)}: ${wgslTypeName(type)}`)
 		.join(", ");
@@ -1109,7 +1231,7 @@ function emitGroupFunction(
  */
 export function generateShader(
 	graph: CodegenGraph,
-	{ uniformScopes = [] }: ShaderOptions = {},
+	{ uniformScopes = [], target, sources = new TextureSources(graph) }: ShaderOptions = {},
 ): {
 	shader: string;
 	lineMap: LineMap;
@@ -1124,7 +1246,7 @@ export function generateShader(
 		groupStructs: new Set(),
 		uniformScopes: new Set(uniformScopes),
 		uniforms: new Map(),
-		sources: new TextureSources(graph),
+		sources,
 		textures: new Map(),
 		samplers: new Map(),
 		textureVariants: new Map(),
@@ -1134,13 +1256,21 @@ export function generateShader(
 	const body = emitDocumentBody(
 		state,
 		graph.root,
-		"frag-output",
+		target ? "" : "frag-output",
 		new Set(),
 		new Map(),
 		state.uniformScopes.has(ROOT_ID),
+		{},
+		undefined,
+		[],
+		target,
 	);
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");
-	const result = output && body.lineMap.has(output.id) ? getVarName(output.id) : undefined;
+	const result = target
+		? body.viewerValue()
+		: output && body.lineMap.has(output.id)
+			? getVarName(output.id)
+			: undefined;
 
 	const preamble: string[] = [];
 	// Every group's struct + fn, emitted once each, before frag() itself.

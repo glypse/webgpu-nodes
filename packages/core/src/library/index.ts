@@ -4,6 +4,8 @@ import type { GraphDocument, StandardLibraryEntry } from "../graph/document";
 import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
+import boxBlur1d from "./std-box-blur-1d.json";
+import boxBlur from "./std-box-blur.json";
 import color from "./std-color.json";
 import componentSum from "./std-component-sum.json";
 import fitUv from "./std-fit-uv.json";
@@ -11,6 +13,8 @@ import fractalNoiseOctaves from "./std-fractal-noise-octaves.json";
 import fractalNoise from "./std-fractal-noise.json";
 import fractalOctave from "./std-fractal-octave.json";
 import fractalVoronoi from "./std-fractal-voronoi.json";
+import gaussianBlur1d from "./std-gaussian-blur-1d.json";
+import gaussianBlur from "./std-gaussian-blur.json";
 import gradientNoise1d from "./std-gradient-noise-1d.json";
 import hash from "./std-hash.json";
 import inDisplayGamut from "./std-in-display-gamut.json";
@@ -126,6 +130,10 @@ const files: unknown[] = [
 	fractalNoiseOctaves,
 	fractalNoise,
 	fitUv,
+	gaussianBlur1d,
+	boxBlur1d,
+	gaussianBlur,
+	boxBlur,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

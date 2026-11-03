@@ -141,10 +141,11 @@ export function isConnectionCompatible(source: WgslType, target: WgslType): bool
 /**
  * `isConnectionCompatible` for sockets. A texture links to a texture, or to
  * a float value, which samples it at the pixel (its colour, or the
- * components a narrower value keeps).
+ * components a narrower value keeps). Any value links to a texture: it's
+ * rendered to one.
  */
 export function isSocketCompatible(source: SocketType, target: SocketType): boolean {
-	if (target === TEXTURE) return source === TEXTURE;
+	if (target === TEXTURE) return true;
 	if (source === TEXTURE) return typeKind(target) === "f32" && target !== "vec2f";
 	return isConnectionCompatible(source, target);
 }

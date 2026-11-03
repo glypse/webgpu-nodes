@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { generateShader, reachableShaderHash } from "$core";
+	import { generateRenderPlan, reachableShaderHash, type RenderPlan } from "$core";
 	import { setDisplayGamut } from "$theme";
 	import { untrack } from "svelte";
 
@@ -48,7 +48,7 @@
 	// Only hash the reachable subgraph so edits to disconnected nodes or unused
 	// group definitions don't trigger unnecessary shader regeneration.
 	let prevHash = "";
-	let prevFragment = "";
+	let prevCode = "";
 
 	// The values of the documents graph areas show are uniforms: editing them
 	// only changes the uniforms, while the fragment (and its compiled
@@ -68,26 +68,22 @@
 		const hash = `${uniformScopes.join(",")}|${reachableShaderHash(graph.project, graph.assets)}`;
 		if (hash === prevHash) return;
 		prevHash = hash;
-		let generated: ReturnType<typeof generateShader>;
+		let generated: RenderPlan;
 		try {
-			generated = generateShader(graph, { uniformScopes });
+			generated = generateRenderPlan(graph, { uniformScopes });
 		} catch (error) {
 			// Keep the last valid shader (e.g. the graph briefly contains a cycle).
 			console.error("[shader] generation failed", error);
 			return;
 		}
-		preview.setSource({
-			fragment: generated.shader,
-			uniforms: generated.uniforms,
-			textures: generated.textures,
-			samplers: generated.samplers,
-		});
-		if (devTools.enabled && generated.shader !== prevFragment) {
+		preview.setSource(generated);
+		const code = generated.passes.map((p) => `// ${p.writes}\n${p.program.code}`).join("\n");
+		if (devTools.enabled && code !== prevCode) {
 			console.groupCollapsed("[shader debug]");
-			console.log("// Compiled fragment shader:\n", generated.shader);
+			console.log("// Compiled passes:\n", code);
 			console.groupEnd();
 		}
-		prevFragment = generated.shader;
+		prevCode = code;
 	});
 
 	// Media are decoded from the assets' files, which change outside the model.

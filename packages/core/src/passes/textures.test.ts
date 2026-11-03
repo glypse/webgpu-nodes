@@ -168,7 +168,7 @@ describe("textures", () => {
 		expectValid(generated);
 	});
 
-	it("link to textures and float colours only, never to zone items", () => {
+	it("link to textures and float colours, values to textures, never to zone items", () => {
 		const graph = new GraphModel(
 			project(
 				[
@@ -190,7 +190,7 @@ describe("textures", () => {
 		expect(link("s", "texture")).toBe(true);
 		expect(link("abs", "e")).toBe(true);
 		expect(link("s", "uv")).toBe(false);
-		expect(link("s", "texture", "two", "value")).toBe(false);
+		expect(link("s", "texture", "two", "value")).toBe(true);
 		const zone = graph.createRepeatZone(at) ?? "";
 		const items = graph.getZoneItems(zone);
 		expect(link(zone, "__new_item__")).toBe(false);

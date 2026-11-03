@@ -56,15 +56,41 @@
 	/** Links into the inputs the node doesn't show (another variant's or type's) are kept but not drawn. */
 	const parked = $derived(graph.hiddenInputs(target, view.path).has(targetHandleId ?? ""));
 
-	/** Links breaking zone rules are drawn red and ignored by codegen. */
-	const invalid = $derived(graph.isEdgeInvalid(id));
+	/**
+	 * What the link does with a texture: a texture linked to a value is
+	 * sampled, a value linked to a Texture input rendered first, which a tag
+	 * tells; one it can't read is invalid.
+	 */
+	const textureLink = $derived(
+		graph.passAnalysis().link(view.path, {
+			id,
+			source,
+			sourceHandle: sourceHandleId ?? "",
+			target,
+			targetHandle: targetHandleId ?? "",
+		}),
+	);
 
-	/** Textures are drawn thicker; one linked to a value is sampled at the pixel, which a tag tells. */
-	const texture = $derived(sourceType === "texture");
+	/** Links breaking zone rules, or reading no texture, are drawn red and ignored by codegen. */
+	const invalid = $derived(graph.isEdgeInvalid(id) || textureLink?.kind === "invalid");
+	const invalidReason = $derived(
+		textureLink?.kind === "invalid"
+			? textureLink.reason
+			: "Invalid link: it can't leave the zone it starts in",
+	);
+
+	/** Textures are drawn thicker. */
+	const texture = $derived(sourceType === "texture" || textureLink?.kind === "render");
+	const passes = $derived(graph.passAnalysis().renders().size + 1);
 	const conversion = $derived(
-		texture && targetType !== "texture"
+		textureLink?.kind === "sample"
 			? { label: "sample", title: "Sampled at the pixel: its colour there" }
-			: undefined,
+			: textureLink?.kind === "render"
+				? {
+						label: "pass",
+						title: `Rendered to a texture first, in a pass of its own: the frame draws ${String(passes)} passes`,
+					}
+				: undefined,
 	);
 
 	/** Length of the dashed stubs a hidden link is drawn as, at both its ends. */
@@ -184,7 +210,7 @@
 				stroke-dasharray="6 4"
 				class="transition-opacity {selected ? 'opacity-100' : 'opacity-80'}"
 			>
-				<title>Invalid link: it can't leave the zone it starts in</title>
+				<title>{invalidReason}</title>
 			</path>
 		{:else}
 			<!-- Stroked with the gradient itself: a mask per link made zooming

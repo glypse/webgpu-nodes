@@ -15,7 +15,7 @@ import { parseArgs } from "node:util";
 
 import * as v from "valibot";
 
-import { generateShader } from "../../src/codegen";
+import { generateRenderPlan } from "../../src/codegen";
 import {
 	type GraphDocument,
 	type GraphDocumentNode,
@@ -31,7 +31,7 @@ import {
 	parseLibraryRef,
 	standardLibrary,
 } from "../../src/library";
-import { fragmentOf, nagaBin, validateFragment } from "../../src/testing/wgsl";
+import { nagaBin, validatePlan } from "../../src/testing/wgsl";
 import type { NodeWidget } from "../../src/types";
 import { groupBuilder, type GroupSpec, type ResolvedGroup } from "./builder";
 import described from "./groups";
@@ -224,11 +224,10 @@ export function validateGroups(groups: readonly BuiltGroup[]): string[] {
 		}
 		for (const { name, root } of cases) {
 			try {
-				const { fragment, uniforms, ...resources } = fragmentOf(
-					generateShader(new GraphModel(projectOf(groups, root))),
-				);
-				const error = nagaBin ? validateFragment(fragment, uniforms, resources) : null;
-				if (error) errors.push(`${group.spec.id}, ${name}:\n${error}`);
+				const plan = generateRenderPlan(new GraphModel(projectOf(groups, root)));
+				for (const error of nagaBin ? validatePlan(plan) : []) {
+					errors.push(`${group.spec.id}, ${name}, ${error}`);
+				}
 			} catch (error) {
 				errors.push(`${group.spec.id}, ${name}: ${String(error)}`);
 			}

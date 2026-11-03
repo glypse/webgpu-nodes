@@ -1,7 +1,7 @@
-import { buildProgram, type ColorSpace, type ShaderSource } from "$core";
+import type { ColorSpace, RenderPlan } from "$core";
 import {
 	CanvasTarget,
-	type CompiledProgram,
+	type CompiledPlan,
 	type FrameInputs,
 	type FrameRate,
 	measureRefreshRate,
@@ -82,9 +82,9 @@ export class Preview {
 	private size = $state<Size>({ width: 0, height: 0 });
 	private colorSpace = $state<ColorSpace>("srgb");
 
-	private source: ShaderSource | undefined;
-	private program: CompiledProgram | undefined;
-	/** The code and textures of the newest program asked for, compiled or not. */
+	private source: RenderPlan | undefined;
+	private program: CompiledPlan | undefined;
+	/** The code and textures of the newest plan asked for, compiled or not. */
 	private programCode: string | undefined;
 	private mediaFiles: MediaFiles = () => undefined;
 	private destroyed = false;
@@ -185,12 +185,13 @@ export class Preview {
 		this.player.invalidate();
 	}
 
-	/** Show a newly generated shader; uniform-only changes skip recompiling. */
-	setSource(source: ShaderSource) {
+	/** Show a newly generated plan; uniform-only changes skip recompiling. */
+	setSource(source: RenderPlan) {
 		this.source = source;
-		const program = buildProgram(source.fragment, source.uniforms, source);
 		// The same code may read other textures, which its bindings are made for.
-		const key = `${program.code}\n${program.textures.map((t) => t.source.id).join("\n")}`;
+		const key = source.passes
+			.map((p) => [p.writes, p.program.code, ...p.reads].join("\n"))
+			.join("\n\n");
 		if (key === this.programCode) {
 			this.program?.setUniforms(source.uniforms);
 			this.player.invalidate();
@@ -198,7 +199,7 @@ export class Preview {
 		}
 		this.programCode = key;
 		void this.ensureRenderer()
-			.then((renderer) => renderer.compile(program))
+			.then((renderer) => renderer.compile(source))
 			.then(
 				(compiled) => {
 					if (this.programCode !== key || this.destroyed) {

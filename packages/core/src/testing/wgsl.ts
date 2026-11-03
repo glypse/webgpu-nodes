@@ -5,7 +5,9 @@ import { join } from "node:path";
 
 import {
 	buildProgram,
+	type RenderPlan,
 	type SamplerBinding,
+	type ShaderProgram,
 	type TextureBinding,
 	type UniformValue,
 } from "../codegen";
@@ -47,6 +49,29 @@ export function validateFragment(
 	} finally {
 		rmSync(dir, { recursive: true, force: true });
 	}
+}
+
+/** Validate a whole program with naga: `null` when valid, or naga's error report. */
+export function validateProgram(program: Pick<ShaderProgram, "code">): string | null {
+	if (!nagaBin) throw new Error("naga is not installed");
+	const dir = mkdtempSync(join(tmpdir(), "webgpu-nodes-"));
+	const file = join(dir, "shader.wgsl");
+	try {
+		writeFileSync(file, program.code);
+		const result = spawnSync(nagaBin, [file], { encoding: "utf8" });
+		if (result.status === 0) return null;
+		return `${result.stdout}\n${result.stderr}`.trim();
+	} finally {
+		rmSync(dir, { recursive: true, force: true });
+	}
+}
+
+/** Every pass of a plan validated (see `validateProgram`): the errors, by pass. */
+export function validatePlan(plan: RenderPlan): string[] {
+	return plan.passes.flatMap((pass) => {
+		const error = validateProgram(pass.program);
+		return error ? [`${pass.id}:\n${error}\n\n${pass.program.code}`] : [];
+	});
 }
 
 /** A fragment to validate, and the uniforms, textures and samplers it reads. */

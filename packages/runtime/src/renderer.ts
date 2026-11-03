@@ -1,9 +1,12 @@
 import {
 	type ColorSpace,
 	DISPLAY_P3_FIELD,
+	PLAN_TARGET,
+	type RenderPlan,
 	type SamplerAddress,
 	type SamplerFilter,
 	type ShaderProgram,
+	type TextureSource,
 	type UniformValue,
 } from "$core";
 
@@ -57,7 +60,10 @@ const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
 /** A compiled pipeline, and the layout of the resources its program reads. */
 type Pipeline = { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout };
 
-/** A compiled program with its own uniform buffers. */
+/** The texture a program reads for each of its sources. */
+type TextureOf = (source: TextureSource) => GPUTexture;
+
+/** A compiled program with its own uniform buffers: one pass of a `CompiledPlan`. */
 export class CompiledProgram {
 	private frameData: ArrayBuffer;
 	private frameBuffer: GPUBuffer;
@@ -71,7 +77,7 @@ export class CompiledProgram {
 		readonly program: ShaderProgram,
 		readonly pipeline: GPURenderPipeline,
 		private layout: GPUBindGroupLayout,
-		private media: MediaLibrary,
+		private empty: GPUTexture,
 		private samplers: readonly GPUSampler[],
 	) {
 		this.frameData = new ArrayBuffer(program.frame.size);
@@ -85,9 +91,9 @@ export class CompiledProgram {
 		});
 	}
 
-	/** The bind group reading the textures shown at `time`, made anew when they change. */
-	private bindGroupAt(time: number): GPUBindGroup {
-		const textures = this.program.textures.map((t) => this.media.texture(t.source, time));
+	/** The bind group reading `textureOf`'s textures, made anew when they change. */
+	private bindGroupOf(textureOf: TextureOf): GPUBindGroup {
+		const textures = this.program.textures.map((t) => textureOf(t.source));
 		if (this.bindGroup && textures.every((t, i) => t === this.bound[i])) return this.bindGroup;
 		this.bound = textures;
 		this.bindGroup = this.device.createBindGroup({
@@ -100,7 +106,7 @@ export class CompiledProgram {
 				},
 				...this.program.textures.map((t, i) => ({
 					binding: t.binding,
-					resource: (textures[i] ?? this.media.emptyTexture).createView(),
+					resource: (textures[i] ?? this.empty).createView(),
 				})),
 				...this.program.samplers.map((s, i) => ({
 					binding: s.binding,
@@ -112,14 +118,6 @@ export class CompiledProgram {
 		return this.bindGroup;
 	}
 
-	/** Decode the media the program reads at `time` (see `MediaLibrary.prepare`). */
-	prepare(time: number): Promise<void> {
-		return this.media.prepare(
-			this.program.textures.map((t) => t.source),
-			time,
-		);
-	}
-
 	setUniforms(values: Readonly<Record<string, UniformValue>>) {
 		this.device.queue.writeBuffer(
 			this.uniformBuffer,
@@ -129,15 +127,16 @@ export class CompiledProgram {
 	}
 
 	/**
-	 * Encode a pass drawing one frame into `target` (a linear texture), to be
-	 * presented in `colorSpace`.
+	 * Encode a pass drawing into `target` (a linear texture), for a frame
+	 * presented in `colorSpace`, reading `textureOf`'s textures.
 	 */
 	encode(
 		encoder: GPUCommandEncoder,
 		target: GPUTexture,
 		frame: FrameInputs,
 		colorSpace: ColorSpace,
-		timing?: FrameTiming,
+		textureOf: TextureOf,
+		timestampWrites?: GPURenderPassTimestampWrites,
 	) {
 		packBlock(
 			this.program.frame,
@@ -149,13 +148,12 @@ export class CompiledProgram {
 			this.frameData,
 		);
 		this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameData);
-		const timestampWrites = timing?.pass();
 		const pass = encoder.beginRenderPass({
 			colorAttachments: [{ view: target.createView(), loadOp: "clear", storeOp: "store" }],
 			...(timestampWrites ? { timestampWrites } : {}),
 		});
 		pass.setPipeline(this.pipeline);
-		pass.setBindGroup(0, this.bindGroupAt(frame.time));
+		pass.setBindGroup(0, this.bindGroupOf(textureOf));
 		pass.draw(3);
 		pass.end();
 	}
@@ -163,6 +161,90 @@ export class CompiledProgram {
 	destroy() {
 		this.frameBuffer.destroy();
 		this.uniformBuffer.destroy();
+	}
+}
+
+/**
+ * A compiled `RenderPlan`: its passes in order, each drawing a canvas-sized
+ * texture of its own (kept while the size stays the same) but the last,
+ * which draws the frame.
+ */
+export class CompiledPlan {
+	private transients = new Map<string, GPUTexture>();
+
+	constructor(
+		private device: GPUDevice,
+		readonly plan: RenderPlan,
+		private passes: readonly { program: CompiledProgram; writes: string }[],
+		private media: MediaLibrary,
+	) {}
+
+	setUniforms(values: Readonly<Record<string, UniformValue>>) {
+		for (const { program } of this.passes) program.setUniforms(values);
+	}
+
+	/** Decode the media the plan reads at `time` (see `MediaLibrary.prepare`). */
+	prepare(time: number): Promise<void> {
+		const sources = this.passes.flatMap(({ program }) =>
+			program.program.textures.map((t) => t.source),
+		);
+		return this.media.prepare(sources, time);
+	}
+
+	/** A pass's own texture, the size of `like`. */
+	private transient(id: string, like: GPUTexture): GPUTexture {
+		const existing = this.transients.get(id);
+		if (existing?.width === like.width && existing.height === like.height) return existing;
+		existing?.destroy();
+		const texture = this.device.createTexture({
+			size: { width: like.width, height: like.height },
+			format: LINEAR_FORMAT,
+			usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+		});
+		this.transients.set(id, texture);
+		return texture;
+	}
+
+	/**
+	 * Encode the passes drawing one frame into `target` (a linear texture), to
+	 * be presented in `colorSpace`. `timing` times them all as one.
+	 */
+	encode(
+		encoder: GPUCommandEncoder,
+		target: GPUTexture,
+		frame: FrameInputs,
+		colorSpace: ColorSpace,
+		timing?: FrameTiming,
+	) {
+		const textureOf: TextureOf = (source) =>
+			source.kind === "render"
+				? this.transient(source.id, target)
+				: this.media.texture(source, frame.time);
+		const writes = timing?.pass();
+		this.passes.forEach(({ program, writes: id }, i) => {
+			const first = i === 0;
+			const last = i === this.passes.length - 1;
+			const timestampWrites = writes && {
+				querySet: writes.querySet,
+				...(first ? { beginningOfPassWriteIndex: writes.beginningOfPassWriteIndex } : {}),
+				...(last ? { endOfPassWriteIndex: writes.endOfPassWriteIndex } : {}),
+			};
+			const into = id === PLAN_TARGET ? target : this.transient(id, target);
+			program.encode(
+				encoder,
+				into,
+				frame,
+				colorSpace,
+				textureOf,
+				first || last ? timestampWrites : undefined,
+			);
+		});
+	}
+
+	destroy() {
+		for (const { program } of this.passes) program.destroy();
+		for (const texture of this.transients.values()) texture.destroy();
+		this.transients.clear();
 	}
 }
 
@@ -221,8 +303,18 @@ export class Renderer {
 		return this.device.lost;
 	}
 
-	/** Compile a program; throws a `ProgramError` when it doesn't compile. */
-	async compile(program: ShaderProgram): Promise<CompiledProgram> {
+	/** Compile a plan's programs; throws a `ProgramError` when one doesn't compile. */
+	async compile(plan: RenderPlan): Promise<CompiledPlan> {
+		const passes = await Promise.all(
+			plan.passes.map(async (pass) => ({
+				program: await this.compileProgram(pass.program),
+				writes: pass.writes,
+			})),
+		);
+		return new CompiledPlan(this.device, plan, passes, this.media);
+	}
+
+	private async compileProgram(program: ShaderProgram): Promise<CompiledProgram> {
 		const key = `${program.vertexEntry}|${program.fragmentEntry}|${program.code}`;
 		let pipeline = this.pipelines.get(key);
 		if (pipeline) {
@@ -245,7 +337,7 @@ export class Renderer {
 			program,
 			compiled,
 			layout,
-			this.media,
+			this.media.emptyTexture,
 			program.samplers.map((s) => this.sampler(s.filter, s.address)),
 		);
 	}
@@ -326,7 +418,7 @@ export class Renderer {
 	 * 8 bits per channel, encoded in `colorSpace`.
 	 */
 	async readPixels(
-		program: CompiledProgram,
+		plan: CompiledPlan,
 		frame: FrameInputs,
 		size: Size,
 		colorSpace: ColorSpace,
@@ -345,9 +437,9 @@ export class Renderer {
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
 		});
 		try {
-			await program.prepare(frame.time);
+			await plan.prepare(frame.time);
 			const encoder = this.device.createCommandEncoder();
-			program.encode(encoder, linear, frame, colorSpace);
+			plan.encode(encoder, linear, frame, colorSpace);
 			this.presenter.encode(encoder, linear, output.createView(), {
 				format: READBACK_FORMAT,
 				colorSpace,

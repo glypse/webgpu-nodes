@@ -24,7 +24,17 @@ export const EMPTY_TEXTURE = "empty";
 export type TextureSource =
 	/** An asset's file, a video's frame at the project's time. */
 	| { kind: "media"; id: string; asset: string; video?: VideoPlayback }
+	/** A value rendered over a canvas-sized texture, in a pass of its own. */
+	| { kind: "render"; id: string; target: SocketRef }
 	| { kind: "empty"; id: typeof EMPTY_TEXTURE };
+
+/** An output of a node of the document computed at `path` (see `TextureSources.instance`). */
+export type SocketRef = { path: readonly string[]; node: string; handle: string };
+
+/** The id of the texture a value is rendered into: one per output and group instance. */
+export function renderTextureId({ path, node, handle }: SocketRef): string {
+	return `render:${[...path, node].join("/")}:${handle}`;
+}
 
 /** What a Texture socket reads: an image, or nothing it can read, and why. */
 export type TextureResolution =
@@ -156,15 +166,20 @@ export class TextureSources {
 			const edge = this.feed(path, nodeId, inputId);
 			if (!instance || !edge) return EMPTY;
 			const type = this.graph.typeResolver.inferHandleType(edge, instance.bindings);
-			if (!isTexture(type)) {
+			if (isTexture(type)) {
+				return through(edge, this.output(path, edge.source, edge.sourceHandle));
+			}
+			// A value is rendered once per frame: it can't change per iteration of a loop.
+			if (this.readsZoneState(path, edge.source, edge.sourceHandle)) {
 				return {
 					kind: "invalid",
 					id: EMPTY_TEXTURE,
-					reason: "Only a texture can be linked here.",
+					reason: "A value computed in a repeat zone can't be rendered to a texture: it changes with every iteration.",
 					edge: edge.id,
 				};
 			}
-			return through(edge, this.output(path, edge.source, edge.sourceHandle));
+			const target = { path, node: edge.source, handle: edge.sourceHandle };
+			return { kind: "render", id: renderTextureId(target), target };
 		});
 	}
 
@@ -253,6 +268,61 @@ export class TextureSources {
 			reason: `A ${label} picks a texture only by ${what}.`,
 			edge: "",
 		};
+	}
+
+	private zoneState = new Map<string, boolean>();
+
+	/**
+	 * Whether a node's outputs at `path` depend on the state or iteration of
+	 * a repeat zone they're computed in (or that the group node they're
+	 * computed through is fed from). A zone's final values don't.
+	 */
+	readsZoneState(path: readonly string[], nodeId: string, handle: string): boolean {
+		const instance = this.instance(path);
+		if (!instance) return false;
+		const zones = analyzeZones(instance.doc.nodes, instance.doc.edges);
+		/** The zone a node is computed in, a Repeat Output's being around its loop. */
+		const zoneOf = (id: string): string | null => {
+			const own = zones.zones.get(zones.zoneOfBoundary.get(id) ?? "");
+			if (own) return id === own.outputId ? own.parent : own.id;
+			return zones.nodeZone.get(id) ?? null;
+		};
+		const done = new Map<string, boolean>();
+		// Zones whose final values are read: what they compute is complete.
+		const visit = (id: string, handle: string, closed: ReadonlySet<string>): boolean => {
+			const node = instance.doc.nodesById.get(id);
+			const key = `${id}|${node?.type === "group-input" ? handle : ""}|${[...closed].join(",")}`;
+			const known = done.get(key);
+			if (known !== undefined) return known;
+			done.set(key, false);
+			const zone = zoneOf(id);
+			let reads = zone !== null && !closed.has(zone);
+			if (!reads && node?.type === "group-input" && path.length > 0) {
+				reads = this.readsZoneStateAt(path.slice(0, -1), path.at(-1) ?? "", handle);
+			}
+			if (!reads) {
+				const own = zones.zones.get(zones.zoneOfBoundary.get(id) ?? "");
+				const closing = own?.outputId === id ? own : undefined;
+				const inner = closing ? new Set([...closed, closing.id]) : closed;
+				const feeds = [...(instance.edgesByTarget.get(id) ?? [])];
+				if (closing) feeds.push(...(instance.edgesByTarget.get(closing.inputId) ?? []));
+				reads = feeds.some((e) => visit(e.source, e.sourceHandle, inner));
+			}
+			done.set(key, reads);
+			return reads;
+		};
+		const key = `${path.join("/")}|${nodeId}|${handle}`;
+		const known = this.zoneState.get(key);
+		if (known !== undefined) return known;
+		const reads = visit(nodeId, handle, new Set());
+		this.zoneState.set(key, reads);
+		return reads;
+	}
+
+	/** Whether what feeds a group node's input at `path` reads a zone's state there. */
+	private readsZoneStateAt(path: readonly string[], groupNodeId: string, input: string): boolean {
+		const feed = this.feed(path, groupNodeId, input);
+		return !!feed && this.readsZoneState(path, feed.source, feed.sourceHandle);
 	}
 
 	private memo(key: string, compute: () => TextureResolution): TextureResolution {
