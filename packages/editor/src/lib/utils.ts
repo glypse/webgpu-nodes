@@ -37,3 +37,6 @@ export function pickFiles(opts: { accept: string; multiple?: boolean }): Promise
 
 /** What the file picker accepts for media assets. */
 export const MEDIA_ACCEPT = "image/*,video/*";
+
+/** The drag data type of an asset dragged from the Assets area, holding its id. */
+export const ASSET_DRAG_TYPE = "application/x-webgpu-nodes-asset";

@@ -28,7 +28,7 @@
 	import { measureInternalNode } from "../geometry/measure";
 	import { getGraphManager } from "../graph-manager.svelte";
 	import { getGraphView } from "../graph-view.svelte";
-	import { openContextMenuAt } from "../utils";
+	import { ASSET_DRAG_TYPE, openContextMenuAt } from "../utils";
 	import AddNodeMenu from "./AddNodeMenu.svelte";
 	import DocumentMeasurer from "./DocumentMeasurer.svelte";
 	import FrameBackdrops from "./FrameBackdrops.svelte";
@@ -315,6 +315,32 @@
 		if (entry.definitionRef) graph.deleteDefinition(entry.definitionRef);
 	}
 
+	/** Whether a drag brings assets (from the Assets area) or files to drop here. */
+	function bringsMedia(event: DragEvent): boolean {
+		const types = event.dataTransfer?.types ?? [];
+		return !isLocked && (types.includes(ASSET_DRAG_TYPE) || types.includes("Files"));
+	}
+
+	/**
+	 * Dropped assets or files (imported first) get nodes reading them, or
+	 * become what the Image or Video node they're dropped on reads.
+	 */
+	async function dropMedia(event: DragEvent) {
+		if (!bringsMedia(event)) return;
+		event.preventDefault();
+		view.activate();
+		const dragged = event.dataTransfer?.getData(ASSET_DRAG_TYPE);
+		const files = Array.from(event.dataTransfer?.files ?? []);
+		const at = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+		const onto =
+			event.target instanceof Element
+				? event.target.closest<HTMLElement>(".svelte-flow__node")?.dataset.id
+				: undefined;
+		const assets = dragged ? [dragged] : (await graph.importFiles(files)).map((a) => a.id);
+		const changed = graph.dropAssets(assets, at, onto);
+		if (changed.length > 0) graph.selectNodes(changed);
+	}
+
 	/** Last pointer position, for keyboard-opened menus and pastes. */
 	let pointer = { x: 0, y: 0 };
 
@@ -424,6 +450,12 @@
 	}}
 	onpointerenter={() => (hovered = true)}
 	onpointerleave={() => (hovered = false)}
+	ondragover={(event: DragEvent) => {
+		if (!bringsMedia(event)) return;
+		event.preventDefault();
+		if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+	}}
+	ondrop={dropMedia}
 	class={cn("relative size-full", wrapperClass)}
 >
 	<AddNodeMenu

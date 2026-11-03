@@ -34,7 +34,7 @@ import {
 import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
 import { hydrateNode, indexDocument, serialiseDocument } from "./hydrate";
-import { AssetModel } from "./model-assets";
+import { AssetModel, MEDIA_NODE_OF } from "./model-assets";
 import { emptyProject, withEntry } from "./model-base";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
@@ -519,6 +519,47 @@ export class GraphModel extends AssetModel {
 	}
 
 	/**
+	 * Add an Image or Video node reading an asset at `position` (flow
+	 * coordinates). Returns its id, if any.
+	 */
+	addAssetNode(assetId: string, position: { x: number; y: number }): string | undefined {
+		const asset = this.asset(assetId);
+		if (!asset) return undefined;
+		return this.addNode(MEDIA_NODE_OF[asset.kind], position, { asset: asset.id });
+	}
+
+	/**
+	 * Assets dropped at `position` on the active document: onto an Image or
+	 * Video node (`onto`), the first of their kind becomes what it reads;
+	 * elsewhere, each gets a node of its own, one under the other. Returns
+	 * the ids of the nodes changed or added.
+	 */
+	dropAssets(
+		assetIds: readonly string[],
+		position: { x: number; y: number },
+		onto?: string,
+	): string[] {
+		const target = onto === undefined ? undefined : this.activeDocument.nodesById.get(onto);
+		const fitting =
+			target &&
+			assetIds.find((id) => {
+				const asset = this.asset(id);
+				return asset && MEDIA_NODE_OF[asset.kind] === target.type;
+			});
+		if (target && fitting) {
+			this.setNodeAsset(target.id, fitting);
+			return [target.id];
+		}
+		return assetIds.flatMap((id, i) => {
+			const added = this.addAssetNode(id, {
+				x: position.x,
+				y: position.y + i * DROPPED_NODE_SPACING,
+			});
+			return added ? [added] : [];
+		});
+	}
+
+	/**
 	 * Create what an add-menu entry stands for at `position` (flow coordinates).
 	 * Returns the id of the created node (a zone's Repeat Input), if any.
 	 */
@@ -746,3 +787,6 @@ const REROUTE_GEOMETRY: NodeGeometry = {
 
 /** Approximate rendered node width, for placing nodes next to a drop point. */
 const NODE_WIDTH = 180;
+
+/** Vertical distance between nodes added for several dropped assets. */
+const DROPPED_NODE_SPACING = 260;

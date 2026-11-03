@@ -1,12 +1,12 @@
 <script lang="ts">
 	import type { Asset } from "$core";
-	import { Button, ContextMenu, Input } from "$theme";
+	import { AlertDialog, Button, ContextMenu, Input } from "$theme";
 	import FilmSlateIcon from "phosphor-svelte/lib/FilmSlateIcon";
 	import ImageBrokenIcon from "phosphor-svelte/lib/ImageBrokenIcon";
 	import PlusIcon from "phosphor-svelte/lib/PlusIcon";
 
 	import { getGraphManager } from "../graph-manager.svelte";
-	import { MEDIA_ACCEPT, pickFiles } from "../utils";
+	import { ASSET_DRAG_TYPE, MEDIA_ACCEPT, pickFiles } from "../utils";
 	import AreaHeader from "./AreaHeader.svelte";
 
 	let { areaId }: { areaId: string } = $props();
@@ -17,6 +17,22 @@
 	let renaming = $state<string | null>(null);
 	let nameBuffer = $state("");
 	let dropping = $state(false);
+	/** A used asset whose deletion waits for confirmation. */
+	let deleting = $state.raw<Asset | null>(null);
+
+	const usages = $derived(graph.assetUsages());
+
+	function usedBy(asset: Asset): string {
+		const count = usages.get(asset.id) ?? 0;
+		return count === 0
+			? "Unused"
+			: `Used by ${String(count)} ${count === 1 ? "node" : "nodes"}`;
+	}
+
+	function remove(asset: Asset) {
+		if ((usages.get(asset.id) ?? 0) > 0) deleting = asset;
+		else graph.removeAsset(asset.id);
+	}
 
 	async function importPicked() {
 		await graph.importFiles(await pickFiles({ accept: MEDIA_ACCEPT, multiple: true }));
@@ -96,7 +112,12 @@
 					<ContextMenu.Root>
 						<ContextMenu.Trigger
 							class="hover:bg-accent/50 flex min-w-0 flex-col gap-1 rounded-md p-1"
-							title={asset.name}
+							title="{asset.name}: drag it into a graph to add a node reading it"
+							draggable="true"
+							ondragstart={(event: DragEvent) => {
+								event.dataTransfer?.setData(ASSET_DRAG_TYPE, asset.id);
+								if (event.dataTransfer) event.dataTransfer.effectAllowed = "copy";
+							}}
 						>
 							<div
 								class="bg-muted text-muted-foreground relative flex aspect-video items-center justify-center overflow-hidden rounded"
@@ -142,6 +163,11 @@
 							>
 								{url ? details(asset) : "File missing"}
 							</span>
+							<span
+								class="text-muted-foreground truncate px-0.5 text-left text-[0.6875rem]"
+							>
+								{usedBy(asset)}
+							</span>
 						</ContextMenu.Trigger>
 						<ContextMenu.Content class="w-44">
 							<ContextMenu.Item
@@ -156,7 +182,7 @@
 							<ContextMenu.Item
 								variant="destructive"
 								onSelect={() => {
-									graph.removeAsset(asset.id);
+									remove(asset);
 								}}>Delete</ContextMenu.Item
 							>
 						</ContextMenu.Content>
@@ -166,3 +192,39 @@
 		{/if}
 	</div>
 </div>
+
+<AlertDialog.Root
+	open={deleting !== null}
+	onOpenChange={(open: boolean) => {
+		if (!open) deleting = null;
+	}}
+>
+	<AlertDialog.Content class="sm:max-w-sm">
+		<AlertDialog.Header>
+			<AlertDialog.Title>Delete {deleting?.name}?</AlertDialog.Title>
+			<AlertDialog.Description>
+				{deleting ? usedBy(deleting) : ""}, which will read a transparent image instead.
+				Undo brings it back.
+			</AlertDialog.Description>
+		</AlertDialog.Header>
+		<AlertDialog.Footer>
+			<AlertDialog.Cancel>
+				{#snippet child({ props })}
+					<Button {...props} variant="ghost">Cancel</Button>
+				{/snippet}
+			</AlertDialog.Cancel>
+			<AlertDialog.Action>
+				{#snippet child({ props })}
+					<Button
+						{...props}
+						variant="destructive"
+						onclick={() => {
+							if (deleting) graph.removeAsset(deleting.id);
+							deleting = null;
+						}}>Delete</Button
+					>
+				{/snippet}
+			</AlertDialog.Action>
+		</AlertDialog.Footer>
+	</AlertDialog.Content>
+</AlertDialog.Root>
