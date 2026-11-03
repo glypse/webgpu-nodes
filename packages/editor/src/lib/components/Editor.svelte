@@ -19,8 +19,9 @@
 	setDisplayGamut(() => graph.settings.colorSpace);
 
 	// Undo history: record a step once the documents stop changing for a
-	// moment, so a drag or a scrub becomes one step. Node/edge arrays and the
-	// settings are reassigned on every change, which is what this effect tracks.
+	// moment, so a drag or a scrub becomes one step. Node/edge arrays, the
+	// settings and the assets are reassigned on every change, which is what
+	// this effect tracks.
 	const HISTORY_DEBOUNCE_MS = 300;
 	$effect(() => {
 		const tracked: unknown[] = [...graph.project.definitions.values()].map((doc) => [
@@ -34,7 +35,7 @@
 			doc.defaults,
 		]);
 		if (tracked.length === 0) return;
-		tracked.push(graph.settings);
+		tracked.push(graph.settings, graph.assets);
 		const timer = setTimeout(() => {
 			graph.recordHistory();
 		}, HISTORY_DEBOUNCE_MS);

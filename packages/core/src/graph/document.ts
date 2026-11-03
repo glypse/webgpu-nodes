@@ -1,3 +1,4 @@
+import type { Asset } from "../assets/assets";
 import type { NodeType } from "../nodes/registry";
 import type { Screen } from "../screen/screen";
 import type { GroupHandleDef, InputValue, NodeData, NodeWidget, TypeVariable } from "../types";
@@ -69,6 +70,8 @@ export type GraphProject = {
 	settings?: ProjectSettings;
 	/** The editor panels it was saved with; the default layout when absent. */
 	layout?: Screen;
+	/** The files it uses; their bytes are saved beside it (see `packBundle`). */
+	assets?: Asset[];
 };
 
 // ── In-memory (hydrated) types ───────────────────────────────────────────────

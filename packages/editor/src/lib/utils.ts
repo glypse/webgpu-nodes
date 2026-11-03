@@ -17,3 +17,23 @@ export function downloadFile(filename: string, blob: Blob) {
 	a.click();
 	URL.revokeObjectURL(url);
 }
+
+/** Ask the user for files; resolves with none when they cancel. */
+export function pickFiles(opts: { accept: string; multiple?: boolean }): Promise<File[]> {
+	return new Promise((resolve) => {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = opts.accept;
+		if (opts.multiple) input.multiple = true;
+		input.onchange = () => {
+			resolve(Array.from(input.files ?? []));
+		};
+		input.oncancel = () => {
+			resolve([]);
+		};
+		input.click();
+	});
+}
+
+/** What the file picker accepts for media assets. */
+export const MEDIA_ACCEPT = "image/*,video/*";

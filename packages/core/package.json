@@ -26,6 +26,7 @@
 	"dependencies": {
 		"@leeoniya/ufuzzy": "^1.0.19",
 		"elkjs": "^0.12.0",
+		"fflate": "^0.8.3",
 		"valibot": "^1.5.0"
 	},
 	"devDependencies": {

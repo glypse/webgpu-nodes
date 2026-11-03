@@ -1,10 +1,13 @@
 <script lang="ts">
 	import { dev } from "$app/env";
+	import { BUNDLE_EXTENSIONS } from "$core";
 	import {
 		DevTools,
 		Editor,
 		exportFrame,
 		GraphManager,
+		MEDIA_ACCEPT,
+		pickFiles,
 		Preferences,
 		Preview,
 		setDevTools,
@@ -44,26 +47,22 @@
 		preview.destroy();
 	});
 
-	function pickFiles(opts: { accept: string; multiple?: boolean }): Promise<File[]> {
-		return new Promise((resolve) => {
-			const input = document.createElement("input");
-			input.type = "file";
-			input.accept = opts.accept;
-			if (opts.multiple) input.multiple = true;
-			input.onchange = () => resolve(Array.from(input.files ?? []));
-			input.click();
-		});
+	async function handleUpload() {
+		const [file] = await pickFiles({ accept: BUNDLE_EXTENSIONS.project });
+		if (file) await graph.upload(file);
 	}
 
-	async function handleUpload() {
-		const [file] = await pickFiles({ accept: ".json" });
-		if (file) await graph.upload(file);
+	async function handleImportMedia() {
+		const files = await pickFiles({ accept: MEDIA_ACCEPT, multiple: true });
+		await graph.importFiles(files);
 	}
 
 	function handleExportGroup() {
 		const ref = graph.selectedGroupRef;
 		if (!ref) return;
-		graph.exportGroup(ref);
+		graph.exportGroup(ref).catch((error: unknown) => {
+			console.error("[graph] group export failed", error);
+		});
 	}
 
 	/** The id of the first selected, enterable group node, if any. */
@@ -138,12 +137,9 @@
 	const hasPrunable = $derived(prunableGroups.length > 0);
 
 	async function handleImportGroups() {
-		const files = await pickFiles({ accept: ".json", multiple: true });
+		const files = await pickFiles({ accept: BUNDLE_EXTENSIONS.groups, multiple: true });
 		if (files.length === 0) return;
-		const entries = await Promise.all(
-			files.map(async (file): Promise<unknown> => JSON.parse(await file.text())),
-		);
-		const result = await graph.importGroups(entries);
+		const result = await graph.importGroupFiles(files);
 		if (result.missing.length > 0) {
 			console.warn("Import completed with missing dependencies:", result.missing);
 		}
@@ -170,12 +166,15 @@
 			<Menubar.Content>
 				<Menubar.Item
 					onSelect={() => {
-						graph.save();
+						graph.save().catch((error: unknown) => {
+							console.error("[graph] save failed", error);
+						});
 					}}
 				>
 					Save
 				</Menubar.Item>
 				<Menubar.Item onSelect={handleUpload}>Upload</Menubar.Item>
+				<Menubar.Item onSelect={handleImportMedia}>Import media…</Menubar.Item>
 				<Menubar.Separator />
 				<Menubar.Item onSelect={handleExportGroup} disabled={!graph.selectedGroupRef}>
 					Export selected group

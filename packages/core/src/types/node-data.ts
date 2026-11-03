@@ -50,6 +50,8 @@ export type NodeData = {
 	hideLinks?: boolean;
 	/** Only the node's linked sockets are shown. */
 	hideUnlinked?: boolean;
+	/** The project asset the node reads, by id. */
+	asset?: string;
 };
 
 /** `data` with `defaults` filled in where it has no value of its own. */

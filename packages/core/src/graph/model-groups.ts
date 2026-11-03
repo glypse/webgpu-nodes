@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import type { Asset } from "../assets/assets";
 import {
 	groupConstants,
 	hiddenInputsOf,
@@ -51,7 +52,7 @@ import {
 import { indexDocument, normaliseDocument, serialiseEdge, serialiseNode } from "./hydrate";
 import { withEntry } from "./model-base";
 import { ZoneModel } from "./model-zones";
-import { GroupFilesSchema } from "./schema";
+import { type GroupsFile, GroupsFileSchema } from "./schema";
 
 /** Names given to new type variables, in turn. */
 const VARIABLE_NAMES = ["T", "U", "V", "W", "X", "Y", "Z", "A", "B", "C", "D", "E"];
@@ -182,59 +183,91 @@ export abstract class GroupModel extends ZoneModel {
 	// ── Import / export ─────────────────────────────────────────────────────────
 
 	/**
-	 * A group (and every user group it nests) as standalone JSON files, one
-	 * per definition, ready to save and import elsewhere. Standard-library
+	 * A group, every user group it nests and the assets they read, as the
+	 * JSON of a groups bundle; `name` suits its file. Standard-library
 	 * dependencies are left out.
 	 */
-	exportGroupFiles(definitionRef: string): { filename: string; contents: string }[] {
+	exportGroups(definitionRef: string): { name: string; json: string; assets: Asset[] } {
 		const refs = new Set([definitionRef, ...this.collectNestedRefs(definitionRef)]);
-		return [...refs].flatMap((ref) => {
+		const groups = [...refs].flatMap((ref) => {
 			const entry = this.buildExportEntry(ref);
-			if (!entry) return [];
-			const slug = entry.label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-			return [{ filename: `${slug}.json`, contents: JSON.stringify(entry, null, "\t") }];
+			return entry ? [entry] : [];
 		});
+		const used = new Set(
+			groups.flatMap((g) => g.definition.nodes.flatMap((n) => n.data.asset ?? [])),
+		);
+		const assets = this.state.assets.filter((a) => used.has(a.id));
+		const label = groups[0]?.label ?? "group";
+		return {
+			name: label.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+			json: JSON.stringify({ groups, assets }, null, "\t"),
+			assets,
+		};
 	}
 
 	/**
-	 * Import group definitions from parsed JSON files.
-	 * All files are loaded first, then dependencies are checked.
-	 * Missing dependencies trigger a console warning but don't block the import.
+	 * Import the groups of parsed groups-bundle JSONs. All groups are loaded
+	 * first, then dependencies are checked: missing ones are reported but
+	 * don't block the import. Their assets join the project's, an asset the
+	 * project has already (the same file) standing in for its copy; `added`
+	 * are the new ones, whose files the caller brings. `rejected` are the
+	 * indices of invalid JSONs.
 	 */
-	async importGroups(
-		jsonFiles: unknown[],
-	): Promise<{ imported: number; missing: string[]; rejected: string[] }> {
-		const parsed = v.safeParse(GroupFilesSchema, jsonFiles);
-		if (!parsed.success) {
-			console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
-			const idOf = (file: unknown) => {
-				const id = v.safeParse(v.object({ id: v.string() }), file);
-				return id.success ? id.output.id : "<unknown>";
-			};
-			return { imported: 0, missing: [], rejected: jsonFiles.map(idOf) };
-		}
+	async importGroups(files: readonly unknown[]): Promise<{
+		imported: number;
+		missing: string[];
+		rejected: number[];
+		added: Asset[];
+	}> {
+		const valid: GroupsFile[] = [];
+		const rejected: number[] = [];
+		files.forEach((file, index) => {
+			const parsed = v.safeParse(GroupsFileSchema, file);
+			if (parsed.success) valid.push(parsed.output);
+			else {
+				console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
+				rejected.push(index);
+			}
+		});
 
-		const entries = parsed.output;
-		await this.fetchArchivedVersions(entries.map((file) => file.definition));
-		// Phase 1: Load all definitions
-		for (const file of entries) {
-			const normalised = normaliseDocument(file.definition);
-			if (file.label) normalised.label = file.label;
+		// Imported asset ids, to the project asset each one is.
+		const assetIds = new Map<string, string>();
+		const added: Asset[] = [];
+		for (const asset of valid.flatMap((file) => file.assets)) {
+			if (assetIds.has(asset.id)) continue;
+			const existing =
+				this.state.assets.find((a) => a.id === asset.id) ??
+				this.state.assets.find((a) => a.hash === asset.hash) ??
+				added.find((a) => a.hash === asset.hash);
+			assetIds.set(asset.id, existing?.id ?? asset.id);
+			if (!existing) added.push(asset);
+		}
+		if (added.length > 0) this.state.assets = [...this.state.assets, ...added];
+
+		const entries = valid.flatMap((file) => file.groups);
+		await this.fetchArchivedVersions(entries.map((entry) => entry.definition));
+		for (const entry of entries) {
+			const normalised = normaliseDocument({
+				...entry.definition,
+				nodes: entry.definition.nodes.map((node) => {
+					const asset = node.data.asset && assetIds.get(node.data.asset);
+					return asset ? { ...node, data: { ...node.data, asset } } : node;
+				}),
+			});
+			normalised.label = entry.label;
 			normalised.locked = true;
-			this.setDefinitions([[file.id, this.hydrate(normalised)]]);
+			this.setDefinitions([[entry.id, this.hydrate(normalised)]]);
 		}
 		this.registerLibraryRefs();
 
-		// Phase 2: Check dependencies
 		const missing: string[] = [];
-		for (const file of entries) {
-			for (const dep of file.dependencies) {
+		for (const entry of entries) {
+			for (const dep of entry.dependencies) {
 				if (!this.project.definitions.has(dep) && !this.isStandardLibrary(dep)) {
-					missing.push(`${file.id} depends on ${dep}`);
+					missing.push(`${entry.id} depends on ${dep}`);
 				}
 			}
 		}
-
 		if (missing.length > 0) {
 			console.warn("[graph] imported groups have missing dependencies:", missing);
 		}
@@ -242,7 +275,7 @@ export abstract class GroupModel extends ZoneModel {
 		// New definitions may change how group nodes resolve their types
 		this.rebuildTypeCache();
 
-		return { imported: entries.length, missing, rejected: [] };
+		return { imported: entries.length, missing, rejected, added };
 	}
 
 	// ── Grouping ────────────────────────────────────────────────────────────────

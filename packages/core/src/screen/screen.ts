@@ -8,7 +8,7 @@ import type { Viewport } from "../graph/document";
  * always the same number, so equality tells which edges coincide.
  */
 
-export const EDITOR_TYPES = ["graph", "preview", "timeline"] as const;
+export const EDITOR_TYPES = ["graph", "preview", "timeline", "assets"] as const;
 export type EditorType = (typeof EDITOR_TYPES)[number];
 
 export type GraphEditorState = {
@@ -19,7 +19,8 @@ export type GraphEditorState = {
 	viewport?: Viewport;
 };
 
-export type EditorState = GraphEditorState | { type: "preview" } | { type: "timeline" };
+export type EditorState =
+	GraphEditorState | { type: "preview" } | { type: "timeline" } | { type: "assets" };
 
 export type Rect = { left: number; top: number; right: number; bottom: number };
 

@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import type { Asset } from "../assets/assets";
 import { convertColorMode } from "../color";
 import type { CurvePoint } from "../curve";
 import { isCaseHandle, MATCH } from "../enums";
@@ -69,6 +70,8 @@ export type ResolvedTypes = ResolvedNodeTypes;
 export type GraphModelState = {
 	project: HydratedGraphProject;
 	settings: ProjectSettings;
+	/** Replaced, never mutated. */
+	assets: Asset[];
 	/** The editor panels; graph areas hold the paths documents are viewed at. */
 	screen: Screen;
 	/** The graph area commands act on (the one last used), if any. */
@@ -129,6 +132,7 @@ export abstract class GraphModelBase {
 		return {
 			project: { definitions: new Map() },
 			settings: defaultSettings(),
+			assets: [],
 			screen: defaultScreen(),
 			activeArea: null,
 			selectedNodeIds: [],
@@ -296,6 +300,7 @@ export abstract class GraphModelBase {
 	protected setProject(project: GraphProject, { keepScreen = false } = {}) {
 		this.project = hydrateProject(project, () => this.createDocument());
 		this.state.settings = project.settings ?? defaultSettings();
+		this.state.assets = project.assets ?? [];
 		const screen = keepScreen ? this.screen : (project.layout ?? defaultScreen());
 		for (const entry of this.library) this.registerLibraryEntry(entry.ref, entry);
 		this.registerLibraryRefs();

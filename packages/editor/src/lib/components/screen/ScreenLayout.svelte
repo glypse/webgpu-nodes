@@ -21,6 +21,7 @@
 
 	import { getGraphManager } from "../../graph-manager.svelte";
 	import { openContextMenuAt } from "../../utils";
+	import Assets from "../Assets.svelte";
 	import NodeGraph from "../NodeGraph.svelte";
 	import Preview from "../Preview.svelte";
 	import Timeline from "../Timeline.svelte";
@@ -540,8 +541,10 @@
 					<NodeGraph areaId={area.id} />
 				{:else if area.editor.type === "preview"}
 					<Preview areaId={area.id} />
-				{:else}
+				{:else if area.editor.type === "timeline"}
 					<Timeline areaId={area.id} />
+				{:else}
+					<Assets areaId={area.id} />
 				{/if}
 
 				<!-- Corner handles: drag into the area to split it, out to join or dock, with Ctrl to swap. -->

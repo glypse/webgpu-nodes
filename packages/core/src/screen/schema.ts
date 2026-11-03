@@ -18,6 +18,7 @@ const EditorSchema = v.variant("type", [
 	}),
 	v.object({ type: v.literal("preview") }),
 	v.object({ type: v.literal("timeline") }),
+	v.object({ type: v.literal("assets") }),
 ]);
 
 export const ScreenSchema = v.pipe(

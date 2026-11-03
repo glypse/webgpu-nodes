@@ -33,8 +33,8 @@ import {
 import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
 import { hydrateNode, indexDocument, serialiseDocument } from "./hydrate";
+import { AssetModel } from "./model-assets";
 import { emptyProject, withEntry } from "./model-base";
-import { PreviewModel } from "./model-preview";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
 
@@ -68,7 +68,7 @@ export type TypeChoice = {
  * Front ends subclass it to plug in their own reactivity, by overriding the
  * `create*` factories (state, documents, history counts).
  */
-export class GraphModel extends PreviewModel {
+export class GraphModel extends AssetModel {
 	/** Content snapshots of past states (see `contentSnapshot`). */
 	readonly history = new History(this.createHistoryCounts());
 
@@ -137,7 +137,7 @@ export class GraphModel extends PreviewModel {
 				.filter(([key]) => !this.isStandardLibrary(key))
 				.map(([key, doc]) => [key, serialiseDocument(doc)]),
 		);
-		return stableStringify({ definitions, settings: this.settings });
+		return stableStringify({ definitions, settings: this.settings, assets: this.assets });
 	}
 
 	markSaved() {
@@ -465,7 +465,12 @@ export class GraphModel extends PreviewModel {
 					serialiseDocument(definition, { viewport: true }),
 				]),
 		);
-		const project: GraphProject = { definitions, settings: this.settings, layout: this.screen };
+		const project: GraphProject = {
+			definitions,
+			settings: this.settings,
+			layout: this.screen,
+			assets: [...this.assets],
+		};
 		return JSON.stringify(project, null, "\t");
 	}
 

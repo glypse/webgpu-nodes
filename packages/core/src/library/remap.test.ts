@@ -71,7 +71,6 @@ describe("remap", () => {
 		const { shader } = generateShader(graph);
 		expect(shader).toContain("t_vec2f(");
 		if (nagaBin) expect(validateFragment(shader)).toBeNull();
-		const [file] = ref ? graph.exportGroupFiles(ref) : [];
-		expect(file?.contents).toContain('"typeVariables"');
+		expect(ref && graph.exportGroups(ref).json).toContain('"typeVariables"');
 	});
 });

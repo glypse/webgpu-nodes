@@ -1,5 +1,6 @@
 import * as v from "valibot";
 
+import { AssetSchema } from "../assets/assets";
 import { COLOR_MODES } from "../color/modes";
 import { CURVE_POINT_KINDS } from "../curve";
 import { FRAME_TINTS } from "../frames/analysis";
@@ -104,6 +105,7 @@ const NodeDataSchema = v.strictObject({
 	tint: v.optional(v.picklist(FRAME_TINTS)),
 	hideLinks: v.optional(v.boolean()),
 	hideUnlinked: v.optional(v.boolean()),
+	asset: v.optional(v.string()),
 });
 
 const GraphDocumentNodeSchema = v.object({
@@ -139,18 +141,28 @@ export const GraphProjectSchema = v.object({
 	definitions: v.record(v.string(), GraphDocumentSchema),
 	settings: v.optional(ProjectSettingsSchema, defaultSettings),
 	layout: v.optional(ScreenSchema),
+	assets: v.optional(v.array(AssetSchema)),
 });
 
-/** A group exported on its own (see `GraphModel.exportGroupFiles`). */
-const GroupFileSchema = v.object({
-	id: v.string(),
-	label: v.string(),
-	category: v.string(),
-	dependencies: v.array(v.string()),
-	definition: GraphDocumentSchema,
+/**
+ * Groups exported to be imported into other projects (see
+ * `GraphModel.exportGroups`): each with the user groups it nests, and the
+ * assets they read.
+ */
+export const GroupsFileSchema = v.object({
+	groups: v.array(
+		v.object({
+			id: v.string(),
+			label: v.string(),
+			category: v.string(),
+			dependencies: v.array(v.string()),
+			definition: GraphDocumentSchema,
+		}),
+	),
+	assets: v.array(AssetSchema),
 });
 
-export const GroupFilesSchema = v.array(GroupFileSchema);
+export type GroupsFile = v.InferOutput<typeof GroupsFileSchema>;
 
 /** Every kind of `NodeWidget`, by its `kind`. */
 export const NodeWidgetSchema = v.variant("kind", [

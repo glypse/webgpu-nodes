@@ -1,4 +1,5 @@
 export * from "./types";
+export * from "./assets";
 export * from "./color";
 export * from "./curve";
 export * from "./nodes";
@@ -25,5 +26,6 @@ export * from "./graph/model-custom";
 export * from "./graph/model-edits";
 export * from "./graph/model-frames";
 export * from "./graph/model-preview";
+export * from "./graph/model-assets";
 export * from "./graph/model";
 export { defaultScene } from "./scenes";

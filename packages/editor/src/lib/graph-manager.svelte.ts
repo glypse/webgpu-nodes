@@ -1,4 +1,8 @@
 import {
+	type Asset,
+	type Bundle,
+	BUNDLE_EXTENSIONS,
+	type BundleKind,
 	defaultScene,
 	defaultScreen,
 	defaultSettings,
@@ -11,16 +15,15 @@ import {
 	type LayoutOptions,
 	type NodeClipboard,
 	type NodeGeometry,
+	packBundle,
+	unpackBundle,
 } from "$core";
 import { getContext, setContext } from "svelte";
 
+import { AssetFiles, describeAsset } from "./assets";
 import type { SettingsPage } from "./components/settings/pages";
 import { ReactiveGraphDocument } from "./reactive-document.svelte";
 import { downloadFile } from "./utils";
-
-function jsonBlob(contents: string): Blob {
-	return new Blob([contents], { type: "application/json" });
-}
 
 /**
  * The editor's graph: `$core`'s `GraphModel` made reactive (its state,
@@ -28,6 +31,8 @@ function jsonBlob(contents: string): Blob {
  * interactive editor needs: settings sheets and browser file I/O.
  */
 export class GraphManager extends GraphModel {
+	readonly assetFiles = new AssetFiles();
+
 	constructor(project: GraphProject = defaultScene) {
 		super(project);
 	}
@@ -37,6 +42,7 @@ export class GraphManager extends GraphModel {
 			// eslint-disable-next-line svelte/prefer-svelte-reactivity -- Map is reassigned, not mutated
 			project: { definitions: new Map() },
 			settings: defaultSettings(),
+			assets: [],
 			screen: defaultScreen(),
 			activeArea: null,
 			selectedNodeIds: [],
@@ -118,27 +124,110 @@ export class GraphManager extends GraphModel {
 
 	// ── Files ───────────────────────────────────────────────────────────────
 
-	/** Download the project as JSON and remember it as saved. */
-	save() {
-		downloadFile("webGpuNodesProject.json", jsonBlob(this.getProjectJson()));
+	/** Download a bundle of `kind` holding `json` and the files of `assets`. */
+	private async downloadBundle(
+		kind: BundleKind,
+		name: string,
+		json: string,
+		assets: readonly Asset[],
+	) {
+		const files: [string, Uint8Array][] = [];
+		for (const asset of assets) {
+			const file = this.assetFiles.get(asset.id);
+			if (file) files.push([asset.file, new Uint8Array(await file.arrayBuffer())]);
+		}
+		downloadFile(
+			`${name}${BUNDLE_EXTENSIONS[kind]}`,
+			new Blob([packBundle({ kind, json, files })], { type: "application/zip" }),
+		);
+	}
+
+	/** The files of `assets` found in a bundle, by asset id. */
+	private static filesIn(bundle: Bundle, assets: readonly Asset[]): [string, Blob][] {
+		return assets.flatMap((asset): [string, Blob][] => {
+			const data = bundle.files.get(asset.file);
+			return data ? [[asset.id, new Blob([data], { type: asset.mime })]] : [];
+		});
+	}
+
+	/** Download the project as a bundle and remember it as saved. */
+	async save() {
+		await this.downloadBundle(
+			"project",
+			"webGpuNodesProject",
+			this.getProjectJson(),
+			this.assets,
+		);
 		this.markSaved();
 	}
 
-	/** Load a project from a JSON file picked by the user. */
+	/** Load a project bundle picked by the user. */
 	async upload(file: File): Promise<boolean> {
 		try {
-			return await this.loadFromString(await file.text());
+			const bundle = unpackBundle(new Uint8Array(await file.arrayBuffer()), "project");
+			if (!(await this.loadFromString(bundle.json))) return false;
+			this.assetFiles.reset(GraphManager.filesIn(bundle, this.assets));
+			return true;
 		} catch (err) {
 			console.error("[graph] failed to read uploaded file", err);
 			return false;
 		}
 	}
 
-	/** Download a group and the user groups it nests, one JSON file each. */
-	exportGroup(definitionRef: string) {
-		for (const { filename, contents } of this.exportGroupFiles(definitionRef)) {
-			downloadFile(filename, jsonBlob(contents));
+	/**
+	 * Add files as assets, skipping what isn't media; a file already imported
+	 * gives its existing asset. Returns the assets, in the files' order.
+	 */
+	async importFiles(files: readonly File[]): Promise<Asset[]> {
+		const imported: Asset[] = [];
+		for (const file of files) {
+			const asset = await describeAsset(file, crypto.randomUUID());
+			if (!asset) continue;
+			const existing = this.assetByHash(asset.hash);
+			if (existing) {
+				imported.push(existing);
+				continue;
+			}
+			this.assetFiles.set(asset.id, file);
+			this.addAsset(asset);
+			imported.push(asset);
 		}
+		return imported;
+	}
+
+	/** Give an asset another file of the same kind; returns whether it did. */
+	async replaceAssetFile(id: string, file: File): Promise<boolean> {
+		const current = this.asset(id);
+		const asset = await describeAsset(file, id);
+		if (!current || asset?.kind !== current.kind) return false;
+		this.assetFiles.set(id, file);
+		this.replaceAsset({ ...asset, name: current.name });
+		return true;
+	}
+
+	/** Download a group, the user groups it nests and their assets as a groups bundle. */
+	async exportGroup(definitionRef: string) {
+		const { name, json, assets } = this.exportGroups(definitionRef);
+		await this.downloadBundle("groups", name, json, assets);
+	}
+
+	/** Import the groups (and their assets) of groups bundles picked by the user. */
+	async importGroupFiles(files: readonly File[]) {
+		const bundles: Bundle[] = [];
+		for (const file of files) {
+			try {
+				bundles.push(unpackBundle(new Uint8Array(await file.arrayBuffer()), "groups"));
+			} catch (err) {
+				console.error(`[graph] can't read ${file.name}`, err);
+			}
+		}
+		const result = await this.importGroups(bundles.map((b) => JSON.parse(b.json) as unknown));
+		for (const bundle of bundles) {
+			for (const [id, file] of GraphManager.filesIn(bundle, result.added)) {
+				this.assetFiles.set(id, file);
+			}
+		}
+		return result;
 	}
 }
 
