@@ -6,12 +6,11 @@ import {
 	type SamplerAddress,
 	type SamplerFilter,
 	type ShaderProgram,
-	type TextureSource,
 	type UniformValue,
 } from "$core";
 
 import { type FrameTiming, GpuTimer } from "./gpu-timer";
-import { MediaLibrary } from "./media";
+import { MediaLibrary, type TextureOf } from "./media";
 import { Presenter } from "./present";
 import { packBlock } from "./uniforms";
 
@@ -59,9 +58,6 @@ const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
 
 /** A compiled pipeline, and the layout of the resources its program reads. */
 type Pipeline = { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout };
-
-/** The texture a program reads for each of its sources. */
-type TextureOf = (source: TextureSource) => GPUTexture;
 
 /** A compiled program with its own uniform buffers: one pass of a `CompiledPlan`. */
 export class CompiledProgram {
@@ -184,7 +180,7 @@ export class CompiledPlan {
 	}
 
 	/** Decode the media the plan reads at `time` (see `MediaLibrary.prepare`). */
-	prepare(time: number): Promise<void> {
+	prepare(time: number): Promise<TextureOf> {
 		const sources = this.passes.flatMap(({ program }) =>
 			program.program.textures.map((t) => t.source),
 		);
@@ -207,7 +203,8 @@ export class CompiledPlan {
 
 	/**
 	 * Encode the passes drawing one frame into `target` (a linear texture), to
-	 * be presented in `colorSpace`. `timing` times them all as one.
+	 * be presented in `colorSpace`. `timing` times them all as one. Media is
+	 * what's decoded so far of `frame`, unless `media` gives it.
 	 */
 	encode(
 		encoder: GPUCommandEncoder,
@@ -215,11 +212,10 @@ export class CompiledPlan {
 		frame: FrameInputs,
 		colorSpace: ColorSpace,
 		timing?: FrameTiming,
+		media: TextureOf = (source) => this.media.texture(source, frame.time),
 	) {
 		const textureOf: TextureOf = (source) =>
-			source.kind === "render"
-				? this.transient(source.id, target)
-				: this.media.texture(source, frame.time);
+			source.kind === "render" ? this.transient(source.id, target) : media(source);
 		const writes = timing?.pass();
 		this.passes.forEach(({ program, writes: id }, i) => {
 			const first = i === 0;
@@ -437,9 +433,9 @@ export class Renderer {
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
 		});
 		try {
-			await plan.prepare(frame.time);
+			const media = await plan.prepare(frame.time);
 			const encoder = this.device.createCommandEncoder();
-			plan.encode(encoder, linear, frame, colorSpace);
+			plan.encode(encoder, linear, frame, colorSpace, undefined, media);
 			this.presenter.encode(encoder, linear, output.createView(), {
 				format: READBACK_FORMAT,
 				colorSpace,

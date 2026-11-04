@@ -48,6 +48,9 @@ fn decode_fragment(@builtin(position) position: vec4f) -> @location(0) vec4f {
 /** The files of a project's assets, by asset id. */
 export type MediaFiles = (asset: string) => Blob | undefined;
 
+/** The texture a program reads for each of its sources. */
+export type TextureOf = (source: TextureSource) => GPUTexture;
+
 type Image = { file: Blob; texture?: GPUTexture; failed?: boolean };
 
 /**
@@ -63,6 +66,11 @@ export class MediaLibrary {
 	private empty: GPUTexture;
 	private images = new Map<string, Image>();
 	private videos = new Map<string, VideoStream>();
+	/**
+	 * The videos `prepare` decodes. A stream holds a single frame, which drawing
+	 * `videos` at another time would otherwise replace before it's read.
+	 */
+	private preparedVideos = new Map<string, VideoStream>();
 	private module: GPUShaderModule;
 	private layout: GPUBindGroupLayout;
 	private pipelines = new Map<number, GPURenderPipeline>();
@@ -100,29 +108,52 @@ export class MediaLibrary {
 		if (source.kind !== "media") return this.empty;
 		const file = this.files(source.asset);
 		if (!file) return this.empty;
-		if (source.video) return this.video(source.id, file, source.video).frameAt(time);
+		if (source.video) {
+			const stream = this.video(this.videos, source.id, file, source.video, () => {
+				this.onChange();
+			});
+			return stream.frameAt(time);
+		}
 		return this.image(source.asset, file).texture ?? this.empty;
 	}
 
-	/** Decode what `sources` show at `time`, e.g. before reading an exported frame back. */
-	async prepare(sources: readonly TextureSource[], time: number): Promise<void> {
+	/**
+	 * Decode what `sources` show at `time`, e.g. before reading an exported frame
+	 * back, whatever `texture` is asked for meanwhile. Returns their textures.
+	 */
+	async prepare(sources: readonly TextureSource[], time: number): Promise<TextureOf> {
+		const frames = new Map<string, GPUTexture>();
 		await Promise.all(
 			sources.map(async (source) => {
 				if (source.kind !== "media") return;
 				const file = this.files(source.asset);
 				if (!file) return;
-				if (source.video) await this.video(source.id, file, source.video).decode(time);
-				else await this.loadImage(source.asset, file);
+				if (source.video) {
+					const stream = this.video(
+						this.preparedVideos,
+						source.id,
+						file,
+						source.video,
+						() => undefined,
+					);
+					await stream.decode(time);
+					frames.set(source.id, stream.current(time));
+				} else {
+					await this.loadImage(source.asset, file);
+				}
 			}),
 		);
+		return (source) => frames.get(source.id) ?? this.texture(source, time);
 	}
 
 	destroy() {
 		this.empty.destroy();
 		for (const image of this.images.values()) image.texture?.destroy();
-		for (const video of this.videos.values()) video.close();
+		for (const videos of [this.videos, this.preparedVideos]) {
+			for (const video of videos.values()) video.close();
+			videos.clear();
+		}
 		this.images.clear();
-		this.videos.clear();
 	}
 
 	private image(asset: string, file: Blob): Image {
@@ -152,24 +183,30 @@ export class MediaLibrary {
 			});
 	}
 
-	private video(id: string, file: Blob, playback: VideoPlayback): VideoStream {
+	private video(
+		videos: Map<string, VideoStream>,
+		id: string,
+		file: Blob,
+		playback: VideoPlayback,
+		onFrame: () => void,
+	): VideoStream {
 		this.closeIdleVideos();
-		const known = this.videos.get(id);
+		const known = videos.get(id);
 		if (known?.file === file) return known;
 		known?.close();
-		const stream = new VideoStream(file, playback, this, () => {
-			this.onChange();
-		});
-		this.videos.set(id, stream);
+		const stream = new VideoStream(file, playback, this, onFrame);
+		videos.set(id, stream);
 		return stream;
 	}
 
 	private closeIdleVideos() {
 		const now = performance.now() / 1000;
-		for (const [id, stream] of this.videos) {
-			if (now - stream.lastUsed < IDLE_SECONDS) continue;
-			stream.close();
-			this.videos.delete(id);
+		for (const videos of [this.videos, this.preparedVideos]) {
+			for (const [id, stream] of videos) {
+				if (now - stream.lastUsed < IDLE_SECONDS) continue;
+				stream.close();
+				videos.delete(id);
+			}
 		}
 	}
 
@@ -248,7 +285,8 @@ export class MediaLibrary {
 /**
  * One video played one way: decodes the frame each requested time shows,
  * frame by frame while it moves forward, seeking otherwise. Only the latest
- * request waiting is decoded.
+ * request waiting is decoded, so a frame that must be the one asked for needs
+ * a stream nothing else requests from.
  */
 class VideoStream {
 	lastUsed = performance.now() / 1000;
@@ -301,11 +339,9 @@ class VideoStream {
 	async decode(time: number): Promise<void> {
 		this.lastUsed = performance.now() / 1000;
 		await this.request(time);
-		// A request made while another decoded is decoded after it.
-		await this.decoding;
 	}
 
-	private current(time: number): GPUTexture {
+	current(time: number): GPUTexture {
 		return this.texture && this.timeIn(time) !== undefined
 			? this.texture
 			: this.library.emptyTexture;
