@@ -3,9 +3,17 @@ import { FrameMeter } from "./frame-meter";
 import type { FrameInputs } from "./renderer";
 
 /**
+ * Frames drawn but not finished yet. Any more than this and a program too
+ * heavy for the display's rate queues work without end, which the page's own
+ * compositing then waits behind, so the whole UI lags, not just the preview.
+ */
+const MAX_FRAMES_IN_FLIGHT = 1;
+
+/**
  * Plays a `Clock` on animation frames, calling `onFrame` whenever there is a
  * frame to draw: on each new frame while playing, and once after a seek or an
- * `invalidate` (e.g. a new program) while paused.
+ * `invalidate` (e.g. a new program) while paused. `onFrame` may return a
+ * promise of the frame being finished, and frames wait for it.
  */
 export class Player {
 	readonly clock: Clock;
@@ -15,10 +23,11 @@ export class Player {
 	private request: number | undefined;
 	private lastTimestamp: number | undefined;
 	private dirty = true;
+	private framesInFlight = 0;
 
 	constructor(
 		timing: Timing,
-		private onFrame: (frame: FrameInputs) => void,
+		private onFrame: (frame: FrameInputs) => Promise<unknown> | undefined,
 	) {
 		this.clock = new Clock(timing);
 		this.schedule();
@@ -70,8 +79,7 @@ export class Player {
 
 	/** Draw the current frame right away rather than on the next animation frame. */
 	drawNow() {
-		this.dirty = false;
-		this.onFrame(this.clock);
+		this.draw();
 	}
 
 	destroy() {
@@ -93,10 +101,21 @@ export class Player {
 			if (this.clock.tick(elapsed)) this.dirty = true;
 			this.schedule();
 		}
-		if (this.dirty) {
-			this.dirty = false;
+		if (this.dirty && this.framesInFlight < MAX_FRAMES_IN_FLIGHT) {
 			if (this.playingState) this.meter.record(timestamp);
-			this.onFrame(this.clock);
+			this.draw();
 		}
 	};
+
+	private draw() {
+		this.dirty = false;
+		const finished = this.onFrame(this.clock);
+		if (!finished) return;
+		this.framesInFlight += 1;
+		const release = () => {
+			this.framesInFlight -= 1;
+			if (this.dirty) this.schedule();
+		};
+		finished.then(release, release);
+	}
 }

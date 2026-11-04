@@ -95,9 +95,7 @@ export class Preview {
 	private playStarts = 0;
 
 	constructor(timing: Timing = { fps: 60, realtime: true }) {
-		this.player = new Player(timing, (frame) => {
-			this.draw(frame);
-		});
+		this.player = new Player(timing, (frame) => this.draw(frame));
 		this.measureRefreshRate();
 	}
 
@@ -336,17 +334,19 @@ export class Preview {
 		this.player.invalidate();
 	}
 
-	private draw(frame: FrameInputs) {
+	/** Draw `frame`; resolves when the GPU has finished it, if it drew. */
+	private draw(frame: FrameInputs): Promise<void> | undefined {
 		this.time = frame.time;
 		this.frame = frame.frame;
 		this.frameRate = this.player.meter.rate;
 		const program = this.program;
-		if (!program) return;
+		if (!program) return undefined;
 		const timing = this.player.playing ? this.renderer?.timer?.begin() : undefined;
 		for (const target of this.targets.values()) target?.render(program, frame, timing);
 		void timing?.end().then((seconds) => {
 			if (seconds !== undefined) this.player.meter.recordGpuTime(seconds);
 		});
+		return this.renderer?.device.queue.onSubmittedWorkDone();
 	}
 
 	/**
