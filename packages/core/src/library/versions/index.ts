@@ -52,8 +52,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-aspect-uv/1b256db7053e2f.json").then((m) => m.default),
 	"std-fractal-noise-octaves@08724997071465": () =>
 		import("./std-fractal-noise-octaves/08724997071465.json").then((m) => m.default),
-	"std-box-blur@148f3b53b522a0": () =>
-		import("./std-box-blur/148f3b53b522a0.json").then((m) => m.default),
+	"std-box-blur@03bf409bc95e92": () =>
+		import("./std-box-blur/03bf409bc95e92.json").then((m) => m.default),
 	"std-opensimplex-orientation@095289db2a643c": () =>
 		import("./std-opensimplex-orientation/095289db2a643c.json").then((m) => m.default),
 	"std-fit-uv@04724b476ccb14": () =>
@@ -66,14 +66,14 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-oklch/19b14b1b258cc5.json").then((m) => m.default),
 	"std-voronoi-smooth@04012c3e9902b8": () =>
 		import("./std-voronoi-smooth/04012c3e9902b8.json").then((m) => m.default),
-	"std-box-blur-1d@098b3afe231c72": () =>
-		import("./std-box-blur-1d/098b3afe231c72.json").then((m) => m.default),
+	"std-box-blur-1d@09e81e18d1c8e2": () =>
+		import("./std-box-blur-1d/09e81e18d1c8e2.json").then((m) => m.default),
 	"std-linear-rgb-to-xyz@07e6143a4fd39a": () =>
 		import("./std-linear-rgb-to-xyz/07e6143a4fd39a.json").then((m) => m.default),
 	"std-xyz-to-linear-rgb@1defc9439b9f88": () =>
 		import("./std-xyz-to-linear-rgb/1defc9439b9f88.json").then((m) => m.default),
-	"std-gaussian-blur-1d@1b67a97fbb5035": () =>
-		import("./std-gaussian-blur-1d/1b67a97fbb5035.json").then((m) => m.default),
+	"std-gaussian-blur-1d@0ce4e46587de3d": () =>
+		import("./std-gaussian-blur-1d/0ce4e46587de3d.json").then((m) => m.default),
 	"std-pad-vector@1728760d9cd716": () =>
 		import("./std-pad-vector/1728760d9cd716.json").then((m) => m.default),
 	"std-hash@195359940b5270": () =>
@@ -92,12 +92,14 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklch-to-linear-rgb/120e0313543487.json").then((m) => m.default),
 	"std-oklab-to-linear-rgb@0deeb5e1a34c78": () =>
 		import("./std-oklab-to-linear-rgb/0deeb5e1a34c78.json").then((m) => m.default),
+	"std-box-blur-once@14710a96f8ca92": () =>
+		import("./std-box-blur-once/14710a96f8ca92.json").then((m) => m.default),
 	"std-opensimplex-2d@0cfc9edb3af544": () =>
 		import("./std-opensimplex-2d/0cfc9edb3af544.json").then((m) => m.default),
 	"std-fractal-voronoi@04284455a8ec10": () =>
 		import("./std-fractal-voronoi/04284455a8ec10.json").then((m) => m.default),
-	"std-gaussian-blur@1a5c0812379d7b": () =>
-		import("./std-gaussian-blur/1a5c0812379d7b.json").then((m) => m.default),
+	"std-gaussian-blur@00f30112c55baa": () =>
+		import("./std-gaussian-blur/00f30112c55baa.json").then((m) => m.default),
 	"std-fractal-octave@009987a5825aa9": () =>
 		import("./std-fractal-octave/009987a5825aa9.json").then((m) => m.default),
 };

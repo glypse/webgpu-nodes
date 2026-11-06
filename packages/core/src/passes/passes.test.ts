@@ -214,7 +214,7 @@ const IMPULSE: Asset = {
 };
 
 /** The image blurred by the standard-library group `id` at `radius` pixels, its alpha by pixel. */
-function blurred(id: string, radius: number): number[][] {
+function blurred(id: string, radius: number, values: Record<string, number> = {}): number[][] {
 	const entry = libraryEntry(id);
 	const asset = IMPULSE;
 	const project = rootProject(
@@ -225,7 +225,15 @@ function blurred(id: string, radius: number): number[][] {
 				type: "node-group",
 				group: { definitionRef: entry.ref, locked: true },
 				data: {
-					values: { [libraryHandle(entry, "group-input", "Radius")]: radius / SIZE },
+					values: {
+						[libraryHandle(entry, "group-input", "Radius")]: radius / SIZE,
+						...Object.fromEntries(
+							Object.entries(values).map(([label, value]) => [
+								libraryHandle(entry, "group-input", label),
+								value,
+							]),
+						),
+					},
 				},
 			},
 			// Samples the blurred texture at the pixel, for the evaluator to read.
@@ -279,7 +287,15 @@ describe("blurs", () => {
 		const sigma = radius / 3;
 		expectClose(
 			blurred("std-gaussian-blur", radius),
-			reference((k) => Math.exp(-(k * k) / (2 * sigma * sigma)), radius),
+			reference(
+				(k) =>
+					Math.max(
+						Math.exp(-(k * k) / (2 * sigma * sigma)) -
+							Math.exp(-((radius + 1) ** 2) / (2 * sigma * sigma)),
+						0,
+					),
+				radius,
+			),
 		);
 	});
 
@@ -289,5 +305,69 @@ describe("blurs", () => {
 			blurred("std-box-blur", radius),
 			reference((k) => Math.min(1, Math.max(0, radius + 1 - Math.abs(k))), Math.ceil(radius)),
 		);
+	});
+
+	it("blurs along the angle alone with a direction", () => {
+		const centre = (SIZE - 1) / 2;
+		for (const id of ["std-gaussian-blur", "std-box-blur"]) {
+			const pixels = blurred(id, 2, { Direction: 1, Angle: 90 });
+			pixels.forEach((row, y) => {
+				row.forEach((value, x) => {
+					if (x !== centre) expect(value).toBeCloseTo(0, 4);
+					else if (y === centre) expect(value).toBeGreaterThan(0);
+				});
+			});
+			expect(pixels[centre - 1]?.[centre]).toBeGreaterThan(0);
+		}
+	});
+
+	it("Box Blur's iterations convolve the box with itself", () => {
+		const twice = blurred("std-box-blur", 1, { Iterations: 2 });
+		const centre = (SIZE - 1) / 2;
+		const taps = [1 / 9, 2 / 9, 3 / 9, 2 / 9, 1 / 9];
+		const w = (d: number) => taps[d + 2] ?? 0;
+		expectClose(
+			twice,
+			Array.from({ length: SIZE }, (_, y) =>
+				Array.from({ length: SIZE }, (_, x) => w(x - centre) * w(y - centre)),
+			),
+		);
+	});
+
+	it("renders only the passes its settings reach", () => {
+		const passes = (id: string, values: Record<string, number>) => {
+			const entry = libraryEntry(id);
+			const project = rootProject(
+				[
+					{ id: "img", type: "image", data: { asset: IMPULSE.id } },
+					{
+						id: "blur",
+						type: "node-group",
+						group: { definitionRef: entry.ref, locked: true },
+						data: {
+							values: Object.fromEntries(
+								Object.entries(values).map(([label, value]) => [
+									libraryHandle(entry, "group-input", label),
+									value,
+								]),
+							),
+						},
+					},
+					{ id: "read", type: "add" },
+				],
+				[
+					["img", "texture", "blur", libraryHandle(entry, "group-input", "Texture")],
+					["blur", libraryHandle(entry, "group-output", "Texture"), "read", "operands"],
+					["read", "result", "out", "color"],
+				],
+			);
+			const graph = new GraphModel({ ...project, assets: [IMPULSE] });
+			return generateRenderPlan(graph).passes.length;
+		};
+		// The last pass samples the blur's result.
+		expect(passes("std-gaussian-blur", {})).toBe(3);
+		expect(passes("std-gaussian-blur", { Direction: 1 })).toBe(2);
+		expect(passes("std-box-blur", { Iterations: 3 })).toBe(7);
+		expect(passes("std-box-blur", { Iterations: 3, Direction: 1 })).toBe(4);
 	});
 });

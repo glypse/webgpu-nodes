@@ -5,6 +5,7 @@ import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
 import boxBlur1d from "./std-box-blur-1d.json";
+import boxBlurOnce from "./std-box-blur-once.json";
 import boxBlur from "./std-box-blur.json";
 import color from "./std-color.json";
 import componentSum from "./std-component-sum.json";
@@ -134,6 +135,7 @@ const files: unknown[] = [
 	boxBlur1d,
 	gaussianBlur,
 	boxBlur,
+	boxBlurOnce,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {
