@@ -5,6 +5,7 @@ import { GraphDocumentSchema, NodeWidgetSchema } from "../graph/schema";
 import type { NodeWidget } from "../types";
 import aspectUv from "./std-aspect-uv.json";
 import boxBlur1d from "./std-box-blur-1d.json";
+import boxBlur2d from "./std-box-blur-2d.json";
 import boxBlurOnce from "./std-box-blur-once.json";
 import boxBlur from "./std-box-blur.json";
 import color from "./std-color.json";
@@ -15,6 +16,7 @@ import fractalNoise from "./std-fractal-noise.json";
 import fractalOctave from "./std-fractal-octave.json";
 import fractalVoronoi from "./std-fractal-voronoi.json";
 import gaussianBlur1d from "./std-gaussian-blur-1d.json";
+import gaussianBlur2d from "./std-gaussian-blur-2d.json";
 import gaussianBlur from "./std-gaussian-blur.json";
 import gradientNoise1d from "./std-gradient-noise-1d.json";
 import hash from "./std-hash.json";
@@ -136,6 +138,8 @@ const files: unknown[] = [
 	gaussianBlur,
 	boxBlur,
 	boxBlurOnce,
+	gaussianBlur2d,
+	boxBlur2d,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

@@ -281,6 +281,9 @@ function expectClose(actual: number[][], expected: number[][]) {
 	});
 }
 
+// The evaluator computes every tap of every pass on the CPU, for each pixel.
+const SLOW = 30_000;
+
 describe("blurs", () => {
 	it("Gaussian Blur weights taps by a Gaussian of a third of the radius", () => {
 		const radius = 3;
@@ -321,18 +324,32 @@ describe("blurs", () => {
 		}
 	});
 
-	it("Box Blur's iterations convolve the box with itself", () => {
-		const twice = blurred("std-box-blur", 1, { Iterations: 2 });
-		const centre = (SIZE - 1) / 2;
-		const taps = [1 / 9, 2 / 9, 3 / 9, 2 / 9, 1 / 9];
-		const w = (d: number) => taps[d + 2] ?? 0;
-		expectClose(
-			twice,
-			Array.from({ length: SIZE }, (_, y) =>
-				Array.from({ length: SIZE }, (_, x) => w(x - centre) * w(y - centre)),
-			),
-		);
-	});
+	it(
+		"Box Blur's iterations convolve the box with itself",
+		() => {
+			const twice = blurred("std-box-blur", 1, { Iterations: 2 });
+			const centre = (SIZE - 1) / 2;
+			const taps = [1 / 9, 2 / 9, 3 / 9, 2 / 9, 1 / 9];
+			const w = (d: number) => taps[d + 2] ?? 0;
+			expectClose(
+				twice,
+				Array.from({ length: SIZE }, (_, y) =>
+					Array.from({ length: SIZE }, (_, x) => w(x - centre) * w(y - centre)),
+				),
+			);
+		},
+		SLOW,
+	);
+
+	it(
+		"blurs the same unseparated, at a radius the same across the image",
+		() => {
+			for (const id of ["std-gaussian-blur", "std-box-blur"]) {
+				expectClose(blurred(id, 2, { Separable: 0 }), blurred(id, 2));
+			}
+		},
+		SLOW,
+	);
 
 	it("renders only the passes its settings reach", () => {
 		const passes = (id: string, values: Record<string, number>) => {
@@ -369,5 +386,6 @@ describe("blurs", () => {
 		expect(passes("std-gaussian-blur", { Direction: 1 })).toBe(2);
 		expect(passes("std-box-blur", { Iterations: 3 })).toBe(7);
 		expect(passes("std-box-blur", { Iterations: 3, Direction: 1 })).toBe(4);
+		expect(passes("std-gaussian-blur", { Separable: 0 })).toBe(2);
 	});
 });

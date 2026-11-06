@@ -1,12 +1,13 @@
 // Blurs: each runs a one-dimensional kernel horizontally, renders it to a
 // texture, then runs it vertically on that, and renders the result. With a
-// direction, the kernel runs once, along an angle.
+// direction, the kernel runs once, along an angle; unseparated, a
+// two-dimensional kernel does all of it in one go.
 import { group, type GroupBuilder, type GroupSpec, helpers, type Ref } from "../../builder";
-import { boxBlur1d, EDGES, gaussianBlur1d } from "./kernel";
+import { boxBlur1d, boxBlur2d, EDGES, gaussianBlur1d, gaussianBlur2d } from "./kernel";
 
-type Kernel = typeof gaussianBlur1d;
+type Kernels = { along: typeof gaussianBlur1d; around: typeof gaussianBlur2d };
 
-const BLUR_INPUTS = ["texture", "radius", "edges", "direction", "angle"] as const;
+const BLUR_INPUTS = ["texture", "radius", "edges", "separable", "direction", "angle"] as const;
 type BlurInput = (typeof BLUR_INPUTS)[number];
 
 const MAX_ITERATIONS = 8;
@@ -17,18 +18,22 @@ function blurInputs<I extends string>(g: GroupBuilder<I | BlurInput, "texture">)
 	const radius = g.input("radius", t, { label: "Radius", default: 0.01, min: 0 });
 	const edges = g.enum("edges", EDGES, 0, { label: "Edges" });
 	const direction = g.toggle("direction", 0, { label: "Direction" });
+	const separable = g.toggle("separable", 1, {
+		label: "Separable",
+		owner: { enum: direction, value: 0 },
+	});
 	const angle = g.input("angle", "f32", {
 		label: "Angle",
 		default: 0,
 		owner: { enum: direction, value: 1 },
 	});
-	return { texture, radius, edges, direction, angle };
+	return { texture, radius, edges, separable, direction, angle };
 }
 
-/** A blur by `kernel`: along both axes in turn, or along its angle. */
+/** A blur by `kernels`: along both axes in turn or at once, or along its angle. */
 function blur(
 	spec: Pick<GroupSpec, "id" | "name" | "aliases" | "section" | "searchSection">,
-	kernel: Kernel,
+	{ along: kernel, around }: Kernels,
 ): GroupSpec<BlurInput, "texture"> {
 	return group({
 		section: ["Blur"],
@@ -37,7 +42,7 @@ function blur(
 		outputs: ["texture"],
 		category: "texture",
 		build: (g) => {
-			const { texture, radius, edges, direction, angle } = blurInputs(g);
+			const { texture, radius, edges, separable, direction, angle } = blurInputs(g);
 			const { pixels, resolution } = g.frame(
 				"Pixels",
 				{
@@ -53,7 +58,8 @@ function blur(
 				},
 			);
 			const { x: pixelsX, y: pixelsY } = g.separateVector(pixels);
-			const { x: stepX, y: stepY } = g.separateVector(g.div(1, resolution));
+			const step = g.div(1, resolution);
+			const { x: stepX, y: stepY } = g.separateVector(step);
 			const horizontal = g.call(kernel, {
 				texture,
 				direction: g.vec("vec2f", stepX, 0),
@@ -67,6 +73,7 @@ function blur(
 				radius: pixelsY,
 				edges,
 			});
+			const exact = g.call(around, { texture, step, radius: pixels, edges });
 			const along = g.frame(
 				"Along the angle",
 				{
@@ -83,7 +90,8 @@ function blur(
 					});
 				},
 			);
-			const color = g.match(direction, { 0: vertical.color, 1: along.color });
+			const bothAxes = g.match(separable, { 0: exact.color, 1: vertical.color });
+			const color = g.match(direction, { 0: bothAxes, 1: along.color });
 			g.output("texture", color, "texture", { label: "Texture" });
 		},
 	});
@@ -95,12 +103,12 @@ export const gaussianBlur = blur(
 		name: "Gaussian Blur",
 		aliases: ["Blur", "Soften", "Defocus", "Gaussian"],
 	},
-	gaussianBlur1d,
+	{ along: gaussianBlur1d, around: gaussianBlur2d },
 );
 
 const boxBlurOnce = blur(
 	{ id: "std-box-blur-once", name: "Box Blur Once", ...helpers("Blur") },
-	boxBlur1d,
+	{ along: boxBlur1d, around: boxBlur2d },
 );
 
 export const boxBlur = group({
@@ -133,4 +141,12 @@ export const boxBlur = group({
 	},
 });
 
-export default [gaussianBlur1d, boxBlur1d, gaussianBlur, boxBlurOnce, boxBlur];
+export default [
+	gaussianBlur1d,
+	boxBlur1d,
+	gaussianBlur2d,
+	boxBlur2d,
+	gaussianBlur,
+	boxBlurOnce,
+	boxBlur,
+];

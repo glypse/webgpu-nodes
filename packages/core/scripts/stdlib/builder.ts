@@ -486,12 +486,23 @@ class Builder<I extends string, O extends string> {
 	}
 
 	/** An on/off enum input (0 or 1), edited as a checkbox. */
-	toggle(key: I, initial: 0 | 1, options: { label?: string } = {}): EnumRef {
+	toggle(
+		key: I,
+		initial: 0 | 1,
+		options: { label?: string; owner?: { enum: EnumRef; value: number } } = {},
+	): EnumRef {
 		const variants: EnumVariant[] = [
 			{ value: 0, label: "Off" },
 			{ value: 1, label: "On" },
 		];
-		const id = this.addInput(key, { label: options.label ?? key, type: "bool", variants });
+		const id = this.addInput(key, {
+			label: options.label ?? key,
+			type: "bool",
+			variants,
+			...(options.owner
+				? { owner: { enumId: options.owner.enum.handle, value: options.owner.value } }
+				: {}),
+		});
 		this.inputValues[id] = initial;
 		return { node: GROUP_INPUT, handle: id, variants };
 	}
