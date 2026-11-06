@@ -31,6 +31,7 @@ import {
 	type NodeData,
 	type NodeInputDef,
 	type NodeWidget,
+	type SocketType,
 	type TypeVariable,
 	type WgslType,
 	type ZoneItem,
@@ -106,6 +107,8 @@ export type InputOptions = {
 	min?: number;
 	max?: number;
 	display?: ColorDisplay;
+	/** Compiled in rather than a uniform, so it can pick among textures. */
+	compiled?: boolean;
 	/** Shown only while this variant of one of the group's enum inputs is picked. */
 	owner?: { enum: EnumRef; value: number };
 	typeOwner?: TypeOwnerOption;
@@ -447,6 +450,7 @@ class Builder<I extends string, O extends string> {
 			...(options.min === undefined ? {} : { min: options.min }),
 			...(options.max === undefined ? {} : { max: options.max }),
 			...(options.display ? { display: options.display } : {}),
+			...(options.compiled ? { compiled: true } : {}),
 			...typeOwnerOf(options.typeOwner),
 		});
 		if (options.default !== undefined) this.inputValues[id] = options.default;
@@ -479,6 +483,17 @@ class Builder<I extends string, O extends string> {
 		});
 		this.inputValues[id] = initial;
 		return { node: GROUP_INPUT, handle: id, variants: list };
+	}
+
+	/** An on/off enum input (0 or 1), edited as a checkbox. */
+	toggle(key: I, initial: 0 | 1, options: { label?: string } = {}): EnumRef {
+		const variants: EnumVariant[] = [
+			{ value: 0, label: "Off" },
+			{ value: 1, label: "On" },
+		];
+		const id = this.addInput(key, { label: options.label ?? key, type: "bool", variants });
+		this.inputValues[id] = initial;
+		return { node: GROUP_INPUT, handle: id, variants };
 	}
 
 	output(key: O, source: Operand, type: HandleType, options: { label?: string } = {}): void {
@@ -570,7 +585,7 @@ class Builder<I extends string, O extends string> {
 	}
 
 	/** The case of `cases` at `index` (a table read at runtime), all of them `type`. */
-	indexSwitch(index: Operand, cases: readonly Operand[], type: WgslType): Ref {
+	indexSwitch(index: Operand, cases: readonly Operand[], type: SocketType): Ref {
 		const ref = this.node(
 			INDEX_SWITCH,
 			{ [INDEX_SWITCH_INDEX]: index },

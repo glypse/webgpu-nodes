@@ -36,6 +36,7 @@ const HandleFields = {
 			}),
 		),
 	),
+	compiled: v.optional(v.boolean()),
 	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
 	typeOwner: v.optional(TypeOwnerSchema),
 	min: v.optional(v.number()),

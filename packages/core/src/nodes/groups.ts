@@ -81,8 +81,11 @@ export function groupInputDef(
 	handle: GroupHandleDef,
 	variables: readonly TypeVariable[],
 ): NodeInputDef {
+	const compiled = handle.compiled ? { compiled: true } : {};
 	const control: InputControl | undefined = handle.variants
-		? { kind: "enum", variants: handle.variants }
+		? handle.type === "bool"
+			? { kind: "toggle", compiled: true }
+			: { kind: "enum", variants: handle.variants }
 		: handle.display === "swatch"
 			? { kind: "color" }
 			: handle.display === "wheel"
@@ -92,8 +95,11 @@ export function groupInputDef(
 							kind: "number",
 							...(handle.min === undefined ? {} : { min: handle.min }),
 							...(handle.max === undefined ? {} : { max: handle.max }),
+							...compiled,
 						}
-					: undefined;
+					: handle.compiled
+						? { kind: "number", compiled: true }
+						: undefined;
 	return {
 		id: handle.id,
 		label: handle.label,

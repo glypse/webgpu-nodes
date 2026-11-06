@@ -12,9 +12,16 @@ export type InputControl =
 	 * when linked). Scrubbing stays within `softMin` and `softMax` too, while
 	 * typed values may go past them.
 	 */
-	| { kind: "number"; min?: number; max?: number; softMin?: number; softMax?: number }
+	| {
+			kind: "number";
+			min?: number;
+			max?: number;
+			softMin?: number;
+			softMax?: number;
+			compiled?: boolean;
+	  }
 	/** An on/off switch per component. */
-	| { kind: "toggle" }
+	| { kind: "toggle"; compiled?: boolean }
 	/** A colour swatch opening a picker; vec3f / vec4f only (linear RGB, alpha). */
 	| { kind: "color" }
 	/** A colour wheel and value ramp drawn on the node; vec3f / vec4f only (linear RGB, alpha). */
@@ -26,13 +33,14 @@ export type InputControlKind = InputControl["kind"];
 
 /**
  * Whether values edited by `control` are passed to the shader as uniforms,
- * so editing them doesn't recompile it. An enum's value is compiled in
- * instead, so only what its variant uses is computed.
+ * so editing them doesn't recompile it. An enum's value, or a `compiled`
+ * one, is compiled in instead, so only what it picks is computed.
  */
 export function isUniformControl(control: InputControl): boolean {
 	switch (control.kind) {
 		case "number":
 		case "toggle":
+			return !control.compiled;
 		case "color":
 		case "wheel":
 			return true;

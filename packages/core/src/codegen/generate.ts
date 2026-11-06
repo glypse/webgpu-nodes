@@ -511,7 +511,7 @@ class BodyEmitter {
 			const constant = this.constants.get(edge.sourceHandle);
 			return constant === undefined
 				? sanitizeIdent(edge.sourceHandle)
-				: formatWgslLiteral("u32", constant);
+				: formatWgslLiteral(this.sourceType(edge), constant);
 		}
 		const zoneVar = this.zoneVars.get(edge.source)?.get(edge.sourceHandle);
 		if (zoneVar) return zoneVar;

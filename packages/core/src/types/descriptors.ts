@@ -13,8 +13,16 @@ export type HandleDef = {
 	label: string;
 	/** The WGSL type this handle carries. */
 	type: WgslType;
-	/** On a group input: makes it an enum input (type u32) choosing among these. */
+	/**
+	 * On a group input: makes it an enum input choosing among these: a u32,
+	 * or a bool edited as a checkbox (its variants being 0 and 1).
+	 */
 	variants?: EnumVariant[];
+	/**
+	 * On a numeric group input: its value is compiled in, as an enum's is, so
+	 * that it can pick among textures. Editing it recompiles the shader.
+	 */
+	compiled?: boolean;
 	/**
 	 * On a group input: the variant of one of the group's enum inputs it
 	 * belongs to. Group nodes show it only while that variant is picked, so
