@@ -4,6 +4,7 @@ import { ASSET_KINDS, AssetSchema, VideoPlaybackSchema } from "../assets/assets"
 import { COLOR_MODES } from "../color/modes";
 import { CURVE_POINT_KINDS } from "../curve";
 import { FRAME_TINTS } from "../frames/analysis";
+import { isSocketName } from "../nodes/custom";
 import { NODE_TYPES } from "../nodes/registry";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, SOCKET_TYPES, WGSL_TYPES } from "../types";
@@ -107,6 +108,15 @@ const InputValueSchema = v.union([
 	}),
 ]);
 
+/** A Custom WGSL node's sockets, whose labels are written into its shader as they are. */
+const CustomSocketsSchema = v.pipe(
+	v.strictObject({ inputs: listOf(HandleSchema), outputs: listOf(HandleSchema) }),
+	v.check(({ inputs, outputs }) => {
+		const labels = [...inputs, ...outputs].map((s) => s.label);
+		return labels.every(isSocketName) && new Set(labels).size === labels.length;
+	}, "Every socket needs a WGSL name of its own."),
+);
+
 const NodeDataSchema = v.strictObject({
 	label: v.optional(LabelSchema),
 	values: v.optional(v.record(IdSchema, InputValueSchema)),
@@ -120,9 +130,7 @@ const NodeDataSchema = v.strictObject({
 	cases: v.optional(v.pipe(FiniteSchema, v.integer(), v.minValue(1), v.maxValue(MAX_CASES))),
 	curve: v.optional(listOf(CurvePointSchema)),
 	code: v.optional(v.pipe(v.string(), v.maxLength(MAX_CODE_LENGTH))),
-	sockets: v.optional(
-		v.strictObject({ inputs: listOf(HandleSchema), outputs: listOf(HandleSchema) }),
-	),
+	sockets: v.optional(CustomSocketsSchema),
 	note: v.optional(v.pipe(v.string(), v.maxLength(MAX_NOTE_LENGTH))),
 	tint: v.optional(v.picklist(FRAME_TINTS)),
 	hideLinks: v.optional(v.boolean()),

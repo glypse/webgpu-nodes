@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import { generateShader } from "../codegen";
-import { managerFor, type TestNode } from "../testing/graph";
+import { managerFor, rootProject, type TestNode } from "../testing/graph";
 import { nagaBin, validateFragment } from "../testing/wgsl";
 import { CUSTOM_WGSL, customSockets, isSocketName } from "./custom";
 
@@ -55,6 +55,51 @@ describe("Custom WGSL node", () => {
 		const node = loaded.root.nodesById.get("c");
 		expect(node?.data.code).toBe(TWO_OUTPUTS.code);
 		expect(node && customSockets(node.data)).toEqual(TWO_OUTPUTS.sockets);
+	});
+
+	it("refuses socket names from a file that aren't WGSL names of their own", async () => {
+		const withLabel = (label: string) =>
+			JSON.stringify(
+				rootProject(
+					[
+						custom({
+							sockets: {
+								inputs: [{ id: "a", label: "taken", type: "f32" }],
+								outputs: [{ id: "b", label, type: "f32" }],
+							},
+						}),
+					],
+					[],
+				),
+			);
+		const loaded = managerFor([], []);
+		expect((await loaded.loadFromString(withLabel("free"))).ok).toBe(true);
+		expect((await loaded.loadFromString(withLabel("taken"))).ok).toBe(false);
+		expect((await loaded.loadFromString(withLabel("x: f32) { evil(); } fn y("))).ok).toBe(
+			false,
+		);
+	});
+
+	it("keeps socket ids out of its shader's syntax", () => {
+		const hostile = "b; evil(); let c";
+		const graph = managerFor(
+			[
+				custom({
+					code: "one = 1.0;\ntwo = 2.0;",
+					sockets: {
+						inputs: [],
+						outputs: [
+							{ id: hostile, label: "one", type: "f32" },
+							{ id: crypto.randomUUID(), label: "two", type: "f32" },
+						],
+					},
+				}),
+			],
+			[["c", hostile, "out", "color"]],
+		);
+		const { shader, uniforms } = generateShader(graph);
+		expect(shader).not.toContain("evil();");
+		if (nagaBin) expect(validateFragment(shader, uniforms)).toBeNull();
 	});
 
 	it("takes only WGSL identifiers as socket names", () => {

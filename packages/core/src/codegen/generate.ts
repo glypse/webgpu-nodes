@@ -518,7 +518,7 @@ class BodyEmitter {
 		const base = getVarName(edge.source);
 		if (sourceNode?.type === "node-group") return `${base}.${sanitizeIdent(edge.sourceHandle)}`;
 		if (sourceNode && this.state.graph.resolveDescriptor(sourceNode).outputs.length > 1) {
-			return `${base}_${edge.sourceHandle}`;
+			return `${base}_${identSuffix(edge.sourceHandle)}`;
 		}
 		return base;
 	}
@@ -682,7 +682,7 @@ class BodyEmitter {
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of resolvedOutputs) {
 			outputVars[outputDef.id] =
-				descriptor.outputs.length > 1 ? `${varName}_${outputDef.id}` : varName;
+				descriptor.outputs.length > 1 ? `${varName}_${identSuffix(outputDef.id)}` : varName;
 		}
 
 		const typeOf = (id: string): WgslType => {
