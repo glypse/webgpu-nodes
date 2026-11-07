@@ -7,7 +7,7 @@
 	"searchSection": "Helpers",
 	"dependencies": [
 		"std-noise-coordinates@099ff8c499b858",
-		"std-opensimplex-orientation@095289db2a643c",
+		"std-opensimplex-orientation@12616c2a725719",
 		"std-gradient-noise-1d@1bf7c19db4dbe5",
 		"std-opensimplex-2d@0cfc9edb3af544",
 		"std-opensimplex-3d@05d78c8e8e7b64",
@@ -48,7 +48,7 @@
 					"y": 234
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-orientation@095289db2a643c",
+					"definitionRef": "std-opensimplex-orientation@12616c2a725719",
 					"locked": true
 				}
 			},
@@ -404,64 +404,44 @@
 					{
 						"value": 0,
 						"label": "Standard",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec2f"]
-						}
+						"types": ["vec2f"]
 					},
 					{
 						"value": 1,
 						"label": "Y Vertical",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec2f"]
-						}
+						"types": ["vec2f"]
 					},
 					{
 						"value": 2,
 						"label": "XY Plane",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec3f", "vec4f"]
-						}
+						"types": ["vec3f", "vec4f"]
 					},
 					{
 						"value": 3,
 						"label": "XZ Plane",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec3f", "vec4f"]
-						}
+						"types": ["vec3f", "vec4f"]
 					},
 					{
 						"value": 4,
 						"label": "XYZ Volume",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec4f"]
-						}
+						"types": ["vec4f"]
 					},
 					{
 						"value": 5,
 						"label": "XY and ZW Planes",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec4f"]
-						}
+						"types": ["vec4f"]
 					},
 					{
 						"value": 6,
 						"label": "Classic",
-						"typeOwner": {
-							"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
-							"types": ["vec3f", "vec4f"]
-						}
+						"types": ["vec3f", "vec4f"]
 					}
 				],
 				"typeOwner": {
 					"variable": "cca8092b-c8d2-48ff-8927-14f11f11b587",
 					"types": ["vec2f", "vec3f", "vec4f"]
-				}
+				},
+				"variantsBy": "cca8092b-c8d2-48ff-8927-14f11f11b587"
 			},
 			{
 				"id": "a4e2ab9c-9673-4b91-adeb-e1b37b224b46",

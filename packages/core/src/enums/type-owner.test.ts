@@ -5,7 +5,7 @@ import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "../graph/doc
 import { GraphModel } from "../graph/model";
 import type { NodeType } from "../nodes/registry";
 import { edge, type TestEdge } from "../testing/graph";
-import type { NodeData, WgslType } from "../types";
+import { type NodeData, TOGGLE_VARIANTS, type WgslType } from "../types";
 import { caseHandle } from "./analysis";
 
 const node = (id: string, type: NodeType, data: NodeData = {}): GraphDocumentNode => ({
@@ -115,6 +115,9 @@ describe("inputs owned by types", () => {
 			graph.project.definitions.get("def")?.inputs.find((h) => h.id === "v")?.typeOwner;
 		graph.setHandleTypeOwner("def", "v", { variable: "T", types: ["vec4f", "f32"] });
 		expect(owner()).toEqual({ variable: "T", types: ["vec4f"] });
+		// None of its types: nothing changes.
+		graph.setHandleTypeOwner("def", "v", { variable: "T", types: ["f32"] });
+		expect(owner()).toEqual({ variable: "T", types: ["vec4f"] });
 		graph.setHandleTypeOwner("def", "v", undefined);
 		expect(owner()).toBeUndefined();
 	});
@@ -153,18 +156,11 @@ function variantProject(type: WgslType, value: number): GraphProject {
 						id: "o",
 						label: "Option",
 						type: "u32",
+						variantsBy: "T",
 						variants: [
-							{
-								value: 0,
-								label: "A",
-								typeOwner: { variable: "T", types: ["vec2f"] },
-							},
+							{ value: 0, label: "A", types: ["vec2f"] },
 							{ value: 1, label: "B" },
-							{
-								value: 2,
-								label: "C",
-								typeOwner: { variable: "T", types: ["vec3f"] },
-							},
+							{ value: 2, label: "C", types: ["vec3f"] },
 						],
 					},
 					{ id: "k", label: "K", type: "f32", owner: { enumId: "o", value: 2 } },
@@ -216,16 +212,93 @@ describe("variants owned by types", () => {
 		expect(shader("vec3f")).toContain("let v_m = v_c;");
 	});
 
+	const enumOf = (graph: GraphModel) =>
+		graph.project.definitions.get("def")?.inputs.find((h) => h.id === "o");
+	const types = (graph: GraphModel) => enumOf(graph)?.variants?.map((v) => v.types);
+
 	it("follow their variable's types", () => {
 		const graph = new GraphModel(variantProject("vec2f", 1));
-		const owners = () =>
-			graph.project.definitions
-				.get("def")
-				?.inputs.find((h) => h.id === "o")
-				?.variants?.map((v) => v.typeOwner?.types);
-		graph.setVariantTypeOwner("def", "o", 1, { variable: "T", types: ["vec3f"] });
-		expect(owners()).toEqual([["vec2f"], ["vec3f"], ["vec3f"]]);
+		graph.setVariantOffered("def", "o", 1, "vec2f", false);
+		expect(types(graph)).toEqual([["vec2f"], ["vec3f"], ["vec3f"]]);
 		graph.removeTypeVariable("def", "T");
-		expect(owners()).toEqual([undefined, undefined, undefined]);
+		expect(types(graph)).toEqual([undefined, undefined, undefined]);
+		expect(enumOf(graph)?.variantsBy).toBeUndefined();
+	});
+
+	it("are offered for all of a type no variant would have", () => {
+		const graph = new GraphModel(variantProject("vec2f", 1));
+		graph.setVariantOffered("def", "o", 1, "vec2f", false);
+		graph.setTypeVariable("def", "T", { types: ["vec2f", "vec3f", "vec4f"] });
+		expect(types(graph)).toEqual([
+			["vec2f", "vec4f"],
+			["vec3f", "vec4f"],
+			["vec3f", "vec4f"],
+		]);
+	});
+
+	it("keep a variant for each type", () => {
+		const graph = new GraphModel(variantProject("vec2f", 1));
+		graph.setVariantOffered("def", "o", 1, "vec3f", false);
+		graph.setVariantOffered("def", "o", 2, "vec3f", false);
+		expect(types(graph)).toEqual([["vec2f"], ["vec2f"], ["vec3f"]]);
+		// Removing the only variant for vec3f leaves all offering it.
+		graph.setHandleVariants(
+			"def",
+			"o",
+			enumOf(graph)?.variants?.filter((v) => v.value !== 2),
+		);
+		expect(types(graph)).toEqual([undefined, undefined]);
+	});
+
+	it("need no variant for the types their enum isn't shown for", () => {
+		const graph = new GraphModel(variantProject("vec2f", 1));
+		graph.setTypeVariable("def", "T", { types: ["vec2f", "vec3f", "vec4f"] });
+		graph.setHandleTypeOwner("def", "o", { variable: "T", types: ["vec2f", "vec3f"] });
+		graph.setVariantOffered("def", "o", 1, "vec3f", false);
+		expect(types(graph)).toEqual([["vec2f"], ["vec2f"], ["vec3f"]]);
+	});
+
+	it("are all offered again without the enum's variable", () => {
+		const graph = new GraphModel(variantProject("vec2f", 1));
+		graph.setVariantsBy("def", "o", undefined);
+		expect(enumOf(graph)?.variantsBy).toBeUndefined();
+		expect(types(graph)).toEqual([undefined, undefined, undefined]);
+		expect(offered(graph)).toEqual(["A", "B", "C"]);
+		graph.setVariantsBy("def", "o", "T");
+		expect(enumOf(graph)?.variantsBy).toBe("T");
+		expect(offered(graph)).toEqual(["A", "B", "C"]);
+	});
+});
+
+describe("checkbox enums", () => {
+	it("stay checkboxes when their variants are renamed", () => {
+		const graph = new GraphModel(project("vec3f"));
+		const handle = graph.addHandle("def", "input", "bool", { variants: [...TOGGLE_VARIANTS] });
+		expect(handle?.type).toBe("bool");
+		expect(handle?.label).toBe("Checkbox 1");
+		const id = handle?.id ?? "";
+		graph.setHandleVariants("def", id, [
+			{ value: 0, label: "No" },
+			{ value: 1, label: "Yes" },
+		]);
+		const input = graph.project.definitions.get("def")?.inputs.find((h) => h.id === id);
+		expect(input?.type).toBe("bool");
+		expect(input?.variants?.map((v) => v.label)).toEqual(["No", "Yes"]);
+	});
+});
+
+describe("compiled inputs", () => {
+	const compiled = (graph: GraphModel, id: string) =>
+		graph.project.definitions.get("def")?.inputs.find((h) => h.id === id)?.compiled;
+
+	it("are integers", () => {
+		const graph = new GraphModel(project("vec3f"));
+		const id = graph.addHandle("def", "input", "i32")?.id ?? "";
+		graph.setHandleCompiled("def", id, true);
+		expect(compiled(graph, id)).toBe(true);
+		graph.setHandleType("def", "input", id, "f32");
+		expect(compiled(graph, id)).toBeUndefined();
+		graph.setHandleCompiled("def", id, true);
+		expect(compiled(graph, id)).toBeUndefined();
 	});
 });

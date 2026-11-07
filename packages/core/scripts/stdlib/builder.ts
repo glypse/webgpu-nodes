@@ -32,6 +32,7 @@ import {
 	type NodeInputDef,
 	type NodeWidget,
 	type SocketType,
+	TOGGLE_VARIANTS,
 	type TypeVariable,
 	type WgslType,
 	type ZoneItem,
@@ -473,13 +474,14 @@ class Builder<I extends string, O extends string> {
 		const list: EnumVariant[] = variants.map(([value, label, types]) => ({
 			value,
 			label,
-			...(by && types ? { typeOwner: { variable: by.variable, types: [...types] } } : {}),
+			...(by && types ? { types: [...types] } : {}),
 		}));
 		const id = this.addInput(key, {
 			label: options.label ?? key,
 			type: "u32",
 			variants: list,
 			...typeOwnerOf(options.typeOwner),
+			...(by ? { variantsBy: by.variable } : {}),
 		});
 		this.inputValues[id] = initial;
 		return { node: GROUP_INPUT, handle: id, variants: list };
@@ -491,10 +493,7 @@ class Builder<I extends string, O extends string> {
 		initial: 0 | 1,
 		options: { label?: string; owner?: { enum: EnumRef; value: number } } = {},
 	): EnumRef {
-		const variants: EnumVariant[] = [
-			{ value: 0, label: "Off" },
-			{ value: 1, label: "On" },
-		];
+		const variants = TOGGLE_VARIANTS.map((v) => ({ ...v }));
 		const id = this.addInput(key, {
 			label: options.label ?? key,
 			type: "bool",

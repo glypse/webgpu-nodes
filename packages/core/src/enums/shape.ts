@@ -1,4 +1,12 @@
-import type { EnumVariant, HandleDef, InputOwner, TypeBindings, TypeOwner } from "../types";
+import type {
+	EnumVariant,
+	HandleDef,
+	InputOwner,
+	TypeBindings,
+	TypeOwner,
+	TypeVariable,
+	WgslType,
+} from "../types";
 
 /** What enums need of a handle, whatever its type. */
 type Owned = Pick<HandleDef, "id" | "owner" | "variants" | "typeOwner">;
@@ -38,12 +46,67 @@ function ownedBy(owner: TypeOwner | undefined, bindings: TypeBindings): boolean 
 	return type === undefined || !!owner?.types.includes(type);
 }
 
+/** Whether `variant` is offered with its enum's variable on `type`. */
+export function offeredFor(variant: EnumVariant, type: WgslType | undefined): boolean {
+	return !variant.types || type === undefined || variant.types.includes(type);
+}
+
+/** `variant` offered whatever the type. */
+export function offeredAlways(variant: EnumVariant): EnumVariant {
+	const rest = { ...variant };
+	delete rest.types;
+	return rest;
+}
+
 /** The variants of an enum offered with its group's variables bound to `bindings`. */
 export function availableVariants(
-	variants: readonly EnumVariant[],
+	handle: Pick<HandleDef, "variants" | "variantsBy">,
 	bindings: TypeBindings,
 ): EnumVariant[] {
-	return variants.filter((v) => ownedBy(v.typeOwner, bindings));
+	const type = handle.variantsBy === undefined ? undefined : bindings[handle.variantsBy];
+	return (handle.variants ?? []).filter((v) => offeredFor(v, type));
+}
+
+/** The types of `variable` an enum is shown for, each needing a variant to offer. */
+export function variantTypes(
+	handle: Pick<HandleDef, "typeOwner">,
+	variable: TypeVariable,
+): readonly WgslType[] {
+	const owner = handle.typeOwner;
+	return owner?.variable === variable.id
+		? variable.types.filter((t) => owner.types.includes(t))
+		: variable.types;
+}
+
+/**
+ * `handle` with its variants' types fitted to `variables`: within those it's
+ * shown for, a type none would offer being offered by all. Without its
+ * variable, its variants are offered whatever the types.
+ */
+export function fitVariants<T extends Pick<HandleDef, "variants" | "variantsBy" | "typeOwner">>(
+	handle: T,
+	variables: readonly TypeVariable[],
+): T {
+	if (handle.variantsBy === undefined) return handle;
+	const variable = variables.find((v) => v.id === handle.variantsBy);
+	const variants = handle.variants ?? [];
+	if (!variable) {
+		const rest = { ...handle, variants: variants.map(offeredAlways) };
+		delete rest.variantsBy;
+		return rest;
+	}
+	const types = variantTypes(handle, variable);
+	const unoffered = types.filter((t) => !variants.some((v) => offeredFor(v, t)));
+	return {
+		...handle,
+		variants: variants.map((variant) => {
+			if (!variant.types) return variant;
+			const offered = variant.types;
+			const kept = types.filter((t) => offered.includes(t) || unoffered.includes(t));
+			const rest = offeredAlways(variant);
+			return kept.length === types.length ? rest : { ...rest, types: kept };
+		}),
+	};
 }
 
 /** The type owners of `handle` and of the enums it lies under. */

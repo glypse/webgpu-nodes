@@ -29,7 +29,7 @@ export function groupConstants(
 			: (node.data.values?.[handle.id] ?? definition?.defaults[handle.id] ?? 0);
 		if (known === undefined) continue;
 		const value = handle.variants
-			? enumValue(known, availableVariants(handle.variants, bindings))
+			? enumValue(known, availableVariants(handle, bindings))
 			: Math.trunc(Number(typeof known === "object" ? known.x : known));
 		if (value !== undefined) values.set(handle.id, value);
 	}

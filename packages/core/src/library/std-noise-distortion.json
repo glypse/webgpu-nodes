@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-pad-vector@1728760d9cd716", "std-opensimplex-noise@00069c28081f59"],
+	"dependencies": ["std-pad-vector@1728760d9cd716", "std-opensimplex-noise@09aa98a1db9460"],
 	"definition": {
 		"nodes": [
 			{
@@ -190,7 +190,7 @@
 					"y": 1043
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@00069c28081f59",
+					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -238,7 +238,7 @@
 					"y": 1459
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@00069c28081f59",
+					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -286,7 +286,7 @@
 					"y": 1756
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@00069c28081f59",
+					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -334,7 +334,7 @@
 					"y": 2071
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@00069c28081f59",
+					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -990,64 +990,44 @@
 					{
 						"value": 0,
 						"label": "Standard",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec2f"]
-						}
+						"types": ["vec2f"]
 					},
 					{
 						"value": 1,
 						"label": "Y Vertical",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec2f"]
-						}
+						"types": ["vec2f"]
 					},
 					{
 						"value": 2,
 						"label": "XY Plane",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec3f", "vec4f"]
-						}
+						"types": ["vec3f", "vec4f"]
 					},
 					{
 						"value": 3,
 						"label": "XZ Plane",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec3f", "vec4f"]
-						}
+						"types": ["vec3f", "vec4f"]
 					},
 					{
 						"value": 4,
 						"label": "XYZ Volume",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec4f"]
-						}
+						"types": ["vec4f"]
 					},
 					{
 						"value": 5,
 						"label": "XY and ZW Planes",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec4f"]
-						}
+						"types": ["vec4f"]
 					},
 					{
 						"value": 6,
 						"label": "Classic",
-						"typeOwner": {
-							"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
-							"types": ["vec3f", "vec4f"]
-						}
+						"types": ["vec3f", "vec4f"]
 					}
 				],
 				"typeOwner": {
 					"variable": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1",
 					"types": ["vec2f", "vec3f", "vec4f"]
-				}
+				},
+				"variantsBy": "6fdc6b2a-79e8-4c07-9ae2-116b668549a1"
 			},
 			{
 				"id": "d46f68a8-5304-4948-86a5-8221cdcfa1d5",

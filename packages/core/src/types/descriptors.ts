@@ -15,12 +15,12 @@ export type HandleDef = {
 	type: WgslType;
 	/**
 	 * On a group input: makes it an enum input choosing among these: a u32,
-	 * or a bool edited as a checkbox (its variants being 0 and 1).
+	 * or a bool edited as a checkbox (its variants being `TOGGLE_VARIANTS`).
 	 */
 	variants?: EnumVariant[];
 	/**
-	 * On a numeric group input: its value is compiled in, as an enum's is, so
-	 * that it can pick among textures. Editing it recompiles the shader.
+	 * On an integer group input: its value is compiled in, as an enum's is,
+	 * so that it can pick among textures. Editing it recompiles the shader.
 	 */
 	compiled?: boolean;
 	/**
@@ -36,6 +36,11 @@ export type HandleDef = {
 	 * its own.
 	 */
 	typeOwner?: TypeOwner;
+	/**
+	 * On a group's enum input: the id of the type variable deciding which of
+	 * its variants are offered (see `EnumVariant.types`).
+	 */
+	variantsBy?: string;
 	/**
 	 * On a numeric group input: the range its value is kept within while
 	 * edited on group nodes. Linked values pass as they are.
@@ -101,6 +106,11 @@ export function boundType(
 	);
 }
 
+/** Whether a group input's value can be compiled in. */
+export function canCompile(handle: Pick<GroupHandleDef, "type" | "variants">): boolean {
+	return !handle.variants && (handle.type === "i32" || handle.type === "u32");
+}
+
 export const COLOR_DISPLAYS = ["swatch", "wheel"] as const;
 export type ColorDisplay = (typeof COLOR_DISPLAYS)[number];
 
@@ -113,12 +123,19 @@ export type EnumVariant = {
 	value: number;
 	label: string;
 	/**
-	 * On a group's enum input: the types of one of its type variables the
-	 * variant is offered for. With others, group nodes neither offer nor
-	 * pick it: a value it holds then picks the first variant offered.
+	 * On an enum input with `variantsBy`: the types of that variable the
+	 * variant is offered for, all of them without. With others, group nodes
+	 * neither offer nor pick it: a value it holds then picks the first
+	 * variant offered.
 	 */
-	typeOwner?: TypeOwner;
+	types?: WgslType[];
 };
+
+/** The variants of a checkbox. */
+export const TOGGLE_VARIANTS: readonly EnumVariant[] = [
+	{ value: 0, label: "Off" },
+	{ value: 1, label: "On" },
+];
 
 /** A variant of a group's enum input, by the input's handle id and the variant's value. */
 export type InputOwner = { enumId: string; value: number };

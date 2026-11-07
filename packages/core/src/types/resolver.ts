@@ -205,17 +205,15 @@ function resolveGroupNodeTypes(
 		type: boundType(h.type, def.typeVariables, bindings) ?? innerType(h.id) ?? "f32",
 	}));
 	// Enums offer the variants their types have.
-	const resolvedInputs = resolved.resolvedInputs.map((input) =>
-		input.control?.kind === "enum"
+	const resolvedInputs = resolved.resolvedInputs.map((input) => {
+		const handle = def.inputs.find((h) => h.id === input.id);
+		return input.control?.kind === "enum" && handle
 			? {
 					...input,
-					control: {
-						...input.control,
-						variants: availableVariants(input.control.variants, bindings),
-					},
+					control: { ...input.control, variants: availableVariants(handle, bindings) },
 				}
-			: input,
-	);
+			: input;
+	});
 	return { ...resolved, resolvedInputs, resolvedOutputs, bindings };
 }
 

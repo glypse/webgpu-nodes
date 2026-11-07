@@ -1,6 +1,7 @@
 <script lang="ts">
 	import {
 		boundType,
+		canCompile,
 		COLOR_DISPLAYS,
 		type ColorDisplay,
 		type EnumVariant,
@@ -15,16 +16,20 @@
 		type InputValue,
 		isTexture,
 		nextVariantValue,
+		offeredFor,
 		ownerExists,
 		SOCKET_TYPES,
 		type SocketType,
+		TOGGLE_VARIANTS,
 		TYPE_SETS,
 		typeKind,
+		typeSetOf,
 		type TypeVariable,
 		valueType,
+		variantTypes,
 		type WgslType,
 	} from "$core";
-	import { Button, DropdownMenu, Input, Scrubbable, Select, ToggleGroup } from "$theme";
+	import { Button, Checkbox, DropdownMenu, Input, Scrubbable, Select, ToggleGroup } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CaretDownIcon from "phosphor-svelte/lib/CaretDownIcon";
@@ -35,6 +40,7 @@
 
 	import { getGraphManager } from "../graph-manager.svelte";
 	import TypePicker from "./TypePicker.svelte";
+	import TypeSetPicker from "./TypeSetPicker.svelte";
 	import InputEditor from "./controls/InputEditor.svelte";
 
 	const graph = getGraphManager();
@@ -50,6 +56,8 @@
 	const locked = $derived(sheetGroupNode?.group?.locked ?? true);
 	const inputHandles = $derived(definition?.inputs ?? []);
 	const variables = $derived(definition?.typeVariables ?? []);
+	/** The variables something can depend on: a single type leaves nothing to tell apart. */
+	const typedVariables = $derived(variables.filter((v) => v.types.length > 1));
 
 	/** The value type a handle has where nothing decides it (see `boundType`). */
 	function typeOf(handle: GroupHandleDef): WgslType {
@@ -60,15 +68,6 @@
 		const type = handle.type;
 		if (typeof type === "string" || !("variable" in type)) return undefined;
 		return variables.find((v) => v.id === type.variable);
-	}
-
-	/** The named set of types a variable takes, if it's one. */
-	function setOf(variable: TypeVariable) {
-		return TYPE_SETS.find(
-			(set) =>
-				set.types.length === variable.types.length &&
-				set.types.every((t) => variable.types.includes(t)),
-		);
 	}
 
 	/** How many sockets share a variable. */
@@ -108,13 +107,19 @@
 		{ value: 1, label: "Option 2" },
 	];
 
-	function addInput(type: SocketType, owner: InputOwner | undefined, enumInput = false) {
+	function addInput(
+		type: SocketType,
+		owner: InputOwner | undefined,
+		variants?: readonly EnumVariant[],
+	) {
 		if (!definitionRef) return;
 		graph.addHandle(definitionRef, "input", type, {
 			...(owner ? { owner } : {}),
-			...(enumInput ? { variants: NEW_ENUM } : {}),
+			...(variants ? { variants: [...variants] } : {}),
 		});
 	}
+
+	const NO_VARIABLE = "none";
 
 	const DISPLAY_LABELS: Record<ColorDisplay | "numbers", string> = {
 		numbers: "Numbers",
@@ -124,6 +129,14 @@
 
 	/** Input handles whose details are shown. */
 	const expanded = $state<Record<string, boolean>>({});
+
+	/** Whether a handle's details are shown: open by default where they depend on a type. */
+	function isExpanded(handle: GroupHandleDef): boolean {
+		return (
+			expanded[handle.id] ??
+			(handle.typeOwner !== undefined || handle.variantsBy !== undefined)
+		);
+	}
 
 	// Local buffer for handle label inputs - keeps the input responsive while
 	// the actual graph mutation is committed on blur to avoid triggering shader re-gen.
@@ -203,7 +216,7 @@
 			<span
 				class="border-border text-muted-foreground flex h-8 w-20 shrink-0 items-center justify-center rounded-md border text-xs"
 			>
-				Enum
+				{handle.type === "bool" ? "Checkbox" : "Enum"}
 			</span>
 		{:else}
 			{@const shared = variableOf(handle)}
@@ -225,7 +238,7 @@
 						>
 							<span class="text-xs">{variable.name}</span>
 							<span class="text-muted-foreground ml-auto text-xs">
-								{setOf(variable)?.label ?? "Custom"}
+								{typeSetOf(variable.types)?.label ?? "Custom"}
 							</span>
 							<CheckIcon class={shared?.id === variable.id ? "" : "invisible"} />
 						</DropdownMenu.Item>
@@ -262,12 +275,12 @@
 				variant="ghost"
 				size="icon-sm"
 				class="shrink-0"
-				title={expanded[handle.id] ? "Hide details" : "Show details"}
+				title={isExpanded(handle) ? "Hide details" : "Show details"}
 				onclick={() => {
-					expanded[handle.id] = !expanded[handle.id];
+					expanded[handle.id] = !isExpanded(handle);
 				}}
 			>
-				{#if expanded[handle.id]}<CaretDownIcon />{:else}<CaretRightIcon />{/if}
+				{#if isExpanded(handle)}<CaretDownIcon />{:else}<CaretRightIcon />{/if}
 			</Button>
 		{/if}
 		{#if !locked}
@@ -284,6 +297,86 @@
 				<TrashIcon />
 			</Button>
 		{/if}
+	</div>
+{/snippet}
+
+<!-- Picks one of the variables something can depend on, or none. -->
+{#snippet variableSelect(
+	value: string | undefined,
+	current: string,
+	noneLabel: string,
+	label: (name: string) => string,
+	onpick: (variable: TypeVariable | undefined) => void,
+)}
+	<Select.Root
+		type="single"
+		value={value ?? NO_VARIABLE}
+		disabled={locked}
+		onValueChange={(id: string) => {
+			onpick(variables.find((v) => v.id === id));
+		}}
+	>
+		<Select.Trigger class="w-full">{current}</Select.Trigger>
+		<Select.Content>
+			<Select.Item value={NO_VARIABLE} label={noneLabel}>{noneLabel}</Select.Item>
+			{#each typedVariables as variable (variable.id)}
+				<Select.Item value={variable.id} label={label(variable.name)}>
+					{label(variable.name)}
+				</Select.Item>
+			{/each}
+		</Select.Content>
+	</Select.Root>
+{/snippet}
+
+<!-- The variants of an enum against the types its variable takes. -->
+{#snippet variantGrid(handle: GroupHandleDef, variable: TypeVariable)}
+	{@const variants = handle.variants ?? []}
+	{@const types = variantTypes(handle, variable)}
+	<div class="overflow-x-auto overflow-y-hidden pt-1">
+		<table class="text-xs">
+			<thead>
+				<tr>
+					<td></td>
+					{#each types as type (type)}
+						<th class="text-muted-foreground px-2 pb-1 font-normal">{type}</th>
+					{/each}
+				</tr>
+			</thead>
+			<tbody>
+				{#each variants as variant (variant.value)}
+					<tr>
+						<th class="max-w-32 truncate pr-2 text-left font-normal">
+							{variant.label}
+						</th>
+						{#each types as type (type)}
+							{@const offered = offeredFor(variant, type)}
+							{@const last =
+								offered && variants.filter((v) => offeredFor(v, type)).length === 1}
+							<td class="px-2 py-1">
+								<Checkbox
+									class="mx-auto"
+									checked={offered}
+									disabled={locked || last}
+									title={last ? `${type} needs a variant` : undefined}
+									aria-label="{variant.label} for {type}"
+									onCheckedChange={(checked: boolean) => {
+										if (definitionRef) {
+											graph.setVariantOffered(
+												definitionRef,
+												handle.id,
+												variant.value,
+												type,
+												checked,
+											);
+										}
+									}}
+								/>
+							</td>
+						{/each}
+					</tr>
+				{/each}
+			</tbody>
+		</table>
 	</div>
 {/snippet}
 
@@ -305,29 +398,98 @@
 			/>
 		</div>
 
-		{#each variables as variable (variable.id)}
+		{#if typedVariables.length > 0}
 			{@const owner = handle.typeOwner}
+			{@const ownerVariable = variables.find((v) => v.id === owner?.variable)}
 			<div class="flex flex-col gap-1">
-				<span class="text-muted-foreground text-xs">Shown while {variable.name} is</span>
-				<ToggleGroup.Root
-					type="multiple"
-					size="sm"
-					disabled={locked || (owner !== undefined && owner.variable !== variable.id)}
-					value={owner?.variable === variable.id ? owner.types : [...variable.types]}
-					onValueChange={(types: string[]) => {
-						if (!definitionRef) return;
-						graph.setHandleTypeOwner(definitionRef, handle.id, {
-							variable: variable.id,
-							types: variable.types.filter((t) => types.includes(t)),
-						});
-					}}
-				>
-					{#each variable.types as type (type)}
-						<ToggleGroup.Item value={type}>{type}</ToggleGroup.Item>
-					{/each}
-				</ToggleGroup.Root>
+				<span class="text-muted-foreground text-xs">Shown</span>
+				{@render variableSelect(
+					owner?.variable,
+					ownerVariable ? `While ${ownerVariable.name} is` : "Always",
+					"Always",
+					(name) => `While ${name} is`,
+					(variable) => {
+						expanded[handle.id] = true;
+						if (definitionRef) {
+							graph.setHandleTypeOwner(
+								definitionRef,
+								handle.id,
+								variable && {
+									variable: variable.id,
+									types: variable.types.slice(0, 1),
+								},
+							);
+						}
+					},
+				)}
+				{#if owner && ownerVariable}
+					<ToggleGroup.Root
+						type="multiple"
+						size="sm"
+						disabled={locked}
+						value={owner.types}
+						onValueChange={(types: string[]) => {
+							if (!definitionRef) return;
+							graph.setHandleTypeOwner(definitionRef, handle.id, {
+								variable: ownerVariable.id,
+								types: ownerVariable.types.filter((t) => types.includes(t)),
+							});
+						}}
+					>
+						{#each ownerVariable.types as type (type)}
+							<ToggleGroup.Item
+								value={type}
+								disabled={owner.types.length === 1 && owner.types[0] === type}
+							>
+								{type}
+							</ToggleGroup.Item>
+						{/each}
+					</ToggleGroup.Root>
+				{/if}
 			</div>
-		{/each}
+		{/if}
+
+		{#if handle.variants && handle.type !== "bool" && typedVariables.length > 0}
+			{@const by = variables.find((v) => v.id === handle.variantsBy)}
+			<div class="flex flex-col gap-1">
+				<span class="text-muted-foreground text-xs">Variants offered</span>
+				{@render variableSelect(
+					handle.variantsBy,
+					by ? `By ${by.name}` : "All",
+					"All",
+					(name) => `By ${name}`,
+					(variable) => {
+						expanded[handle.id] = true;
+						if (definitionRef) {
+							graph.setVariantsBy(definitionRef, handle.id, variable?.id);
+						}
+					},
+				)}
+				{#if by}
+					{@render variantGrid(handle, by)}
+				{/if}
+			</div>
+		{/if}
+
+		{#if canCompile(handle)}
+			<div class="flex flex-col gap-1">
+				<label class="flex items-center gap-2 text-xs">
+					<Checkbox
+						checked={handle.compiled === true}
+						disabled={locked}
+						onCheckedChange={(checked: boolean) => {
+							if (definitionRef) {
+								graph.setHandleCompiled(definitionRef, handle.id, checked);
+							}
+						}}
+					/>
+					Compile in
+				</label>
+				<span class="text-muted-foreground text-xs">
+					Lets it pick among textures. Editing it recompiles the shader.
+				</span>
+			</div>
+		{/if}
 
 		{#if !handle.variants && !handle.display && typeKind(typeOf(handle)) !== "bool"}
 			<div class="flex flex-col gap-1">
@@ -426,14 +588,15 @@
 		title="Add an input"
 		variant={owner ? "ghost" : "outline"}
 		onpick={(type: SocketType) => addInput(type, owner)}
-		onpickenum={() => addInput("u32", owner, true)}
+		onpickenum={() => addInput("u32", owner, NEW_ENUM)}
+		onpicktoggle={() => addInput("bool", owner, TOGGLE_VARIANTS)}
 	/>
 {/snippet}
 
 {#snippet inputList(side: GroupSide, owner: InputOwner | undefined)}
 	{#each inputsUnder(owner) as handle (handle.id)}
 		{@render handleRow(handle, side, true)}
-		{#if expanded[handle.id] && !isTexture(handle.type)}
+		{#if isExpanded(handle) && !isTexture(handle.type)}
 			{@render inputDetails(handle)}
 		{/if}
 		{#if handle.variants}
@@ -445,13 +608,14 @@
 <!-- Each variant with the inputs group nodes show while it's picked. -->
 {#snippet variantTree(handle: GroupHandleDef, side: GroupSide)}
 	{@const variants = handle.variants ?? []}
+	{@const fixed = locked || handle.type === "bool"}
 	<div class="border-border ml-2 flex flex-col gap-2 border-l pl-3">
 		{#each variants as variant, i (variant.value)}
 			<div class="flex flex-col gap-1.5">
 				<div class="flex items-center gap-1">
 					<Input
 						value={variant.label}
-						disabled={locked}
+						disabled={fixed}
 						class="h-7 font-medium"
 						title="Variant name"
 						onchange={(e: Event) => {
@@ -466,7 +630,7 @@
 						}}
 						onkeydown={handleEnterBlur}
 					/>
-					{#if !locked}
+					{#if !fixed}
 						<Button
 							variant="ghost"
 							size="icon-sm"
@@ -501,39 +665,6 @@
 					{/if}
 				</div>
 				<div class="flex flex-col gap-1.5 pl-3">
-					{#each variables as variable (variable.id)}
-						{@const owner = variant.typeOwner}
-						<div class="flex flex-col gap-1">
-							<span class="text-muted-foreground text-xs">
-								Offered while {variable.name} is
-							</span>
-							<ToggleGroup.Root
-								type="multiple"
-								size="sm"
-								disabled={locked ||
-									(owner !== undefined && owner.variable !== variable.id)}
-								value={owner?.variable === variable.id
-									? owner.types
-									: [...variable.types]}
-								onValueChange={(types: string[]) => {
-									if (!definitionRef) return;
-									graph.setVariantTypeOwner(
-										definitionRef,
-										handle.id,
-										variant.value,
-										{
-											variable: variable.id,
-											types: variable.types.filter((t) => types.includes(t)),
-										},
-									);
-								}}
-							>
-								{#each variable.types as type (type)}
-									<ToggleGroup.Item value={type}>{type}</ToggleGroup.Item>
-								{/each}
-							</ToggleGroup.Root>
-						</div>
-					{/each}
 					{@render inputList(side, { enumId: handle.id, value: variant.value })}
 					{#if !locked}
 						{@render addInputPicker({ enumId: handle.id, value: variant.value })}
@@ -541,7 +672,7 @@
 				</div>
 			</div>
 		{/each}
-		{#if !locked}
+		{#if !fixed}
 			<Button variant="outline" size="sm" onclick={() => addVariant(handle)}>
 				Add variant
 			</Button>
@@ -576,7 +707,6 @@
 					what's linked to them or picked on the node.
 				</span>
 				{#each variables as variable (variable.id)}
-					{@const set = setOf(variable)}
 					<div class="flex items-center gap-2">
 						<Input
 							value={variable.name}
@@ -593,30 +723,16 @@
 							}}
 							onkeydown={handleEnterBlur}
 						/>
-						<Select.Root
-							type="single"
-							value={set?.id ?? ""}
+						<TypeSetPicker
+							types={variable.types}
 							disabled={locked}
-							onValueChange={(id: string) => {
-								const picked = TYPE_SETS.find((s) => s.id === id);
-								if (picked && definitionRef) {
-									graph.setTypeVariable(definitionRef, variable.id, {
-										types: picked.types,
-									});
+							class="min-w-0 flex-1"
+							onchange={(types: readonly WgslType[]) => {
+								if (definitionRef) {
+									graph.setTypeVariable(definitionRef, variable.id, { types });
 								}
 							}}
-						>
-							<Select.Trigger class="min-w-0 flex-1" title="Types it may take">
-								{set?.label ?? "Custom"}
-							</Select.Trigger>
-							<Select.Content>
-								{#each TYPE_SETS as option (option.id)}
-									<Select.Item value={option.id} label={option.label}>
-										{option.label}
-									</Select.Item>
-								{/each}
-							</Select.Content>
-						</Select.Root>
+						/>
 						<span class="text-muted-foreground w-14 shrink-0 text-right text-xs">
 							{socketCount(variable)}
 							{socketCount(variable) === 1 ? "socket" : "sockets"}

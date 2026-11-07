@@ -62,6 +62,23 @@ export const TYPE_SETS: readonly { id: string; label: string; types: readonly Wg
 	{ id: "any", label: "Any", types: WGSL_TYPES },
 ];
 
+/** The named set `types` make up, in whatever order. */
+export function typeSetOf(types: readonly WgslType[]) {
+	return TYPE_SETS.find(
+		(set) => set.types.length === types.length && set.types.every((t) => types.includes(t)),
+	);
+}
+
+/** `types` with `type`, when among them, first: the one taken when nothing decides. */
+export function withDefaultType(
+	types: readonly WgslType[],
+	type: WgslType | undefined,
+): readonly WgslType[] {
+	return type !== undefined && types.includes(type)
+		? [type, ...types.filter((t) => t !== type)]
+		: types;
+}
+
 const TYPE_INFO: Record<WgslType, { kind: ScalarKind; components: 1 | 2 | 3 | 4 }> = {
 	f32: { kind: "f32", components: 1 },
 	vec2f: { kind: "f32", components: 2 },

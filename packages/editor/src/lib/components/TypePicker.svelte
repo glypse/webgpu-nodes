@@ -24,6 +24,7 @@
 		inferred,
 		onreset,
 		onpickenum,
+		onpicktoggle,
 		extra,
 		label,
 		title,
@@ -45,6 +46,8 @@
 		onreset?: () => void;
 		/** When given, the menu offers an enum first, picking it calls this. */
 		onpickenum?: () => void;
+		/** When given, the menu offers a checkbox with the enum, picking it calls this. */
+		onpicktoggle?: () => void;
 		/** Items listed first in the menu, before the types. */
 		extra?: Snippet;
 		/** Button text; defaults to the current type. */
@@ -122,6 +125,12 @@
 				Enum
 				<span class="text-muted-foreground ml-auto text-xs">Variants</span>
 			</DropdownMenu.Item>
+			{#if onpicktoggle}
+				<DropdownMenu.Item onSelect={() => onpicktoggle()}>
+					Checkbox
+					<span class="text-muted-foreground ml-auto text-xs">Off or on</span>
+				</DropdownMenu.Item>
+			{/if}
 			<DropdownMenu.Separator />
 		{/if}
 		{#if inferred}

@@ -2,16 +2,21 @@ import * as v from "valibot";
 
 import type { Asset } from "../assets/assets";
 import {
+	fitVariants,
 	groupConstants,
 	hiddenInputsOf,
 	isUnder,
+	offeredAlways,
+	offeredFor,
 	ownerChain,
 	ownerExists,
 	shownApart,
+	variantTypes,
 } from "../enums";
 import { commonFrame } from "../frames";
 import { nodeRegistry } from "../nodes/registry";
 import {
+	canCompile,
 	type ColorDisplay,
 	type EnumVariant,
 	type GroupHandleDef,
@@ -938,7 +943,8 @@ export abstract class GroupModel extends ZoneModel {
 		if (!def || definitionRef === ROOT_ID) return undefined;
 		const handles = interfaceOf(def, side);
 		const isInput = side === "input";
-		const prefix = variants ? "Enum" : isInput ? "Input" : "Output";
+		const toggle = variants !== undefined && type === "bool";
+		const prefix = toggle ? "Checkbox" : variants ? "Enum" : isInput ? "Input" : "Output";
 		const labels = new Set(handles.map((h) => h.label));
 		let n = 1;
 		while (labels.has(`${prefix} ${String(n)}`)) n++;
@@ -947,7 +953,7 @@ export abstract class GroupModel extends ZoneModel {
 		const handle: GroupHandleDef = {
 			id: crypto.randomUUID(),
 			label: `${prefix} ${String(n)}`,
-			type: variants ? "u32" : isInput && inferred ? "f32" : type,
+			type: toggle ? "bool" : variants ? "u32" : isInput && inferred ? "f32" : type,
 			...(isInput && variants ? { variants } : {}),
 			...(isInput && ownerExists(handles, owner) && owner ? { owner } : {}),
 		};
@@ -1007,59 +1013,94 @@ export abstract class GroupModel extends ZoneModel {
 		const def = this.project.definitions.get(definitionRef);
 		const variable = def?.typeVariables.find((v) => v.id === typeOwner?.variable);
 		if (!def || (typeOwner && !variable)) return;
+		if (typeOwner && !variable?.types.some((t) => typeOwner.types.includes(t))) return;
 		const owner = typeOwner && fitTypeOwner(typeOwner, variable?.types ?? []);
 		const changed = this.updateHandle(definitionRef, "input", handleId, (h) =>
-			withTypeOwner(h, owner),
+			fitVariants(withTypeOwner(h, owner), def.typeVariables),
 		);
 		if (changed) this.rebuildTypeCache();
 	}
 
 	/**
-	 * Offer a variant of a group's enum input only while one of the group's
-	 * type variables has one of some types, or whatever the types with
-	 * `undefined`.
+	 * Decide which variants of a group's enum input are offered by the type
+	 * of one of the group's type variables, all of them to begin with; or,
+	 * with `undefined`, offer them whatever the types.
 	 */
-	setVariantTypeOwner(
-		definitionRef: string,
-		handleId: string,
-		value: number,
-		typeOwner: TypeOwner | undefined,
-	) {
+	setVariantsBy(definitionRef: string, handleId: string, variableId: string | undefined) {
 		const def = this.project.definitions.get(definitionRef);
-		const variable = def?.typeVariables.find((v) => v.id === typeOwner?.variable);
-		if (!def || (typeOwner && !variable)) return;
-		const owner = typeOwner && fitTypeOwner(typeOwner, variable?.types ?? []);
-		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => ({
-			...h,
-			...(h.variants
-				? {
-						variants: h.variants.map((v) =>
-							v.value === value ? withTypeOwner(v, owner) : v,
-						),
-					}
-				: {}),
-		}));
+		if (!def) return;
+		if (variableId !== undefined && !def.typeVariables.some((v) => v.id === variableId)) return;
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			if (!h.variants) return h;
+			const rest = { ...h, variants: h.variants.map(offeredAlways) };
+			delete rest.variantsBy;
+			return variableId === undefined ? rest : { ...rest, variantsBy: variableId };
+		});
 		if (changed) this.rebuildTypeCache();
 	}
 
-	/** Fit the type owners of inputs and variants to the group's type variables, as they now are. */
+	/**
+	 * Offer a variant of an enum input for a type of its `variantsBy`
+	 * variable, or stop. Each type keeps a variant: taking the last one away
+	 * does nothing.
+	 */
+	setVariantOffered(
+		definitionRef: string,
+		handleId: string,
+		value: number,
+		type: WgslType,
+		offered: boolean,
+	) {
+		const def = this.project.definitions.get(definitionRef);
+		if (!def) return;
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			const variable = def.typeVariables.find((v) => v.id === h.variantsBy);
+			const variants = h.variants ?? [];
+			if (!variable) return h;
+			if (!offered && !variants.some((v) => v.value !== value && offeredFor(v, type))) {
+				return h;
+			}
+			const all = variantTypes(h, variable);
+			return fitVariants(
+				{
+					...h,
+					variants: variants.map((v) => {
+						if (v.value !== value) return v;
+						const others = (v.types ?? all).filter((t) => t !== type);
+						return { ...v, types: offered ? [...others, type] : others };
+					}),
+				},
+				def.typeVariables,
+			);
+		});
+		if (changed) this.rebuildTypeCache();
+	}
+
+	/**
+	 * Compile a group's integer input in, as an enum's value is, or pass it
+	 * as a uniform again.
+	 */
+	setHandleCompiled(definitionRef: string, handleId: string, compiled: boolean) {
+		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
+			const rest = { ...h };
+			delete rest.compiled;
+			return compiled && canCompile(h) ? { ...rest, compiled } : rest;
+		});
+		if (changed) this.rebuildTypeCache();
+	}
+
+	/** Fit what inputs and variants say of types to the group's type variables, as they now are. */
 	private fitTypeOwners(def: HydratedGraphDocument) {
-		const fit = <T extends { typeOwner?: TypeOwner }>(owned: T): T => {
-			if (!owned.typeOwner) return owned;
-			const variable = def.typeVariables.find((v) => v.id === owned.typeOwner?.variable);
-			return withTypeOwner(owned, variable && fitTypeOwner(owned.typeOwner, variable.types));
+		const fit = (h: GroupHandleDef): GroupHandleDef => {
+			if (!h.typeOwner) return h;
+			const variable = def.typeVariables.find((v) => v.id === h.typeOwner?.variable);
+			return withTypeOwner(h, variable && fitTypeOwner(h.typeOwner, variable.types));
 		};
-		const owned = def.inputs.some(
-			(h) => h.typeOwner !== undefined || h.variants?.some((v) => v.typeOwner) === true,
-		);
-		if (owned) {
+		if (def.inputs.some((h) => h.typeOwner !== undefined || h.variantsBy !== undefined)) {
 			this.setInterface(
 				def,
 				"input",
-				def.inputs.map((h) => {
-					const fitted = fit(h);
-					return h.variants ? { ...fitted, variants: h.variants.map(fit) } : fitted;
-				}),
+				def.inputs.map((h) => fitVariants(fit(h), def.typeVariables)),
 			);
 		}
 	}
@@ -1106,12 +1147,16 @@ export abstract class GroupModel extends ZoneModel {
 		if (!def || !handles.some((h) => h.id === handleId)) return;
 		if (side === "input" && typeof type === "object" && "inferred" in type) return;
 
-		// Only a u32 can be an enum; the inputs of a former enum's variants
-		// take its place.
+		// Retyped, only a u32 stays an enum; the inputs of a former enum's
+		// variants take its place.
 		const retyped = (h: GroupHandleDef): GroupHandleDef => {
 			const next = { ...h, type };
-			if (type !== "u32") delete next.variants;
+			if (type !== "u32") {
+				delete next.variants;
+				delete next.variantsBy;
+			}
 			if (type !== "vec3f" && type !== "vec4f") delete next.display;
+			if (!canCompile(next)) delete next.compiled;
 			return next;
 		};
 		const enumOwner = handles.find((h) => h.id === handleId)?.owner;
@@ -1365,12 +1410,20 @@ export abstract class GroupModel extends ZoneModel {
 		handleId: string,
 		variants: EnumVariant[] | undefined,
 	) {
-		if (variants) this.setHandleType(definitionRef, "input", handleId, "u32");
-		const handles = this.project.definitions.get(definitionRef)?.inputs ?? [];
+		const def = this.project.definitions.get(definitionRef);
+		const isToggle = (h: GroupHandleDef) =>
+			h.id === handleId && h.type === "bool" && h.variants;
+		if (variants && !def?.inputs.some(isToggle)) {
+			this.setHandleType(definitionRef, "input", handleId, "u32");
+		}
+		const handles = def?.inputs ?? [];
 		const changed = this.updateHandle(definitionRef, "input", handleId, (h) => {
 			const rest = { ...h };
 			delete rest.variants;
-			return variants ? { ...rest, variants } : rest;
+			delete rest.compiled;
+			if (variants) return fitVariants({ ...rest, variants }, def?.typeVariables ?? []);
+			delete rest.variantsBy;
+			return rest;
 		});
 		if (!changed) return;
 		this.rebuildTypeCache();
@@ -1463,12 +1516,9 @@ export abstract class GroupModel extends ZoneModel {
  * `owner` within the types its variable may take, or undefined once it
  * owns none of them, or all: either way it hides nothing.
  */
-/** `owned` with `typeOwner`, or without one. */
-function withTypeOwner<T extends { typeOwner?: TypeOwner }>(
-	owned: T,
-	typeOwner: TypeOwner | undefined,
-): T {
-	const rest = { ...owned };
+/** `handle` with `typeOwner`, or without one. */
+function withTypeOwner(handle: GroupHandleDef, typeOwner: TypeOwner | undefined): GroupHandleDef {
+	const rest = { ...handle };
 	delete rest.typeOwner;
 	return typeOwner ? { ...rest, typeOwner } : rest;
 }
