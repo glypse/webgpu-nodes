@@ -10,5 +10,6 @@
 
 <svelte:head><link rel="icon" href={favicon} /></svelte:head>
 
-<ModeWatcher defaultMode="dark" />
+<!-- Its script would only run once the page is up, as it isn't server rendered, and the CSP has no hash for it. -->
+<ModeWatcher defaultMode="dark" disableHeadScriptInjection />
 {@render children()}
