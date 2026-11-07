@@ -15,6 +15,8 @@ export * from "./library";
 export * from "./graph/document";
 export * from "./graph/hydrate";
 export * from "./graph/limits";
+export * from "./graph/validate";
+export * from "./result";
 export * from "./graph/schema";
 export * from "./graph/settings";
 export * from "./screen";

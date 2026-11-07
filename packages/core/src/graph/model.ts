@@ -13,6 +13,7 @@ import {
 } from "../layout";
 import { defaultDataForType, nodeRegistry, type NodeType } from "../nodes/registry";
 import { PassAnalysis } from "../passes/analysis";
+import { err, ok } from "../result";
 import {
 	isSocketCompatible,
 	isTexture,
@@ -39,6 +40,7 @@ import { AssetModel, MEDIA_NODE_OF } from "./model-assets";
 import { emptyProject, withEntry } from "./model-base";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
+import { type LoadResult, parseJson, type ValidatedProject, validateProject } from "./validate";
 
 /** Rows a widget takes, for estimating node sizes. */
 const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
@@ -478,19 +480,48 @@ export class GraphModel extends AssetModel {
 		this.rebuildTypeCache();
 	}
 
-	/** Replace the project with a saved one, once the library versions it uses are fetched. */
-	async loadProject(project: unknown): Promise<boolean> {
-		const parsed = v.safeParse(GraphProjectSchema, project);
-		if (!parsed.success) {
-			console.error("[graph] rejected invalid project JSON", v.flatten(parsed.issues));
-			return false;
-		}
-		await this.fetchArchivedVersions(Object.values(parsed.output.definitions));
-		this.setProject(parsed.output);
-		this.markSaved();
-		this.history.reset(this.contentSnapshot());
+	/** Check saved JSON against every rule of a project, changing nothing. */
+	parseProject(text: string): LoadResult<ValidatedProject> {
+		const json = parseJson(text);
+		return json.ok ? this.validate(json.value) : json;
+	}
 
-		return true;
+	private validate(project: unknown): LoadResult<ValidatedProject> {
+		return validateProject(project, (ref) => this.isStandardLibrary(ref));
+	}
+
+	/**
+	 * Replace the project, once the library versions it uses are fetched. If
+	 * it fails the current project stays, as it was.
+	 */
+	async commitProject(project: ValidatedProject): Promise<LoadResult> {
+		const { settings, assets } = this.state;
+		const { project: current, screen, typeResolver } = this;
+		try {
+			await this.fetchArchivedVersions(Object.values(project.definitions));
+			this.setProject(project);
+			this.markSaved();
+			this.history.reset(this.contentSnapshot());
+			return ok(undefined);
+		} catch (error) {
+			console.error("[graph] failed to load a project", error);
+			this.project = current;
+			this.state.settings = settings;
+			this.state.assets = assets;
+			this.typeResolver = typeResolver;
+			this.setScreen(screen);
+			this.rebuildTypeCache();
+			return err({
+				kind: "failed",
+				message: error instanceof Error ? error.message : String(error),
+			});
+		}
+	}
+
+	/** Replace the project with parsed saved JSON; see `commitProject`. */
+	async loadProject(project: unknown): Promise<LoadResult> {
+		const validated = this.validate(project);
+		return validated.ok ? this.commitProject(validated.value) : validated;
 	}
 
 	/**
@@ -515,14 +546,10 @@ export class GraphModel extends AssetModel {
 		return JSON.stringify(project, null, "\t");
 	}
 
-	async loadFromString(text: string): Promise<boolean> {
-		try {
-			const project = JSON.parse(text) as unknown;
-			return await this.loadProject(project);
-		} catch (err) {
-			console.error("[graph] failed to parse JSON", err);
-			return false;
-		}
+	/** Replace the project with saved JSON; see `commitProject`. */
+	async loadFromString(text: string): Promise<LoadResult> {
+		const validated = this.parseProject(text);
+		return validated.ok ? this.commitProject(validated.value) : validated;
 	}
 
 	/**

@@ -165,7 +165,7 @@ export class GraphManager extends GraphModel {
 	async upload(file: File): Promise<boolean> {
 		try {
 			const bundle = unpackBundle(new Uint8Array(await file.arrayBuffer()), "project");
-			if (!(await this.loadFromString(bundle.json))) return false;
+			if (!(await this.loadFromString(bundle.json)).ok) return false;
 			this.assetFiles.reset(GraphManager.filesIn(bundle, this.assets));
 			return true;
 		} catch (err) {

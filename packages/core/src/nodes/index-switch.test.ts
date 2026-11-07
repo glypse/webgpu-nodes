@@ -55,7 +55,7 @@ describe("Index Switch", () => {
 	it("saves and loads its cases", async () => {
 		const graph = graphAt(0);
 		const copy = managerFor([], []);
-		expect(await copy.loadFromString(graph.getProjectJson())).toBe(true);
+		expect((await copy.loadFromString(graph.getProjectJson())).ok).toBe(true);
 		expect(copy.activeDocument.nodesById.get("s")?.data.cases).toBe(CASES.length);
 	});
 

@@ -164,7 +164,7 @@ describe("type variables", () => {
 	it("survive saving and loading", async () => {
 		const graph = new GraphModel(project({ a: "vec2f" }));
 		const loaded = new GraphModel(project());
-		expect(await loaded.loadProject(JSON.parse(graph.getProjectJson()))).toBe(true);
+		expect((await loaded.loadProject(JSON.parse(graph.getProjectJson()))).ok).toBe(true);
 		expect(bindingsOf(loaded)).toEqual({ T: "vec2f", U: "f32" });
 	});
 

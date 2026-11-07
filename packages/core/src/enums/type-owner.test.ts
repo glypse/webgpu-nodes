@@ -125,7 +125,7 @@ describe("inputs owned by types", () => {
 	it("save and load", async () => {
 		const graph = new GraphModel(project("vec3f"));
 		const copy = new GraphModel(project("vec2f"));
-		expect(await copy.loadFromString(graph.getProjectJson())).toBe(true);
+		expect((await copy.loadFromString(graph.getProjectJson())).ok).toBe(true);
 		expect(hidden(copy)).toEqual(["o2"]);
 	});
 });

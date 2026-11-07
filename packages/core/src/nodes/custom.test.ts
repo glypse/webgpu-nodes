@@ -51,7 +51,7 @@ describe("Custom WGSL node", () => {
 	it("keeps its code and sockets through save and load", async () => {
 		const graph = managerFor([custom(TWO_OUTPUTS)], []);
 		const loaded = managerFor([], []);
-		expect(await loaded.loadFromString(graph.getProjectJson())).toBe(true);
+		expect((await loaded.loadFromString(graph.getProjectJson())).ok).toBe(true);
 		const node = loaded.root.nodesById.get("c");
 		expect(node?.data.code).toBe(TWO_OUTPUTS.code);
 		expect(node && customSockets(node.data)).toEqual(TWO_OUTPUTS.sockets);

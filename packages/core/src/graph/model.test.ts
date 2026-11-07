@@ -348,7 +348,7 @@ describe("standard-library versions", () => {
 		expect(Object.keys(saved.definitions)).toEqual([ROOT_ID]);
 
 		const loaded = managerFor([], []);
-		expect(await loaded.loadProject(saved)).toBe(true);
+		expect((await loaded.loadProject(saved)).ok).toBe(true);
 		expect(loaded.resolveNodeOutputs("a").map((o) => o.id)).toEqual([UV]);
 		expect(loaded.outdatedLibraryVersion("a")).toBeUndefined();
 	});
@@ -377,7 +377,7 @@ describe("standard-library versions", () => {
 		expect(requested).toEqual([]);
 
 		const project = rootProject([instance(oldRef), { ...instance(aspectUv.ref), id: "b" }], []);
-		expect(await graph.loadProject(project)).toBe(true);
+		expect((await graph.loadProject(project)).ok).toBe(true);
 		expect(requested).toEqual([oldRef]);
 		expect(graph.resolveNodeOutputs("a").map((o) => o.id)).toEqual([UV, "extra"]);
 		expect(graph.resolveNodeOutputs("b").map((o) => o.id)).toEqual([UV]);

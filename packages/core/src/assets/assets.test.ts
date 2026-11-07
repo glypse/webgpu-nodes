@@ -36,7 +36,7 @@ describe("assets", () => {
 		expect([...files.keys()]).toEqual([image.file]);
 		expect([...(files.get(image.file) ?? [])]).toEqual([1, 2, 3]);
 		const loaded = new GraphModel();
-		expect(await loaded.loadFromString(json)).toBe(true);
+		expect((await loaded.loadFromString(json)).ok).toBe(true);
 		expect(loaded.assets).toEqual([image]);
 		expect(loaded.hasUnsavedChanges()).toBe(false);
 	});

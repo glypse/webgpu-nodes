@@ -10,7 +10,7 @@ export const STDLIB_LAYOUT_PARAM = "stdlib-layout";
  */
 export async function layoutServedProject(graph: GraphManager, server: string): Promise<void> {
 	const response = await fetch(new URL("project", server));
-	if (!(await graph.loadFromString(await response.text()))) {
+	if (!(await graph.loadFromString(await response.text())).ok) {
 		throw new Error("[stdlib-layout] the served project didn't load");
 	}
 	await document.fonts.ready;

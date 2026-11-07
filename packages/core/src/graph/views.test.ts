@@ -49,7 +49,7 @@ function project(layout?: Screen): GraphProject {
 						["in", "a", "add", "operands"],
 						["add", "result", "outs", "sum"],
 					] satisfies TestEdge[]
-				).map(edge),
+				).map((e, i) => ({ ...edge(e), id: String(i) })),
 			},
 		},
 		...(layout ? { layout } : {}),
