@@ -139,10 +139,7 @@
 	async function handleImportGroups() {
 		const files = await pickFiles({ accept: BUNDLE_EXTENSIONS.groups, multiple: true });
 		if (files.length === 0) return;
-		const result = await graph.importGroupFiles(files);
-		if (result.missing.length > 0) {
-			console.warn("Import completed with missing dependencies:", result.missing);
-		}
+		await graph.importGroupFiles(files);
 	}
 
 	function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -320,6 +317,39 @@
 			</Menubar.Content>
 		</Menubar.Menu>
 	</Menubar.Root>
+
+	<AlertDialog.Root
+		bind:open={
+			() => graph.fileProblems.length > 0,
+			(open) => {
+				if (!open) graph.fileProblems = [];
+			}
+		}
+	>
+		<AlertDialog.Content interactOutsideBehavior="ignore" showCloseButton={false}>
+			<AlertDialog.Header>
+				<AlertDialog.Title>Some files couldn't be used</AlertDialog.Title>
+				<AlertDialog.Description>
+					What couldn't be read was left out.
+				</AlertDialog.Description>
+			</AlertDialog.Header>
+			<ul class="flex max-h-60 flex-col gap-1 overflow-auto text-sm">
+				{#each graph.fileProblems as problem, i (i)}
+					<li class="wrap-anywhere">{problem}</li>
+				{/each}
+			</ul>
+			<AlertDialog.Footer>
+				<AlertDialog.Action
+					class={buttonVariants()}
+					onclick={() => {
+						graph.fileProblems = [];
+					}}
+				>
+					OK
+				</AlertDialog.Action>
+			</AlertDialog.Footer>
+		</AlertDialog.Content>
+	</AlertDialog.Root>
 
 	<AlertDialog.Root bind:open={pruneDialogOpen}>
 		<AlertDialog.Content interactOutsideBehavior="ignore" showCloseButton={false}>

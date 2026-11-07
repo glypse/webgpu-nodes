@@ -164,6 +164,8 @@ export function referenceIssues(
 ): GraphIssue[] {
 	const issues: GraphIssue[] = [];
 	if (definitions.size > MAX_DEFINITIONS) issues.push({ kind: "too-many-definitions" });
+	const nodes = [...definitions.values()].reduce((sum, doc) => sum + doc.nodes.length, 0);
+	if (nodes > MAX_PROJECT_NODES) issues.push({ kind: "too-many-nodes" });
 	const links = [...definitions].flatMap(([ref, doc]) =>
 		groupRefsOf(doc).map((target) => [ref, target] as const),
 	);
@@ -184,8 +186,6 @@ export function projectIssues(
 	const definitions = Object.entries(project.definitions);
 	const issues: GraphIssue[] = [];
 	if (!Object.hasOwn(project.definitions, ROOT_ID)) issues.push({ kind: "no-root" });
-	const nodes = definitions.reduce((sum, [, doc]) => sum + doc.nodes.length, 0);
-	if (nodes > MAX_PROJECT_NODES) issues.push({ kind: "too-many-nodes" });
 	// Saves leave the library out: one here would stand in for the app's own.
 	for (const [definition] of definitions) {
 		if (isLibrary(definition)) issues.push({ kind: "reserved-definition", definition });

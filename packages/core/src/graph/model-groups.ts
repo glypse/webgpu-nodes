@@ -1,6 +1,4 @@
-import * as v from "valibot";
-
-import type { Asset } from "../assets/assets";
+import { type Asset, assetFile } from "../assets/assets";
 import {
 	fitVariants,
 	groupConstants,
@@ -15,6 +13,7 @@ import {
 } from "../enums";
 import { commonFrame } from "../frames";
 import { nodeRegistry } from "../nodes/registry";
+import { err, ok } from "../result";
 import {
 	canCompile,
 	type ColorDisplay,
@@ -55,14 +54,45 @@ import {
 	rewireIncomingGroup,
 	rewireOutgoingGroup,
 	sideOf,
+	stableStringify,
 } from "./editing";
-import { indexDocument, normaliseDocument, serialiseEdge, serialiseNode } from "./hydrate";
+import {
+	indexDocument,
+	normaliseDocument,
+	serialiseDocument,
+	serialiseEdge,
+	serialiseNode,
+} from "./hydrate";
 import { withEntry } from "./model-base";
 import { ZoneModel } from "./model-zones";
-import { type GroupsFile, GroupsFileSchema } from "./schema";
+import type { GroupsFile } from "./schema";
+import { documentIssues, type GraphIssue, type LoadResult, referenceIssues } from "./validate";
 
 /** Names given to new type variables, in turn. */
 const VARIABLE_NAMES = ["T", "U", "V", "W", "X", "Y", "Z", "A", "B", "C", "D", "E"];
+
+/** An asset new to the project, and where its file is: an imported file's path in its bundle. */
+export type ImportedAsset = { asset: Asset; source: { bundle: number; path: string } };
+
+export type GroupImport = {
+	imported: number;
+	missing: string[];
+	added: ImportedAsset[];
+};
+
+type StagedGroup = { id: string; dependencies: string[]; definition: GraphDocument };
+
+/** What a definition computes and exposes, to compare two; its name and locking don't count. */
+function documentContent(doc: GraphDocument): string {
+	return stableStringify({
+		nodes: doc.nodes.map(serialiseNode),
+		edges: doc.edges.map(serialiseEdge),
+		typeVariables: doc.typeVariables ?? [],
+		inputs: doc.inputs ?? [],
+		outputs: doc.outputs ?? [],
+		defaults: doc.defaults ?? {},
+	});
+}
 
 // ── Definitions and references ──────────────────────────────────────────────
 
@@ -179,11 +209,7 @@ export abstract class GroupModel extends ZoneModel {
 			category: entry?.category ?? "group",
 			dependencies: deps,
 			locked: def.locked,
-			definition: structuredClone({
-				nodes: def.nodes.map(serialiseNode),
-				edges: def.edges.map(serialiseEdge),
-				...(def.typeVariables.length > 0 ? { typeVariables: def.typeVariables } : {}),
-			}),
+			definition: structuredClone(serialiseDocument(def)),
 		};
 	}
 
@@ -213,76 +239,162 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * Import the groups of parsed groups-bundle JSONs. All groups are loaded
-	 * first, then dependencies are checked: missing ones are reported but
-	 * don't block the import. Their assets join the project's, an asset the
-	 * project has already (the same file) standing in for its copy; `added`
-	 * are the new ones, whose files the caller brings. `rejected` are the
-	 * indices of invalid JSONs.
+	 * Import groups read with `parseGroups`, all of them or none. They never
+	 * replace what's there: one differing from a definition of the project
+	 * with its id comes in as a copy, the groups it nests following, and the
+	 * standard library's stay the app's own. An asset the project has already
+	 * (the same file) stands in for its copy; `added` are the new ones, each
+	 * with the file it came from, whose bytes the caller brings. Missing
+	 * dependencies don't block the import.
 	 */
-	async importGroups(files: readonly unknown[]): Promise<{
-		imported: number;
-		missing: string[];
-		rejected: number[];
-		added: Asset[];
-	}> {
-		const valid: GroupsFile[] = [];
-		const rejected: number[] = [];
-		files.forEach((file, index) => {
-			const parsed = v.safeParse(GroupsFileSchema, file);
-			if (parsed.success) valid.push(parsed.output);
-			else {
-				console.error("[graph] rejected invalid group import", v.flatten(parsed.issues));
-				rejected.push(index);
-			}
-		});
+	async importGroups(files: readonly GroupsFile[]): Promise<LoadResult<GroupImport>> {
+		const { assetIds, added } = this.stageAssets(files);
+		const entries: StagedGroup[] = files.flatMap((file, index) =>
+			file.groups
+				.filter((entry) => !this.isStandardLibrary(entry.id))
+				.map((entry) => ({
+					id: entry.id,
+					dependencies: entry.dependencies,
+					definition: {
+						...normaliseDocument({
+							...entry.definition,
+							nodes: entry.definition.nodes.map((node) => {
+								const asset = node.data.asset;
+								const id =
+									asset === undefined ? undefined : assetIds[index]?.get(asset);
+								return id ? { ...node, data: { ...node.data, asset: id } } : node;
+							}),
+						}),
+						label: entry.label,
+						locked: true,
+					},
+				})),
+		);
+		const staged = this.stageDefinitions(entries);
 
-		// Imported asset ids, to the project asset each one is.
-		const assetIds = new Map<string, string>();
-		const added: Asset[] = [];
-		for (const asset of valid.flatMap((file) => file.assets)) {
-			if (assetIds.has(asset.id)) continue;
-			const existing =
-				this.state.assets.find((a) => a.id === asset.id) ??
-				this.state.assets.find((a) => a.hash === asset.hash) ??
-				added.find((a) => a.hash === asset.hash);
-			assetIds.set(asset.id, existing?.id ?? asset.id);
-			if (!existing) added.push(asset);
+		const userDefinitions = [...this.project.definitions].filter(
+			([ref]) => !this.isStandardLibrary(ref),
+		);
+		const issues = [
+			...entries.flatMap(({ id }): GraphIssue[] =>
+				id === ROOT_ID ? [{ kind: "reserved-definition", definition: id }] : [],
+			),
+			...[...staged.definitions].flatMap(([ref, doc]) => documentIssues(ref, doc)),
+			...referenceIssues(new Map([...userDefinitions, ...staged.definitions])),
+		];
+		if (issues.length > 0) return err({ kind: "invalid-graph", issues });
+
+		const { definitions } = this.project;
+		const { assets } = this.state;
+		try {
+			await this.fetchArchivedVersions(staged.definitions.values());
+			const hydrated = [...staged.definitions].map(
+				([ref, doc]): [string, HydratedGraphDocument] => [ref, this.hydrate(doc)],
+			);
+			this.state.assets = [...assets, ...added.map(({ asset }) => asset)];
+			this.setDefinitions(hydrated);
+			this.registerLibraryRefs();
+			// New definitions may change how group nodes resolve their types
+			this.rebuildTypeCache();
+		} catch (error) {
+			console.error("[graph] failed to import groups", error);
+			this.project.definitions = definitions;
+			this.state.assets = assets;
+			this.rebuildTypeCache();
+			return err({
+				kind: "failed",
+				message: error instanceof Error ? error.message : String(error),
+			});
 		}
-		if (added.length > 0) this.state.assets = [...this.state.assets, ...added];
 
-		const entries = valid.flatMap((file) => file.groups);
-		await this.fetchArchivedVersions(entries.map((entry) => entry.definition));
+		const missing = entries.flatMap(({ id, dependencies }) =>
+			dependencies
+				.map((dep) => staged.ids.get(dep) ?? dep)
+				.filter((dep) => !this.project.definitions.has(dep) && !this.isStandardLibrary(dep))
+				.map((dep) => `${id} depends on ${dep}`),
+		);
+		return ok({ imported: entries.length, missing, added });
+	}
+
+	/** Each file's assets: which project asset each one is, by its id, and the new ones. */
+	private stageAssets(files: readonly GroupsFile[]): {
+		assetIds: Map<string, string>[];
+		added: ImportedAsset[];
+	} {
+		const added: ImportedAsset[] = [];
+		const assetIds = files.map((file, index) => {
+			const ids = new Map<string, string>();
+			for (const asset of file.assets) {
+				if (ids.has(asset.id)) continue;
+				const known = [...this.state.assets, ...added.map((a) => a.asset)];
+				const existing = known.find((a) => a.hash === asset.hash);
+				if (existing) {
+					ids.set(asset.id, existing.id);
+					continue;
+				}
+				// Ids are only unique within a project: this one may name another file.
+				const id = known.some((a) => a.id === asset.id) ? crypto.randomUUID() : asset.id;
+				added.push({
+					asset: { ...asset, id, file: assetFile(asset.kind, id, asset.file) },
+					source: { bundle: index, path: asset.file },
+				});
+				ids.set(asset.id, id);
+			}
+			return ids;
+		});
+		return { assetIds, added };
+	}
+
+	/**
+	 * The definitions `entries` add, by ref, and the refs that had to change.
+	 * A definition the project has, the same, adds nothing; one that differs
+	 * takes a new ref, and so do those nesting it, which then differ too. Of
+	 * entries sharing an id, the first counts.
+	 */
+	private stageDefinitions(entries: readonly StagedGroup[]): {
+		definitions: Map<string, GraphDocument>;
+		ids: Map<string, string>;
+	} {
+		const contents = new Map(entries.map((e) => [e, documentContent(e.definition)]));
+		const existing = new Map(
+			entries.flatMap(({ id }): [string, string][] => {
+				const doc = this.project.definitions.get(id);
+				return doc ? [[id, documentContent(serialiseDocument(doc))]] : [];
+			}),
+		);
+
+		const ids = new Map<string, string>();
+		for (let changed = true; changed;) {
+			changed = false;
+			for (const entry of entries) {
+				const content = existing.get(entry.id);
+				if (ids.has(entry.id) || content === undefined) continue;
+				const nested = groupRefsOf(entry.definition).some((ref) => ids.has(ref));
+				if (content === contents.get(entry) && !nested) continue;
+				ids.set(entry.id, crypto.randomUUID());
+				changed = true;
+			}
+		}
+
+		const definitions = new Map<string, GraphDocument>();
 		for (const entry of entries) {
-			const normalised = normaliseDocument({
+			const ref = ids.get(entry.id) ?? entry.id;
+			if (definitions.has(ref)) continue;
+			if (!ids.has(entry.id) && existing.has(entry.id)) continue;
+			definitions.set(ref, {
 				...entry.definition,
+				label: ids.has(entry.id)
+					? this.uniqueCopyLabel(entry.definition.label)
+					: entry.definition.label,
 				nodes: entry.definition.nodes.map((node) => {
-					const asset = node.data.asset && assetIds.get(node.data.asset);
-					return asset ? { ...node, data: { ...node.data, asset } } : node;
+					const target = node.group && ids.get(node.group.definitionRef);
+					return node.group && target
+						? { ...node, group: { ...node.group, definitionRef: target } }
+						: node;
 				}),
 			});
-			normalised.label = entry.label;
-			normalised.locked = true;
-			this.setDefinitions([[entry.id, this.hydrate(normalised)]]);
 		}
-		this.registerLibraryRefs();
-
-		const missing: string[] = [];
-		for (const entry of entries) {
-			for (const dep of entry.dependencies) {
-				if (!this.project.definitions.has(dep) && !this.isStandardLibrary(dep)) {
-					missing.push(`${entry.id} depends on ${dep}`);
-				}
-			}
-		}
-		if (missing.length > 0) {
-			console.warn("[graph] imported groups have missing dependencies:", missing);
-		}
-
-		// New definitions may change how group nodes resolve their types
-		this.rebuildTypeCache();
-
-		return { imported: entries.length, missing, rejected, added };
+		return { definitions, ids };
 	}
 
 	// ── Grouping ────────────────────────────────────────────────────────────────

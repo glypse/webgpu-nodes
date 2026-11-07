@@ -24,6 +24,9 @@ export const MAX_LABEL_LENGTH = 1024;
 export const MAX_NOTE_LENGTH = 64 * 1024;
 export const MAX_CODE_LENGTH = 1024 * 1024;
 export const MAX_JSON_BYTES = 64 * 1024 * 1024;
+/** Bundles hold their media whole, so unlike the rest this is about what fits in memory. */
+export const MAX_BUNDLE_BYTES = 4 * 1024 * 1024 * 1024;
+export const MAX_ASSET_SIDE = 65536;
 
 /** A number JSON can write back: `1e999` parses to `Infinity`, which saves as `null`. */
 export const FiniteSchema = v.pipe(v.number(), v.finite());

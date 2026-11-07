@@ -6,17 +6,25 @@ import {
 	defaultScene,
 	defaultScreen,
 	defaultSettings,
+	describeLoadError,
+	err,
 	GraphModel,
 	type GraphModelState,
 	type GraphNode,
 	type GraphProject,
+	type GroupsFile,
 	type HistoryCounts,
 	type HydratedGraphDocument,
 	type LayoutOptions,
+	type LoadError,
+	type LoadResult,
+	MAX_BUNDLE_BYTES,
 	type NodeClipboard,
 	type NodeGeometry,
 	packBundle,
+	parseGroups,
 	unpackBundle,
+	verifiedFiles,
 } from "$core";
 import { getContext, setContext } from "svelte";
 
@@ -142,12 +150,36 @@ export class GraphManager extends GraphModel {
 		);
 	}
 
-	/** The files of `assets` found in a bundle, by asset id. */
-	private static filesIn(bundle: Bundle, assets: readonly Asset[]): [string, Blob][] {
-		return assets.flatMap((asset): [string, Blob][] => {
-			const data = bundle.files.get(asset.file);
-			return data ? [[asset.id, new Blob([data], { type: asset.mime })]] : [];
-		});
+	/**
+	 * What went wrong with files the user gave, a sentence each, for them to
+	 * read. Replaced, never mutated.
+	 */
+	fileProblems = $state.raw<readonly string[]>([]);
+
+	private reportFile(name: string, error: LoadError) {
+		console.error(`[graph] can't read ${name}`, error);
+		this.fileProblems = [...this.fileProblems, `${name}: ${describeLoadError(error)}`];
+	}
+
+	private reportAltered(name: string, altered: readonly Asset[]) {
+		if (altered.length === 0) return;
+		const names = altered.map((asset) => asset.name).join(", ");
+		this.fileProblems = [
+			...this.fileProblems,
+			`${name}: these files aren't what the bundle says they are, so they were left out: ${names}.`,
+		];
+	}
+
+	private static async readBundle(file: File, kind: BundleKind): Promise<LoadResult<Bundle>> {
+		if (file.size > MAX_BUNDLE_BYTES) return err({ kind: "too-large", what: "the bundle" });
+		try {
+			return unpackBundle(new Uint8Array(await file.arrayBuffer()), kind);
+		} catch (error) {
+			return err({
+				kind: "failed",
+				message: error instanceof Error ? error.message : String(error),
+			});
+		}
 	}
 
 	/** Download the project as a bundle and remember it as saved. */
@@ -161,30 +193,50 @@ export class GraphManager extends GraphModel {
 		this.markSaved();
 	}
 
-	/** Load a project bundle picked by the user. */
+	/** Load a project bundle picked by the user; failing leaves the project as it was. */
 	async upload(file: File): Promise<boolean> {
-		try {
-			const bundle = unpackBundle(new Uint8Array(await file.arrayBuffer()), "project");
-			if (!(await this.loadFromString(bundle.json)).ok) return false;
-			this.assetFiles.reset(GraphManager.filesIn(bundle, this.assets));
-			return true;
-		} catch (err) {
-			console.error("[graph] failed to read uploaded file", err);
+		const bundle = await GraphManager.readBundle(file, "project");
+		const project = bundle.ok ? this.parseProject(bundle.value.json) : bundle;
+		if (!bundle.ok || !project.ok) {
+			if (!project.ok) this.reportFile(file.name, project.error);
 			return false;
 		}
+		const assets = project.value.assets ?? [];
+		const { files, altered } = await verifiedFiles(bundle.value, assets);
+		const loaded = await this.commitProject(project.value);
+		if (!loaded.ok) {
+			this.reportFile(file.name, loaded.error);
+			return false;
+		}
+		this.assetFiles.reset(
+			assets.flatMap((asset): [string, Blob][] => {
+				const data = files.get(asset.id);
+				return data ? [[asset.id, new Blob([data], { type: asset.mime })]] : [];
+			}),
+		);
+		this.reportAltered(file.name, altered);
+		return true;
 	}
 
 	/**
 	 * Add files as assets, skipping what isn't media; a file already imported
-	 * gives its existing asset. Returns the assets, in the files' order.
+	 * gives its existing asset, finding it its file if it had none. Returns
+	 * the assets, in the files' order.
 	 */
 	async importFiles(files: readonly File[]): Promise<Asset[]> {
 		const imported: Asset[] = [];
 		for (const file of files) {
 			const asset = await describeAsset(file, crypto.randomUUID());
-			if (!asset) continue;
+			if (!asset) {
+				this.fileProblems = [
+					...this.fileProblems,
+					`${file.name}: it isn't an image or video this editor can read.`,
+				];
+				continue;
+			}
 			const existing = this.assetByHash(asset.hash);
 			if (existing) {
+				if (!this.assetFiles.get(existing.id)) this.assetFiles.set(existing.id, file);
 				imported.push(existing);
 				continue;
 			}
@@ -199,7 +251,13 @@ export class GraphManager extends GraphModel {
 	async replaceAssetFile(id: string, file: File): Promise<boolean> {
 		const current = this.asset(id);
 		const asset = await describeAsset(file, id);
-		if (!current || asset?.kind !== current.kind) return false;
+		if (!current || asset?.kind !== current.kind) {
+			this.fileProblems = [
+				...this.fileProblems,
+				`${file.name}: it can't replace this asset, being unreadable or of another kind.`,
+			];
+			return false;
+		}
 		this.assetFiles.set(id, file);
 		this.replaceAsset({ ...asset, name: current.name });
 		return true;
@@ -211,23 +269,49 @@ export class GraphManager extends GraphModel {
 		await this.downloadBundle("groups", name, json, assets);
 	}
 
-	/** Import the groups (and their assets) of groups bundles picked by the user. */
+	/**
+	 * Import the groups (and their assets) of groups bundles picked by the
+	 * user. A file that can't be read is left out; the others come in together.
+	 */
 	async importGroupFiles(files: readonly File[]) {
 		const bundles: Bundle[] = [];
+		const groups: GroupsFile[] = [];
+		const names: string[] = [];
 		for (const file of files) {
-			try {
-				bundles.push(unpackBundle(new Uint8Array(await file.arrayBuffer()), "groups"));
-			} catch (err) {
-				console.error(`[graph] can't read ${file.name}`, err);
+			const bundle = await GraphManager.readBundle(file, "groups");
+			const parsed = bundle.ok ? parseGroups(bundle.value.json) : bundle;
+			if (!bundle.ok || !parsed.ok) {
+				if (!parsed.ok) this.reportFile(file.name, parsed.error);
+				continue;
 			}
+			const { altered } = await verifiedFiles(bundle.value, parsed.value.assets);
+			this.reportAltered(file.name, altered);
+			names.push(file.name);
+			bundles.push(bundle.value);
+			groups.push({
+				...parsed.value,
+				assets: parsed.value.assets.filter((asset) => !altered.includes(asset)),
+			});
 		}
-		const result = await this.importGroups(bundles.map((b) => JSON.parse(b.json) as unknown));
-		for (const bundle of bundles) {
-			for (const [id, file] of GraphManager.filesIn(bundle, result.added)) {
-				this.assetFiles.set(id, file);
-			}
+		if (groups.length === 0) return;
+
+		const result = await this.importGroups(groups);
+		if (!result.ok) {
+			this.reportFile(names.join(", "), result.error);
+			return;
 		}
-		return result;
+		for (const { asset, source } of result.value.added) {
+			const data = bundles[source.bundle]?.files.get(source.path);
+			if (data) this.assetFiles.set(asset.id, new Blob([data], { type: asset.mime }));
+		}
+		const { missing } = result.value;
+		if (missing.length > 0) {
+			console.warn("[graph] imported groups have missing dependencies:", missing);
+			this.fileProblems = [
+				...this.fileProblems,
+				`${String(missing.length)} imported groups rely on groups that weren't in the bundles.`,
+			];
+		}
 	}
 }
 

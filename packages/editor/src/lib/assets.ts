@@ -1,12 +1,6 @@
-import { type Asset, assetFile, assetKindOf, assetName } from "$core";
+import { type Asset, assetFile, assetHash, assetKindOf, assetName } from "$core";
 import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { SvelteMap } from "svelte/reactivity";
-
-/** SHA-256 of a file, hex. */
-async function hashFile(file: Blob): Promise<string> {
-	const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
-	return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
-}
 
 async function probeVideo(file: Blob) {
 	const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) });
@@ -43,7 +37,7 @@ export async function describeAsset(file: File, id: string): Promise<Asset | und
 		file: assetFile(kind, id, file.name),
 		mime: file.type,
 		bytes: file.size,
-		hash: await hashFile(file),
+		hash: await assetHash(await file.arrayBuffer()),
 	};
 	try {
 		return kind === "image"
