@@ -14,6 +14,7 @@ export * from "./catalog/add-menu";
 export * from "./library";
 export * from "./graph/document";
 export * from "./graph/hydrate";
+export * from "./graph/limits";
 export * from "./graph/schema";
 export * from "./graph/settings";
 export * from "./screen";

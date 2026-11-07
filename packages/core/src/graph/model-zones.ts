@@ -1,6 +1,7 @@
 import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
+	clampIterations,
 	DEFAULT_ITERATIONS,
 	DEFAULT_MAX_ITERATIONS,
 	inferredItemFamily,
@@ -227,7 +228,7 @@ export abstract class ZoneModel extends GraphModelBase {
 	setZoneMaxIterations(zoneId: string, max: number) {
 		const zone = this.zoneNodes(zoneId);
 		if (!zone || this.isLocked) return;
-		const value = Math.max(0, Math.trunc(Number.isFinite(max) ? max : DEFAULT_MAX_ITERATIONS));
+		const value = clampIterations(max);
 		this.patchNodeData(
 			new Map([[zone.input.id, { ...zone.input.data, maxIterations: value }]]),
 		);

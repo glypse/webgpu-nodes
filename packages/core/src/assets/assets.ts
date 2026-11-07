@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { FiniteSchema, LabelSchema } from "../graph/limits";
+
 export const ASSET_KINDS = ["image", "video"] as const;
 export type AssetKind = (typeof ASSET_KINDS)[number];
 
@@ -12,15 +14,15 @@ export const ASSET_FOLDERS: Record<AssetKind, string> = {
 const AssetFields = {
 	id: v.string(),
 	/** Shown to the user; the file's name without its extension when imported. */
-	name: v.string(),
+	name: LabelSchema,
 	/** The file's path in the project bundle (see `assetFile`). */
 	file: v.string(),
 	mime: v.string(),
-	bytes: v.pipe(v.number(), v.integer(), v.minValue(0)),
+	bytes: v.pipe(FiniteSchema, v.integer(), v.minValue(0)),
 	/** SHA-256 of the file, hex: importing the same file twice reuses the asset. */
 	hash: v.string(),
-	width: v.pipe(v.number(), v.integer(), v.minValue(1)),
-	height: v.pipe(v.number(), v.integer(), v.minValue(1)),
+	width: v.pipe(FiniteSchema, v.integer(), v.minValue(1)),
+	height: v.pipe(FiniteSchema, v.integer(), v.minValue(1)),
 };
 
 export const AssetSchema = v.variant("kind", [
@@ -29,7 +31,7 @@ export const AssetSchema = v.variant("kind", [
 		kind: v.literal("video"),
 		...AssetFields,
 		/** Seconds. */
-		duration: v.pipe(v.number(), v.minValue(0)),
+		duration: v.pipe(FiniteSchema, v.minValue(0)),
 	}),
 ]);
 
@@ -65,9 +67,9 @@ export type VideoEnd = (typeof VIDEO_ENDS)[number];
 
 export const VideoPlaybackSchema = v.object({
 	/** Project seconds at which the video's first frame shows. */
-	start: v.number(),
+	start: FiniteSchema,
 	/** Video seconds per project second. */
-	speed: v.number(),
+	speed: FiniteSchema,
 	end: v.picklist(VIDEO_ENDS),
 });
 

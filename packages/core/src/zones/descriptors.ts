@@ -1,4 +1,5 @@
 import type { HydratedGraphDocument } from "../graph/document";
+import { MAX_ITERATIONS } from "../graph/limits";
 import {
 	boundType,
 	type NodeData,
@@ -68,8 +69,13 @@ export function zoneItems(outputNode: MinimalNode | undefined): ZoneItem[] {
 
 /** The safety cap applied to a zone's iteration count. */
 export function zoneMaxIterations(inputNode: MinimalNode): number {
-	const raw = inputNode.data.maxIterations ?? DEFAULT_MAX_ITERATIONS;
-	return Number.isFinite(raw) ? Math.max(0, Math.trunc(raw)) : DEFAULT_MAX_ITERATIONS;
+	return clampIterations(inputNode.data.maxIterations ?? DEFAULT_MAX_ITERATIONS);
+}
+
+/** An iteration cap a zone can have, the nearest to `max`. */
+export function clampIterations(max: number): number {
+	if (!Number.isFinite(max)) return DEFAULT_MAX_ITERATIONS;
+	return Math.min(MAX_ITERATIONS, Math.max(0, Math.trunc(max)));
 }
 
 /** Find a node by id in any document of the project. */

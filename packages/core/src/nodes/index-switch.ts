@@ -1,4 +1,5 @@
 import { caseHandle, CASES_FAMILY } from "../enums";
+import { MAX_CASES } from "../graph/limits";
 import { type NodeData, type NodeDescriptor, SOCKET_TYPES, wgslTypeName } from "../types";
 
 export const INDEX_SWITCH = "index-switch";
@@ -6,8 +7,13 @@ export const INDEX_SWITCH_INDEX = "index";
 
 const DEFAULT_CASES = 2;
 
+/** A count of cases a node can have, the nearest to `count`. */
+export function clampCases(count: number): number {
+	return Math.min(MAX_CASES, Math.max(1, Math.trunc(count)));
+}
+
 export function indexSwitchCases(data: NodeData): number {
-	return Math.max(1, Math.trunc(data.cases ?? DEFAULT_CASES));
+	return clampCases(data.cases ?? DEFAULT_CASES);
 }
 
 /**

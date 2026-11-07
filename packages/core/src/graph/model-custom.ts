@@ -7,10 +7,11 @@ import {
 	newSocketLabel,
 	type SocketSide,
 } from "../nodes/custom";
-import { INDEX_SWITCH, indexSwitchCases } from "../nodes/index-switch";
+import { clampCases, INDEX_SWITCH, indexSwitchCases } from "../nodes/index-switch";
 import type { HandleDef, WgslType } from "../types";
 import type { GraphNode } from "./document";
 import { indexDocument } from "./hydrate";
+import { MAX_CODE_LENGTH } from "./limits";
 import { GroupModel } from "./model-groups";
 
 /**
@@ -24,7 +25,7 @@ export abstract class CustomWgslModel extends GroupModel {
 	}
 
 	setCustomCode(nodeId: string, code: string) {
-		if (!this.customNode(nodeId)) return;
+		if (!this.customNode(nodeId) || code.length > MAX_CODE_LENGTH) return;
 		this.updateNodeData(nodeId, { code }, { retype: false });
 	}
 
@@ -120,7 +121,7 @@ export abstract class CustomWgslModel extends GroupModel {
 	setIndexSwitchCases(nodeId: string, count: number) {
 		const node = this.activeDocument.nodesById.get(nodeId);
 		if (node?.type !== INDEX_SWITCH || this.isLocked) return;
-		const cases = Math.max(1, Math.trunc(count));
+		const cases = clampCases(count);
 		if (cases === indexSwitchCases(node.data)) return;
 		const kept = new Set(Array.from({ length: cases }, (_, i) => caseHandle(i)));
 		const removed = (handle: string) => handle.startsWith("case-") && !kept.has(handle);

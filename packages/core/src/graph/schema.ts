@@ -7,48 +7,62 @@ import { FRAME_TINTS } from "../frames/analysis";
 import { NODE_TYPES } from "../nodes/registry";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, SOCKET_TYPES, WGSL_TYPES } from "../types";
+import {
+	FiniteSchema,
+	IdSchema,
+	LabelSchema,
+	listOf,
+	MAX_ASSETS,
+	MAX_CASES,
+	MAX_CODE_LENGTH,
+	MAX_DEFINITIONS,
+	MAX_EDGES_PER_DOCUMENT,
+	MAX_ITERATIONS,
+	MAX_NODES_PER_DOCUMENT,
+	MAX_NOTE_LENGTH,
+} from "./limits";
 import { defaultSettings, ProjectSettingsSchema } from "./settings";
 
 const PositionSchema = v.object({
-	x: v.number(),
-	y: v.number(),
+	x: FiniteSchema,
+	y: FiniteSchema,
 });
 
 const GroupSchema = v.object({
-	definitionRef: v.string(),
+	definitionRef: IdSchema,
 	locked: v.boolean(),
 });
 
 const TypeOwnerSchema = v.object({
-	variable: v.string(),
-	types: v.array(v.picklist(WGSL_TYPES)),
+	variable: IdSchema,
+	types: listOf(v.picklist(WGSL_TYPES)),
 });
 
 const HandleFields = {
-	id: v.string(),
-	label: v.string(),
+	id: IdSchema,
+	label: LabelSchema,
 	variants: v.optional(
-		v.array(
+		listOf(
 			v.object({
-				value: v.number(),
-				label: v.string(),
-				types: v.optional(v.array(v.picklist(WGSL_TYPES))),
+				value: FiniteSchema,
+				label: LabelSchema,
+				types: v.optional(listOf(v.picklist(WGSL_TYPES))),
 			}),
 		),
 	),
 	compiled: v.optional(v.boolean()),
-	owner: v.optional(v.object({ enumId: v.string(), value: v.number() })),
+	owner: v.optional(v.object({ enumId: IdSchema, value: FiniteSchema })),
 	typeOwner: v.optional(TypeOwnerSchema),
-	variantsBy: v.optional(v.string()),
-	min: v.optional(v.number()),
-	max: v.optional(v.number()),
+	variantsBy: v.optional(IdSchema),
+	min: v.optional(FiniteSchema),
+	max: v.optional(FiniteSchema),
 	display: v.optional(v.picklist(COLOR_DISPLAYS)),
 };
 
 const HandleSchema = v.object({ ...HandleFields, type: v.picklist(WGSL_TYPES) });
 
 const VariableTypeSchemas = [
-	v.strictObject({ variable: v.string() }),
+	v.strictObject({ variable: IdSchema }),
 	v.strictObject({ inferred: v.literal(true) }),
 ] as const;
 
@@ -66,22 +80,22 @@ const GroupHandleSchema = v.object({
 });
 
 const TypeVariableSchema = v.object({
-	id: v.string(),
-	name: v.string(),
-	types: v.array(v.picklist(WGSL_TYPES)),
+	id: IdSchema,
+	name: LabelSchema,
+	types: listOf(v.picklist(WGSL_TYPES)),
 });
 
-const Vec2Schema = v.object({ x: v.number(), y: v.number() });
+const Vec2Schema = v.object({ x: FiniteSchema, y: FiniteSchema });
 
 const CurvePointSchema = v.object({
-	x: v.number(),
-	y: v.number(),
+	x: FiniteSchema,
+	y: FiniteSchema,
 	kind: v.picklist(CURVE_POINT_KINDS),
 	left: Vec2Schema,
 	right: Vec2Schema,
 });
 
-const ScalarValueSchema = v.union([v.number(), v.boolean()]);
+const ScalarValueSchema = v.union([FiniteSchema, v.boolean()]);
 
 const InputValueSchema = v.union([
 	ScalarValueSchema,
@@ -94,61 +108,66 @@ const InputValueSchema = v.union([
 ]);
 
 const NodeDataSchema = v.strictObject({
-	label: v.optional(v.string()),
-	values: v.optional(v.record(v.string(), InputValueSchema)),
-	settings: v.optional(v.record(v.string(), v.string())),
-	types: v.optional(v.record(v.string(), v.picklist(SOCKET_TYPES))),
-	items: v.optional(v.array(ZoneItemSchema)),
-	pairedOutput: v.optional(v.string()),
-	maxIterations: v.optional(v.number()),
-	cases: v.optional(v.number()),
-	curve: v.optional(v.array(CurvePointSchema)),
-	code: v.optional(v.string()),
-	sockets: v.optional(
-		v.strictObject({ inputs: v.array(HandleSchema), outputs: v.array(HandleSchema) }),
+	label: v.optional(LabelSchema),
+	values: v.optional(v.record(IdSchema, InputValueSchema)),
+	settings: v.optional(v.record(IdSchema, LabelSchema)),
+	types: v.optional(v.record(IdSchema, v.picklist(SOCKET_TYPES))),
+	items: v.optional(listOf(ZoneItemSchema)),
+	pairedOutput: v.optional(IdSchema),
+	maxIterations: v.optional(
+		v.pipe(FiniteSchema, v.integer(), v.minValue(0), v.maxValue(MAX_ITERATIONS)),
 	),
-	note: v.optional(v.string()),
+	cases: v.optional(v.pipe(FiniteSchema, v.integer(), v.minValue(1), v.maxValue(MAX_CASES))),
+	curve: v.optional(listOf(CurvePointSchema)),
+	code: v.optional(v.pipe(v.string(), v.maxLength(MAX_CODE_LENGTH))),
+	sockets: v.optional(
+		v.strictObject({ inputs: listOf(HandleSchema), outputs: listOf(HandleSchema) }),
+	),
+	note: v.optional(v.pipe(v.string(), v.maxLength(MAX_NOTE_LENGTH))),
 	tint: v.optional(v.picklist(FRAME_TINTS)),
 	hideLinks: v.optional(v.boolean()),
 	hideUnlinked: v.optional(v.boolean()),
-	asset: v.optional(v.string()),
+	asset: v.optional(IdSchema),
 	playback: v.optional(VideoPlaybackSchema),
 });
 
 const GraphDocumentNodeSchema = v.object({
-	id: v.string(),
+	id: IdSchema,
 	type: v.picklist(NODE_TYPES),
 	data: NodeDataSchema,
 	position: PositionSchema,
 	group: v.optional(GroupSchema),
-	frame: v.optional(v.string()),
+	frame: v.optional(IdSchema),
 });
 
 const GraphDocumentEdgeSchema = v.object({
-	id: v.string(),
-	source: v.string(),
-	target: v.string(),
-	sourceHandle: v.string(),
-	targetHandle: v.string(),
+	id: IdSchema,
+	source: IdSchema,
+	target: IdSchema,
+	sourceHandle: IdSchema,
+	targetHandle: IdSchema,
 });
 
 export const GraphDocumentSchema = v.object({
-	nodes: v.array(GraphDocumentNodeSchema),
-	edges: v.array(GraphDocumentEdgeSchema),
-	label: v.optional(v.string()),
+	nodes: v.pipe(v.array(GraphDocumentNodeSchema), v.maxLength(MAX_NODES_PER_DOCUMENT)),
+	edges: v.pipe(v.array(GraphDocumentEdgeSchema), v.maxLength(MAX_EDGES_PER_DOCUMENT)),
+	label: v.optional(LabelSchema),
 	locked: v.optional(v.boolean()),
 	viewport: v.optional(ViewportSchema),
-	typeVariables: v.optional(v.array(TypeVariableSchema)),
-	inputs: v.optional(v.array(GroupHandleSchema)),
-	outputs: v.optional(v.array(GroupHandleSchema)),
-	defaults: v.optional(v.record(v.string(), InputValueSchema)),
+	typeVariables: v.optional(listOf(TypeVariableSchema)),
+	inputs: v.optional(listOf(GroupHandleSchema)),
+	outputs: v.optional(listOf(GroupHandleSchema)),
+	defaults: v.optional(v.record(IdSchema, InputValueSchema)),
 });
 
 export const GraphProjectSchema = v.object({
-	definitions: v.record(v.string(), GraphDocumentSchema),
+	definitions: v.pipe(
+		v.record(IdSchema, GraphDocumentSchema),
+		v.check((definitions) => Object.keys(definitions).length <= MAX_DEFINITIONS),
+	),
 	settings: v.optional(ProjectSettingsSchema, defaultSettings),
 	layout: v.optional(ScreenSchema),
-	assets: v.optional(v.array(AssetSchema)),
+	assets: v.optional(v.pipe(v.array(AssetSchema), v.maxLength(MAX_ASSETS))),
 });
 
 /**
@@ -157,16 +176,19 @@ export const GraphProjectSchema = v.object({
  * assets they read.
  */
 export const GroupsFileSchema = v.object({
-	groups: v.array(
-		v.object({
-			id: v.string(),
-			label: v.string(),
-			category: v.string(),
-			dependencies: v.array(v.string()),
-			definition: GraphDocumentSchema,
-		}),
+	groups: v.pipe(
+		v.array(
+			v.object({
+				id: IdSchema,
+				label: LabelSchema,
+				category: LabelSchema,
+				dependencies: v.pipe(v.array(IdSchema), v.maxLength(MAX_DEFINITIONS)),
+				definition: GraphDocumentSchema,
+			}),
+		),
+		v.maxLength(MAX_DEFINITIONS),
 	),
-	assets: v.array(AssetSchema),
+	assets: v.pipe(v.array(AssetSchema), v.maxLength(MAX_ASSETS)),
 });
 
 export type GroupsFile = v.InferOutput<typeof GroupsFileSchema>;

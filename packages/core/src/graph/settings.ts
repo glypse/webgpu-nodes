@@ -1,5 +1,7 @@
 import * as v from "valibot";
 
+import { FiniteSchema } from "./limits";
+
 export const COLOR_SPACES = ["srgb", "display-p3"] as const;
 export type ColorSpace = (typeof COLOR_SPACES)[number];
 
@@ -8,7 +10,7 @@ export const MAX_CANVAS_SIZE = 8192;
 export const MAX_FPS = 240;
 
 const CanvasSizeSchema = v.pipe(
-	v.number(),
+	FiniteSchema,
 	v.integer(),
 	v.minValue(1),
 	v.maxValue(MAX_CANVAS_SIZE),
@@ -22,7 +24,7 @@ export const ProjectSettingsSchema = v.object({
 		followPreview: v.boolean(),
 	}),
 	timing: v.object({
-		fps: v.pipe(v.number(), v.minValue(1), v.maxValue(MAX_FPS)),
+		fps: v.pipe(FiniteSchema, v.minValue(1), v.maxValue(MAX_FPS)),
 		/** Draw on every display refresh, time following the wall clock, rather than at `fps`. */
 		realtime: v.boolean(),
 	}),
