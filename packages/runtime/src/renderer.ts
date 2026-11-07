@@ -259,10 +259,22 @@ export class Renderer {
 	private samplers = new Map<string, GPUSampler>();
 	private linearTextures = new Map<string, GPUTexture>();
 
+	/**
+	 * Told what the GPU refused that nothing else was watching for, e.g. being
+	 * out of memory, and media that can't be used.
+	 */
+	onError: (message: string) => void = () => undefined;
+
 	private constructor(readonly device: GPUDevice) {
+		device.addEventListener("uncapturederror", (event) => {
+			this.onError(event.error.message);
+		});
 		this.presenter = new Presenter(device);
 		this.timer = GpuTimer.create(device);
 		this.media = new MediaLibrary(device);
+		this.media.onError = (message) => {
+			this.onError(message);
+		};
 	}
 
 	private sampler(filter: SamplerFilter, address: SamplerAddress): GPUSampler {

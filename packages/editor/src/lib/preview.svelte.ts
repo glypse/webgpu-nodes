@@ -27,6 +27,13 @@ export type PreviewError = {
 /** Lines of context shown around an error. */
 const SNIPPET_RADIUS = 2;
 
+/** Device losses this close together have one cause: most likely, the program. */
+const LOSS_WINDOW_MS = 60_000;
+/** Losses in a window after which a program isn't run again, each one resetting the GPU. */
+const MAX_LOSSES = 3;
+/** How long the first recovery waits; each loss in a window doubles it. */
+const RECOVERY_DELAY_MS = 1000;
+
 function describeError(error: unknown): PreviewError {
 	if (error instanceof ProgramError) {
 		const [first] = error.diagnostics;
@@ -86,6 +93,11 @@ export class Preview {
 	private program: CompiledPlan | undefined;
 	/** The code and textures of the newest plan asked for, compiled or not. */
 	private programCode: string | undefined;
+	/** Times the device was lost lately. */
+	private losses: number[] = [];
+	/** The plan that kept losing the device, as `programCode`: it won't run until it changes. */
+	private blockedCode: string | undefined;
+	private recovery: ReturnType<typeof setTimeout> | undefined;
 	private mediaFiles: MediaFiles = () => undefined;
 	private destroyed = false;
 	private measuringRefreshRate = false;
@@ -190,6 +202,11 @@ export class Preview {
 		const key = source.passes
 			.map((p) => [p.writes, p.program.code, ...p.reads].join("\n"))
 			.join("\n\n");
+		if (key === this.blockedCode) return;
+		if (this.blockedCode !== undefined) {
+			this.blockedCode = undefined;
+			this.losses = [];
+		}
 		if (key === this.programCode) {
 			this.program?.setUniforms(source.uniforms);
 			this.player.invalidate();
@@ -277,6 +294,7 @@ export class Preview {
 
 	destroy() {
 		this.destroyed = true;
+		clearTimeout(this.recovery);
 		this.player.destroy();
 		this.program?.destroy();
 		for (const target of this.targets.values()) target?.destroy();
@@ -291,6 +309,11 @@ export class Preview {
 				renderer.media.onChange = () => {
 					this.player.invalidate();
 				};
+				renderer.onError = (message) => {
+					if (this.error) return;
+					console.error("[preview] GPU error:", message);
+					this.error = { title: "GPU error", message };
+				};
 				void renderer.lost.then((info) => {
 					this.recover(info);
 				});
@@ -304,21 +327,41 @@ export class Preview {
 		return this.rendererRequest;
 	}
 
-	/** After a device loss, start over with a new device: canvas, then program. */
+	/**
+	 * After a device loss, start over with a new device: canvas, then program,
+	 * unless losses keep following that program. A shader can hang the GPU,
+	 * which then resets, so running it again would only do so again.
+	 */
 	private recover(info: GPUDeviceLostInfo) {
 		if (this.destroyed || info.reason === "destroyed") return;
 		console.warn("[preview] GPU device lost, recreating it:", info.message);
+		const now = performance.now();
+		this.losses = [...this.losses.filter((t) => now - t < LOSS_WINDOW_MS), now];
+		if (this.losses.length >= MAX_LOSSES) {
+			this.blockedCode = this.programCode;
+			this.error = {
+				title: "The GPU keeps resetting",
+				message:
+					"This shader stopped running, as the GPU reset each time it was drawn. Changing the graph tries again.",
+			};
+		}
 		this.renderer = undefined;
 		this.rendererRequest = undefined;
 		this.program = undefined;
 		this.programCode = undefined;
 		for (const canvas of this.targets.keys()) this.targets.set(canvas, undefined);
-		this.ensureRenderer().then(
+		clearTimeout(this.recovery);
+		this.recovery = setTimeout(
 			() => {
-				this.connectCanvases();
-				if (this.source) this.setSource(this.source);
+				this.ensureRenderer().then(
+					() => {
+						this.connectCanvases();
+						if (this.source) this.setSource(this.source);
+					},
+					() => undefined,
+				);
 			},
-			() => undefined,
+			RECOVERY_DELAY_MS * 2 ** (this.losses.length - 1),
 		);
 	}
 

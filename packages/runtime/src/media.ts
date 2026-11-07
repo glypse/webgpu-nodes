@@ -77,6 +77,10 @@ fn decode_fragment(@location(0) target_uv: vec2f) -> @location(0) vec4f {
 }
 `;
 
+function describe(error: unknown): string {
+	return error instanceof Error ? error.message : String(error);
+}
+
 /** The files of a project's assets, by asset id. */
 export type MediaFiles = (asset: string) => Blob | undefined;
 
@@ -103,6 +107,8 @@ type Decoder = {
 export class MediaLibrary {
 	/** Called when a texture got a newly decoded frame. */
 	onChange: () => void = () => undefined;
+	/** Told why media can't be drawn; what stands in for it is transparent. */
+	onError: (message: string) => void = () => undefined;
 	private files: MediaFiles = () => undefined;
 	private empty: GPUTexture;
 	private images = new Map<string, Image>();
@@ -143,6 +149,16 @@ export class MediaLibrary {
 			pipelines: new Map(),
 		};
 		this.frameSampler = device.createSampler({ magFilter: "linear", minFilter: "linear" });
+	}
+
+	/** Throws when this device can't hold a texture of this size. */
+	checkSize(width: number, height: number) {
+		const max = this.device.limits.maxTextureDimension2D;
+		if (width > max || height > max) {
+			throw new Error(
+				`It's ${String(width)}×${String(height)} pixels, more than this GPU's ${String(max)}.`,
+			);
+		}
 	}
 
 	/** Read assets' files from `files` from now on. */
@@ -224,15 +240,33 @@ export class MediaLibrary {
 		const image: Image = { file };
 		this.images.set(asset, image);
 		return createImageBitmap(file, { premultiplyAlpha: "none", imageOrientation: "from-image" })
-			.then((bitmap) => {
-				if (this.images.get(asset) !== image) return;
-				image.texture = this.upload(bitmap, bitmap.width, bitmap.height, 0);
-				bitmap.close();
+			.then(async (bitmap) => {
+				try {
+					if (this.images.get(asset) !== image) return;
+					this.checkSize(bitmap.width, bitmap.height);
+					image.texture = await this.uploadChecked(bitmap);
+				} finally {
+					bitmap.close();
+				}
 			})
 			.catch((error: unknown) => {
 				image.failed = true;
 				console.error("[media] can't decode an image", error);
+				this.onError(`An image can't be used. ${describe(error)}`);
 			});
+	}
+
+	/** Upload an image, throwing if the GPU refuses it. */
+	private async uploadChecked(bitmap: ImageBitmap): Promise<GPUTexture> {
+		this.device.pushErrorScope("out-of-memory");
+		this.device.pushErrorScope("validation");
+		const texture = this.upload(bitmap, bitmap.width, bitmap.height, 0);
+		const refused = (await this.device.popErrorScope()) ?? (await this.device.popErrorScope());
+		if (refused) {
+			texture.destroy();
+			throw new Error(refused.message);
+		}
+		return texture;
 	}
 
 	private video(
@@ -401,6 +435,7 @@ class VideoStream {
 		try {
 			const track = await this.input.getPrimaryVideoTrack();
 			if (!track || !(await track.canDecode())) throw new Error("no decodable video track");
+			this.library.checkSize(await track.getDisplayWidth(), await track.getDisplayHeight());
 			return {
 				sink: new VideoSampleSink(track),
 				packets: new EncodedPacketSink(track),
@@ -408,6 +443,7 @@ class VideoStream {
 			};
 		} catch (error) {
 			console.error("[media] can't decode a video", error);
+			this.library.onError(`A video can't be used. ${describe(error)}`);
 			return undefined;
 		}
 	}
