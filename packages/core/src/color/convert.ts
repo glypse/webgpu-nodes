@@ -1,5 +1,5 @@
 import type { ColorSpace } from "../graph/settings";
-import { clipToGamut, fromGamut, toGamut } from "./display";
+import { applyMat3, clipToGamut, fromGamut, type Mat3, toGamut } from "./display";
 
 /**
  * Colour conversions. Colours are held as linear sRGB (what shaders compute
@@ -72,28 +72,44 @@ export function hsvToRgb({ h, s, v }: Hsv): Rgb {
 
 type Lab = [number, number, number];
 
-/** Björn Ottosson's OKLab of a linear RGB colour. */
-function linearToOklab({ r, g, b }: Rgb): Lab {
-	const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b);
-	const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b);
-	const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b);
-	return [
-		0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
-		1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
-		0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
-	];
+// Björn Ottosson's OKLab: linear sRGB to the cones' responses (LMS), whose
+// cube roots make OKLab, and back.
+export const LINEAR_RGB_TO_LMS: Mat3 = [
+	[0.4122214708, 0.5363325363, 0.0514459929],
+	[0.2119034982, 0.6806995451, 0.1073969566],
+	[0.0883024619, 0.2817188376, 0.6299787005],
+];
+export const LMS_TO_OKLAB: Mat3 = [
+	[0.2104542553, 0.793617785, -0.0040720468],
+	[1.9779984951, -2.428592205, 0.4505937099],
+	[0.0259040371, 0.7827717662, -0.808675766],
+];
+export const OKLAB_TO_LMS: Mat3 = [
+	[1, 0.3963377774, 0.2158037573],
+	[1, -0.1055613458, -0.0638541728],
+	[1, -0.0894841775, -1.291485548],
+];
+export const LMS_TO_LINEAR_RGB: Mat3 = [
+	[4.0767416621, -3.3077115913, 0.2309699292],
+	[-1.2684380046, 2.6097574011, -0.3413193965],
+	[-0.0041960863, -0.7034186147, 1.707614701],
+];
+
+/** OKLab of a linear RGB colour. */
+function linearToOklab(rgb: Rgb): Lab {
+	const lms = applyMat3(LINEAR_RGB_TO_LMS, rgb);
+	const { r, g, b } = applyMat3(LMS_TO_OKLAB, {
+		r: Math.cbrt(lms.r),
+		g: Math.cbrt(lms.g),
+		b: Math.cbrt(lms.b),
+	});
+	return [r, g, b];
 }
 
 /** Linear RGB of an OKLab colour, outside [0, 1] when out of the sRGB gamut. */
 function oklabToLinear([L, A, B]: Lab): Rgb {
-	const l = (L + 0.3963377774 * A + 0.2158037573 * B) ** 3;
-	const m = (L - 0.1055613458 * A - 0.0638541728 * B) ** 3;
-	const s = (L - 0.0894841775 * A - 1.291485548 * B) ** 3;
-	return {
-		r: 4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
-		g: -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
-		b: -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
-	};
+	const lms = applyMat3(OKLAB_TO_LMS, { r: L, g: A, b: B });
+	return applyMat3(LMS_TO_LINEAR_RGB, { r: lms.r ** 3, g: lms.g ** 3, b: lms.b ** 3 });
 }
 
 const oklchToOklab = (l: number, c: number, h: number): Lab => {

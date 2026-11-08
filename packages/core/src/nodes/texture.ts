@@ -2,11 +2,10 @@ import { formatWgslLiteral } from "../codegen/literals";
 import { FRAGMENT_VAR } from "../codegen/program";
 import {
 	defineNode,
-	enumValue,
 	type EnumVariant,
+	knownEnum,
 	type SamplerAddress,
 	type SamplerFilter,
-	type WgslCtx,
 } from "../types";
 
 export const IMAGE = "image";
@@ -63,17 +62,6 @@ const OUTSIDE_FN = "texture_outside";
 const OUTSIDE_SOURCE = `fn ${OUTSIDE_FN}(coords: vec2f) -> bool {
 	return any(coords < vec2f(0.0)) || any(coords > vec2f(1.0));
 }`;
-
-/**
- * An enum input's value while compiling: set by the calling group node, or
- * stored on the node while unlinked. Undefined when it's only known per pixel.
- */
-function knownEnum(ctx: WgslCtx, id: string, variants: readonly EnumVariant[]): number | undefined {
-	const constant = ctx.constant(id);
-	if (constant !== undefined) return enumValue(constant, variants);
-	if ((ctx.inputs[id] ?? []).length > 0) return undefined;
-	return enumValue(ctx.data.values?.[id], variants);
-}
 
 /** A file's frames, with its size in pixels. */
 export const imageNode = defineNode({

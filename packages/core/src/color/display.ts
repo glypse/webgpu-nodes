@@ -27,19 +27,19 @@ export function wgslMat3(m: Mat3): string {
 	return `mat3x3f(${column(0)}, ${column(1)}, ${column(2)})`;
 }
 
-function apply(m: Mat3, { r, g, b }: Rgb): Rgb {
+export function applyMat3(m: Mat3, { r, g, b }: Rgb): Rgb {
 	const [x, y, z] = m.map((row) => row[0] * r + row[1] * g + row[2] * b);
 	return { r: x ?? 0, g: y ?? 0, b: z ?? 0 };
 }
 
 /** A linear sRGB colour as linear RGB of `space`'s primaries. */
 export function toGamut(rgb: Rgb, space: ColorSpace): Rgb {
-	return space === "srgb" ? rgb : apply(SRGB_TO_DISPLAY_P3, rgb);
+	return space === "srgb" ? rgb : applyMat3(SRGB_TO_DISPLAY_P3, rgb);
 }
 
 /** A linear RGB colour of `space`'s primaries as linear sRGB. */
 export function fromGamut(rgb: Rgb, space: ColorSpace): Rgb {
-	return space === "srgb" ? rgb : apply(DISPLAY_P3_TO_SRGB, rgb);
+	return space === "srgb" ? rgb : applyMat3(DISPLAY_P3_TO_SRGB, rgb);
 }
 
 const clamp01 = (n: number) => Math.min(1, Math.max(0, n));

@@ -1,4 +1,4 @@
-import type { EnumVariant, NodeInputDef } from "./descriptors";
+import type { EnumVariant, NodeInputDef, WgslCtx } from "./descriptors";
 import type { InputValue } from "./node-data";
 import { typeKind, type WgslType } from "./values";
 
@@ -68,4 +68,19 @@ export function inputControl(input: NodeInputDef, type: WgslType): InputControl 
 	const bool = typeKind(type) === "bool";
 	if (input.control && !(bool && input.control.kind === "number")) return input.control;
 	return bool ? { kind: "toggle" } : { kind: "number" };
+}
+
+/**
+ * An enum input's value while compiling: set by the calling group node, or
+ * stored on the node while unlinked. Undefined when it's only known per pixel.
+ */
+export function knownEnum(
+	ctx: WgslCtx,
+	id: string,
+	variants: readonly EnumVariant[],
+): number | undefined {
+	const constant = ctx.constant(id);
+	if (constant !== undefined) return enumValue(constant, variants);
+	if ((ctx.inputs[id] ?? []).length > 0) return undefined;
+	return enumValue(ctx.data.values?.[id], variants);
 }
