@@ -5,10 +5,19 @@ import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
+import {
+	COLOR_RAMP,
+	colorRampStops,
+	RAMP_FACTOR,
+	RAMP_HUE,
+	RAMP_INTERPOLATION,
+	RAMP_SPACE,
+} from "../nodes/color-ramp";
 import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
 import { SAMPLE_TEXTURE, TEXTURE_SIZE } from "../nodes/texture";
 import { COMPONENT_COUNT, COMPONENT_COUNT_INPUT } from "../nodes/vector";
 import { readSource, type TextureSource, TextureSources } from "../passes/sources";
+import { evaluateRamp } from "../ramp";
 import {
 	enumValue,
 	isTexture,
@@ -568,6 +577,19 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 				values.map((v) => ({ value: v, label: "" })),
 			);
 			return get(caseHandle(value ?? 0));
+		}
+		case COLOR_RAMP: {
+			const mode = (id: string) => get(id)[0] ?? 0;
+			const stops = colorRampStops(node.data).map((stop) => {
+				const [r = 0, g = 0, b = 0, a = 1] = get(stop.id);
+				return { position: stop.position, color: [r, g, b, width === 4 ? a : 1] as const };
+			});
+			const color = evaluateRamp(stops, get(RAMP_FACTOR)[0] ?? 0, {
+				interpolation: mode(RAMP_INTERPOLATION),
+				space: mode(RAMP_SPACE),
+				hue: mode(RAMP_HUE),
+			});
+			return color.slice(0, width);
 		}
 		case INDEX_SWITCH: {
 			const last = indexSwitchCases(node.data) - 1;

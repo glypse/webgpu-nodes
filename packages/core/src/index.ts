@@ -2,6 +2,7 @@ export * from "./types";
 export * from "./assets";
 export * from "./color";
 export * from "./curve";
+export * from "./ramp";
 export * from "./nodes";
 export * from "./nodes/registry";
 export * from "./zones";

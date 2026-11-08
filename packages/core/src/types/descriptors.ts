@@ -231,7 +231,12 @@ export function settingValue(data: NodeData, setting: NodeSetting): string {
  * has its own component in a front end.
  */
 export type NodeWidget =
-	NodeColorWidget | NodeCurveWidget | NodeCodeWidget | NodeCasesWidget | NodeAssetWidget;
+	| NodeColorWidget
+	| NodeCurveWidget
+	| NodeRampWidget
+	| NodeCodeWidget
+	| NodeCasesWidget
+	| NodeAssetWidget;
 
 /** A hue / saturation wheel and a value ramp, editing the values of a colour's inputs. */
 export type NodeColorWidget = {
@@ -247,6 +252,9 @@ export type NodeColorWidget = {
 
 /** A graph editing the node's curve (`NodeData.curve`). */
 export type NodeCurveWidget = { kind: "curve" };
+
+/** A gradient editing the node's colour ramp stops (`NodeData.ramp`) and their colours. */
+export type NodeRampWidget = { kind: "ramp" };
 
 /** A code editor for the node's WGSL (`NodeData.code`) and its sockets (`NodeData.sockets`). */
 export type NodeCodeWidget = { kind: "code" };

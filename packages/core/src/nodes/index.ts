@@ -14,4 +14,5 @@ export * from "./dev";
 export * from "./curve";
 export * from "./custom";
 export * from "./color";
+export * from "./color-ramp";
 export * from "./texture";

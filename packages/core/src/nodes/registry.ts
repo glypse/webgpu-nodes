@@ -94,6 +94,7 @@ const DESCRIPTORS = {
 	"to-bool": nodes.toBoolNode,
 
 	// Color
+	[nodes.COLOR_RAMP]: nodes.buildColorRampDescriptor({}),
 	"display-gamut-clip": nodes.displayGamutClipNode,
 
 	// Texture

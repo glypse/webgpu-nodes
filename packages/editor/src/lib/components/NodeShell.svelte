@@ -34,6 +34,7 @@
 	import CodeWidget from "./widgets/CodeWidget.svelte";
 	import ColorWidget from "./widgets/ColorWidget.svelte";
 	import CurveWidget from "./widgets/CurveWidget.svelte";
+	import RampWidget from "./widgets/RampWidget.svelte";
 
 	let {
 		id,
@@ -418,6 +419,14 @@
 			/>
 		{:else if descriptor.widget?.kind === "curve"}
 			<CurveWidget {id} curve={data.curve} disabled={isLocked} />
+		{:else if descriptor.widget?.kind === "ramp"}
+			<RampWidget
+				{id}
+				{data}
+				defaults={descriptor.defaultData.values}
+				connected={connectedHandles}
+				disabled={isLocked}
+			/>
 		{:else if descriptor.widget?.kind === "code"}
 			<CodeWidget {id} {data} disabled={isLocked} />
 		{:else if descriptor.widget?.kind === "cases"}

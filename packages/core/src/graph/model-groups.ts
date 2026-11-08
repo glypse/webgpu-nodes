@@ -12,6 +12,7 @@ import {
 	variantTypes,
 } from "../enums";
 import { commonFrame } from "../frames";
+import { COLOR_RAMP, colorRampHiddenInputs } from "../nodes/color-ramp";
 import { nodeRegistry } from "../nodes/registry";
 import { err, ok } from "../result";
 import {
@@ -1024,15 +1025,19 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * The inputs a group node doesn't show, seen from `path`: those under a
-	 * variant of one of its enums other than the one it's on, or owned by
-	 * types its variables don't have there. Their links stay, unused, for
-	 * when that variant or type is picked again.
+	 * The inputs a node doesn't show, seen from `path`: a group node's under
+	 * a variant of one of its enums other than the one it's on, or owned by
+	 * types its variables don't have there; a Color Ramp's unused ones. Their
+	 * links stay, unused, for when that variant or type is picked again.
 	 */
 	hiddenInputs(nodeId: string, path: readonly string[] = this.path): Set<string> {
 		const node = this.resolveNode(nodeId);
 		const def = node?.group && this.project.definitions.get(node.group.definitionRef);
 		const doc = this.documentOf(nodeId);
+		if (node?.type === COLOR_RAMP) {
+			const linked = (doc?.edgesByTarget.get(nodeId) ?? []).map((e) => e.targetHandle);
+			return colorRampHiddenInputs(node.data, new Set(linked));
+		}
 		if (node?.type !== "node-group" || !def || !doc) return new Set();
 		const bindings = this.typesOf(node, path).bindings ?? {};
 		return hiddenInputsOf(def.inputs, this.instanceEnumValues(node, bindings), bindings);

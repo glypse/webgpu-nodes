@@ -1,6 +1,7 @@
 import type { VideoPlayback } from "../assets/assets";
 import type { CurvePoint } from "../curve/curve";
 import type { FrameTint } from "../frames/analysis";
+import type { RampStop } from "../ramp/ramp";
 import type { HandleDef, ZoneItem } from "./descriptors";
 import type { SocketType } from "./values";
 
@@ -38,6 +39,11 @@ export type NodeData = {
 	code?: string;
 	/** A Custom WGSL node's sockets; their labels name them in `code`. */
 	sockets?: { inputs: HandleDef[]; outputs: HandleDef[] };
+	/**
+	 * A Color Ramp's stops, by position. Each id is also the id of the input
+	 * holding the stop's colour.
+	 */
+	ramp?: RampStop[];
 	/** How many cases an Index Switch picks among. */
 	cases?: number;
 	/** A frame's note, shown under its label. */

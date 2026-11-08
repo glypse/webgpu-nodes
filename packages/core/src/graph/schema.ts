@@ -6,6 +6,7 @@ import { CURVE_POINT_KINDS } from "../curve";
 import { FRAME_TINTS } from "../frames/analysis";
 import { isSocketName } from "../nodes/custom";
 import { NODE_TYPES } from "../nodes/registry";
+import { isRampStopId } from "../ramp/ramp";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, SOCKET_TYPES, WGSL_TYPES } from "../types";
 import {
@@ -96,6 +97,11 @@ const CurvePointSchema = v.object({
 	right: Vec2Schema,
 });
 
+const RampStopSchema = v.object({
+	id: v.pipe(IdSchema, v.check(isRampStopId)),
+	position: FiniteSchema,
+});
+
 const ScalarValueSchema = v.union([FiniteSchema, v.boolean()]);
 
 const InputValueSchema = v.union([
@@ -129,6 +135,15 @@ const NodeDataSchema = v.strictObject({
 	),
 	cases: v.optional(v.pipe(FiniteSchema, v.integer(), v.minValue(1), v.maxValue(MAX_CASES))),
 	curve: v.optional(listOf(CurvePointSchema)),
+	ramp: v.optional(
+		v.pipe(
+			listOf(RampStopSchema),
+			v.check(
+				(stops) => new Set(stops.map((s) => s.id)).size === stops.length,
+				"Every ramp stop needs an id of its own.",
+			),
+		),
+	),
 	code: v.optional(v.pipe(v.string(), v.maxLength(MAX_CODE_LENGTH))),
 	sockets: v.optional(CustomSocketsSchema),
 	note: v.optional(v.pipe(v.string(), v.maxLength(MAX_NOTE_LENGTH))),
@@ -215,6 +230,7 @@ export const NodeWidgetSchema = v.variant("kind", [
 		),
 	}),
 	v.object({ kind: v.literal("curve") }),
+	v.object({ kind: v.literal("ramp") }),
 	v.object({ kind: v.literal("code") }),
 	v.object({ kind: v.literal("cases") }),
 	v.object({ kind: v.literal("asset"), media: v.picklist(ASSET_KINDS) }),

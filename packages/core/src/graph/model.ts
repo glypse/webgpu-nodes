@@ -48,6 +48,8 @@ const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
 	color: 6,
 	// The graph, the selected point's tools and its coordinates.
 	curve: 10,
+	// The tools, the gradient with its stops, and the selected stop's position.
+	ramp: 4,
 	// The signature line and the code editor's default height.
 	code: 5,
 	// The case count and its buttons.

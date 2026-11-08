@@ -6,6 +6,7 @@ export { default as CurveEditor } from "./curve-editor.svelte";
 export { default as Input } from "./input.svelte";
 export { default as Kbd } from "./kbd.svelte";
 export { default as Progress } from "./progress.svelte";
+export { default as RampEditor } from "./ramp-editor.svelte";
 export { default as Scrubbable } from "./scrubbable.svelte";
 export { default as Textarea } from "./textarea.svelte";
 export { default as ColorPicker } from "./color-picker/color-picker.svelte";

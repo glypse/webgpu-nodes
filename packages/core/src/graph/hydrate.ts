@@ -1,4 +1,5 @@
 import { enumAt, MATCH, MATCH_SELECTOR } from "../enums";
+import { buildColorRampDescriptor, COLOR_RAMP } from "../nodes/color-ramp";
 import { buildCustomWgslDescriptor, CUSTOM_WGSL } from "../nodes/custom";
 import {
 	buildGroupDescriptor,
@@ -54,6 +55,9 @@ export function resolveDescriptor(
 	}
 	if (node.type === INDEX_SWITCH) {
 		return buildIndexSwitchDescriptor(node.data);
+	}
+	if (node.type === COLOR_RAMP) {
+		return buildColorRampDescriptor(node.data);
 	}
 	if (node.type === MATCH) {
 		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));

@@ -1,4 +1,5 @@
 import { caseHandle } from "../enums";
+import { COLOR_RAMP, colorRampStops } from "../nodes/color-ramp";
 import {
 	CUSTOM_WGSL,
 	type CustomSockets,
@@ -8,7 +9,8 @@ import {
 	type SocketSide,
 } from "../nodes/custom";
 import { clampCases, INDEX_SWITCH, indexSwitchCases } from "../nodes/index-switch";
-import type { HandleDef, WgslType } from "../types";
+import { isRampStopId, type RampStop, sortedRampStops } from "../ramp";
+import type { HandleDef, InputValue, WgslType } from "../types";
 import type { GraphNode } from "./document";
 import { indexDocument } from "./hydrate";
 import { MAX_CODE_LENGTH } from "./limits";
@@ -16,7 +18,7 @@ import { GroupModel } from "./model-groups";
 
 /**
  * Editing nodes whose sockets are their own data: Custom WGSL nodes' code
- * and sockets, Index Switches' cases.
+ * and sockets, Index Switches' cases, Color Ramps' stops.
  */
 export abstract class CustomWgslModel extends GroupModel {
 	private customNode(nodeId: string): GraphNode | undefined {
@@ -130,6 +132,38 @@ export abstract class CustomWgslModel extends GroupModel {
 		);
 		this.patchNodeData(new Map([[node.id, { ...node.data, cases, values }]]));
 		const doc = this.activeDocument;
+		doc.edges = doc.edges.filter((e) => e.target !== node.id || !removed(e.targetHandle));
+		indexDocument(doc);
+		this.invalidateTypes([node.id]);
+		this.rebuildTypeCache();
+	}
+
+	/**
+	 * Give a Color Ramp `stops`, setting the colours in `colors` (by stop id),
+	 * and dropping the links and colours of the stops removed. Moving stops
+	 * without reordering them only changes values the shader reads.
+	 */
+	setColorRamp(
+		nodeId: string,
+		stops: readonly RampStop[],
+		colors: Readonly<Record<string, InputValue>> = {},
+	) {
+		const node = this.resolveNode(nodeId);
+		const doc = this.documentOf(nodeId);
+		if (node?.type !== COLOR_RAMP || !doc) return;
+		const ramp = sortedRampStops(stops);
+		const kept = new Set(ramp.map((s) => s.id));
+		const removed = (handle: string) => isRampStopId(handle) && !kept.has(handle);
+		const values = {
+			...Object.fromEntries(
+				Object.entries(node.data.values ?? {}).filter(([handle]) => !removed(handle)),
+			),
+			...colors,
+		};
+		const order = (list: readonly RampStop[]) => list.map((s) => s.id).join(",");
+		const reordered = order(ramp) !== order(colorRampStops(node.data));
+		this.patchNodeData(new Map([[node.id, { ...node.data, ramp, values }]]));
+		if (!reordered) return;
 		doc.edges = doc.edges.filter((e) => e.target !== node.id || !removed(e.targetHandle));
 		indexDocument(doc);
 		this.invalidateTypes([node.id]);
