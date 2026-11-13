@@ -13,6 +13,7 @@ import {
 	pickableTypes,
 	settingValue,
 } from "../types";
+import type { ZoneKind } from "../zones";
 
 /** Category headings, in menu order. */
 export const CATEGORY_LABELS: Record<NodeCategory, string> = {
@@ -50,12 +51,13 @@ export type AddMenuEntry = {
 	/**
 	 * - `node`: a registered node type (`type`), "node-group" creating a new empty group,
 	 * - `group`: an instance of an existing group definition (`definitionRef`),
-	 * - `zone`: a new repeat zone (input/output pair),
+	 * - `zone`: a new zone of the `zone` kind (input/output pair),
 	 * - `link`: a link from a reroute of the document whose links are hidden
 	 *   (`source`), or a reroute it feeds.
 	 */
 	kind: "node" | "group" | "zone" | "link";
 	type?: NodeType;
+	zone?: ZoneKind;
 	definitionRef?: string;
 	source?: string;
 	/** Data the node is created with, over its defaults: a picked type, an enum set. */
@@ -216,6 +218,18 @@ export function addMenuEntries(
 			aliases: ["Loop", "For Loop", "For Each", "Iterate", "While"],
 			heading: CATEGORY_LABELS.zone,
 			kind: "zone",
+			zone: "repeat",
+			choices: [],
+			disabled: false,
+			deletable: false,
+		},
+		{
+			key: "zone:simulation",
+			label: "Simulation Zone",
+			aliases: ["Feedback", "Previous Frame", "Persistent", "State", "Ping Pong"],
+			heading: CATEGORY_LABELS.zone,
+			kind: "zone",
+			zone: "simulation",
 			choices: [],
 			disabled: false,
 			deletable: false,

@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 import { err, ok, type Result } from "../result";
-import { pairedOutputId, REPEAT_INPUT, REPEAT_OUTPUT } from "../zones";
+import { isZoneOutput, pairedOutputId } from "../zones";
 import { type GraphDocument, type GraphProject, ROOT_ID } from "./document";
 import { groupRefsOf } from "./editing";
 import {
@@ -142,9 +142,9 @@ export function documentIssues(definition: string, doc: CheckedDocument): GraphI
 	}
 
 	// A zone's output depends on its input without a link saying so.
-	const outputs = new Set(doc.nodes.filter((n) => n.type === REPEAT_OUTPUT).map((n) => n.id));
+	const outputs = new Set(doc.nodes.filter((n) => isZoneOutput(n.type)).map((n) => n.id));
 	const zones = doc.nodes.flatMap((n): [string, string][] => {
-		const output = n.type === REPEAT_INPUT ? pairedOutputId(n) : undefined;
+		const output = pairedOutputId(n);
 		return output !== undefined && outputs.has(output) ? [[n.id, output]] : [];
 	});
 	const links = [...doc.edges.map((e) => [e.source, e.target] as const), ...zones];

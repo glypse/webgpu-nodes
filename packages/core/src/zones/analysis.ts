@@ -1,17 +1,32 @@
 import {
+	isZoneInput,
+	isZoneOutput,
 	type MinimalEdge,
 	type MinimalNode,
 	pairedOutputId,
-	REPEAT_INPUT,
-	REPEAT_OUTPUT,
+	SIMULATION_INPUT,
+	type ZoneKind,
+	zoneKindOf,
 } from "./descriptors";
 
-/** Nodes that can never live inside a zone (they are the document's sinks). */
-const ROOT_ONLY_TYPES = new Set(["frag-output", "group-output"]);
+/**
+ * Nodes that can never live inside a zone: the document's sinks, and a
+ * simulation's start, which a loop or another frame's step can't run.
+ */
+const ROOT_ONLY_TYPES = new Set(["frag-output", "group-output", SIMULATION_INPUT]);
+
+export type ZoneAnalysisOptions = {
+	/**
+	 * Group nodes computing a simulation zone, themselves or through groups
+	 * they nest (see `simulatingDefinitions`): they can't be in a zone either.
+	 */
+	simulating?: ReadonlySet<string>;
+};
 
 export type Zone = {
-	/** The zone's id: its Repeat Input node id. */
+	/** The zone's id: its input node's id. */
 	id: string;
+	kind: ZoneKind;
 	inputId: string;
 	outputId: string;
 	/** Id of the directly enclosing zone, or null at the document's top level. */
@@ -24,7 +39,7 @@ export type Zone = {
 
 export type ZoneAnalysis = {
 	zones: Map<string, Zone>;
-	/** Zone id of every paired Repeat Input / Repeat Output node. */
+	/** Zone id of every paired zone input / output node. */
 	zoneOfBoundary: Map<string, string>;
 	/**
 	 * Innermost zone containing each node (null when outside every zone).
@@ -42,9 +57,45 @@ function implicitZoneEdges(zones: Iterable<Zone>): { source: string; target: str
 	return [...zones].map((z) => ({ source: z.inputId, target: z.outputId }));
 }
 
+type Definitions = ReadonlyMap<string, { nodes: readonly MinimalNode[] }>;
+
+const simulatingCache = new WeakMap<
+	Definitions,
+	{ nodes: (readonly MinimalNode[])[]; result: ReadonlySet<string> }
+>();
+
+/**
+ * The definitions computing a simulation zone, themselves or through the
+ * groups they nest, among `definitions`. Memoised on their node arrays.
+ */
+export function simulatingDefinitions(definitions: Definitions): ReadonlySet<string> {
+	const nodes = [...definitions.values()].map((d) => d.nodes);
+	const cached = simulatingCache.get(definitions);
+	if (cached?.nodes.length === nodes.length && cached.nodes.every((n, i) => n === nodes[i])) {
+		return cached.result;
+	}
+	const simulating = new Set<string>();
+	for (const [ref, doc] of definitions) {
+		if (doc.nodes.some((n) => n.type === SIMULATION_INPUT)) simulating.add(ref);
+	}
+	// Grows until no definition nesting a simulating one is left out.
+	for (let grew = simulating.size > 0; grew;) {
+		grew = false;
+		for (const [ref, doc] of definitions) {
+			if (simulating.has(ref)) continue;
+			if (doc.nodes.some((n) => n.group && simulating.has(n.group.definitionRef))) {
+				simulating.add(ref);
+				grew = true;
+			}
+		}
+	}
+	simulatingCache.set(definitions, { nodes, result: simulating });
+	return simulating;
+}
+
 /**
  * Whether a link `source → target` would close a cycle, accounting for the
- * implicit Repeat Input → Repeat Output dependency of every zone.
+ * implicit zone input → zone output dependency of every zone.
  */
 export function wouldCreateCycle(
 	nodes: readonly MinimalNode[],
@@ -60,9 +111,9 @@ export function wouldCreateCycle(
 		adjacency.set(from, list);
 	};
 	for (const e of edges) link(e.source, e.target);
-	const outputs = new Set(nodes.filter((n) => n.type === REPEAT_OUTPUT).map((n) => n.id));
+	const outputs = new Set(nodes.filter((n) => isZoneOutput(n.type)).map((n) => n.id));
 	for (const n of nodes) {
-		const out = n.type === REPEAT_INPUT ? pairedOutputId(n) : undefined;
+		const out = pairedOutputId(n);
 		if (out && outputs.has(out)) link(n.id, out);
 	}
 	// Is `source` reachable from `target`?
@@ -111,20 +162,25 @@ function topoOrder(ids: string[], edges: { source: string; target: string }[]): 
  * Work out zone membership, nesting and invalid links for one document,
  * following Blender's rules (blenkernel/intern/node_tree_zones.cc):
  *
- * - "inside" flags propagate forward along links: a Repeat Input sets its
- *   zone's flag; a Repeat Output inherits its input's flags (implicit link),
+ * - "inside" flags propagate forward along links: a zone input sets its
+ *   zone's flag; a zone output inherits its input's flags (implicit link),
  *   clears its own zone and marks downstream nodes as "after" the zone.
  * - A node can't be both inside and after the same zone, nor inside two
- *   unrelated zones, and sinks (frag-output, group-output) are always outside:
- *   the incoming links causing such conflicts are invalid. Unlike Blender
- *   (which rejects the whole tree), only those links are dropped and the
- *   analysis is re-run until it is stable.
+ *   unrelated zones, and sinks (frag-output, group-output) are always
+ *   outside, as are simulation zones (and groups computing one): the
+ *   incoming links causing such conflicts are invalid. Unlike Blender (which
+ *   rejects the whole tree), only those links are dropped and the analysis
+ *   is re-run until it is stable.
  * - Remaining links may only stay in a zone or enter a nested one, never leave.
  */
 export function analyzeZones(
 	nodes: readonly MinimalNode[],
 	edges: readonly MinimalEdge[],
+	{ simulating }: ZoneAnalysisOptions = {},
 ): ZoneAnalysis {
+	const rootOnly = (node: MinimalNode | undefined): boolean =>
+		ROOT_ONLY_TYPES.has(node?.type ?? "") ||
+		(!!node?.group && !!simulating?.has(node.group.definitionRef));
 	const nodeById = new Map(nodes.map((n) => [n.id, n]));
 	const zones = new Map<string, Zone>();
 	const zoneOfBoundary = new Map<string, string>();
@@ -133,16 +189,23 @@ export function analyzeZones(
 	// 1. Pair boundary nodes.
 	const claimedOutputs = new Set<string>();
 	for (const node of nodes) {
-		if (node.type !== REPEAT_INPUT) continue;
+		if (!isZoneInput(node.type)) continue;
+		const kind = zoneKindOf(node.type) ?? "repeat";
 		const outputId = pairedOutputId(node);
 		const output = outputId ? nodeById.get(outputId) : undefined;
-		if (!outputId || output?.type !== REPEAT_OUTPUT || claimedOutputs.has(outputId)) {
+		if (
+			!outputId ||
+			!isZoneOutput(output?.type) ||
+			zoneKindOf(output?.type) !== kind ||
+			claimedOutputs.has(outputId)
+		) {
 			unpaired.add(node.id);
 			continue;
 		}
 		claimedOutputs.add(outputId);
 		const zone: Zone = {
 			id: node.id,
+			kind,
 			inputId: node.id,
 			outputId,
 			parent: null,
@@ -154,7 +217,7 @@ export function analyzeZones(
 		zoneOfBoundary.set(outputId, zone.id);
 	}
 	for (const node of nodes) {
-		if (node.type === REPEAT_OUTPUT && !claimedOutputs.has(node.id)) unpaired.add(node.id);
+		if (isZoneOutput(node.type) && !claimedOutputs.has(node.id)) unpaired.add(node.id);
 	}
 
 	// Links touching an unpaired zone node carry no meaning.
@@ -208,13 +271,13 @@ export function analyzeZones(
 			}
 			const zoneId = zoneOfBoundary.get(id);
 			const zone = zoneId ? zones.get(zoneId) : undefined;
+			if (rootOnly(node)) ins.clear();
 			if (id === zone?.inputId) ins.add(zone.id);
 			if (id === zone?.outputId) {
 				for (const z of inside.get(zone.inputId) ?? []) ins.add(z);
 				ins.delete(zone.id);
 				aft.add(zone.id);
 			}
-			if (ROOT_ONLY_TYPES.has(node?.type ?? "")) ins.clear();
 
 			// Inside and after the same zone: the links bringing the inside
 			// flag in are the culprits.
@@ -242,7 +305,7 @@ export function analyzeZones(
 			const foreign = [...flags].filter((z) => !chain.has(z));
 			if (foreign.length === 0) continue;
 			const suspects = [...(incoming.get(id) ?? [])];
-			// A Repeat Output inherits its input's flags through the implicit link.
+			// A zone output inherits its input's flags through the implicit link.
 			const zone = own ? zones.get(own) : undefined;
 			if (id === zone?.outputId) suspects.push(...(incoming.get(zone.inputId) ?? []));
 			for (const e of suspects) {

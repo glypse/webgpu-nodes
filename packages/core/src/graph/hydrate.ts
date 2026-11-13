@@ -10,12 +10,7 @@ import { buildIndexSwitchDescriptor, INDEX_SWITCH } from "../nodes/index-switch"
 import { buildMatchDescriptor } from "../nodes/match";
 import { nodeRegistry } from "../nodes/registry";
 import { type NodeDescriptor, withDefaults } from "../types";
-import {
-	buildRepeatInputDescriptor,
-	buildRepeatOutputDescriptor,
-	REPEAT_INPUT,
-	REPEAT_OUTPUT,
-} from "../zones";
+import { buildZoneDescriptor, isZoneNodeType } from "../zones";
 import {
 	createPlainDocument,
 	type GraphDocument,
@@ -43,12 +38,9 @@ export function resolveDescriptor(
 	if (node.type === "node-group") {
 		return buildGroupDescriptor(node, definitions);
 	}
-	if (node.type === REPEAT_INPUT || node.type === REPEAT_OUTPUT) {
+	if (isZoneNodeType(node.type)) {
 		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
-		const variables = doc?.typeVariables ?? [];
-		return node.type === REPEAT_INPUT
-			? buildRepeatInputDescriptor(node, definitions, variables)
-			: buildRepeatOutputDescriptor(node, variables);
+		return buildZoneDescriptor(node, definitions, doc?.typeVariables ?? []);
 	}
 	if (node.type === CUSTOM_WGSL) {
 		return buildCustomWgslDescriptor(node.data);

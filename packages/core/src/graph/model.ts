@@ -24,7 +24,13 @@ import {
 	type SocketType,
 	withDefaults,
 } from "../types";
-import { isZoneNodeType, NEW_ITEM_HANDLE, pairedOutputId, wouldCreateCycle } from "../zones";
+import {
+	isZoneNodeType,
+	NEW_ITEM_HANDLE,
+	pairedOutputId,
+	wouldCreateCycle,
+	zoneKindOf,
+} from "../zones";
 import { rerouteBranches } from "./branches";
 import {
 	type GraphEdge,
@@ -192,9 +198,11 @@ export class GraphModel extends AssetModel {
 				targetHandle === NEW_ITEM_HANDLE
 					? this.resolveOutputHandleType(sourceNode.id, sourceHandle)
 					: this.resolveInputType(targetNode.id, targetHandle),
-			)
+			) &&
+			zoneKindOf((targetHandle === NEW_ITEM_HANDLE ? targetNode : sourceNode).type) !==
+				"simulation"
 		) {
-			// A zone can't carry a texture.
+			// Only a simulation zone carries a texture.
 			return false;
 		}
 		// A Match node's cases come from its enum: nothing else can pick one.
@@ -615,13 +623,13 @@ export class GraphModel extends AssetModel {
 
 	/**
 	 * Create what an add-menu entry stands for at `position` (flow coordinates).
-	 * Returns the id of the created node (a zone's Repeat Input), if any.
+	 * Returns the id of the created node (a zone's input), if any.
 	 */
 	addMenuEntry(entry: AddMenuEntry, position: { x: number; y: number }): string | undefined {
 		if (entry.disabled) return undefined;
 		switch (entry.kind) {
 			case "zone":
-				return this.createRepeatZone(position);
+				return this.createZone(entry.zone ?? "repeat", position);
 			case "group":
 				return entry.definitionRef
 					? this.addFromLibrary(entry.definitionRef, position, entry.data)

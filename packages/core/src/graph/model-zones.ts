@@ -1,16 +1,23 @@
 import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
+	carriesItem,
 	clampIterations,
 	DEFAULT_ITERATIONS,
 	DEFAULT_MAX_ITERATIONS,
+	FIXED_ZONE_HANDLES,
 	inferredItemFamily,
+	isZoneInput,
 	ITERATIONS_HANDLE,
 	NEW_ITEM_HANDLE,
 	pairedOutputId,
 	REPEAT_INPUT,
-	REPEAT_OUTPUT,
+	simulatingDefinitions,
+	SKIP_HANDLE,
+	ZONE_BOUNDARIES,
 	zoneItems,
+	type ZoneKind,
+	zoneKindOf,
 } from "../zones";
 import { type GraphEdge, type GraphNode, type HydratedGraphDocument } from "./document";
 import { indexDocument } from "./hydrate";
@@ -19,7 +26,7 @@ import { GraphModelBase, withEntry } from "./model-base";
 /** Horizontal distance between a new zone's input and output nodes. */
 export const ZONE_SPACING = 450;
 
-/** Repeat zone editing. */
+/** Zone editing. */
 export abstract class ZoneModel extends GraphModelBase {
 	/** Whether an edge of the active document breaks zone rules (drawn red, ignored by codegen). */
 	isEdgeInvalid(edgeId: string): boolean {
@@ -46,17 +53,19 @@ export abstract class ZoneModel extends GraphModelBase {
 				!(e.target === candidate.target && e.targetHandle === candidate.targetHandle),
 		);
 		const before = this.zoneAnalysis(doc).invalidEdges;
-		const after = analyzeZones(doc.nodes, [...kept, candidate]).invalidEdges;
+		const after = analyzeZones(doc.nodes, [...kept, candidate], {
+			simulating: simulatingDefinitions(this.project.definitions),
+		}).invalidEdges;
 		for (const id of after) if (!before.has(id)) return false;
 		return true;
 	}
 
 	/**
-	 * Add a new repeat zone (paired input/output nodes) to the active document,
-	 * with one inferred state item passed straight through.
-	 * Returns the Repeat Input's id, or undefined if the document is locked.
+	 * Add a new zone (paired input/output nodes) to the active document, with
+	 * one inferred state item passed straight through. Returns its input's
+	 * id, or undefined if the document is locked.
 	 */
-	createRepeatZone(position: { x: number; y: number }): string | undefined {
+	createZone(kind: ZoneKind, position: { x: number; y: number }): string | undefined {
 		if (this.isLocked) return undefined;
 		const inputId = crypto.randomUUID();
 		const outputId = crypto.randomUUID();
@@ -65,22 +74,27 @@ export abstract class ZoneModel extends GraphModelBase {
 			label: "Value",
 			type: { inferred: true },
 		};
+		const { input, output } = ZONE_BOUNDARIES[kind];
+		const repeat = kind === "repeat";
 
 		const nodes: GraphNode[] = [
 			{
 				id: inputId,
-				type: REPEAT_INPUT,
+				type: input,
 				data: {
 					pairedOutput: outputId,
-					values: { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS, [item.id]: 0 },
-					maxIterations: DEFAULT_MAX_ITERATIONS,
+					values: {
+						...(repeat ? { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS } : {}),
+						[item.id]: 0,
+					},
+					...(repeat ? { maxIterations: DEFAULT_MAX_ITERATIONS } : {}),
 				},
 				position,
 			},
 			{
 				id: outputId,
-				type: REPEAT_OUTPUT,
-				data: { items: [item] },
+				type: output,
+				data: { items: [item], ...(repeat ? {} : { values: { [SKIP_HANDLE]: false } }) },
 				position: { x: position.x + ZONE_SPACING, y: position.y },
 			},
 		];
@@ -100,13 +114,32 @@ export abstract class ZoneModel extends GraphModelBase {
 		return inputId;
 	}
 
-	/** The paired Repeat Input / Repeat Output nodes of a zone in the active document. */
-	protected zoneNodes(zoneId: string): { input: GraphNode; output: GraphNode } | undefined {
+	/** Add a new repeat zone (see `createZone`). */
+	createRepeatZone(position: { x: number; y: number }): string | undefined {
+		return this.createZone("repeat", position);
+	}
+
+	/** Add a new simulation zone (see `createZone`). */
+	createSimulationZone(position: { x: number; y: number }): string | undefined {
+		return this.createZone("simulation", position);
+	}
+
+	/** The kind of a zone of the active document, by its input's id. */
+	zoneKind(zoneId: string): ZoneKind | undefined {
+		return this.zoneNodes(zoneId)?.kind;
+	}
+
+	/** The paired input / output nodes of a zone in the active document. */
+	protected zoneNodes(
+		zoneId: string,
+	): { input: GraphNode; output: GraphNode; kind: ZoneKind } | undefined {
 		const doc = this.activeDocument;
 		const input = doc.nodesById.get(zoneId);
 		const output = input ? doc.nodesById.get(pairedOutputId(input) ?? "") : undefined;
-		if (input?.type !== REPEAT_INPUT || output?.type !== REPEAT_OUTPUT) return undefined;
-		return { input, output };
+		const kind = zoneKindOf(input?.type);
+		if (!input || !output || !kind || !isZoneInput(input.type)) return undefined;
+		if (output.type !== ZONE_BOUNDARIES[kind].output) return undefined;
+		return { input, output, kind };
 	}
 
 	getZoneItems(zoneId: string): ZoneItem[] {
@@ -116,7 +149,7 @@ export abstract class ZoneModel extends GraphModelBase {
 	/** Write a zone's item list (on its output node) and refresh everything derived from it. */
 	protected setZoneItems(zoneId: string, items: ZoneItem[]) {
 		const zone = this.zoneNodes(zoneId);
-		if (!zone || this.isLocked) return;
+		if (!zone || this.isLocked || !items.every((i) => carriesItem(zone.kind, i))) return;
 		const patches = new Map<string, Record<string, unknown>>([
 			[zone.output.id, { ...zone.output.data, items }],
 		]);
@@ -126,7 +159,7 @@ export abstract class ZoneModel extends GraphModelBase {
 		const ids = new Set(items.map((i) => i.id));
 		const doc = this.activeDocument;
 		const boundary = new Set([zone.input.id, zone.output.id]);
-		const fixed = new Set(["iterations", "iteration"]);
+		const fixed = FIXED_ZONE_HANDLES;
 		doc.edges = doc.edges.filter((e) => {
 			if (boundary.has(e.target) && !fixed.has(e.targetHandle) && !ids.has(e.targetHandle)) {
 				return false;
@@ -155,7 +188,7 @@ export abstract class ZoneModel extends GraphModelBase {
 	/** Append a state item to a zone. Returns the new item. */
 	addZoneItem(zoneId: string, type: ZoneItem["type"], label?: string): ZoneItem | undefined {
 		const zone = this.zoneNodes(zoneId);
-		if (!zone || this.isLocked) return undefined;
+		if (!zone || this.isLocked || !carriesItem(zone.kind, { type })) return undefined;
 		const items = zoneItems(zone.output);
 		const existing = new Set(items.map((i) => i.label));
 		let name = label ?? "Value";
@@ -224,10 +257,10 @@ export abstract class ZoneModel extends GraphModelBase {
 		this.patchNodeData(new Map([[zone.input.id, { ...zone.input.data, types }]]));
 	}
 
-	/** Set a zone's iteration safety cap. */
+	/** Set a repeat zone's iteration safety cap. */
 	setZoneMaxIterations(zoneId: string, max: number) {
 		const zone = this.zoneNodes(zoneId);
-		if (!zone || this.isLocked) return;
+		if (zone?.input.type !== REPEAT_INPUT || this.isLocked) return;
 		const value = clampIterations(max);
 		this.patchNodeData(
 			new Map([[zone.input.id, { ...zone.input.data, maxIterations: value }]]),
@@ -237,7 +270,8 @@ export abstract class ZoneModel extends GraphModelBase {
 	/**
 	 * Complete a connection dropped on a zone's virtual "new item" handle:
 	 * create an inferred item, then link to it. Unless the link is its initial
-	 * value, the item takes the type at the other end until one is linked.
+	 * value, the item takes the type at the other end until one is linked. A
+	 * texture makes a simulation zone's texture item, and no repeat zone's.
 	 * Returns false when the connection doesn't involve the virtual handle.
 	 */
 	connectNewZoneItem(connection: {
@@ -267,11 +301,11 @@ export abstract class ZoneModel extends GraphModelBase {
 				(i) => i.id === connection.targetHandle,
 			)?.label;
 		}
-		// A zone can't carry a texture.
-		if (isTexture(type)) return true;
-		const item = this.addZoneItem(zoneId, { inferred: true }, label);
+		const item = this.addZoneItem(zoneId, isTexture(type) ? type : { inferred: true }, label);
 		if (!item) return true;
-		if (!(toNew && connection.target === zoneId)) this.pickItemType(zoneId, item.id, type);
+		if (!isTexture(type) && !(toNew && connection.target === zoneId)) {
+			this.pickItemType(zoneId, item.id, type);
+		}
 
 		const edge: GraphEdge = {
 			id: crypto.randomUUID(),

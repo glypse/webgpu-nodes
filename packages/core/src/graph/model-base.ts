@@ -43,7 +43,13 @@ import {
 	TypeResolver,
 	unavailableEdges,
 } from "../types/resolver";
-import { analyzeZones, inferredItemFamily, REPEAT_INPUT, type ZoneAnalysis } from "../zones";
+import {
+	analyzeZones,
+	inferredItemFamily,
+	isZoneInput,
+	simulatingDefinitions,
+	type ZoneAnalysis,
+} from "../zones";
 import {
 	createPlainDocument,
 	type GraphDocument,
@@ -456,18 +462,31 @@ export abstract class GraphModelBase {
 
 	protected zoneCache = new WeakMap<
 		HydratedGraphDocument,
-		{ nodes: GraphNode[]; edges: GraphEdge[]; analysis: ZoneAnalysis }
+		{
+			nodes: GraphNode[];
+			edges: GraphEdge[];
+			simulating: ReadonlySet<string>;
+			analysis: ZoneAnalysis;
+		}
 	>();
 
 	/**
 	 * Zone membership / invalid links of a document. Derived from its nodes and
-	 * edges (the single source of truth) and memoised on their identity.
+	 * edges (the single source of truth), and from which groups simulate, and
+	 * memoised on their identity.
 	 */
 	zoneAnalysis(doc: HydratedGraphDocument): ZoneAnalysis {
+		const simulating = simulatingDefinitions(this.project.definitions);
 		const cached = this.zoneCache.get(doc);
-		if (cached?.nodes === doc.nodes && cached.edges === doc.edges) return cached.analysis;
-		const analysis = analyzeZones(doc.nodes, doc.edges);
-		this.zoneCache.set(doc, { nodes: doc.nodes, edges: doc.edges, analysis });
+		if (
+			cached?.nodes === doc.nodes &&
+			cached.edges === doc.edges &&
+			cached.simulating === simulating
+		) {
+			return cached.analysis;
+		}
+		const analysis = analyzeZones(doc.nodes, doc.edges, { simulating });
+		this.zoneCache.set(doc, { nodes: doc.nodes, edges: doc.edges, simulating, analysis });
 		return analysis;
 	}
 
@@ -524,7 +543,7 @@ export abstract class GraphModelBase {
 		if (targetInputDef.family === inferredItemFamily(targetHandle)) {
 			return (
 				!isTexture(sourceType) &&
-				(targetNode.type === REPEAT_INPUT ||
+				(isZoneInput(targetNode.type) ||
 					isConnectionCompatible(
 						sourceType,
 						valueType(this.resolveInputType(targetNode.id, targetHandle, [])),

@@ -19,10 +19,10 @@ import type {
 import {
 	inferredItemFamily,
 	isInferredItem,
+	isZoneInput,
+	isZoneNodeType,
 	pairedInput,
 	pairedOutputId,
-	REPEAT_INPUT,
-	REPEAT_OUTPUT,
 	zoneItems,
 } from "../zones";
 
@@ -115,7 +115,7 @@ function resolveNodeTypesForNode(
 		}));
 		return { ...resolved, resolvedOutputs };
 	}
-	if (node.type === REPEAT_INPUT || node.type === REPEAT_OUTPUT) {
+	if (isZoneNodeType(node.type)) {
 		return resolveZoneNodeTypes(node, descriptor, incoming, nodeData, env, bindings);
 	}
 	const resolved = resolveRegularNodeTypes(descriptor, incoming, nodeData, env, bindings);
@@ -123,10 +123,11 @@ function resolveNodeTypesForNode(
 }
 
 /**
- * A Repeat Input or Output: items typed by a variable take its bound type,
- * and each item's output carries its input's type. An inferred item takes
- * the type of its initial value on the Repeat Input (the type picked there
- * while it's unlinked), which the Repeat Output's sockets are forced to:
+ * A zone input or output: items typed by a variable take its bound type,
+ * and each item's output carries its input's type, but a texture item's,
+ * whose values are colours and whose outputs are textures. An inferred item
+ * takes the type of its initial value on the zone input (the type picked
+ * there while it's unlinked), which the zone output's sockets are forced to:
  * its next value would make the type depend on itself, through the loop.
  */
 function resolveZoneNodeTypes(
@@ -140,7 +141,7 @@ function resolveZoneNodeTypes(
 	const doc = definitionOf(node.id, env.definitions());
 	const bound = completeBindings(doc?.typeVariables ?? [], bindings);
 	let types: Record<string, SocketType> = { ...nodeData.types, ...bound };
-	if (node.type === REPEAT_INPUT) {
+	if (isZoneInput(node.type)) {
 		const linked = new Set(incoming.map((e) => e.targetHandle));
 		const output = doc?.nodesById.get(pairedOutputId(node) ?? "");
 		const ignored = new Set(
@@ -161,7 +162,7 @@ function resolveZoneNodeTypes(
 	const resolved = resolveRegularNodeTypes(descriptor, incoming, data, env, bindings);
 	const resolvedOutputs = resolved.resolvedOutputs.map((o) => ({
 		...o,
-		type: resolved.inputTypes[o.id] ?? o.type,
+		type: isTexture(o.type) ? o.type : (resolved.inputTypes[o.id] ?? o.type),
 	}));
 	return { ...resolved, resolvedOutputs };
 }
@@ -515,7 +516,7 @@ export class TypeResolver {
 		for (const id of queue) {
 			for (const e of bySource.get(id) ?? []) add(e.target);
 			const node = this.env.resolveNode(id);
-			const paired = node?.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
+			const paired = node && pairedOutputId(node);
 			if (paired) add(paired);
 			const ref = [...definitions].find(([, def]) => def.nodesById.has(id))?.[0];
 			if (ref === undefined || groupsSeen.has(ref)) continue;

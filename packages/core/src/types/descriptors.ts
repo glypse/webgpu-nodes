@@ -73,13 +73,17 @@ export type TypeVariable = {
  */
 export type HandleType = SocketType | { variable: string } | { inferred: true };
 
-/** A zone item's type: a group socket's, but never a texture (WGSL can't store one). */
-export type ItemType = Exclude<HandleType, "texture">;
+/**
+ * A zone item's type: a group socket's. Only a simulation zone's may be a
+ * texture: WGSL can't carry one through a loop, but a texture of the
+ * previous frame is kept between frames.
+ */
+export type ItemType = HandleType;
 
 /**
- * A repeat zone's state item: a fixed type; in a group, the type of one of
- * its type variables, so a loop carries values as wide as the group's; or
- * (inferred) the type of its initial value.
+ * A zone's state item: a fixed type; in a group, the type of one of its type
+ * variables, so a loop carries values as wide as the group's; or (inferred)
+ * the type of its initial value.
  */
 export type ZoneItem = Omit<HandleDef, "type"> & { type: ItemType };
 

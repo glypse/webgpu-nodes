@@ -2,6 +2,7 @@ import type { HydratedGraphDocument } from "../graph/document";
 import { MAX_ITERATIONS } from "../graph/limits";
 import {
 	boundType,
+	isTexture,
 	type NodeData,
 	type NodeDescriptor,
 	type NodeInputDef,
@@ -12,59 +13,125 @@ import {
 } from "../types";
 
 //
-// A repeat zone is a pair of nodes, like Blender's geometry-nodes repeat zone:
+// A zone is a pair of nodes, after Blender's geometry-nodes zones. The output
+// node owns the item list (`data.items`); the input node points at its
+// partner with `data.pairedOutput`. Item handle ids are shared by both nodes.
+//
+// A repeat zone loops within one pixel's computation:
 //
 //   Repeat Input  ── inputs:  iterations, initial value of every state item
 //                 └─ outputs: iteration index, current value of every item
 //   Repeat Output ── inputs:  next value of every item
 //                 └─ outputs: final value of every item
 //
-// The output node owns the item list (`data.items`); the input node points at
-// its partner with `data.pairedOutput`. Item handle ids are shared by both
-// nodes.
+// A simulation zone steps once per frame, its state kept per pixel between
+// frames:
+//
+//   Simulation Input  ── inputs:  initial value of every state item
+//                     └─ outputs: delta time, previous frame's value of every item
+//   Simulation Output ── inputs:  skip, this frame's value of every item
+//                     └─ outputs: this frame's value of every item
 //
 // Which nodes are *inside* a zone is derived from the links, never stored:
-// anything downstream of the Repeat Input is evaluated once per iteration;
-// nodes only feeding the zone are loop invariants evaluated once before the
-// loop. See `analyzeZones`.
+// anything downstream of the zone's input is computed in it (once per
+// iteration, or by the frame's step); nodes only feeding the zone are
+// invariants computed outside it. See `analyzeZones`.
 
 export const REPEAT_INPUT = "repeat-input";
 export const REPEAT_OUTPUT = "repeat-output";
-export const ZONE_NODE_TYPES = [REPEAT_INPUT, REPEAT_OUTPUT] as const;
+export const SIMULATION_INPUT = "simulation-input";
+export const SIMULATION_OUTPUT = "simulation-output";
+export const ZONE_NODE_TYPES = [
+	REPEAT_INPUT,
+	REPEAT_OUTPUT,
+	SIMULATION_INPUT,
+	SIMULATION_OUTPUT,
+] as const;
+
+export type ZoneKind = "repeat" | "simulation";
+
+/** The node types bounding each kind of zone. */
+export const ZONE_BOUNDARIES = {
+	repeat: { input: REPEAT_INPUT, output: REPEAT_OUTPUT },
+	simulation: { input: SIMULATION_INPUT, output: SIMULATION_OUTPUT },
+} as const satisfies Record<ZoneKind, { input: string; output: string }>;
 
 /** Repeat Input's iteration count input. */
 export const ITERATIONS_HANDLE = "iterations";
 /** Repeat Input's current-iteration-index output. */
 export const ITERATION_HANDLE = "iteration";
+/** Simulation Input's output: seconds since the previous frame's step, 0 when it starts. */
+export const DELTA_TIME_HANDLE = "delta-time";
+/** Simulation Output's input: keep the previous frame's state rather than this frame's. */
+export const SKIP_HANDLE = "skip";
 /** Virtual handle: dropping a link on it creates a new state item. */
 export const NEW_ITEM_HANDLE = "__new_item__";
+/** The handles of zone nodes that aren't state items. */
+export const FIXED_ZONE_HANDLES: ReadonlySet<string> = new Set([
+	ITERATIONS_HANDLE,
+	ITERATION_HANDLE,
+	DELTA_TIME_HANDLE,
+	SKIP_HANDLE,
+]);
 
 export const DEFAULT_ITERATIONS = 1;
 export const DEFAULT_MAX_ITERATIONS = 1024;
 
-export type MinimalNode = { id: string; type?: string; data: NodeData };
+export type MinimalNode = {
+	id: string;
+	type?: string;
+	data: NodeData;
+	group?: { definitionRef: string };
+};
 export type MinimalEdge = { id: string; source: string; target: string };
 
 export function isZoneNodeType(type: string | undefined): boolean {
-	return type === REPEAT_INPUT || type === REPEAT_OUTPUT;
+	return zoneKindOf(type) !== undefined;
 }
 
-/** The id of the Repeat Output a Repeat Input is paired with. */
+/** The kind of zone a node type bounds, if it's a zone node. */
+export function zoneKindOf(type: string | undefined): ZoneKind | undefined {
+	if (type === REPEAT_INPUT || type === REPEAT_OUTPUT) return "repeat";
+	if (type === SIMULATION_INPUT || type === SIMULATION_OUTPUT) return "simulation";
+	return undefined;
+}
+
+export function isZoneInput(type: string | undefined): boolean {
+	return type === REPEAT_INPUT || type === SIMULATION_INPUT;
+}
+
+export function isZoneOutput(type: string | undefined): boolean {
+	return type === REPEAT_OUTPUT || type === SIMULATION_OUTPUT;
+}
+
+/** The id of the zone output a zone input is paired with. */
 export function pairedOutputId(node: MinimalNode): string | undefined {
-	return node.data.pairedOutput;
+	return isZoneInput(node.type) ? node.data.pairedOutput : undefined;
 }
 
-/** The Repeat Input paired with the Repeat Output `outputId`, among its document's `nodes`. */
+/** The zone input paired with the zone output `outputId`, among its document's `nodes`. */
 export function pairedInput<N extends MinimalNode>(
 	nodes: readonly N[],
 	outputId: string,
 ): N | undefined {
-	return nodes.find((n) => n.type === REPEAT_INPUT && pairedOutputId(n) === outputId);
+	return nodes.find((n) => isZoneInput(n.type) && n.data.pairedOutput === outputId);
 }
 
-/** The state items declared on a Repeat Output node. */
+/** Whether a zone of `kind` can carry an item of `item`'s type. */
+export function carriesItem(kind: ZoneKind | undefined, item: Pick<ZoneItem, "type">): boolean {
+	return kind === "simulation" || !isTexture(item.type);
+}
+
+/**
+ * The state items declared on a zone output node. A repeat zone has none
+ * of a texture's: those a file gives it are left out.
+ */
 export function zoneItems(outputNode: MinimalNode | undefined): ZoneItem[] {
-	return outputNode?.data.items ?? [];
+	const items = outputNode?.data.items ?? [];
+	const kind = zoneKindOf(outputNode?.type);
+	return items.every((item) => carriesItem(kind, item))
+		? items
+		: items.filter((item) => carriesItem(kind, item));
 }
 
 /** The safety cap applied to a zone's iteration count. */
@@ -97,8 +164,8 @@ export function isInferredItem(item: ZoneItem): boolean {
 
 /**
  * The family of an inferred item's sockets, in the `types` of both zone
- * nodes: the Repeat Input's takes the type of the item's initial value,
- * the Repeat Output's is forced to it.
+ * nodes: the zone input's takes the type of the item's initial value, the
+ * zone output's is forced to it.
  */
 export function inferredItemFamily(itemId: string): string {
 	return `inferred:${itemId}`;
@@ -106,10 +173,12 @@ export function inferredItemFamily(itemId: string): string {
 
 /**
  * An item's input: a variable's items share its family, which takes the type
- * it's bound to; an inferred item's is in a family of its own.
+ * it's bound to; an inferred item's is in a family of its own. A texture
+ * item's values are colours, computed per pixel like any other.
  */
 function itemInput(item: ZoneItem, variables: readonly TypeVariable[]): NodeInputDef {
 	const { id, label, type } = item;
+	if (isTexture(type)) return { id, label, types: ["vec4f"] };
 	if (typeof type === "string") return { id, label, types: [type] };
 	if ("inferred" in type) return { id, label, types: WGSL_TYPES, family: inferredItemFamily(id) };
 	const variable = variables.find((v) => v.id === type.variable);
@@ -172,4 +241,54 @@ export function buildRepeatOutputDescriptor(
 		inputs: items.map((item) => itemInput(item, variables)),
 		outputs: items.map((item) => itemOutput(item, variables)),
 	};
+}
+
+export function buildSimulationInputDescriptor(
+	node: MinimalNode,
+	definitions: Map<string, HydratedGraphDocument>,
+	variables: readonly TypeVariable[] = [],
+): NodeDescriptor {
+	const items = zoneItems(findNode(pairedOutputId(node), definitions));
+	return {
+		...zoneDescriptorBase(SIMULATION_INPUT, "Simulation Input"),
+		inputs: items.map((item) => itemInput(item, variables)),
+		outputs: [
+			{ id: DELTA_TIME_HANDLE, label: "Delta Time", type: "f32" },
+			...items.map((item) => itemOutput(item, variables)),
+		],
+	};
+}
+
+export function buildSimulationOutputDescriptor(
+	node: MinimalNode,
+	variables: readonly TypeVariable[] = [],
+): NodeDescriptor {
+	const items = zoneItems(node);
+	return {
+		...zoneDescriptorBase(SIMULATION_OUTPUT, "Simulation Output"),
+		defaultData: { items: [], values: { [SKIP_HANDLE]: false } },
+		inputs: [
+			{ id: SKIP_HANDLE, label: "Skip", types: ["bool"] },
+			...items.map((item) => itemInput(item, variables)),
+		],
+		outputs: items.map((item) => itemOutput(item, variables)),
+	};
+}
+
+/** The descriptor of a zone node, of either kind. */
+export function buildZoneDescriptor(
+	node: MinimalNode,
+	definitions: Map<string, HydratedGraphDocument>,
+	variables: readonly TypeVariable[] = [],
+): NodeDescriptor {
+	switch (node.type) {
+		case REPEAT_INPUT:
+			return buildRepeatInputDescriptor(node, definitions, variables);
+		case SIMULATION_INPUT:
+			return buildSimulationInputDescriptor(node, definitions, variables);
+		case SIMULATION_OUTPUT:
+			return buildSimulationOutputDescriptor(node, variables);
+		default:
+			return buildRepeatOutputDescriptor(node, variables);
+	}
 }

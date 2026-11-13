@@ -27,9 +27,9 @@ export type NodeData = {
 	settings?: Record<string, string>;
 	/** Types the user forced, by type family key. */
 	types?: Record<string, SocketType>;
-	/** A Repeat Output's state items. */
+	/** A zone output's state items. */
 	items?: ZoneItem[];
-	/** A Repeat Input's partner. */
+	/** A zone input's partner. */
 	pairedOutput?: string;
 	/** A Repeat Input's iteration safety cap. */
 	maxIterations?: number;

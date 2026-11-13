@@ -70,10 +70,7 @@ const VariableTypeSchemas = [
 
 const HandleTypeSchema = v.union([v.picklist(SOCKET_TYPES), ...VariableTypeSchemas]);
 
-const ZoneItemSchema = v.object({
-	...HandleFields,
-	type: v.union([v.picklist(WGSL_TYPES), ...VariableTypeSchemas]),
-});
+const ZoneItemSchema = v.object({ ...HandleFields, type: HandleTypeSchema });
 
 const GroupHandleSchema = v.object({
 	...HandleFields,
