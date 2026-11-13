@@ -92,4 +92,16 @@ describe("Player", () => {
 		expect(player.meter.rate?.fps ?? 0).toBeLessThan(2);
 		player.destroy();
 	});
+
+	it("keeps its frame when given the timing it has", () => {
+		const player = new Player({ fps: 60, realtime: true }, () => undefined);
+		// In real time, frames count the display's refreshes rather than follow time.
+		player.clock.time = 1;
+		player.clock.frame = 100;
+		player.setTiming({ fps: 60, realtime: true });
+		expect(player.clock.frame).toBe(100);
+		player.setTiming({ fps: 30, realtime: true });
+		expect(player.clock.frame).toBe(30);
+		player.destroy();
+	});
 });

@@ -9,6 +9,7 @@ import {
 	Player,
 	ProgramError,
 	Renderer,
+	SimulationState,
 	type Size,
 	type Timing,
 } from "$runtime";
@@ -84,6 +85,8 @@ export class Preview {
 
 	private renderer: Renderer | undefined;
 	private rendererRequest: Promise<Renderer> | undefined;
+	/** The state the preview's simulations keep between the frames it draws. */
+	private simulation: SimulationState | undefined;
 	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- only drawn to, never displayed
 	private targets = new Map<HTMLCanvasElement, CanvasTarget | undefined>();
 	private size = $state<Size>({ width: 0, height: 0 });
@@ -200,7 +203,7 @@ export class Preview {
 		this.source = source;
 		// The same code may read other textures, which its bindings are made for.
 		const key = source.passes
-			.map((p) => [p.writes, p.program.code, ...p.reads].join("\n"))
+			.map((p) => [...p.writes, p.program.code, ...p.reads].join("\n"))
 			.join("\n\n");
 		if (key === this.blockedCode) return;
 		if (this.blockedCode !== undefined) {
@@ -268,16 +271,40 @@ export class Preview {
 
 	/**
 	 * Draw `frame` and read it back as straight-alpha RGBA, 8 bits per channel,
-	 * by default at the canvas resolution and in its colour space.
+	 * by default at the canvas resolution and in its colour space, its
+	 * simulations stepping in `state` (the preview's by default).
 	 */
 	async readFrame(
 		frame: FrameInputs,
 		size: Size = this.size,
 		colorSpace: ColorSpace = this.colorSpace,
+		state?: SimulationState,
 	): Promise<Uint8ClampedArray<ArrayBuffer>> {
 		const renderer = await this.ensureRenderer();
 		if (!this.program) throw new Error("The shader hasn't compiled yet.");
-		return renderer.readPixels(this.program, frame, size, colorSpace);
+		const simulation = state ?? this.simulation ?? new SimulationState(renderer.device);
+		this.simulation ??= simulation;
+		return renderer.readPixels(this.program, frame, size, colorSpace, simulation);
+	}
+
+	/** Whether the shader keeps state between frames, which a frame then depends on. */
+	get simulates(): boolean {
+		return this.program?.simulates ?? false;
+	}
+
+	/**
+	 * A simulation state of its own, for frames drawn apart from the
+	 * preview's (an export's). Destroy it once done.
+	 */
+	async createSimulationState(): Promise<SimulationState> {
+		return new SimulationState((await this.ensureRenderer()).device);
+	}
+
+	/** Draw `frame` at `size` without reading it back, to step the simulations in `state`. */
+	async simulate(frame: FrameInputs, size: Size, state: SimulationState) {
+		const renderer = await this.ensureRenderer();
+		if (!this.program) throw new Error("The shader hasn't compiled yet.");
+		await renderer.simulate(this.program, frame, size, state);
 	}
 
 	/** The frame shown, as a PNG at the canvas resolution. */
@@ -297,6 +324,7 @@ export class Preview {
 		clearTimeout(this.recovery);
 		this.player.destroy();
 		this.program?.destroy();
+		this.simulation?.destroy();
 		for (const target of this.targets.values()) target?.destroy();
 		this.renderer?.destroy();
 	}
@@ -305,6 +333,7 @@ export class Preview {
 		this.rendererRequest ??= Renderer.create().then(
 			(renderer) => {
 				this.renderer = renderer;
+				this.simulation = new SimulationState(renderer.device);
 				renderer.media.setFiles(this.mediaFiles);
 				renderer.media.onChange = () => {
 					this.player.invalidate();
@@ -347,6 +376,7 @@ export class Preview {
 		}
 		this.renderer = undefined;
 		this.rendererRequest = undefined;
+		this.simulation = undefined;
 		this.program = undefined;
 		this.programCode = undefined;
 		for (const canvas of this.targets.keys()) this.targets.set(canvas, undefined);
@@ -383,9 +413,11 @@ export class Preview {
 		this.frame = frame.frame;
 		this.frameRate = this.player.meter.rate;
 		const program = this.program;
-		if (!program) return undefined;
+		const simulation = this.simulation;
+		if (!program || !simulation) return undefined;
 		const timing = this.player.playing ? this.renderer?.timer?.begin() : undefined;
-		for (const target of this.targets.values()) target?.render(program, frame, timing);
+		for (const target of this.targets.values())
+			target?.render(program, frame, simulation, timing);
 		void timing?.end().then((seconds) => {
 			if (seconds !== undefined) this.player.meter.recordGpuTime(seconds);
 		});

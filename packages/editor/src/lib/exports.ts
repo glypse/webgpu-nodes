@@ -91,15 +91,24 @@ export async function encodeVideo(
 
 	const total = frameCount(options);
 	const first = Math.round(options.start * options.fps);
+	const frameAt = (frame: number) => ({
+		time: frame / options.fps,
+		delta: 1 / options.fps,
+		frame,
+	});
+	// Simulations run from the start, so the frames before the first are drawn too.
+	const state = await preview.createSimulationState();
 	try {
+		if (preview.simulates) {
+			for (let frame = 0; frame < first; frame++) {
+				if (signal?.aborted) throw signal.reason;
+				await preview.simulate(frameAt(frame), size, state);
+			}
+		}
 		for (let i = 0; i < total; i++) {
 			if (signal?.aborted) throw signal.reason;
 			const frame = first + i;
-			const pixels = await preview.readFrame(
-				{ time: frame / options.fps, delta: 1 / options.fps, frame },
-				size,
-				"srgb",
-			);
+			const pixels = await preview.readFrame(frameAt(frame), size, "srgb", state);
 			const sample = new VideoSample(pixels, {
 				format: "RGBX",
 				codedWidth: size.width,
@@ -116,6 +125,8 @@ export async function encodeVideo(
 	} catch (error) {
 		await output.cancel();
 		throw error;
+	} finally {
+		state.destroy();
 	}
 	if (!target.buffer) throw new Error("The video encoder produced no data.");
 	return new Blob([target.buffer], { type: format.mimeType });

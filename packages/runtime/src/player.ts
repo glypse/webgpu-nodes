@@ -66,7 +66,14 @@ export class Player {
 		this.invalidate();
 	}
 
+	/**
+	 * Play at `timing`, re-snapping time to its frame grid when it changes: in
+	 * real time, frames count the display's refreshes, so a re-snap may move
+	 * the frame (and restart simulations, for which it went back).
+	 */
 	setTiming(timing: Timing) {
+		const current = this.clock.timing;
+		if (current.fps === timing.fps && current.realtime === timing.realtime) return;
 		this.clock.setTiming(timing);
 		this.invalidate();
 	}

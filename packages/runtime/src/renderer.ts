@@ -1,17 +1,21 @@
 import {
 	type ColorSpace,
 	DISPLAY_P3_FIELD,
+	type PassDecl,
 	PLAN_TARGET,
 	type RenderPlan,
+	type ResourceDecl,
 	type SamplerAddress,
 	type SamplerFilter,
 	type ShaderProgram,
+	SIMULATION_DELTA_FIELD,
 	type UniformValue,
 } from "$core";
 
 import { type FrameTiming, GpuTimer } from "./gpu-timer";
 import { MediaLibrary, type TextureOf } from "./media";
 import { Presenter } from "./present";
+import type { SimulationState } from "./simulation";
 import { packBlock } from "./uniforms";
 
 /** The values a program reads per frame. */
@@ -123,29 +127,40 @@ export class CompiledProgram {
 	}
 
 	/**
-	 * Encode a pass drawing into `target` (a linear texture), for a frame
-	 * presented in `colorSpace`, reading `textureOf`'s textures.
+	 * Encode a pass drawing into `targets` (a colour attachment each, of the
+	 * canvas' size), for a frame presented in `colorSpace`, reading
+	 * `textureOf`'s textures. `simulationDelta` is the step of the
+	 * simulation it computes something of.
 	 */
 	encode(
 		encoder: GPUCommandEncoder,
-		target: GPUTexture,
+		targets: readonly GPUTexture[],
 		frame: FrameInputs,
 		colorSpace: ColorSpace,
 		textureOf: TextureOf,
-		timestampWrites?: GPURenderPassTimestampWrites,
+		{
+			simulationDelta = 0,
+			timestampWrites,
+		}: { simulationDelta?: number; timestampWrites?: GPURenderPassTimestampWrites } = {},
 	) {
+		const [first] = targets;
 		packBlock(
 			this.program.frame,
 			{
 				...frame,
-				resolution: [target.width, target.height],
+				resolution: [first?.width ?? 0, first?.height ?? 0],
 				[DISPLAY_P3_FIELD]: colorSpace === "display-p3" ? 1 : 0,
+				[SIMULATION_DELTA_FIELD]: simulationDelta,
 			},
 			this.frameData,
 		);
 		this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameData);
 		const pass = encoder.beginRenderPass({
-			colorAttachments: [{ view: target.createView(), loadOp: "clear", storeOp: "store" }],
+			colorAttachments: targets.map((target) => ({
+				view: target.createView(),
+				loadOp: "clear" as const,
+				storeOp: "store" as const,
+			})),
 			...(timestampWrites ? { timestampWrites } : {}),
 		});
 		pass.setPipeline(this.pipeline);
@@ -160,20 +175,31 @@ export class CompiledProgram {
 	}
 }
 
+/** A pass of a `CompiledPlan`: its compiled program and what it draws. */
+type CompiledPass = { program: CompiledProgram; decl: PassDecl };
+
 /**
- * A compiled `RenderPlan`: its passes in order, each drawing a canvas-sized
- * texture of its own (kept while the size stays the same) but the last,
- * which draws the frame.
+ * A compiled `RenderPlan`: its passes in order, each drawing canvas-sized
+ * textures of its own (kept while the size stays the same) or of the
+ * simulations' state, but the last, which draws the frame.
  */
 export class CompiledPlan {
 	private transients = new Map<string, GPUTexture>();
+	private resources: ReadonlyMap<string, ResourceDecl>;
 
 	constructor(
 		private device: GPUDevice,
 		readonly plan: RenderPlan,
-		private passes: readonly { program: CompiledProgram; writes: string }[],
+		private passes: readonly CompiledPass[],
 		private media: MediaLibrary,
-	) {}
+	) {
+		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
+	}
+
+	/** Whether the plan keeps state between frames, which drawing it then needs. */
+	get simulates(): boolean {
+		return this.plan.resources.some((r) => r.kind === "state");
+	}
 
 	setUniforms(values: Readonly<Record<string, UniformValue>>) {
 		for (const { program } of this.passes) program.setUniforms(values);
@@ -203,37 +229,53 @@ export class CompiledPlan {
 
 	/**
 	 * Encode the passes drawing one frame into `target` (a linear texture), to
-	 * be presented in `colorSpace`. `timing` times them all as one. Media is
-	 * what's decoded so far of `frame`, unless `media` gives it.
+	 * be presented in `colorSpace`, the simulations stepping in `state`.
+	 * `timing` times them all as one. Media is what's decoded so far of
+	 * `frame`, unless `media` gives it.
 	 */
 	encode(
 		encoder: GPUCommandEncoder,
 		target: GPUTexture,
 		frame: FrameInputs,
 		colorSpace: ColorSpace,
-		timing?: FrameTiming,
-		media: TextureOf = (source) => this.media.texture(source, frame.time),
+		state: SimulationState,
+		{ timing, media }: { timing?: FrameTiming; media?: TextureOf } = {},
 	) {
+		const steps = state.advance(this.plan, frame, target);
+		const mediaOf: TextureOf = media ?? ((source) => this.media.texture(source, frame.time));
+		const stateTexture = (texture: string, read: "previous" | "current") =>
+			state.texture(texture, read) ?? this.media.emptyTexture;
 		const textureOf: TextureOf = (source) =>
-			source.kind === "render" ? this.transient(source.id, target) : media(source);
+			source.kind === "render"
+				? this.transient(source.id, target)
+				: source.kind === "state"
+					? stateTexture(source.texture, source.read)
+					: mediaOf(source);
+		const written = (id: string): GPUTexture => {
+			if (id === PLAN_TARGET) return target;
+			const resource = this.resources.get(id);
+			if (resource?.kind === "state") return stateTexture(resource.texture, resource.read);
+			return this.transient(id, target);
+		};
+		// A simulation's start only draws on the frames it starts.
+		const drawn = this.passes.filter(({ decl }) => {
+			const simulation = decl.simulation;
+			return simulation?.stage !== "start" || steps.get(simulation.id)?.kind === "start";
+		});
 		const writes = timing?.pass();
-		this.passes.forEach(({ program, writes: id }, i) => {
+		drawn.forEach(({ program, decl }, i) => {
 			const first = i === 0;
-			const last = i === this.passes.length - 1;
+			const last = i === drawn.length - 1;
 			const timestampWrites = writes && {
 				querySet: writes.querySet,
 				...(first ? { beginningOfPassWriteIndex: writes.beginningOfPassWriteIndex } : {}),
 				...(last ? { endOfPassWriteIndex: writes.endOfPassWriteIndex } : {}),
 			};
-			const into = id === PLAN_TARGET ? target : this.transient(id, target);
-			program.encode(
-				encoder,
-				into,
-				frame,
-				colorSpace,
-				textureOf,
-				first || last ? timestampWrites : undefined,
-			);
+			const simulation = decl.simulation && steps.get(decl.simulation.id);
+			program.encode(encoder, decl.writes.map(written), frame, colorSpace, textureOf, {
+				simulationDelta: simulation?.delta ?? 0,
+				...(first || last ? { timestampWrites } : {}),
+			});
 		});
 	}
 
@@ -313,24 +355,33 @@ export class Renderer {
 
 	/** Compile a plan's programs; throws a `ProgramError` when one doesn't compile. */
 	async compile(plan: RenderPlan): Promise<CompiledPlan> {
+		const resources = new Map(plan.resources.map((r) => [r.id, r]));
+		const formatOf = (id: string): GPUTextureFormat => {
+			const resource = resources.get(id);
+			return resource?.kind === "state" ? resource.format : LINEAR_FORMAT;
+		};
 		const passes = await Promise.all(
-			plan.passes.map(async (pass) => ({
-				program: await this.compileProgram(pass.program),
-				writes: pass.writes,
+			plan.passes.map(async (decl) => ({
+				program: await this.compileProgram(decl.program, decl.writes.map(formatOf)),
+				decl,
 			})),
 		);
 		return new CompiledPlan(this.device, plan, passes, this.media);
 	}
 
-	private async compileProgram(program: ShaderProgram): Promise<CompiledProgram> {
-		const key = `${program.vertexEntry}|${program.fragmentEntry}|${program.code}`;
+	/** Compile `program`, drawing into textures of `formats`. */
+	private async compileProgram(
+		program: ShaderProgram,
+		formats: readonly GPUTextureFormat[],
+	): Promise<CompiledProgram> {
+		const key = `${program.vertexEntry}|${program.fragmentEntry}|${formats.join(",")}|${program.code}`;
 		let pipeline = this.pipelines.get(key);
 		if (pipeline) {
 			// Most recently used last, so eviction drops the least recently used.
 			this.pipelines.delete(key);
 			this.pipelines.set(key, pipeline);
 		} else {
-			pipeline = this.createPipeline(program);
+			pipeline = this.createPipeline(program, formats);
 			this.pipelines.set(key, pipeline);
 			// A failed compile isn't worth keeping.
 			pipeline.catch(() => this.pipelines.delete(key));
@@ -360,7 +411,7 @@ export class Renderer {
 				...program.textures.map((t) => ({
 					binding: t.binding,
 					visibility,
-					texture: { sampleType: "float" as const },
+					texture: { sampleType: t.sampleType },
 				})),
 				...program.samplers.map((s) => ({
 					binding: s.binding,
@@ -371,7 +422,10 @@ export class Renderer {
 		});
 	}
 
-	private async createPipeline(program: ShaderProgram): Promise<Pipeline> {
+	private async createPipeline(
+		program: ShaderProgram,
+		formats: readonly GPUTextureFormat[],
+	): Promise<Pipeline> {
 		const module = this.device.createShaderModule({ code: program.code });
 		const info = await module.getCompilationInfo();
 		const errors = info.messages.filter((m) => m.type === "error");
@@ -392,7 +446,7 @@ export class Renderer {
 				fragment: {
 					module,
 					entryPoint: program.fragmentEntry,
-					targets: [{ format: LINEAR_FORMAT }],
+					targets: formats.map((format) => ({ format })),
 				},
 			});
 			return { pipeline, layout };
@@ -422,14 +476,29 @@ export class Renderer {
 	}
 
 	/**
+	 * Draw `frame` at `size` without reading it back, only to step the
+	 * plan's simulations in `state`: for the frames before an export's first.
+	 */
+	async simulate(plan: CompiledPlan, frame: FrameInputs, size: Size, state: SimulationState) {
+		const linear = this.linearTexture("simulate", size);
+		const media = await plan.prepare(frame.time);
+		const encoder = this.device.createCommandEncoder();
+		plan.encode(encoder, linear, frame, "srgb", state, { media });
+		this.device.queue.submit([encoder.finish()]);
+		await this.device.queue.onSubmittedWorkDone();
+	}
+
+	/**
 	 * Draw one frame at `size` and read its pixels back: straight-alpha RGBA,
-	 * 8 bits per channel, encoded in `colorSpace`.
+	 * 8 bits per channel, encoded in `colorSpace`, the simulations stepping
+	 * in `state`.
 	 */
 	async readPixels(
 		plan: CompiledPlan,
 		frame: FrameInputs,
 		size: Size,
 		colorSpace: ColorSpace,
+		state: SimulationState,
 	): Promise<Uint8ClampedArray<ArrayBuffer>> {
 		const { width, height } = size;
 		const linear = this.linearTexture("readback", size);
@@ -447,7 +516,7 @@ export class Renderer {
 		try {
 			const media = await plan.prepare(frame.time);
 			const encoder = this.device.createCommandEncoder();
-			plan.encode(encoder, linear, frame, colorSpace, undefined, media);
+			plan.encode(encoder, linear, frame, colorSpace, state, { media });
 			this.presenter.encode(encoder, linear, output.createView(), {
 				format: READBACK_FORMAT,
 				colorSpace,

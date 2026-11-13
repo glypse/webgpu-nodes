@@ -9,4 +9,5 @@ export * from "./player";
 export * from "./present";
 export * from "./refresh-rate";
 export * from "./renderer";
+export * from "./simulation";
 export * from "./uniforms";

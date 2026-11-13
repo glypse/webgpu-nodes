@@ -77,7 +77,9 @@
 			return;
 		}
 		preview.setSource(generated);
-		const code = generated.passes.map((p) => `// ${p.writes}\n${p.program.code}`).join("\n");
+		const code = generated.passes
+			.map((p) => `// ${p.writes.join(", ")}\n${p.program.code}`)
+			.join("\n");
 		if (devTools.enabled && code !== prevCode) {
 			console.groupCollapsed("[shader debug]");
 			console.log("// Compiled passes:\n", code);
@@ -112,7 +114,11 @@
 	const fps = $derived(graph.settings.timing.fps);
 	const realtime = $derived(graph.settings.timing.realtime);
 	$effect(() => {
-		preview.setTiming({ fps, realtime });
+		const timing = { fps, realtime };
+		// Setting it reads the playback state, which mustn't run this again.
+		untrack(() => {
+			preview.setTiming(timing);
+		});
 	});
 
 	/** Keys acting on the whole editor, whichever area is under the pointer. */
