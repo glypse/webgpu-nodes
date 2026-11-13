@@ -2,8 +2,9 @@
 	import {
 		DEFAULT_MAX_ITERATIONS,
 		isInferredItem,
+		SOCKET_TYPES,
+		type SocketType,
 		WGSL_TYPES,
-		type WgslType,
 		type ZoneItem,
 		zoneMaxIterations,
 	} from "$core";
@@ -18,9 +19,12 @@
 
 	const graph = getGraphManager();
 
-	/** The zone's Repeat Input. */
+	/** The zone's input node. */
 	let { zoneId }: { zoneId: string } = $props();
 
+	const simulation = $derived(graph.zoneKind(zoneId) === "simulation");
+	/** What its items can be: a simulation keeps textures too. */
+	const itemTypes = $derived(simulation ? SOCKET_TYPES : WGSL_TYPES);
 	const items = $derived(graph.getZoneItems(zoneId));
 	const inputNode = $derived(graph.resolveNode(zoneId));
 	const maxIterations = $derived(
@@ -63,29 +67,43 @@
 </script>
 
 <div class="flex flex-col gap-4">
-	<div class="flex flex-col gap-1.5">
-		<span class="text-sm font-medium">Repeat zone</span>
-		<span class="text-muted-foreground text-xs">
-			Nodes linked from the Repeat Input run once per iteration. Each state item carries a
-			value from one iteration to the next.
-		</span>
-	</div>
-	<div class="flex flex-col gap-1.5">
-		<span class="text-sm font-medium">Maximum iterations</span>
-		<Scrubbable
-			integer
-			min={0}
-			readonly={locked}
-			value={maxIterations}
-			oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-				graph.setZoneMaxIterations(zoneId, Number(e.currentTarget.value));
-			}}
-		/>
-		<span class="text-muted-foreground text-xs">
-			The iteration count is clamped to this value, so a large or animated count can't stall
-			the GPU.
-		</span>
-	</div>
+	{#if simulation}
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-medium">Simulation zone</span>
+			<span class="text-muted-foreground text-xs">
+				Nodes linked from the Simulation Input run once per frame, from the previous frame's
+				state; each pixel keeps its own. A simulation starts from its initial values on the
+				first frame, and whenever time goes back. A texture item keeps an image, which can
+				be sampled anywhere.
+			</span>
+		</div>
+	{:else}
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-medium">Repeat zone</span>
+			<span class="text-muted-foreground text-xs">
+				Nodes linked from the Repeat Input run once per iteration. Each state item carries a
+				value from one iteration to the next.
+			</span>
+		</div>
+	{/if}
+	{#if !simulation}
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-medium">Maximum iterations</span>
+			<Scrubbable
+				integer
+				min={0}
+				readonly={locked}
+				value={maxIterations}
+				oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+					graph.setZoneMaxIterations(zoneId, Number(e.currentTarget.value));
+				}}
+			/>
+			<span class="text-muted-foreground text-xs">
+				The iteration count is clamped to this value, so a large or animated count can't
+				stall the GPU.
+			</span>
+		</div>
+	{/if}
 
 	<div class="flex flex-col gap-1.5">
 		<span class="text-sm font-medium">State items</span>
@@ -103,7 +121,7 @@
 					onkeydown={handleEnterBlur}
 				/>
 				<TypePicker
-					types={WGSL_TYPES}
+					types={itemTypes}
 					value={typeof item.type === "string" ? item.type : undefined}
 					label={shared?.name ?? (inferred ? "Inferred" : undefined)}
 					disabled={locked}
@@ -113,7 +131,7 @@
 						: inferred
 							? "Takes the type of its initial value"
 							: "Item type"}
-					onpick={(type: WgslType) => {
+					onpick={(type: SocketType) => {
 						graph.setZoneItemType(zoneId, item.id, type);
 					}}
 				>
@@ -180,9 +198,9 @@
 		{/each}
 		{#if !locked}
 			<TypePicker
-				types={WGSL_TYPES}
+				types={itemTypes}
 				label="Add item"
-				onpick={(type: WgslType) => {
+				onpick={(type: SocketType) => {
 					graph.addZoneItem(zoneId, type);
 				}}
 			>

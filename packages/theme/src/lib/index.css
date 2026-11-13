@@ -65,8 +65,9 @@
 	--color-vec4b: var(--color-vec4f);
 	--color-texture: var(--color-sky-500);
 
-	/* Zones (loops): bubble drawn under the nodes they enclose. */
+	/* Zones: bubble drawn under the nodes they enclose. */
 	--color-zone-repeat: oklch(0.55 0 0);
+	--color-zone-simulation: oklch(0.6 0.13 20);
 }
 
 .dark {
@@ -102,6 +103,7 @@
 	--sidebar-border: oklch(1 0 0 / 10%);
 	--sidebar-ring: oklch(0.556 0 0);
 	--color-zone-repeat: oklch(0.75 0 0);
+	--color-zone-simulation: oklch(0.72 0.12 20);
 }
 
 /* =============================================
@@ -155,6 +157,7 @@
 	--color-vec4f: var(--color-vec4f);
 	--color-texture: var(--color-texture);
 	--color-zone-repeat: var(--color-zone-repeat);
+	--color-zone-simulation: var(--color-zone-simulation);
 }
 
 /* =============================================

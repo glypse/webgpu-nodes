@@ -16,6 +16,7 @@
 		type SocketType,
 		WGSL_TYPES,
 		zoneItems,
+		zoneKindOf,
 	} from "$core";
 	import { Button, Select } from "$theme";
 	import { Handle, Position, useNodeConnections, useUpdateNodeInternals } from "@xyflow/svelte";
@@ -155,7 +156,7 @@
 	}
 
 	const isZoneNode = $derived(isZoneNodeType(nodeType));
-	/** The zone a boundary node belongs to (its Repeat Input id). */
+	/** The zone a boundary node belongs to (its input's id). */
 	const zoneId = $derived(
 		isZoneNode ? graph.zoneAnalysis(view.document).zoneOfBoundary.get(id) : undefined,
 	);
@@ -182,8 +183,11 @@
 		);
 	});
 
+	/** What a zone's items can be: a simulation keeps textures too. */
+	const itemTypes = $derived(zoneKindOf(nodeType) === "simulation" ? SOCKET_TYPES : WGSL_TYPES);
+
 	function addZoneItem(type: SocketType) {
-		if (zoneId && type !== "texture") graph.addZoneItem(zoneId, type);
+		if (zoneId) graph.addZoneItem(zoneId, type);
 	}
 
 	function addHandle(type: SocketType) {
@@ -529,7 +533,7 @@
 					/>
 					<span class="node-shell__handle-label opacity-60">new item</span>
 				</div>
-				{@render addHandleButton(addZoneItem, WGSL_TYPES)}
+				{@render addHandleButton(addZoneItem, itemTypes)}
 			{/if}
 		</div>
 	</div>

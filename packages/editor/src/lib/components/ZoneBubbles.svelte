@@ -50,7 +50,7 @@
 			// The outline cuts through the middle of the boundary nodes.
 			const edges = boundaryPoints(rectOf(input), rectOf(output), padding);
 			const path = bubblePath(rects, padding, edges, cornerRadius);
-			return path ? [{ id: zone.id, path }] : [];
+			return path ? [{ id: zone.id, kind: zone.kind, path }] : [];
 		});
 	});
 </script>
@@ -58,7 +58,11 @@
 <ViewportPortal target="back">
 	<svg class="zone-bubbles" aria-hidden="true">
 		{#each bubbles as bubble (bubble.id)}
-			<path class="zone-bubble" d={bubble.path} />
+			<path
+				class="zone-bubble"
+				style="--zone-color: var(--color-zone-{bubble.kind})"
+				d={bubble.path}
+			/>
 		{/each}
 	</svg>
 </ViewportPortal>
@@ -75,8 +79,8 @@
 	}
 
 	.zone-bubble {
-		fill: color-mix(in oklab, var(--color-zone-repeat) 16%, transparent);
-		stroke: color-mix(in oklab, var(--color-zone-repeat) 55%, transparent);
+		fill: color-mix(in oklab, var(--zone-color) 16%, transparent);
+		stroke: color-mix(in oklab, var(--zone-color) 55%, transparent);
 		stroke-width: 1.5px;
 		vector-effect: non-scaling-stroke;
 	}
