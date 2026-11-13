@@ -242,7 +242,8 @@ const EMPTY_IMAGE: CpuTexture = { width: 1, height: 1, texel: () => [0, 0, 0, 0]
 /** The image a texture source reads, rendering a value over the canvas when it's a render. */
 function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuTexture {
 	if (source.kind === "media") return frame.env.images.get(source.asset) ?? EMPTY_IMAGE;
-	if (source.kind === "empty") return EMPTY_IMAGE;
+	// Simulations aren't run here: their state reads nothing.
+	if (source.kind === "empty" || source.kind === "state") return EMPTY_IMAGE;
 	const done = frame.env.renders.get(source.id);
 	if (done) return done;
 	const [width, height] = frame.resolution;

@@ -1,11 +1,19 @@
+import { stateScalar } from "../passes/simulation";
 import type { TextureSource } from "../passes/sources";
-import type { SamplerAddress, SamplerFilter } from "../types";
+import { type SamplerAddress, type SamplerFilter, type WgslType, wgslTypeName } from "../types";
 import type { UniformValue } from "./generate";
 
 /** What the generated code reads per draw: the frame's timing and the target's size and gamut. */
 export const FRAME_VAR = "runtime_frame";
 /** The frame field telling whether the target is Display P3 (1) rather than sRGB (0). */
 export const DISPLAY_P3_FIELD = "display_p3";
+/**
+ * The frame field holding the seconds since the previous step of the
+ * simulation a pass computes, 0 on its first.
+ */
+export const SIMULATION_DELTA_FIELD = "simulation_delta";
+/** The struct a fragment drawing several textures returns, a field per colour attachment. */
+export const TARGETS_STRUCT = "RuntimeTargets";
 /** The struct holding the values of uniform inputs. */
 export const UNIFORMS_VAR = "runtime_uniforms";
 /** Per-fragment values readable from any function, unlike `frag()`'s own parameters. */
@@ -28,15 +36,41 @@ export type UniformBlock = {
 	fields: Readonly<Record<string, UniformField>>;
 };
 
-/** A module-scope `texture_2d<f32>` of a generated fragment, and the image it reads. */
+/** A module-scope `texture_2d` of a generated fragment, and the image it reads. */
 export type TextureBinding = { name: string; source: TextureSource };
+
+/**
+ * How a texture is read: a filterable float image, but a state item's,
+ * kept exactly, which is read texel by texel.
+ */
+export type TextureSampleType = "float" | "unfilterable-float" | "sint" | "uint";
+
+export function textureSampleType(source: TextureSource): TextureSampleType {
+	if (source.kind !== "state" || source.format === "rgba16float") return "float";
+	switch (stateScalar(source.format)) {
+		case "i32":
+			return "sint";
+		case "u32":
+			return "uint";
+		default:
+			return "unfilterable-float";
+	}
+}
+
+const TEXEL_SCALARS: Record<TextureSampleType, string> = {
+	float: "f32",
+	"unfilterable-float": "f32",
+	sint: "i32",
+	uint: "u32",
+};
 
 /** A module-scope `sampler` of a generated fragment. */
 export type SamplerBinding = { name: string; filter: SamplerFilter; address: SamplerAddress };
 
 /**
  * A complete WGSL module drawing the graph over a fullscreen triangle, and the
- * buffers it reads. The fragment entry returns a linear, straight-alpha colour.
+ * buffers it reads. The fragment entry returns a linear, straight-alpha colour,
+ * or, for a simulation, a texel of each of its targets.
  */
 export type ShaderProgram = {
 	code: string;
@@ -51,10 +85,12 @@ export type ShaderProgram = {
 	uniforms: UniformBlock;
 	/**
 	 * The textures it reads at `@group(0) @binding(binding)`: linear,
-	 * straight-alpha, filterable float images.
+	 * straight-alpha float images, or state items' values.
 	 */
-	textures: readonly { binding: number; source: TextureSource }[];
+	textures: readonly { binding: number; source: TextureSource; sampleType: TextureSampleType }[];
 	samplers: readonly { binding: number; filter: SamplerFilter; address: SamplerAddress }[];
+	/** The types of the colour attachments it draws into, by location; a colour without. */
+	targets?: readonly WgslType[];
 };
 
 type FieldDecl = { name: string; scalar: UniformScalar; components: 1 | 2 | 3 | 4 };
@@ -65,6 +101,7 @@ const FRAME_FIELDS: readonly FieldDecl[] = [
 	{ name: "resolution", scalar: "f32", components: 2 },
 	{ name: "frame", scalar: "u32", components: 1 },
 	{ name: DISPLAY_P3_FIELD, scalar: "u32", components: 1 },
+	{ name: SIMULATION_DELTA_FIELD, scalar: "f32", components: 1 },
 ];
 
 /** A struct can't be empty: this stands in when the graph has no uniforms. */
@@ -99,7 +136,12 @@ export function buildProgram(
 	{
 		textures = [],
 		samplers = [],
-	}: { textures?: readonly TextureBinding[]; samplers?: readonly SamplerBinding[] } = {},
+		targets,
+	}: {
+		textures?: readonly TextureBinding[];
+		samplers?: readonly SamplerBinding[];
+		targets?: readonly WgslType[];
+	} = {},
 ): ShaderProgram {
 	const uniformDecls: FieldDecl[] = Object.entries(uniforms).map(([name, value]) => ({
 		name,
@@ -110,19 +152,29 @@ export function buildProgram(
 
 	const frame = layout(0, FRAME_FIELDS);
 	const uniformBlock = layout(1, uniformDecls);
-	const textureBindings = textures.map((t, i) => ({ ...t, binding: 2 + i }));
+	const textureBindings = textures.map((t, i) => ({
+		...t,
+		binding: 2 + i,
+		sampleType: textureSampleType(t.source),
+	}));
 	const samplerBindings = samplers.map((s, i) => ({ ...s, binding: 2 + textures.length + i }));
 	const resources = [
 		...textureBindings.map(
-			(t) => `@group(0) @binding(${String(t.binding)}) var ${t.name}: texture_2d<f32>;`,
+			(t) =>
+				`@group(0) @binding(${String(t.binding)}) var ${t.name}: texture_2d<${TEXEL_SCALARS[t.sampleType]}>;`,
 		),
 		...samplerBindings.map(
 			(s) => `@group(0) @binding(${String(s.binding)}) var ${s.name}: sampler;`,
 		),
 	];
 
+	const output = targets ? TARGETS_STRUCT : "@location(0) vec4f";
+	const targetsStruct = targets
+		? `struct ${TARGETS_STRUCT} {\n${targets.map((t, i) => `\t@location(${String(i)}) t${String(i)}: ${wgslTypeName(t)},`).join("\n")}\n};\n`
+		: "";
+
 	// uv's origin is the bottom-left corner, y pointing up.
-	const code = `${struct("RuntimeFrame", FRAME_FIELDS)}
+	const code = `${targetsStruct}${struct("RuntimeFrame", FRAME_FIELDS)}
 ${struct("RuntimeUniforms", uniformDecls)}
 struct RuntimeFragment {
 	uv: vec2f,
@@ -149,7 +201,7 @@ fn runtime_vertex(@builtin(vertex_index) index: u32) -> RuntimeVarying {
 }
 
 @fragment
-fn runtime_fragment_main(in: RuntimeVarying) -> @location(0) vec4f {
+fn runtime_fragment_main(in: RuntimeVarying) -> ${output} {
 	${FRAGMENT_VAR}.uv = in.uv;
 	${FRAGMENT_VAR}.position = in.position.xy;
 	return frag(in.uv);
@@ -162,11 +214,16 @@ fn runtime_fragment_main(in: RuntimeVarying) -> @location(0) vec4f {
 		fragmentEntry: "runtime_fragment_main",
 		frame,
 		uniforms: uniformBlock,
-		textures: textureBindings.map(({ binding, source }) => ({ binding, source })),
+		textures: textureBindings.map(({ binding, source, sampleType }) => ({
+			binding,
+			source,
+			sampleType,
+		})),
 		samplers: samplerBindings.map(({ binding, filter, address }) => ({
 			binding,
 			filter,
 			address,
 		})),
+		...(targets ? { targets } : {}),
 	};
 }

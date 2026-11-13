@@ -58,7 +58,7 @@ describe("implicit renders", () => {
 			),
 		);
 		const plan = generateRenderPlan(graph);
-		expect(plan.passes.map((p) => p.writes)).toEqual(["render:uv:uv", PLAN_TARGET]);
+		expect(plan.passes.map((p) => p.writes)).toEqual([["render:uv:uv"], [PLAN_TARGET]]);
 		expect(plan.passes[1]?.reads).toEqual(["render:uv:uv"]);
 		expect(plan.resources).toContainEqual({
 			id: "render:uv:uv",

@@ -10,7 +10,21 @@ import {
 	TEXTURE_SIZE,
 	textureCoordinates,
 } from "../nodes/texture";
-import { readSource, type SocketRef, type TextureSource, TextureSources } from "../passes/sources";
+import {
+	packState,
+	simulationId,
+	type SimulationRef,
+	type StateItem,
+	texelType,
+	unpackState,
+} from "../passes/simulation";
+import {
+	readSource,
+	type SocketRef,
+	stateSource,
+	type TextureSource,
+	TextureSources,
+} from "../passes/sources";
 import type {
 	GroupHandleDef,
 	InputValue,
@@ -42,11 +56,16 @@ import {
 import {
 	analyzeZones,
 	DEFAULT_ITERATIONS,
+	DELTA_TIME_HANDLE,
 	ITERATION_HANDLE,
 	ITERATIONS_HANDLE,
 	pairedOutputId,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
+	simulatingDefinitions,
+	SIMULATION_INPUT,
+	SIMULATION_OUTPUT,
+	SKIP_HANDLE,
 	type Zone,
 	type ZoneAnalysis,
 	zoneItems,
@@ -54,27 +73,37 @@ import {
 } from "../zones";
 import { HelperRegistry } from "./helpers";
 import { formatWgslLiteral, scalarNumber } from "./literals";
-import { FRAGMENT_VAR, type SamplerBinding, type TextureBinding, UNIFORMS_VAR } from "./program";
+import {
+	FRAGMENT_VAR,
+	FRAME_VAR,
+	type SamplerBinding,
+	SIMULATION_DELTA_FIELD,
+	TARGETS_STRUCT,
+	type TextureBinding,
+	UNIFORMS_VAR,
+} from "./program";
 
 // ── Graph walking ────────────────────────────────────────────────────────────
 
 /**
  * Walk backwards from the `seedType` nodes (and `seeds`) through edges to
- * find every node contributing to them. A Repeat Output implicitly depends
- * on its Repeat Input.
+ * find every node contributing to them. A zone output implicitly depends on
+ * its input, but a simulation's that `computes` says is read rather than
+ * computed (from the textures keeping its state).
  */
 function findReachableNodeIds(
 	nodes: Map<string, GraphNode>,
 	edges: readonly { source: string; target: string }[],
 	seedType: string,
 	seeds: ReadonlySet<string> = new Set(),
+	computes: (zoneInput: GraphNode) => boolean = () => true,
 ): Set<string> {
 	const reverseAdj = new Map<string, string[]>();
 	for (const node of nodes.values()) reverseAdj.set(node.id, []);
 	for (const edge of edges) reverseAdj.get(edge.target)?.push(edge.source);
 	for (const node of nodes.values()) {
-		const output = node.type === REPEAT_INPUT ? pairedOutputId(node) : undefined;
-		if (output) reverseAdj.get(output)?.push(node.id);
+		const output = pairedOutputId(node);
+		if (output && computes(node)) reverseAdj.get(output)?.push(node.id);
 	}
 
 	const reachable = new Set<string>();
@@ -144,7 +173,8 @@ function topologicalSort(
  * The edges needed to compute the `seedType` nodes, and the state items of
  * each repeat zone (by Repeat Output id) they need. An item is needed when
  * its final value is read, or when its current value is read inside the loop
- * by something needed: others are left out, with what only they used.
+ * by something needed: others are left out, with what only they used. A
+ * simulation's items are all computed by the passes computing its state.
  */
 function neededEdges(
 	nodes: Map<string, GraphNode>,
@@ -153,6 +183,7 @@ function neededEdges(
 	seeds: ReadonlySet<string>,
 	/** Zone items read without a link, by Repeat Output id: a viewer's. */
 	read: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
+	computes?: (zoneInput: GraphNode) => boolean,
 ): { edges: GraphEdge[]; reachable: Set<string>; liveItems: Map<string, Set<string>> } {
 	const liveItems = new Map([...read].map(([id, items]) => [id, new Set(items)]));
 	const itemOwner = (nodeId: string, handle: string): string | undefined => {
@@ -172,7 +203,7 @@ function neededEdges(
 	};
 	for (;;) {
 		const active = edges.filter((e) => isLive(e.target, e.targetHandle));
-		const reachable = findReachableNodeIds(nodes, active, seedType, seeds);
+		const reachable = findReachableNodeIds(nodes, active, seedType, seeds, computes);
 		let grew = false;
 		for (const e of active) {
 			if (!reachable.has(e.target) || isLive(e.source, e.sourceHandle)) continue;
@@ -326,6 +357,8 @@ type ShaderState = {
 	textureVariants: Map<string, number>;
 	/** Whether each definition reads textures, itself or through groups it nests. */
 	readsTextures: Map<string, boolean>;
+	/** The simulation the shader computes something of (by `simulationId`), if any. */
+	simulation?: string;
 };
 
 /**
@@ -351,28 +384,80 @@ export type ShaderOptions = {
 	 */
 	uniformScopes?: Iterable<string>;
 	/**
-	 * The output the shader draws, as a colour (see `fieldColor`); the
-	 * fragment output's by default.
+	 * What the shader draws: an output as a colour (see `fieldColor`), or
+	 * some of a simulation's state items; the fragment output by default.
 	 */
-	target?: SocketRef;
+	target?: ShaderTarget;
 	/** The graph's texture sources, shared by the shaders of one graph state. */
 	sources?: TextureSources;
 };
 
-/**
- * An output computed in a group nested at `path` (group node ids, from the
- * document at hand): each group on the way gives it its caller as a field
- * of its outputs it doesn't have, like a viewer output it would have for
- * the preview, so a shader can draw any socket of any group instance.
- */
-type Viewer = SocketRef;
+/** A simulation's state at its start (its initial values), or this frame's (its step). */
+export type SimulationStage = "start" | "step";
 
-/** The output struct field of a group giving its caller a `Viewer`'s value. */
-const VIEWER_FIELD = "viewer";
+/** Some of a simulation's state items, at a stage, each drawn into the texture keeping it. */
+export type SimulationTarget = {
+	simulation: SimulationRef;
+	stage: SimulationStage;
+	items: readonly StateItem[];
+};
 
-function viewerKey({ path, node, handle }: Viewer): string {
-	return `${[...path, node].join("/")}:${handle}`;
+export type ShaderTarget = SocketRef | SimulationTarget;
+
+function isSimulationTarget(target: ShaderTarget): target is SimulationTarget {
+	return "simulation" in target;
 }
+
+/**
+ * What a shader computes in a group nested at `path` (group node ids, from
+ * the document at hand), besides its seeds: each group on the way gives it
+ * its caller as fields of its outputs it doesn't have, like a viewer output
+ * it would have for the preview, so a shader can draw any socket, or compute
+ * any simulation, of any group instance.
+ */
+type Probe = { path: readonly string[] } & (
+	| { kind: "socket"; node: string; handle: string }
+	| { kind: "simulation"; zone: string; stage: SimulationStage; items: readonly StateItem[] }
+);
+
+function probeOf(target: ShaderTarget): Probe {
+	if (!isSimulationTarget(target)) return { kind: "socket", ...target };
+	const { simulation, stage, items } = target;
+	return { kind: "simulation", path: simulation.path, zone: simulation.zone, stage, items };
+}
+
+/** The probe of the group node it goes through at its level, as that group computes it. */
+function innerProbe(probe: Probe): Probe {
+	return { ...probe, path: probe.path.slice(1) };
+}
+
+function probeKey(probe: Probe): string {
+	if (probe.kind === "socket") return `${[...probe.path, probe.node].join("/")}:${probe.handle}`;
+	const items = probe.items.map((i) => i.texture).join(",");
+	return `${[...probe.path, probe.zone].join("/")}:${probe.stage}:${items}`;
+}
+
+/** The types of the values a probe gives: a colour, or a texel per state item. */
+function probeTypes(probe: Probe): WgslType[] {
+	return probe.kind === "socket" ? ["vec4f"] : probe.items.map((i) => texelType(i.format));
+}
+
+/** The output struct field of a group giving its caller a probe's `index`th value. */
+function probeField(index: number): string {
+	return `viewer${String(index)}`;
+}
+
+/** The values of a state item: a texture item's are colours. */
+function stateValueType(item: StateItem): WgslType {
+	return isTexture(item.type) ? "vec4f" : item.type;
+}
+
+/**
+ * How a document's shader computes a simulation zone in it: reading its
+ * state (`opaque`), or computing its initial values (`start`), its next
+ * state (`step`), or something in it from its previous state (`inline`).
+ */
+type SimulationMode = "opaque" | "start" | "step" | "inline";
 
 /**
  * A value drawn as a colour: a vec3f opaque, as the fragment output takes
@@ -426,7 +511,9 @@ class BodyEmitter {
 		readonly liveItems: ReadonlyMap<string, ReadonlySet<string>> = new Map(),
 		/** The group nodes the document is computed through, from the root. */
 		readonly path: readonly string[] = [],
-		readonly viewer?: Viewer,
+		readonly probe?: Probe,
+		/** How each simulation zone is computed, by zone id. */
+		readonly simulations: ReadonlyMap<string, SimulationMode> = new Map(),
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		this.inputs = doc.inputs ?? [];
@@ -439,6 +526,14 @@ class BodyEmitter {
 			this.readHandles.set(edge.source, read);
 		}
 		for (const zone of zones.zones.values()) {
+			if (zone.kind === "simulation") {
+				const vars = simulationVarNames(zone, this.zoneItems(zone));
+				const inputVars = new Map(vars.previous);
+				inputVars.set(DELTA_TIME_HANDLE, `${FRAME_VAR}.${SIMULATION_DELTA_FIELD}`);
+				this.zoneVars.set(zone.inputId, inputVars);
+				this.zoneVars.set(zone.outputId, vars.current);
+				continue;
+			}
 			const vars = zoneVarNames(zone, this.zoneItems(zone));
 			const inputVars = new Map(vars.state);
 			inputVars.set(ITERATION_HANDLE, vars.index);
@@ -446,6 +541,9 @@ class BodyEmitter {
 			this.zoneVars.set(zone.outputId, vars.state);
 		}
 	}
+
+	/** The values a simulation target gives, once its zone is emitted (see `probeFields`). */
+	simulationFields: string[] = [];
 
 	node(id: string): GraphNode | undefined {
 		return this.nodeMap.get(id);
@@ -532,38 +630,41 @@ class BodyEmitter {
 	private sampleAtPixel(source: TextureSource): string {
 		const texture = this.textureVar(source);
 		// Rendered at the canvas' size: its pixel is read exactly.
-		if (source.kind === "render") {
+		if (source.kind === "render" || source.kind === "state") {
 			return `textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`;
 		}
 		const sampler = this.samplerVar("linear", "clamp");
 		return `textureSampleLevel(${texture}, ${sampler}, ${textureCoordinates(`${FRAGMENT_VAR}.uv`)}, 0.0)`;
 	}
 
-	/** The module-scope texture reading `source`. */
-	/** The outputs of a node something reads, the viewer included. */
-	private readOutputs(nodeId: string): ReadonlySet<string> {
+	/** The outputs of a node something reads, the probe's included. */
+	readOutputs(nodeId: string): ReadonlySet<string> {
 		const read = this.readHandles.get(nodeId) ?? new Set<string>();
-		const viewer = this.viewer;
-		if (viewer?.path.length !== 0 || viewer.node !== nodeId) return read;
-		return new Set([...read, viewer.handle]);
+		const probe = this.probe;
+		if (probe?.kind !== "socket" || probe.path.length !== 0 || probe.node !== nodeId) {
+			return read;
+		}
+		return new Set([...read, probe.handle]);
 	}
 
-	/** The colour of the viewer's output (see `Viewer`), from where it's computed. */
-	viewerValue(): string {
-		const viewer = this.viewer;
-		if (!viewer) return WGSL_DEFAULTS.vec4f;
-		const [inner] = viewer.path;
-		if (inner) return `${getVarName(inner)}.${VIEWER_FIELD}`;
+	/** The values of the probe (see `Probe`), from where they're computed. */
+	probeFields(): string[] {
+		const probe = this.probe;
+		if (!probe) return [];
+		const [inner] = probe.path;
+		if (inner) return probeTypes(probe).map((_, k) => `${getVarName(inner)}.${probeField(k)}`);
+		if (probe.kind === "simulation") return this.simulationFields;
 		const edge = {
 			id: "",
-			source: viewer.node,
-			sourceHandle: viewer.handle,
+			source: probe.node,
+			sourceHandle: probe.handle,
 			target: "",
 			targetHandle: "",
 		};
-		return fieldColor(this.sourceExpr(edge), this.sourceType(edge));
+		return [fieldColor(this.sourceExpr(edge), this.sourceType(edge))];
 	}
 
+	/** The module-scope texture reading `source`. */
 	textureVar(source: TextureSource): string {
 		const textures = this.state.textures;
 		let binding = textures.get(source.id);
@@ -657,7 +758,9 @@ class BodyEmitter {
 		const outputs = resolved.resolvedOutputs;
 		const read = [...(this.readHandles.get(node.id) ?? [])];
 		const texture = (id: string) => isTexture(outputs.find((o) => o.id === id)?.type);
-		const seed = this.viewer && (this.viewer.path[0] ?? this.viewer.node) === node.id;
+		const probe = this.probe;
+		const seed =
+			probe && (probe.path[0] ?? (probe.kind === "socket" ? probe.node : "")) === node.id;
 		if (outputs.length > 0 && read.every(texture) && !seed) return;
 		if (node.type === "node-group") {
 			this.emitGroupCall(node, indent);
@@ -769,9 +872,7 @@ class BodyEmitter {
 			resolved.bindings,
 			this.readOutputs(node.id),
 			[...this.path, node.id],
-			this.viewer?.path[0] === node.id
-				? { ...this.viewer, path: this.viewer.path.slice(1) }
-				: undefined,
+			this.probe?.path[0] === node.id ? innerProbe(this.probe) : undefined,
 		);
 		if (!decl) return;
 		// Converted to the function's parameters, which its body was emitted for.
@@ -787,6 +888,17 @@ class BodyEmitter {
 			indent,
 		);
 	}
+}
+
+/** A simulation's previous state, read in it, and its current one, read after it. */
+function simulationVarNames(zone: Zone, items: ZoneItem[]) {
+	const ident = identSuffix(zone.id);
+	return {
+		previous: new Map(items.map((item, k) => [item.id, `z_${ident}_p${String(k)}`])),
+		current: new Map(items.map((item, k) => [item.id, `z_${ident}_c${String(k)}`])),
+		next: items.map((_, k) => `z_${ident}_next${String(k)}`),
+		skip: `z_${ident}_skip`,
+	};
 }
 
 function zoneVarNames(zone: Zone, items: ZoneItem[]) {
@@ -821,12 +933,14 @@ function inputTypeIn(
 /**
  * Emit the nodes of a document needed to compute `seedType` nodes.
  *
- * Nodes are grouped by scope: the document's top level, then each repeat zone.
+ * Nodes are grouped by scope: the document's top level, then each zone.
  * Within a scope, nodes and child zones are emitted in dependency order; a
- * child zone becomes a `for` loop whose body is its own scope. Loop
+ * child repeat zone becomes a `for` loop whose body is its own scope. Loop
  * invariants live in the enclosing scope, so they are computed once before
- * the loop. Invalid links, and links to sockets the nodes don't have with
- * `bindings`, are ignored (inputs fall back to their stored values).
+ * the loop. A simulation zone is computed by passes of its own, its state
+ * read from the textures keeping it, but where the probe is in it (see
+ * `SimulationMode`). Invalid links, and links to sockets the nodes don't
+ * have with `bindings`, are ignored (inputs fall back to their stored values).
  */
 function emitDocumentBody(
 	state: ShaderState,
@@ -840,13 +954,59 @@ function emitDocumentBody(
 	seedHandles?: ReadonlySet<string>,
 	/** The group nodes the document is computed through, from the root. */
 	path: readonly string[] = [],
-	/** An output to compute besides the seeds, and give its caller (see `Viewer`). */
-	viewer?: Viewer,
+	/** What to compute besides the seeds, and give its caller (see `Probe`). */
+	probe?: Probe,
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
 
-	const zones = analyzeZones(doc.nodes, doc.edges);
+	const zones = analyzeZones(doc.nodes, doc.edges, {
+		simulating: simulatingDefinitions(state.graph.project.definitions),
+	});
+
+	// The node the probe is computed at, here: the group node it goes through,
+	// or the socket's node, or the boundary node whose inputs a simulation
+	// target computes.
+	const probeZone = probe?.kind === "simulation" ? zones.zones.get(probe.zone) : undefined;
+	const probeNode =
+		probe &&
+		(probe.path[0] ??
+			(probe.kind === "socket"
+				? probe.node
+				: probe.stage === "start"
+					? probe.zone
+					: probeZone?.outputId));
+	const simulations = new Map<string, SimulationMode>();
+	for (const zone of zones.zones.values()) {
+		if (zone.kind !== "simulation") continue;
+		let mode: SimulationMode = "opaque";
+		if (probe?.kind === "simulation" && probe.path.length === 0 && probe.zone === zone.id) {
+			mode = probe.stage;
+		} else if (
+			probeNode !== undefined &&
+			(zone.members.has(probeNode) || probeNode === zone.inputId)
+		) {
+			mode = "inline";
+		}
+		simulations.set(zone.id, mode);
+		if (mode !== "opaque") state.simulation = simulationId({ path, zone: zone.id });
+	}
+	const probeItems = new Set(
+		probe?.kind === "simulation" && probe.path.length === 0
+			? probe.items.map((i) => i.item.id)
+			: [],
+	);
+	/** Whether a link into a simulation's boundary node is computed here. */
+	const intoSimulation = (e: GraphEdge): boolean => {
+		const zone = zones.zones.get(zones.zoneOfBoundary.get(e.target) ?? "");
+		const mode = zone && simulations.get(zone.id);
+		if (!zone || !mode) return true;
+		if (e.target === zone.inputId) return mode === "start";
+		return (
+			mode === "step" && (e.targetHandle === SKIP_HANDLE || probeItems.has(e.targetHandle))
+		);
+	};
+
 	const incoming = new Map<string, GraphEdge[]>();
 	for (const e of doc.edges) incoming.set(e.target, [...(incoming.get(e.target) ?? []), e]);
 	const unavailable = unavailableEdges(doc.edges, (id) => {
@@ -872,7 +1032,11 @@ function emitDocumentBody(
 		);
 	};
 	const validEdges = doc.edges.filter(
-		(e) => !zones.invalidEdges.has(e.id) && !unavailable.has(e.id) && !intoTexture(e),
+		(e) =>
+			!zones.invalidEdges.has(e.id) &&
+			!unavailable.has(e.id) &&
+			!intoTexture(e) &&
+			intoSimulation(e),
 	);
 	const edgesByTarget = new Map<string, GraphEdge[]>();
 	for (const e of validEdges)
@@ -892,17 +1056,24 @@ function emitDocumentBody(
 			nodeMap.get(e.target)?.type !== seedType ||
 			seedHandles.has(e.targetHandle),
 	);
-	const seeds = new Set(viewer ? [viewer.path[0] ?? viewer.node] : []);
+	const seeds = new Set(probeNode === undefined ? [] : [probeNode]);
 	const viewed =
-		viewer?.path.length === 0 && nodeMap.get(viewer.node)?.type === REPEAT_OUTPUT
-			? new Map([[viewer.node, new Set([viewer.handle])]])
+		probe?.kind === "socket" &&
+		probe.path.length === 0 &&
+		nodeMap.get(probe.node)?.type === REPEAT_OUTPUT
+			? new Map([[probe.node, new Set([probe.handle])]])
 			: undefined;
+	const computed = (input: GraphNode) => {
+		const mode = simulations.get(input.id);
+		return mode !== "opaque" && mode !== "start";
+	};
 	const { edges, reachable, liveItems } = neededEdges(
 		nodeMap,
 		usedEdges,
 		seedType,
 		seeds,
 		viewed,
+		computed,
 	);
 	const emitter = new BodyEmitter(
 		state,
@@ -915,7 +1086,8 @@ function emitDocumentBody(
 		bindings,
 		liveItems,
 		path,
-		viewer,
+		probe,
+		simulations,
 	);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
@@ -945,7 +1117,8 @@ function emitDocumentBody(
 		for (const unit of topologicalSort(units, unitEdges)) {
 			if (unit.startsWith("zone:")) {
 				const zone = zones.zones.get(unit.slice("zone:".length));
-				if (zone) emitZoneLoop(zone, indent);
+				if (zone?.kind === "simulation") emitSimulation(zone, indent);
+				else if (zone) emitZoneLoop(zone, indent);
 				continue;
 			}
 			const node = nodeMap.get(unit);
@@ -999,15 +1172,79 @@ function emitDocumentBody(
 		emitter.push(zone.outputId, update, indent);
 	};
 
+	const emitSimulation = (zone: Zone, indent: string) => {
+		const input = nodeMap.get(zone.inputId);
+		const output = nodeMap.get(zone.outputId);
+		const simulation = state.sources.simulation(path, zone.id);
+		if (!input || !output || !simulation) return;
+		const mode = simulations.get(zone.id) ?? "opaque";
+		const vars = simulationVarNames(zone, emitter.zoneItems(zone));
+		const index = new Map(emitter.zoneItems(zone).map((item, k) => [item.id, k]));
+		const load = (item: StateItem, read: "previous" | "current") =>
+			`textureLoad(${emitter.textureVar(stateSource(simulation.ref, item, read))}, vec2i(${FRAGMENT_VAR}.position), 0)`;
+		// A texture item's values are read where they're used, as a texture.
+		const values = simulation.items.filter((i) => !isTexture(i.type));
+		const targeted = probe?.kind === "simulation" ? probe.items : [];
+
+		if (mode === "opaque") {
+			const read = emitter.readOutputs(zone.outputId);
+			const lines = values
+				.filter((i) => read.has(i.item.id))
+				.map(
+					(i) =>
+						`let ${vars.current.get(i.item.id) ?? ""} = ${unpackState(load(i, "current"), stateValueType(i), i.format)};`,
+				);
+			emitter.push(zone.outputId, lines, indent);
+			return;
+		}
+		if (mode === "start") {
+			emitter.simulationFields = targeted.map((i) => {
+				const type = stateValueType(i);
+				return packState(emitter.inputExpr(input, i.item.id, type), type, i.format);
+			});
+			return;
+		}
+
+		const read = emitter.readOutputs(zone.inputId);
+		const step = mode === "step";
+		const previous = values
+			.filter((i) => read.has(i.item.id) || (step && targeted.includes(i)))
+			.map(
+				(i) =>
+					`let ${vars.previous.get(i.item.id) ?? ""} = ${unpackState(load(i, "previous"), stateValueType(i), i.format)};`,
+			);
+		emitter.push(zone.inputId, previous, indent);
+
+		emitScope(zone.id, indent);
+
+		if (!step) return;
+		// Skipping keeps the previous frame's state: the nodes in the zone don't change it.
+		const update = [
+			`let ${vars.skip} = ${emitter.inputExpr(output, SKIP_HANDLE, "bool", false)};`,
+		];
+		emitter.simulationFields = targeted.map((i) => {
+			const type = stateValueType(i);
+			const next = vars.next[index.get(i.item.id) ?? 0] ?? "";
+			const kept = isTexture(i.type) ? load(i, "previous") : vars.previous.get(i.item.id);
+			update.push(
+				`let ${next} = select(${emitter.inputExpr(output, i.item.id, type)}, ${kept ?? ""}, ${vars.skip});`,
+			);
+			return packState(next, type, i.format);
+		});
+		emitter.push(zone.outputId, update, indent);
+	};
+
 	emitScope(null, "  ");
 	return emitter;
 }
 
-/** Node types reading or giving textures of their own. */
+/** Node types reading or giving textures of their own: a simulation's keep its state. */
 const TEXTURE_NODE_TYPES: ReadonlySet<string> = new Set([
 	...MEDIA_NODE_TYPES,
 	SAMPLE_TEXTURE,
 	TEXTURE_SIZE,
+	SIMULATION_INPUT,
+	SIMULATION_OUTPUT,
 ]);
 
 /** Whether a definition reads textures: itself, through its sockets or the groups it nests. */
@@ -1045,6 +1282,10 @@ function textureFingerprint(state: ShaderState, definitionRef: string, path: rea
 	if (!def || !instance) return "";
 	const parts: string[] = [];
 	for (const node of def.nodes) {
+		// Each instance keeps a state of its own.
+		if (node.type === SIMULATION_INPUT) {
+			parts.push(`sim:${simulationId({ path, zone: node.id })}`);
+		}
 		if (node.type === "node-group" && node.group) {
 			const nested = textureFingerprint(state, node.group.definitionRef, [...path, node.id]);
 			if (nested !== "") parts.push(`${node.id}(${nested})`);
@@ -1080,7 +1321,7 @@ function emitGroupFunction(
 	readOutputs?: ReadonlySet<string>,
 	/** The group nodes it's computed through, from the root, the caller last. */
 	path: readonly string[] = [],
-	viewer?: Viewer,
+	probe?: Probe,
 ): GroupDecl | undefined {
 	const definition: HydratedGraphDocument | undefined =
 		state.graph.project.definitions.get(definitionRef);
@@ -1121,7 +1362,7 @@ function emitGroupFunction(
 		"x",
 		textures,
 		"v",
-		viewer ? viewerKey(viewer) : "",
+		probe ? probeKey(probe) : "",
 	].join("|");
 	const existing = state.groupDecls.get(key);
 	if (existing) return existing;
@@ -1136,7 +1377,7 @@ function emitGroupFunction(
 		...enumValues.map((v) => `e${v}`),
 		...(unreadIndices.length > 0 ? [`u${unreadIndices.join("_")}`] : []),
 		...(textureVariant === undefined ? [] : [`x${String(textureVariant)}`]),
-		...(viewer ? ["v"] : []),
+		...(probe ? ["v"] : []),
 	];
 	const fnName = [`group_${ident}`, ...suffix, ...(typeSuffix ? [`t_${typeSuffix}`] : [])].join(
 		"__",
@@ -1144,7 +1385,7 @@ function emitGroupFunction(
 	const structName = [
 		`GroupOutputs_${ident}`,
 		...(typeSuffix ? [typeSuffix] : []),
-		...(viewer ? ["v"] : []),
+		...(probe ? ["v"] : []),
 	].join("__");
 
 	const readHandles = new Set(
@@ -1160,7 +1401,7 @@ function emitGroupFunction(
 		bindings,
 		readHandles,
 		path,
-		viewer,
+		probe,
 	);
 
 	// Struct fields follow the handle types; whatever feeds them is converted
@@ -1198,12 +1439,14 @@ function emitGroupFunction(
 			? body.inputExpr(node, handle.id, type)
 			: WGSL_DEFAULTS[type];
 	});
-	if (viewer) fieldValues.push(body.viewerValue());
+	fieldValues.push(...body.probeFields());
 	const structFields = [
 		...outputs.map(
 			({ handle, type }) => `  ${sanitizeIdent(handle.id)}: ${wgslTypeName(type)},`,
 		),
-		...(viewer ? [`  ${VIEWER_FIELD}: vec4f,`] : []),
+		...(probe
+			? probeTypes(probe).map((t, k) => `  ${probeField(k)}: ${wgslTypeName(t)},`)
+			: []),
 	].join("\n");
 	const params = inputs
 		.map(({ handle, type }) => `${sanitizeIdent(handle.id)}: ${wgslTypeName(type)}`)
@@ -1227,7 +1470,9 @@ function emitGroupFunction(
 }
 
 /**
- * Emit the full WGSL fragment shader source from the graph.
+ * Emit the full WGSL fragment shader source from the graph: `frag` returns
+ * a colour, or, for a simulation target, a `TARGETS_STRUCT` of the texels of
+ * its items (`targets` their types).
  */
 export function generateShader(
 	graph: CodegenGraph,
@@ -1238,6 +1483,8 @@ export function generateShader(
 	uniforms: Record<string, UniformValue>;
 	textures: TextureBinding[];
 	samplers: SamplerBinding[];
+	targets?: readonly WgslType[];
+	simulation?: string;
 } {
 	const state: ShaderState = {
 		graph,
@@ -1253,6 +1500,7 @@ export function generateShader(
 		readsTextures: new Map(),
 	};
 
+	const probe = target && probeOf(target);
 	const body = emitDocumentBody(
 		state,
 		graph.root,
@@ -1263,14 +1511,18 @@ export function generateShader(
 		{},
 		undefined,
 		[],
-		target,
+		probe,
 	);
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");
-	const result = target
-		? body.viewerValue()
-		: output && body.lineMap.has(output.id)
-			? getVarName(output.id)
-			: undefined;
+	const targets = probe?.kind === "simulation" ? probeTypes(probe) : undefined;
+	const fields = probe && body.probeFields();
+	const result = targets
+		? `${TARGETS_STRUCT}(${(fields ?? []).join(", ")})`
+		: fields
+			? fields[0]
+			: output && body.lineMap.has(output.id)
+				? getVarName(output.id)
+				: undefined;
 
 	const preamble: string[] = [];
 	// Every group's struct + fn, emitted once each, before frag() itself.
@@ -1280,7 +1532,11 @@ export function generateShader(
 		preamble.push("// ---------- Common libraries ----------", "");
 		for (const fn of helpers) preamble.push(fn, "");
 	}
-	preamble.push("// ---------- User code ----------", "", "fn frag(uv: vec2f) -> vec4f {");
+	preamble.push(
+		"// ---------- User code ----------",
+		"",
+		`fn frag(uv: vec2f) -> ${targets ? TARGETS_STRUCT : "vec4f"} {`,
+	);
 
 	// Offset the line map so line numbers correspond to the final shader string.
 	const offset = preamble.length;
@@ -1302,5 +1558,7 @@ export function generateShader(
 		uniforms: Object.fromEntries(state.uniforms),
 		textures: [...state.textures.values()],
 		samplers: [...state.samplers.values()],
+		...(targets ? { targets } : {}),
+		...(state.simulation === undefined ? {} : { simulation: state.simulation }),
 	};
 }

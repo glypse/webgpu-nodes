@@ -12,7 +12,25 @@ import type { GraphModel } from "../graph/model";
 import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
 import { IMAGE, VIDEO } from "../nodes/texture";
 import { isTexture, type TypeBindings, unavailableEdges } from "../types";
-import { analyzeZones } from "../zones";
+import {
+	analyzeZones,
+	simulatingDefinitions,
+	SIMULATION_INPUT,
+	SIMULATION_OUTPUT,
+	type ZoneAnalysis,
+	zoneItems,
+} from "../zones";
+import {
+	simulationId,
+	type SimulationRef,
+	type SimulationState,
+	type StateFormat,
+	stateFormat,
+	type StateItem,
+	type StateRead,
+	stateReadId,
+	stateTextureId,
+} from "./simulation";
 
 /** The id of the texture an unlinked Texture input reads: transparent black. */
 export const EMPTY_TEXTURE = "empty";
@@ -26,6 +44,16 @@ export type TextureSource =
 	| { kind: "media"; id: string; asset: string; video?: VideoPlayback }
 	/** A value rendered over a canvas-sized texture, in a pass of its own. */
 	| { kind: "render"; id: string; target: SocketRef }
+	/** A simulation's state item, kept in a canvas-sized texture between frames. */
+	| {
+			kind: "state";
+			id: string;
+			/** The texture keeping it (see `stateTextureId`), whichever frame is read. */
+			texture: string;
+			read: StateRead;
+			format: StateFormat;
+			simulation: SimulationRef;
+	  }
 	| { kind: "empty"; id: typeof EMPTY_TEXTURE };
 
 /** An output of a node of the document computed at `path` (see `TextureSources.instance`). */
@@ -66,6 +94,7 @@ type Instance = {
 	path: readonly string[];
 	doc: HydratedGraphDocument;
 	bindings: TypeBindings;
+	zones: ZoneAnalysis;
 	/** Enum values known while compiling, by group-input handle. */
 	constants: ReadonlyMap<string, number>;
 	/** The links codegen follows, by target. */
@@ -120,7 +149,10 @@ export class TextureSources {
 		bindings: TypeBindings,
 		constants: ReadonlyMap<string, number>,
 	): Instance {
-		const invalid = analyzeZones(doc.nodes, doc.edges).invalidEdges;
+		const zones = analyzeZones(doc.nodes, doc.edges, {
+			simulating: simulatingDefinitions(this.graph.project.definitions),
+		});
+		const invalid = zones.invalidEdges;
 		const unavailable = unavailableEdges(doc.edges, (id) => {
 			const node = doc.nodesById.get(id);
 			return node && this.typesIn(doc, node, bindings);
@@ -141,7 +173,7 @@ export class TextureSources {
 				return input === undefined || isTexture(input) ? undefined : input;
 			},
 		};
-		return { path, doc, bindings, constants, edgesByTarget, enums };
+		return { path, doc, bindings, zones, constants, edgesByTarget, enums };
 	}
 
 	private typesIn(doc: HydratedGraphDocument, node: GraphNode, bindings: TypeBindings) {
@@ -202,6 +234,10 @@ export class TextureSources {
 			case IMAGE:
 			case VIDEO:
 				return this.media(node);
+			case SIMULATION_INPUT:
+				return this.state(path, instance, nodeId, handleId, "previous");
+			case SIMULATION_OUTPUT:
+				return this.state(path, instance, nodeId, handleId, "current");
 			case "reroute":
 				return this.input(path, nodeId, "in");
 			case "group-input":
@@ -234,6 +270,54 @@ export class TextureSources {
 			default:
 				return EMPTY;
 		}
+	}
+
+	private simulations = new Map<string, SimulationState | undefined>();
+
+	/**
+	 * The state of the simulation zone `zone` (its input's id) of the document
+	 * computed at `path`, its items typed as they are there.
+	 */
+	simulation(path: readonly string[], zone: string): SimulationState | undefined {
+		const ref = { path, zone };
+		const id = simulationId(ref);
+		if (this.simulations.has(id)) return this.simulations.get(id);
+		const instance = this.instance(path);
+		const analysed = instance?.zones.zones.get(zone);
+		const input = instance?.doc.nodesById.get(zone);
+		let state: SimulationState | undefined;
+		if (instance && input && analysed?.kind === "simulation") {
+			const outputs = this.typesIn(instance.doc, input, instance.bindings).resolvedOutputs;
+			const items = zoneItems(instance.doc.nodesById.get(analysed.outputId)).map(
+				(item): StateItem => {
+					const type = outputs.find((o) => o.id === item.id)?.type ?? "f32";
+					return {
+						item,
+						type,
+						format: stateFormat(type),
+						texture: stateTextureId(ref, item.id),
+					};
+				},
+			);
+			state = { ref, id, items };
+		}
+		this.simulations.set(id, state);
+		return state;
+	}
+
+	/** A state item of the simulation computed at `path` that a boundary node gives. */
+	private state(
+		path: readonly string[],
+		instance: Instance,
+		nodeId: string,
+		handleId: string,
+		read: StateRead,
+	): TextureSource {
+		const zone = instance.zones.zoneOfBoundary.get(nodeId);
+		const state = zone === undefined ? undefined : this.simulation(path, zone);
+		const item = state?.items.find((i) => i.item.id === handleId);
+		if (!state || !item) return EMPTY;
+		return stateSource(state.ref, item, read);
 	}
 
 	private media(node: GraphNode): TextureSource {
@@ -275,17 +359,24 @@ export class TextureSources {
 	/**
 	 * Whether a node's outputs at `path` depend on the state or iteration of
 	 * a repeat zone they're computed in (or that the group node they're
-	 * computed through is fed from). A zone's final values don't.
+	 * computed through is fed from). A zone's final values don't, nor does a
+	 * simulation's state, the same over a frame.
 	 */
 	readsZoneState(path: readonly string[], nodeId: string, handle: string): boolean {
 		const instance = this.instance(path);
 		if (!instance) return false;
-		const zones = analyzeZones(instance.doc.nodes, instance.doc.edges);
-		/** The zone a node is computed in, a Repeat Output's being around its loop. */
+		const zones = instance.zones;
+		/** The repeat zone a node is computed in, a Repeat Output's being around its loop. */
 		const zoneOf = (id: string): string | null => {
 			const own = zones.zones.get(zones.zoneOfBoundary.get(id) ?? "");
-			if (own) return id === own.outputId ? own.parent : own.id;
-			return zones.nodeZone.get(id) ?? null;
+			let zone = own
+				? id === own.outputId
+					? own.parent
+					: own.id
+				: (zones.nodeZone.get(id) ?? null);
+			// A simulation is never in a repeat zone: a node in one is in none.
+			if (zone !== null && zones.zones.get(zone)?.kind === "simulation") zone = null;
+			return zone;
 		};
 		const done = new Map<string, boolean>();
 		// Zones whose final values are read: what they compute is complete.
@@ -340,6 +431,15 @@ function through(edge: GraphEdge, resolution: TextureResolution): TextureResolut
 		return { ...resolution, edge: edge.id };
 	}
 	return resolution;
+}
+
+/** The texture keeping a state item, as read in `read`'s frame. */
+export function stateSource(
+	simulation: SimulationRef,
+	{ texture, format }: Pick<StateItem, "texture" | "format">,
+	read: StateRead,
+): Extract<TextureSource, { kind: "state" }> {
+	return { kind: "state", id: stateReadId(texture, read), texture, read, format, simulation };
 }
 
 /** The image a resolution reads: nothing for an invalid one. */
