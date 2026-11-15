@@ -3,13 +3,6 @@ import { FrameMeter } from "./frame-meter";
 import type { FrameInputs } from "./renderer";
 
 /**
- * Frames drawn but not finished yet. Any more than this and a program too
- * heavy for the display's rate queues work without end, which the page's own
- * compositing then waits behind, so the whole UI lags, not just the preview.
- */
-const MAX_FRAMES_IN_FLIGHT = 1;
-
-/**
  * Plays a `Clock` on animation frames, calling `onFrame` whenever there is a
  * frame to draw: on each new frame while playing, and once after a seek or an
  * `invalidate` (e.g. a new program) while paused. `onFrame` may return a
@@ -19,6 +12,13 @@ export class Player {
 	readonly clock: Clock;
 	/** The rate frames are drawn at while playing; reset on play and pause. */
 	readonly meter = new FrameMeter();
+	/**
+	 * Frames drawn but not finished yet before the next waits. A deeper queue
+	 * lets a program too heavy for the display's rate pile up work, which the
+	 * page's own compositing then waits behind, so the whole UI lags, not
+	 * just the preview.
+	 */
+	maxFramesInFlight = 1;
 	private playingState = false;
 	private request: number | undefined;
 	private lastTimestamp: number | undefined;
@@ -108,7 +108,7 @@ export class Player {
 			if (this.clock.tick(elapsed)) this.dirty = true;
 			this.schedule();
 		}
-		if (this.dirty && this.framesInFlight < MAX_FRAMES_IN_FLIGHT) {
+		if (this.dirty && this.framesInFlight < this.maxFramesInFlight) {
 			if (this.playingState) this.meter.record(timestamp);
 			this.draw();
 		}

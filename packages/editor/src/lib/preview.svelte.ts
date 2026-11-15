@@ -333,6 +333,9 @@ export class Preview {
 		this.rendererRequest ??= Renderer.create().then(
 			(renderer) => {
 				this.renderer = renderer;
+				void renderer.framesInFlight.then((frames) => {
+					if (this.renderer === renderer) this.player.maxFramesInFlight = frames;
+				});
 				this.simulation = new SimulationState(renderer.device);
 				renderer.media.setFiles(this.mediaFiles);
 				renderer.media.onChange = () => {

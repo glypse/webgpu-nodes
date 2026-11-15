@@ -53,6 +53,19 @@ const LINEAR_FORMAT: GPUTextureFormat = "rgba16float";
 const READBACK_FORMAT: GPUTextureFormat = "rgba8unorm";
 /** Compiled pipelines kept for programs not in use, e.g. while switching between documents. */
 const PIPELINE_CACHE_SIZE = 8;
+/**
+ * Past this, the browser only notices finished work on a slow timer while the
+ * page submits nothing (Firefox: about 100 ms), so waiting for each frame
+ * before drawing the next leaves the GPU idle most of the time.
+ */
+const SLOW_COMPLETION_MS = 20;
+/**
+ * Frames in flight where finishing is noticed late. Firefox stops the page
+ * from queuing more than this itself, so it's as deep as the queue gets.
+ */
+const SLOW_COMPLETION_FRAMES_IN_FLIGHT = 3;
+/** Samples of how late finishing is noticed: one alone depends on where the timer is. */
+const COMPLETION_SAMPLES = 5;
 
 const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
 	clamp: "clamp-to-edge",
@@ -307,6 +320,14 @@ export class Renderer {
 	 */
 	onError: (message: string) => void = () => undefined;
 
+	/**
+	 * Frames to let the GPU work on before waiting for the oldest to finish,
+	 * once measured; one until then. More let a program too heavy for the
+	 * display lag the page further, so it's only more than one where waiting
+	 * on one stalls.
+	 */
+	readonly framesInFlight: Promise<number>;
+
 	private constructor(readonly device: GPUDevice) {
 		device.addEventListener("uncapturederror", (event) => {
 			this.onError(event.error.message);
@@ -317,6 +338,10 @@ export class Renderer {
 		this.media.onError = (message) => {
 			this.onError(message);
 		};
+		this.framesInFlight = completionLatency(device).then(
+			(latency) => (latency > SLOW_COMPLETION_MS ? SLOW_COMPLETION_FRAMES_IN_FLIGHT : 1),
+			() => 1,
+		);
 	}
 
 	private sampler(filter: SamplerFilter, address: SamplerAddress): GPUSampler {
@@ -546,4 +571,17 @@ export class Renderer {
 		this.media.destroy();
 		this.device.destroy();
 	}
+}
+
+/** Median milliseconds between submitting no work and being told it's done. */
+async function completionLatency(device: GPUDevice): Promise<number> {
+	const samples: number[] = [];
+	for (let i = 0; i < COMPLETION_SAMPLES; i++) {
+		const start = performance.now();
+		device.queue.submit([device.createCommandEncoder().finish()]);
+		await device.queue.onSubmittedWorkDone();
+		samples.push(performance.now() - start);
+	}
+	samples.sort((a, b) => a - b);
+	return samples[Math.floor(samples.length / 2)] ?? 0;
 }

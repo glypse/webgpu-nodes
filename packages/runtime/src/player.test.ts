@@ -47,6 +47,19 @@ describe("Player", () => {
 		player.destroy();
 	});
 
+	it("draws up to its limit of frames before one finishes", () => {
+		let drawn = 0;
+		const player = new Player({ fps: 60, realtime: true }, () => {
+			drawn += 1;
+			return new Promise(() => undefined);
+		});
+		player.maxFramesInFlight = 3;
+		player.play();
+		for (let i = 0; i < 5; i++) nextFrame();
+		expect(drawn).toBe(3);
+		player.destroy();
+	});
+
 	it("draws what was invalidated once a frame finishes, even paused", async () => {
 		const finished = Promise.withResolvers<undefined>();
 		let drawn = 0;
