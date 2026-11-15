@@ -100,10 +100,8 @@ export async function encodeVideo(
 	const state = await preview.createSimulationState();
 	try {
 		if (preview.simulates) {
-			for (let frame = 0; frame < first; frame++) {
-				if (signal?.aborted) throw signal.reason;
-				await preview.simulate(frameAt(frame), size, state);
-			}
+			const before = Array.from({ length: first }, (_, frame) => frameAt(frame));
+			await preview.simulate(before, size, state, signal);
 		}
 		for (let i = 0; i < total; i++) {
 			if (signal?.aborted) throw signal.reason;

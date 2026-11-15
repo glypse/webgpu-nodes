@@ -54,8 +54,8 @@ const READBACK_FORMAT: GPUTextureFormat = "rgba8unorm";
 /** Compiled pipelines kept for programs not in use, e.g. while switching between documents. */
 const PIPELINE_CACHE_SIZE = 8;
 /**
- * Past this, the browser only notices finished work on a slow timer while the
- * page submits nothing (Firefox: about 100 ms), so waiting for each frame
+ * Past this, the browser notices finished work on a slow timer (Firefox:
+ * about 100 ms) unless frames keep being presented, so waiting for each frame
  * before drawing the next leaves the GPU idle most of the time.
  */
 const SLOW_COMPLETION_MS = 20;
@@ -66,6 +66,13 @@ const SLOW_COMPLETION_MS = 20;
 const SLOW_COMPLETION_FRAMES_IN_FLIGHT = 3;
 /** Samples of how late finishing is noticed: one alone depends on where the timer is. */
 const COMPLETION_SAMPLES = 5;
+/**
+ * Frames drawn only to step simulations are waited on in batches taking about
+ * this many times the time finishing takes to be noticed, so waiting is a
+ * small share of drawing, and at least `MIN_SIMULATE_BATCH_MS`.
+ */
+const SIMULATE_BATCH_LATENCIES = 3;
+const MIN_SIMULATE_BATCH_MS = 50;
 
 const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
 	clamp: "clamp-to-edge",
@@ -327,6 +334,8 @@ export class Renderer {
 	 * on one stalls.
 	 */
 	readonly framesInFlight: Promise<number>;
+	/** Milliseconds between submitting work and being told it's done, at the least. */
+	private completionLatency: Promise<number>;
 
 	private constructor(readonly device: GPUDevice) {
 		device.addEventListener("uncapturederror", (event) => {
@@ -338,9 +347,9 @@ export class Renderer {
 		this.media.onError = (message) => {
 			this.onError(message);
 		};
-		this.framesInFlight = completionLatency(device).then(
-			(latency) => (latency > SLOW_COMPLETION_MS ? SLOW_COMPLETION_FRAMES_IN_FLIGHT : 1),
-			() => 1,
+		this.completionLatency = completionLatency(device).catch(() => 0);
+		this.framesInFlight = this.completionLatency.then((latency) =>
+			latency > SLOW_COMPLETION_MS ? SLOW_COMPLETION_FRAMES_IN_FLIGHT : 1,
 		);
 	}
 
@@ -501,15 +510,38 @@ export class Renderer {
 	}
 
 	/**
-	 * Draw `frame` at `size` without reading it back, only to step the
+	 * Draw `frames` at `size` without reading them back, only to step the
 	 * plan's simulations in `state`: for the frames before an export's first.
 	 */
-	async simulate(plan: CompiledPlan, frame: FrameInputs, size: Size, state: SimulationState) {
+	async simulate(
+		plan: CompiledPlan,
+		frames: Iterable<FrameInputs>,
+		size: Size,
+		state: SimulationState,
+		signal?: AbortSignal,
+	) {
 		const linear = this.linearTexture("simulate", size);
-		const media = await plan.prepare(frame.time);
-		const encoder = this.device.createCommandEncoder();
-		plan.encode(encoder, linear, frame, "srgb", state, { media });
-		this.device.queue.submit([encoder.finish()]);
+		const latency = await this.completionLatency;
+		const target = Math.max(MIN_SIMULATE_BATCH_MS, SIMULATE_BATCH_LATENCIES * latency);
+		// Batches start at a frame and double while they take less than the
+		// target, halving past twice that, so the queue stays as short as it can.
+		let batch = 1;
+		let queued = 0;
+		let start = performance.now();
+		for (const frame of frames) {
+			signal?.throwIfAborted();
+			const media = await plan.prepare(frame.time);
+			const encoder = this.device.createCommandEncoder();
+			plan.encode(encoder, linear, frame, "srgb", state, { media });
+			this.device.queue.submit([encoder.finish()]);
+			if (++queued < batch) continue;
+			await this.device.queue.onSubmittedWorkDone();
+			const elapsed = performance.now() - start;
+			if (elapsed < target) batch *= 2;
+			else if (elapsed > target * 2) batch = Math.max(1, Math.floor(batch / 2));
+			queued = 0;
+			start = performance.now();
+		}
 		await this.device.queue.onSubmittedWorkDone();
 	}
 

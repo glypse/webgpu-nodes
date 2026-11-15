@@ -300,11 +300,16 @@ export class Preview {
 		return new SimulationState((await this.ensureRenderer()).device);
 	}
 
-	/** Draw `frame` at `size` without reading it back, to step the simulations in `state`. */
-	async simulate(frame: FrameInputs, size: Size, state: SimulationState) {
+	/** Draw `frames` at `size` without reading them back, to step the simulations in `state`. */
+	async simulate(
+		frames: Iterable<FrameInputs>,
+		size: Size,
+		state: SimulationState,
+		signal?: AbortSignal,
+	) {
 		const renderer = await this.ensureRenderer();
 		if (!this.program) throw new Error("The shader hasn't compiled yet.");
-		await renderer.simulate(this.program, frame, size, state);
+		await renderer.simulate(this.program, frames, size, state, signal);
 	}
 
 	/** The frame shown, as a PNG at the canvas resolution. */
