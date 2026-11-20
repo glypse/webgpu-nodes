@@ -1,0 +1,181 @@
+import { describe, expect, it } from "bun:test";
+
+import type { GraphProject } from "../graph/document";
+import { GraphModel } from "../graph/model";
+import { edge, rootProject, type TestEdge, type TestNode } from "../testing/graph";
+
+const at = { x: 0, y: 0 };
+
+function model(nodes: TestNode[], edges: TestEdge[]) {
+	return new GraphModel(rootProject(nodes, edges));
+}
+
+/** A group adding 1 to its input `a`. */
+function increment(): GraphProject["definitions"][string] {
+	return {
+		label: "Increment",
+		inputs: [{ id: "a", label: "A", type: "f32" }],
+		outputs: [{ id: "b", label: "B", type: "f32" }],
+		nodes: [
+			{ id: "gin", type: "group-input", data: {}, position: at },
+			{ id: "one", type: "declare", data: { values: { x: 1 } }, position: at },
+			{ id: "sum", type: "add", data: {}, position: at },
+			{ id: "gout", type: "group-output", data: {}, position: at },
+		],
+		edges: [
+			edge(["gin", "a", "sum", "operands"]),
+			edge(["one", "value", "sum", "operands"]),
+			edge(["sum", "result", "gout", "b"]),
+		],
+	};
+}
+
+describe("frame values", () => {
+	it("include maths on Time, unlinked values and canvas sizes", () => {
+		const graph = model(
+			[
+				{ id: "time", type: "time" },
+				{ id: "two", type: "declare", data: { values: { x: 2 } } },
+				{ id: "double", type: "mul" },
+				{ id: "size", type: "resolution" },
+				{ id: "width", type: "separate-vector" },
+			],
+			[
+				["time", "seconds", "double", "operands"],
+				["two", "value", "double", "operands"],
+				["size", "resolution", "width", "v"],
+			],
+		);
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], "double", "result")).toBe(true);
+		expect(frame.isFrameValue([], "two", "value")).toBe(true);
+		expect(frame.isFrameValue([], "width", "x")).toBe(true);
+	});
+
+	it("exclude what differs per pixel, saying why", () => {
+		const graph = model(
+			[
+				{ id: "uv", type: "uv" },
+				{ id: "x", type: "separate-vector" },
+				{ id: "time", type: "time" },
+				{ id: "sum", type: "add" },
+			],
+			[
+				["uv", "uv", "x", "v"],
+				["x", "x", "sum", "operands"],
+				["time", "seconds", "sum", "operands"],
+			],
+		);
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], "x", "x")).toBe(false);
+		expect(frame.isFrameValue([], "sum", "result")).toBe(false);
+		expect(frame.reason([], "sum", "result")).toBe("UV is computed for each pixel.");
+		expect(frame.isFrameInput([], "sum", "operands")).toBe(false);
+	});
+
+	it("exclude texture reads", () => {
+		const graph = model(
+			[
+				{ id: "s", type: "sample-texture" },
+				{ id: "a", type: "separate-vector" },
+			],
+			[["s", "color", "a", "v"]],
+		);
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], "s", "color")).toBe(false);
+		expect(frame.isFrameValue([], "a", "x")).toBe(false);
+	});
+
+	it("pass through groups as the inputs they're given", () => {
+		const project = rootProject(
+			[
+				{ id: "time", type: "time" },
+				{ id: "uv", type: "uv" },
+				{ id: "x", type: "separate-vector" },
+				{
+					id: "a",
+					type: "node-group",
+					group: { definitionRef: "increment", locked: false },
+				},
+				{
+					id: "b",
+					type: "node-group",
+					group: { definitionRef: "increment", locked: false },
+				},
+				{
+					id: "c",
+					type: "node-group",
+					group: { definitionRef: "increment", locked: false },
+				},
+			],
+			[
+				["time", "seconds", "a", "a"],
+				["uv", "uv", "x", "v"],
+				["x", "x", "b", "a"],
+			],
+		);
+		project.definitions.increment = increment();
+		const frame = new GraphModel(project).frameValueAnalysis();
+		expect(frame.isFrameValue([], "a", "b")).toBe(true);
+		expect(frame.isFrameValue([], "b", "b")).toBe(false);
+		// Unlinked, the group's input is an unlinked value.
+		expect(frame.isFrameValue([], "c", "b")).toBe(true);
+		expect(frame.isFrameValue(["a"], "sum", "result")).toBe(true);
+		expect(frame.isFrameValue(["b"], "sum", "result")).toBe(false);
+	});
+
+	it("include a repeat zone over frame values, and what's in it", () => {
+		const graph = new GraphModel(rootProject([{ id: "time", type: "time" }], []));
+		const zone = graph.createRepeatZone(at) ?? "";
+		const output = graph.root.nodesById.get(zone)?.data.pairedOutput ?? "";
+		const item = graph.getZoneItems(zone)[0]?.id ?? "";
+		const next = graph.addNode("mul", at) ?? "";
+		graph.connect({ source: zone, sourceHandle: item, target: next, targetHandle: "operands" });
+		graph.connect({
+			source: zone,
+			sourceHandle: "iteration",
+			target: next,
+			targetHandle: "operands",
+		});
+		graph.connect({ source: next, sourceHandle: "result", target: output, targetHandle: item });
+		graph.connect({
+			source: "time",
+			sourceHandle: "seconds",
+			target: zone,
+			targetHandle: item,
+		});
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], output, item)).toBe(true);
+		expect(frame.isFrameValue([], next, "result")).toBe(true);
+	});
+
+	it("exclude a repeat zone with a value per pixel in it", () => {
+		const graph = new GraphModel(rootProject([{ id: "uv", type: "uv" }], []));
+		const zone = graph.createRepeatZone(at) ?? "";
+		const output = graph.root.nodesById.get(zone)?.data.pairedOutput ?? "";
+		const item = graph.getZoneItems(zone)[0]?.id ?? "";
+		const x = graph.addNode("separate-vector", at) ?? "";
+		const next = graph.addNode("mul", at) ?? "";
+		graph.connect({ source: "uv", sourceHandle: "uv", target: x, targetHandle: "v" });
+		graph.connect({ source: x, sourceHandle: "x", target: next, targetHandle: "operands" });
+		graph.connect({
+			source: zone,
+			sourceHandle: "iteration",
+			target: next,
+			targetHandle: "operands",
+		});
+		graph.connect({ source: next, sourceHandle: "result", target: output, targetHandle: item });
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], output, item)).toBe(false);
+		expect(frame.isFrameValue([], next, "result")).toBe(false);
+		expect(frame.isFrameValue([], zone, "iteration")).toBe(false);
+	});
+
+	it("are memoised until the graph changes", () => {
+		const graph = model([{ id: "time", type: "time" }], []);
+		const first = graph.frameValueAnalysis();
+		expect(graph.frameValueAnalysis()).toBe(first);
+		graph.addNode("add", at);
+		expect(graph.frameValueAnalysis()).not.toBe(first);
+	});
+});

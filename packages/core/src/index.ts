@@ -10,6 +10,7 @@ export * from "./frames";
 export * from "./enums";
 export * from "./codegen";
 export * from "./passes";
+export * from "./frame";
 export * from "./layout";
 export * from "./catalog/add-menu";
 export * from "./library";

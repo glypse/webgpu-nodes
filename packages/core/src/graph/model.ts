@@ -2,6 +2,7 @@ import * as v from "valibot";
 
 import { type AddMenuEntry, withOptions } from "../catalog/add-menu";
 import { enumOfOutput, MATCH, MATCH_SELECTOR } from "../enums";
+import { FrameValueAnalysis } from "../frame/analysis";
 import { LAYOUT_FRAME } from "../frames";
 import {
 	computeLayout,
@@ -454,6 +455,20 @@ export class GraphModel extends AssetModel {
 		}
 		const analysis = new PassAnalysis(this);
 		this.passCache = { inputs, analysis };
+		return analysis;
+	}
+
+	private frameValueCache: { passes: PassAnalysis; analysis: FrameValueAnalysis } | undefined;
+
+	/**
+	 * Which values are the same for a whole frame (see `FrameValueAnalysis`),
+	 * memoised on the same state as `passAnalysis`.
+	 */
+	frameValueAnalysis(): FrameValueAnalysis {
+		const passes = this.passAnalysis();
+		if (this.frameValueCache?.passes === passes) return this.frameValueCache.analysis;
+		const analysis = new FrameValueAnalysis(this, passes.sources);
+		this.frameValueCache = { passes, analysis };
 		return analysis;
 	}
 
