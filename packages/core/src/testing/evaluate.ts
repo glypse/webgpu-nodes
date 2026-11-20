@@ -7,6 +7,7 @@ import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
 import { coerce } from "../nodes/cpu";
 import {
+	LOAD_TEXEL,
 	SAMPLE_TEXTURE,
 	SAMPLE_TEXTURE_LEVEL,
 	TEXTURE_SIZE,
@@ -477,6 +478,18 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 				get(SAMPLE_TEXTURE_LEVEL)[0] ?? 0,
 			);
 			return handleId === "alpha" ? [color[3] ?? 0] : color;
+		}
+		case LOAD_TEXEL: {
+			const texture = textureInput(model, frame, node, "texture");
+			const level = Math.min(
+				Math.max(Math.trunc(get("level")[0] ?? 0), 0),
+				levelsOf(texture) - 1,
+			);
+			const [x = 0, y = 0] = get("texel");
+			return coerce(
+				texelAt(mipLevel(texture, level), x, y),
+				valueType(typesIn(model, frame, node).outputType),
+			);
 		}
 		case TEXTURE_SIZE: {
 			const texture = textureInput(model, frame, node, "texture");

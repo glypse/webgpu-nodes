@@ -1,6 +1,7 @@
 import { formatWgslLiteral } from "../codegen/literals";
 import { FRAGMENT_VAR } from "../codegen/program";
 import { readTexture } from "../codegen/texture-read";
+import { texelType } from "../passes/simulation";
 import { isFilterable } from "../passes/textures";
 import {
 	defineNode,
@@ -14,6 +15,7 @@ export const IMAGE = "image";
 export const VIDEO = "video";
 export const SAMPLE_TEXTURE = "sample-texture";
 export const TEXTURE_SIZE = "texture-size";
+export const LOAD_TEXEL = "load-texel";
 
 /** The output of an Image or Video node giving its file's frames. */
 export const MEDIA_TEXTURE = "texture";
@@ -229,6 +231,42 @@ export const textureSizeNode = defineNode({
 			`let ${size} = vec2f(textureDimensions(${texture}, ${level}));`,
 			`let ${ctx.outputVars.texel ?? "texel"} = 1.0 / ${size};`,
 			`let ${ctx.outputVars.levels ?? "levels"} = ${levels};`,
+		];
+	},
+});
+
+/** What Load Texel's value can be, by the scalar its texture's texels are read as. */
+const TEXEL_VALUES = ["vec4f", "vec4i", "vec4u"] as const;
+
+/**
+ * A texture's exact texel at integer coordinates (rows down, as texture
+ * memory is) and mip level, both clamped into the texture: its value as
+ * the type picked on the node, converted from what the texture holds.
+ */
+export const loadTexelNode = defineNode({
+	type: LOAD_TEXEL,
+	label: "Load Texel",
+	aliases: ["texelFetch", "textureLoad", "Texel Fetch", "Pixel Read", "Image Load", "Read Pixel"],
+	category: "texture",
+	inputs: [
+		{ id: "texture", label: "texture", types: ["texture"] },
+		{ id: "texel", label: "texel", types: ["vec2i"] },
+		{ id: "level", label: "level", types: ["i32"] },
+	],
+	outputs: [{ id: "value", label: "value", type: "vec4f" }],
+	typeFamily: { key: LOAD_TEXEL, types: TEXEL_VALUES },
+	defaultData: { values: { texel: { x: 0, y: 0 }, level: 0 } },
+	wgsl: (ctx) => {
+		const texture = ctx.texture("texture");
+		const levels = `i32(textureNumLevels(${texture}))`;
+		const level = `${ctx.varName}_level`;
+		const coords = `${ctx.varName}_texel`;
+		const load = `textureLoad(${texture}, ${coords}, ${level})`;
+		const held = texelType(ctx.textureFormat("texture"));
+		return [
+			`let ${level} = clamp(${ctx.promoteInput("level")}, 0, ${levels} - 1);`,
+			`let ${coords} = clamp(${ctx.promoteInput("texel")}, vec2i(0), vec2i(textureDimensions(${texture}, ${level})) - 1);`,
+			`let ${ctx.varName} = ${ctx.convert(load, held, ctx.outputType)};`,
 		];
 	},
 });

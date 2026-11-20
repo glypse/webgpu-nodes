@@ -341,6 +341,7 @@ describe("add menu sections", () => {
 			"Video",
 			"Sample Texture",
 			"Texture Size",
+			"Load Texel",
 			"Render Texture",
 			"Fractal Voronoi",
 			"Fractal Noise",

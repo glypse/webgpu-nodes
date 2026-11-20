@@ -102,6 +102,7 @@ const DESCRIPTORS = {
 	[nodes.VIDEO]: nodes.videoNode,
 	[nodes.SAMPLE_TEXTURE]: nodes.sampleTextureNode,
 	[nodes.TEXTURE_SIZE]: nodes.textureSizeNode,
+	[nodes.LOAD_TEXEL]: nodes.loadTexelNode,
 	[nodes.RENDER_TEXTURE]: nodes.buildRenderTextureDescriptor({}),
 
 	// Misc
