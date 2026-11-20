@@ -10,10 +10,11 @@ export function packBlock(
 ): ArrayBuffer {
 	const floats = new Float32Array(target);
 	const uints = new Uint32Array(target);
+	const ints = new Int32Array(target);
 	for (const [name, field] of Object.entries(block.fields)) {
 		const value = values[name];
 		if (value === undefined) continue;
-		const view = field.scalar === "u32" ? uints : floats;
+		const view = field.scalar === "u32" ? uints : field.scalar === "i32" ? ints : floats;
 		const start = field.offset / 4;
 		for (let i = 0; i < field.components; i++) {
 			view[start + i] = typeof value === "number" ? (i === 0 ? value : 0) : (value[i] ?? 0);

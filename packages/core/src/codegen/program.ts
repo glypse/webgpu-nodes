@@ -1,3 +1,4 @@
+import type { FrameRef } from "../frame/program";
 import { sourceFormat, type TextureSource } from "../passes/sources";
 import { sampleTypeOf, type TextureSampleType } from "../passes/textures";
 import { type SamplerAddress, type SamplerFilter, type WgslType, wgslTypeName } from "../types";
@@ -14,12 +15,14 @@ export const DISPLAY_P3_FIELD = "display_p3";
 export const SIMULATION_DELTA_FIELD = "simulation_delta";
 /** The struct a fragment drawing several textures returns, a field per colour attachment. */
 export const TARGETS_STRUCT = "RuntimeTargets";
+/** The struct holding the frame values pixel computations read (see `FrameValueUse`). */
+export const FRAME_VALUES_VAR = "runtime_frame_values";
 /** The struct holding the values of uniform inputs. */
 export const UNIFORMS_VAR = "runtime_uniforms";
 /** Per-fragment values readable from any function, unlike `frag()`'s own parameters. */
 export const FRAGMENT_VAR = "runtime_fragment";
 
-export type UniformScalar = "f32" | "u32";
+export type UniformScalar = "f32" | "u32" | "i32";
 
 export type UniformField = {
 	/** Byte offset in the block. */
@@ -34,6 +37,19 @@ export type UniformBlock = {
 	/** Byte size, a multiple of 16. */
 	size: number;
 	fields: Readonly<Record<string, UniformField>>;
+};
+
+/** A frame value a shader reads: the field of its block, and the value of the plan's frame program written there. */
+export type FrameValueUse = {
+	name: string;
+	ref: FrameRef;
+	scalar: UniformScalar;
+	components: 1 | 2 | 3 | 4;
+};
+
+/** A uniform buffer of frame values, each field written from a value of the plan's frame program. */
+export type FrameValuesBlock = UniformBlock & {
+	fields: Readonly<Record<string, UniformField & { ref: FrameRef }>>;
 };
 
 /** A module-scope `texture_2d` of a generated fragment, and the image it reads. */
@@ -71,6 +87,8 @@ export type ShaderProgram = {
 	frame: UniformBlock;
 	/** Fields named after the uniforms `generateShader` returns. */
 	uniforms: UniformBlock;
+	/** Frame values hoisted out of the pixel computation, written by the runtime before each pass. */
+	frameValues: FrameValuesBlock;
 	/**
 	 * The textures it reads at `@group(0) @binding(binding)`: linear,
 	 * straight-alpha float images, or state items' values.
@@ -92,11 +110,16 @@ const FRAME_FIELDS: readonly FieldDecl[] = [
 	{ name: SIMULATION_DELTA_FIELD, scalar: "f32", components: 1 },
 ];
 
+/** Textures and samplers are bound after the frame, uniform and frame value blocks. */
+const FIRST_RESOURCE_BINDING = 3;
+
 /** A struct can't be empty: this stands in when the graph has no uniforms. */
 const PLACEHOLDER: FieldDecl = { name: "unused", scalar: "f32", components: 4 };
 
+const VECTOR_SUFFIX = { f32: "f", u32: "u", i32: "i" } as const;
+
 function wgslType({ scalar, components }: FieldDecl): string {
-	return components === 1 ? scalar : `vec${String(components)}${scalar === "f32" ? "f" : "u"}`;
+	return components === 1 ? scalar : `vec${String(components)}${VECTOR_SUFFIX[scalar]}`;
 }
 
 /** Offsets per WGSL's uniform layout: vec2 aligns to 8 bytes, vec3 and vec4 to 16. */
@@ -125,10 +148,12 @@ export function buildProgram(
 		textures = [],
 		samplers = [],
 		targets,
+		frameValues = [],
 	}: {
 		textures?: readonly TextureBinding[];
 		samplers?: readonly SamplerBinding[];
 		targets?: readonly WgslType[];
+		frameValues?: readonly FrameValueUse[];
 	} = {},
 ): ShaderProgram {
 	const uniformDecls: FieldDecl[] = Object.entries(uniforms).map(([name, value]) => ({
@@ -138,14 +163,34 @@ export function buildProgram(
 	}));
 	if (uniformDecls.length === 0) uniformDecls.push(PLACEHOLDER);
 
+	const frameValueDecls: FieldDecl[] = frameValues.map((f) => ({
+		name: f.name,
+		scalar: f.scalar,
+		components: f.components,
+	}));
+	if (frameValueDecls.length === 0) frameValueDecls.push(PLACEHOLDER);
+
 	const frame = layout(0, FRAME_FIELDS);
 	const uniformBlock = layout(1, uniformDecls);
+	const valuesLayout = layout(2, frameValueDecls);
+	const frameValuesBlock: FrameValuesBlock = {
+		...valuesLayout,
+		fields: Object.fromEntries(
+			frameValues.flatMap((f) => {
+				const field = valuesLayout.fields[f.name];
+				return field ? [[f.name, { ...field, ref: f.ref }]] : [];
+			}),
+		),
+	};
 	const textureBindings = textures.map((t, i) => ({
 		...t,
-		binding: 2 + i,
+		binding: FIRST_RESOURCE_BINDING + i,
 		sampleType: textureSampleType(t.source),
 	}));
-	const samplerBindings = samplers.map((s, i) => ({ ...s, binding: 2 + textures.length + i }));
+	const samplerBindings = samplers.map((s, i) => ({
+		...s,
+		binding: FIRST_RESOURCE_BINDING + textures.length + i,
+	}));
 	const resources = [
 		...textureBindings.map(
 			(t) =>
@@ -164,6 +209,7 @@ export function buildProgram(
 	// uv's origin is the bottom-left corner, y pointing up.
 	const code = `${targetsStruct}${struct("RuntimeFrame", FRAME_FIELDS)}
 ${struct("RuntimeUniforms", uniformDecls)}
+${struct("RuntimeFrameValues", frameValueDecls)}
 struct RuntimeFragment {
 	uv: vec2f,
 	/** The pixel's centre, in pixels from the top-left corner. */
@@ -172,6 +218,7 @@ struct RuntimeFragment {
 
 @group(0) @binding(${String(frame.binding)}) var<uniform> ${FRAME_VAR}: RuntimeFrame;
 @group(0) @binding(${String(uniformBlock.binding)}) var<uniform> ${UNIFORMS_VAR}: RuntimeUniforms;
+@group(0) @binding(${String(frameValuesBlock.binding)}) var<uniform> ${FRAME_VALUES_VAR}: RuntimeFrameValues;
 ${resources.join("\n")}
 var<private> ${FRAGMENT_VAR}: RuntimeFragment;
 
@@ -202,6 +249,7 @@ fn runtime_fragment_main(in: RuntimeVarying) -> ${output} {
 		fragmentEntry: "runtime_fragment_main",
 		frame,
 		uniforms: uniformBlock,
+		frameValues: frameValuesBlock,
 		textures: textureBindings.map(({ binding, source, sampleType }) => ({
 			binding,
 			source,

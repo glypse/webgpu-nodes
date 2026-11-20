@@ -1,4 +1,6 @@
 import type { VideoPlayback } from "../assets/assets";
+import { FrameValueAnalysis } from "../frame/analysis";
+import { FrameCompiler, type FrameProgram } from "../frame/program";
 import {
 	attachmentGroups,
 	simulationId,
@@ -71,6 +73,8 @@ export type RenderPlan = {
 	passes: PassDecl[];
 	/** The uniform values of every pass: each program's block holds those it reads. */
 	uniforms: Record<string, UniformValue>;
+	/** The frame values the passes' programs read, computed on the CPU for each pass. */
+	frame: FrameProgram;
 };
 
 function resourceOf(source: TextureSource): ResourceDecl {
@@ -115,6 +119,11 @@ export function generateRenderPlan(
 	options: Omit<ShaderOptions, "target" | "sources"> = {},
 ): RenderPlan {
 	const sources = new TextureSources(graph);
+	// Texture sizes aren't read yet: the textures a shader only sizes aren't bound.
+	const frame = new FrameCompiler(graph, new FrameValueAnalysis(graph, sources), sources, {
+		uniformScopes: new Set(options.uniformScopes ?? []),
+		textureSize: false,
+	});
 	const passes: PassDecl[] = [];
 	const resources = new Map<string, ResourceDecl>();
 	const uniforms: Record<string, UniformValue> = {};
@@ -141,6 +150,7 @@ export function generateRenderPlan(
 			...options,
 			target,
 			sources,
+			frame,
 			targetSize: targetSize ?? CANVAS_SIZE,
 		});
 		for (const { source } of generated.textures) {
@@ -198,5 +208,6 @@ export function generateRenderPlan(
 	};
 
 	visit(PLAN_TARGET, [PLAN_TARGET]);
-	return { resources: [...resources.values()], passes, uniforms };
+	Object.assign(uniforms, frame.uniforms);
+	return { resources: [...resources.values()], passes, uniforms, frame: frame.program() };
 }

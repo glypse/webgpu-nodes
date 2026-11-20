@@ -211,7 +211,7 @@ export class Preview {
 			this.losses = [];
 		}
 		if (key === this.programCode) {
-			this.program?.setUniforms(source.uniforms);
+			this.program?.update(source);
 			this.player.invalidate();
 			return;
 		}
@@ -226,7 +226,7 @@ export class Preview {
 					}
 					this.program?.destroy();
 					this.program = compiled;
-					if (this.source) compiled.setUniforms(this.source.uniforms);
+					if (this.source) compiled.update(this.source);
 					this.error = null;
 					this.player.invalidate();
 				},

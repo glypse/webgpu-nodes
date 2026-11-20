@@ -262,7 +262,7 @@ export class FrameCompiler {
 
 	constructor(
 		private graph: TextureGraph,
-		private analysis: FrameValueAnalysis,
+		readonly analysis: FrameValueAnalysis,
 		private sources: TextureSources = new TextureSources(graph),
 		{ uniformScopes = new Set(), textureSize = true }: FrameCompilerOptions = {},
 	) {
@@ -291,6 +291,18 @@ export class FrameCompiler {
 			: undefined;
 		this.memo.set(key, result);
 		return result;
+	}
+
+	/**
+	 * The program output giving a node's value, when it varies with what the
+	 * runtime knows: one a shader can read from the frame block.
+	 */
+	hoist(path: readonly string[], nodeId: string, handleId: string): FrameRef | undefined {
+		const value = this.compile(path, nodeId, handleId);
+		if (!value?.dynamic) return undefined;
+		return "ref" in value.input
+			? value.input.ref
+			: this.push({ kind: "read", input: value.input }, true, "value");
 	}
 
 	/** The same, as a number a plan can carry: a component of the value. */

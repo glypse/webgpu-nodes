@@ -1,6 +1,10 @@
 import {
 	type ColorSpace,
 	DISPLAY_P3_FIELD,
+	evaluateFrame,
+	type FrameEnv,
+	type FrameProgram,
+	type FrameValues,
 	type PassDecl,
 	PLAN_TARGET,
 	type RenderPlan,
@@ -31,6 +35,9 @@ export type FrameInputs = {
 };
 
 export type Size = { width: number; height: number };
+
+/** The frame values of a pass of the size given, which its program reads. */
+type FrameValuesOf = (passSize: Size) => FrameValues;
 
 export type ProgramDiagnostic = {
 	message: string;
@@ -100,6 +107,10 @@ export class CompiledProgram {
 	private frameData: ArrayBuffer;
 	private frameBuffer: GPUBuffer;
 	private uniformBuffer: GPUBuffer;
+	private frameValuesData: ArrayBuffer;
+	private frameValuesBuffer: GPUBuffer;
+	/** The frame block's fields, which a plan's update may point at other values. */
+	private frameValues: ShaderProgram["frameValues"];
 	private bindGroup: GPUBindGroup | undefined;
 	/** The textures `bindGroup` binds, in the program's order. */
 	private bound: GPUTexture[] = [];
@@ -121,6 +132,17 @@ export class CompiledProgram {
 			size: program.uniforms.size,
 			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
 		});
+		this.frameValues = program.frameValues;
+		this.frameValuesData = new ArrayBuffer(program.frameValues.size);
+		this.frameValuesBuffer = device.createBuffer({
+			size: program.frameValues.size,
+			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+		});
+	}
+
+	/** Read the frame values from where `program` (the same code as before) says. */
+	setFrameValues(frameValues: ShaderProgram["frameValues"]) {
+		this.frameValues = frameValues;
 	}
 
 	/** The bind group reading `textureOf`'s textures, made anew when they change. */
@@ -135,6 +157,10 @@ export class CompiledProgram {
 				{
 					binding: this.program.uniforms.binding,
 					resource: { buffer: this.uniformBuffer },
+				},
+				{
+					binding: this.program.frameValues.binding,
+					resource: { buffer: this.frameValuesBuffer },
 				},
 				...this.program.textures.map((t, i) => ({
 					binding: t.binding,
@@ -173,7 +199,12 @@ export class CompiledProgram {
 		{
 			simulationDelta = 0,
 			timestampWrites,
-		}: { simulationDelta?: number; timestampWrites?: GPURenderPassTimestampWrites } = {},
+			frameValuesOf,
+		}: {
+			simulationDelta?: number;
+			timestampWrites?: GPURenderPassTimestampWrites;
+			frameValuesOf?: FrameValuesOf;
+		} = {},
 	) {
 		const [first] = targets;
 		packBlock(
@@ -187,6 +218,16 @@ export class CompiledProgram {
 			this.frameData,
 		);
 		this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameData);
+		const fields = Object.entries(this.frameValues.fields);
+		if (fields.length > 0 && frameValuesOf) {
+			const values = frameValuesOf({ width: first?.width ?? 0, height: first?.height ?? 0 });
+			packBlock(
+				this.frameValues,
+				Object.fromEntries(fields.map(([name, field]) => [name, values.ref(field.ref)])),
+				this.frameValuesData,
+			);
+			this.device.queue.writeBuffer(this.frameValuesBuffer, 0, this.frameValuesData);
+		}
 		const pass = encoder.beginRenderPass({
 			colorAttachments: targets.map((target) => ({
 				view: target.createView(),
@@ -204,6 +245,7 @@ export class CompiledProgram {
 	destroy() {
 		this.frameBuffer.destroy();
 		this.uniformBuffer.destroy();
+		this.frameValuesBuffer.destroy();
 	}
 }
 
@@ -218,6 +260,8 @@ type CompiledPass = { program: CompiledProgram; decl: PassDecl };
 export class CompiledPlan {
 	private transients = new Map<string, GPUTexture>();
 	private resources: ReadonlyMap<string, ResourceDecl>;
+	private frameProgram: FrameProgram;
+	private uniforms: Readonly<Record<string, UniformValue>>;
 
 	constructor(
 		private device: GPUDevice,
@@ -226,6 +270,8 @@ export class CompiledPlan {
 		private media: MediaLibrary,
 	) {
 		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
+		this.frameProgram = plan.frame;
+		this.uniforms = plan.uniforms;
 	}
 
 	/** Whether the plan keeps state between frames, which drawing it then needs. */
@@ -234,7 +280,20 @@ export class CompiledPlan {
 	}
 
 	setUniforms(values: Readonly<Record<string, UniformValue>>) {
+		this.uniforms = values;
 		for (const { program } of this.passes) program.setUniforms(values);
+	}
+
+	/**
+	 * Take what a newer plan of the same code changes: its uniforms, and the
+	 * frame values its programs read.
+	 */
+	update(plan: RenderPlan) {
+		this.frameProgram = plan.frame;
+		plan.passes.forEach((decl, i) => {
+			this.passes[i]?.program.setFrameValues(decl.program.frameValues);
+		});
+		this.setUniforms(plan.uniforms);
 	}
 
 	/** Decode the media the plan reads at `time` (see `MediaLibrary.prepare`). */
@@ -321,6 +380,15 @@ export class CompiledPlan {
 			const simulation = decl.simulation;
 			return simulation?.stage !== "start" || steps.get(simulation.id)?.kind === "start";
 		});
+		const frameValuesOf: FrameValuesOf = (passSize) =>
+			evaluateFrame(this.frameProgram, {
+				time: frame.time,
+				delta: frame.delta,
+				frame: frame.frame,
+				canvas,
+				passSize,
+				uniforms: this.uniforms,
+			} satisfies FrameEnv);
 		const writes = timing?.pass();
 		drawn.forEach(({ program, decl }, i) => {
 			const first = i === 0;
@@ -333,6 +401,7 @@ export class CompiledPlan {
 			const simulation = decl.simulation && steps.get(decl.simulation.id);
 			program.encode(encoder, decl.writes.map(written), frame, colorSpace, textureOf, {
 				simulationDelta: simulation?.delta ?? 0,
+				frameValuesOf,
 				...(first || last ? { timestampWrites } : {}),
 			});
 		});
@@ -488,6 +557,7 @@ export class Renderer {
 			entries: [
 				{ binding: program.frame.binding, visibility, buffer: { type: "uniform" } },
 				{ binding: program.uniforms.binding, visibility, buffer: { type: "uniform" } },
+				{ binding: program.frameValues.binding, visibility, buffer: { type: "uniform" } },
 				...program.textures.map((t) => ({
 					binding: t.binding,
 					visibility,

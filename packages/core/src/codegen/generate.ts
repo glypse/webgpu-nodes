@@ -1,5 +1,6 @@
 import type { Asset } from "../assets/assets";
 import { constantAt, type EnumDocument, groupConstants, liveEdges } from "../enums";
+import { type FrameCompiler, frameValueField } from "../frame/program";
 import { type GraphEdge, ROOT_ID } from "../graph/document";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
@@ -48,6 +49,7 @@ import {
 	isUniformControl,
 	makeType,
 	typeComponents,
+	typeKind,
 	unavailableEdges,
 	valueType,
 	valueTypes,
@@ -82,7 +84,9 @@ import {
 } from "./literals";
 import {
 	FRAGMENT_VAR,
+	FRAME_VALUES_VAR,
 	FRAME_VAR,
+	type FrameValueUse,
 	type SamplerBinding,
 	SIMULATION_DELTA_FIELD,
 	TARGETS_STRUCT,
@@ -328,6 +332,9 @@ export type CodegenGraph = Pick<
 	"root" | "project" | "typeResolver" | "resolveDescriptor" | "resolveNode" | "assets"
 >;
 
+/** An output of a node read from a field of the frame values block. */
+type HoistedValue = { field: string; storage: WgslType; type: WgslType };
+
 type LineMap = Map<string, { start: number; end: number }>;
 
 /**
@@ -352,6 +359,10 @@ type ShaderState = {
 	uniformScopes: ReadonlySet<string>;
 	uniforms: Map<string, UniformValue>;
 	sources: TextureSources;
+	/** Compiles the frame values hoisted out of the shader, when the plan evaluates them. */
+	frame?: FrameCompiler;
+	/** The frame values the shader reads, by field name. */
+	frameValues: Map<string, FrameValueUse>;
 	targetSize: TextureSize;
 	/** The textures the shader reads, by `TextureSource.id`. */
 	textures: Map<string, TextureBinding>;
@@ -387,6 +398,12 @@ export type ShaderOptions = {
 	target?: ShaderTarget;
 	/** The graph's texture sources, shared by the shaders of one graph state. */
 	sources?: TextureSources;
+	/**
+	 * Hoists the root document's frame values out of the pixel computation,
+	 * reading them from a block the runtime writes (`FrameValueUse`), the
+	 * values of the compiler's program. Without it, they're computed per pixel.
+	 */
+	frame?: FrameCompiler;
 	/** The size of what the shader draws into; the canvas' by default. */
 	targetSize?: TextureSize;
 };
@@ -513,6 +530,8 @@ class BodyEmitter {
 		readonly probe?: Probe,
 		/** How each simulation zone is computed, by zone id. */
 		readonly simulations: ReadonlyMap<string, SimulationMode> = new Map(),
+		/** The frame values read from the frame block rather than computed, by node id. */
+		private hoisted: ReadonlyMap<string, ReadonlyMap<string, HoistedValue>> = new Map(),
 	) {
 		for (const node of doc.nodes) this.nodeMap.set(node.id, node);
 		this.inputs = doc.inputs ?? [];
@@ -748,6 +767,17 @@ class BodyEmitter {
 	}
 
 	emitNode(node: GraphNode, indent: string) {
+		const hoisted = this.hoisted.get(node.id);
+		if (hoisted) {
+			const varName = getVarName(node.id);
+			const multiple = this.state.graph.resolveDescriptor(node).outputs.length > 1;
+			const lines = [...hoisted].map(
+				([handle, { field, storage, type }]) =>
+					`let ${multiple ? `${varName}_${identSuffix(handle)}` : varName} = ${convertVar(`${FRAME_VALUES_VAR}.${field}`, storage, type)};`,
+			);
+			this.push(node.id, lines, indent);
+			return;
+		}
 		const incoming = this.incoming(node.id);
 		const resolved = this.typeResolver.resolveNodeTypes(node, incoming, this.bindings);
 		// A node only textures are read from computes nothing: they're read where they're used.
@@ -927,6 +957,70 @@ function inputTypeIn(
 }
 
 /**
+ * The frame values of the root document pixel computations read, to be read
+ * from the frame block: the outputs of nodes outside zones that are frame
+ * values depending on something the runtime knows (not only literals) and
+ * that something computed per pixel reads. A node whose values are all read
+ * only by other frame values stays inside the frame program. Groups' bodies
+ * are shared by their instances, so their values aren't hoisted.
+ */
+function hoistFrameValues(
+	state: ShaderState,
+	path: readonly string[],
+	nodeMap: ReadonlyMap<string, GraphNode>,
+	zones: ZoneAnalysis,
+	edges: readonly GraphEdge[],
+	reachable: ReadonlySet<string>,
+	{ bindings, seeds }: { bindings: TypeBindings; seeds: ReadonlySet<string> },
+): Map<string, Map<string, HoistedValue>> {
+	const frame = state.frame;
+	const hoisted = new Map<string, Map<string, HoistedValue>>();
+	if (!frame || path.length > 0) return hoisted;
+	const read = new Map<string, Set<string>>();
+	for (const e of edges)
+		read.set(e.source, (read.get(e.source) ?? new Set()).add(e.sourceHandle));
+	// The nodes computed on the CPU, whatever reads them.
+	const onCpu = new Set<string>();
+	for (const id of reachable) {
+		const node = nodeMap.get(id);
+		const handles = read.get(id);
+		if (!node || !handles || seeds.has(id) || zones.nodeZone.get(id) != null) continue;
+		if (!state.graph.resolveDescriptor(node).cpu) continue;
+		if ([...handles].every((h) => frame.analysis.isFrameValue(path, id, h))) onCpu.add(id);
+	}
+	const incoming = new Map<string, GraphEdge[]>();
+	for (const e of edges) incoming.set(e.target, [...(incoming.get(e.target) ?? []), e]);
+	for (const id of onCpu) {
+		const node = nodeMap.get(id);
+		if (!node || !edges.some((e) => e.source === id && !onCpu.has(e.target))) continue;
+		const types = state.graph.typeResolver.resolveNodeTypes(
+			node,
+			incoming.get(id) ?? [],
+			bindings,
+		);
+		const values = new Map<string, HoistedValue>();
+		const uses: FrameValueUse[] = [];
+		for (const handle of read.get(id) ?? []) {
+			const ref = frame.hoist(path, id, handle);
+			const outputType = types.resolvedOutputs.find((o) => o.id === handle)?.type;
+			if (!ref || outputType === undefined || isTexture(outputType)) break;
+			const type = valueType(outputType);
+			const kind = typeKind(type);
+			const scalar = kind === "bool" ? "u32" : kind;
+			const components = typeComponents(type);
+			const name = frameValueField(id, handle);
+			values.set(handle, { field: name, storage: makeType(scalar, components), type });
+			uses.push({ name, ref, scalar, components });
+		}
+		// All of a node's values are hoisted or none, as what feeds it is dropped.
+		if (values.size !== (read.get(id)?.size ?? 0)) continue;
+		hoisted.set(id, values);
+		for (const use of uses) state.frameValues.set(use.name, use);
+	}
+	return hoisted;
+}
+
+/**
  * Emit the nodes of a document needed to compute `seedType` nodes.
  *
  * Nodes are grouped by scope: the document's top level, then each zone.
@@ -1063,14 +1157,17 @@ function emitDocumentBody(
 		const mode = simulations.get(input.id);
 		return mode !== "opaque" && mode !== "start";
 	};
-	const { edges, reachable, liveItems } = neededEdges(
-		nodeMap,
-		usedEdges,
-		seedType,
+	let needed = neededEdges(nodeMap, usedEdges, seedType, seeds, viewed, computed);
+	const hoisted = hoistFrameValues(state, path, nodeMap, zones, needed.edges, needed.reachable, {
+		bindings,
 		seeds,
-		viewed,
-		computed,
-	);
+	});
+	// What only a hoisted value read is no longer needed.
+	if (hoisted.size > 0) {
+		const pruned = usedEdges.filter((e) => !hoisted.has(e.target));
+		needed = neededEdges(nodeMap, pruned, seedType, seeds, viewed, computed);
+	}
+	const { edges, reachable, liveItems } = needed;
 	const emitter = new BodyEmitter(
 		state,
 		doc,
@@ -1084,6 +1181,7 @@ function emitDocumentBody(
 		path,
 		probe,
 		simulations,
+		hoisted,
 	);
 
 	/** The unit (node id, or child zone id) standing for `nodeId` within `scope`. */
@@ -1477,6 +1575,7 @@ export function generateShader(
 		target,
 		sources = new TextureSources(graph),
 		targetSize = CANVAS_SIZE,
+		frame,
 	}: ShaderOptions = {},
 ): {
 	shader: string;
@@ -1485,6 +1584,7 @@ export function generateShader(
 	textures: TextureBinding[];
 	samplers: SamplerBinding[];
 	targets?: readonly WgslType[];
+	frameValues: FrameValueUse[];
 	simulation?: string;
 } {
 	const state: ShaderState = {
@@ -1495,6 +1595,8 @@ export function generateShader(
 		uniformScopes: new Set(uniformScopes),
 		uniforms: new Map(),
 		sources,
+		...(frame ? { frame } : {}),
+		frameValues: new Map(),
 		targetSize,
 		textures: new Map(),
 		samplers: new Map(),
@@ -1560,6 +1662,7 @@ export function generateShader(
 		uniforms: Object.fromEntries(state.uniforms),
 		textures: [...state.textures.values()],
 		samplers: [...state.samplers.values()],
+		frameValues: [...state.frameValues.values()],
 		...(targets ? { targets } : {}),
 		...(state.simulation === undefined ? {} : { simulation: state.simulation }),
 	};
