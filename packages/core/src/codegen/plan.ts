@@ -145,19 +145,6 @@ export function generateRenderPlan(
 		);
 	};
 
-	/** Declares the state item a state texture's size is a scale of: the runtime reads its size. */
-	const declareSizeBase = (source: Extract<TextureSource, { kind: "state" }>) => {
-		const base = source.size.kind === "scale" ? source.size.of : "canvas";
-		if (base === "canvas" || resources.has(base.resource)) return;
-		const item = sources
-			.simulation(source.simulation.path, source.simulation.zone)
-			?.items.find((i) => stateReadId(i.texture, "current") === base.resource);
-		if (!item) return;
-		const declared = stateSource(source.simulation, item, "current");
-		resources.set(declared.id, resourceOf(declared));
-		declareSizeBase(declared);
-	};
-
 	/** Declares a texture a pass reads, and adds the passes making it before the one reading it. */
 	const include = (source: TextureSource) => {
 		resources.set(source.id, resourceOf(source));
@@ -186,10 +173,13 @@ export function generateRenderPlan(
 			}
 		}
 		if (source.kind === "state") {
-			declareSizeBase(source);
-			const stage = source.read === "current" ? "step" : "start";
 			const items = runOf(source.simulation, source.texture);
-			if (items) visitSimulation(source.simulation, stage, items);
+			if (items) {
+				// What's read as the previous frame's state is the last frame's step, so
+				// it has to be stepped every frame, read as its current state or not.
+				if (source.read === "previous") visitSimulation(source.simulation, "start", items);
+				visitSimulation(source.simulation, "step", items);
+			}
 		}
 	};
 
@@ -239,9 +229,7 @@ export function generateRenderPlan(
 		const writes = items.map((i) => stateReadId(i.texture, read));
 		for (const [i, item] of items.entries()) {
 			const write = writes[i] ?? "";
-			const declared = stateSource(ref, item, read);
-			resources.set(write, resourceOf(declared));
-			declareSizeBase(declared);
+			resources.set(write, resourceOf(stateSource(ref, item, read)));
 		}
 		visit(
 			`${stage}:${writes.join(",")}`,
@@ -249,6 +237,7 @@ export function generateRenderPlan(
 			{ simulation: ref, stage, items },
 			{ id, stage },
 			items[0]?.size,
+			items[0]?.like,
 		);
 	};
 

@@ -13,17 +13,21 @@ import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/ind
 import {
 	mipsProblem,
 	RENDER_LIKE,
-	RENDER_PIXELS,
-	RENDER_SCALE,
 	RENDER_TEXTURE,
 	renderItemFormat,
 	renderItemType,
+	rendersInPixels,
 	rendersMips,
 	renderTextureItems,
-	storedSize,
 } from "../nodes/render-texture";
 import { IMAGE, VIDEO } from "../nodes/texture";
-import { isTexture, type TypeBindings, unavailableEdges, type WgslType } from "../types";
+import {
+	isTexture,
+	type TypeBindings,
+	unavailableEdges,
+	type WgslType,
+	type ZoneItem,
+} from "../types";
 import {
 	analyzeZones,
 	simulatingDefinitions,
@@ -32,9 +36,10 @@ import {
 	type ZoneAnalysis,
 	zoneItems,
 } from "../zones";
+import { itemSizeHandles, NODE_SIZE_HANDLES, type SizeHandles, storedSize } from "./item-size";
+import type { ItemSizeMode } from "./item-size";
 import {
 	attachmentGroups,
-	itemSizes,
 	simulationId,
 	type SimulationRef,
 	type SimulationState,
@@ -369,7 +374,13 @@ export class TextureSources {
 		const run =
 			attachmentGroups(items).find((r) => r.some((i) => i.item.id === handleId)) ?? [];
 		const like = this.likeOf(path, instance, node, items[0]?.item.id);
-		const size = this.renderSize(path, node, like);
+		const size = this.sizeOf(
+			path,
+			node,
+			NODE_SIZE_HANDLES,
+			rendersInPixels(node.data) ? "pixels" : "scale",
+			like,
+		);
 		const target = { path, node: node.id, handle: handleId };
 		return {
 			kind: "render",
@@ -392,6 +403,22 @@ export class TextureSources {
 		};
 	}
 
+	/** The texture linked to a Texture input, if it gives an image. */
+	private linkedTexture(
+		path: readonly string[],
+		instance: Instance,
+		nodeId: string,
+		inputId: string,
+	): TextureSource | undefined {
+		const edge = this.feed(path, nodeId, inputId);
+		if (!edge) return undefined;
+		if (!isTexture(this.graph.typeResolver.inferHandleType(edge, instance.bindings))) {
+			return undefined;
+		}
+		const resolved = this.output(path, edge.source, edge.sourceHandle);
+		return resolved.kind === "invalid" || resolved.kind === "empty" ? undefined : resolved;
+	}
+
 	/**
 	 * What a Render Texture's scale is relative to: its `like` texture, else
 	 * the texture linked to its first item, else the canvas.
@@ -402,24 +429,30 @@ export class TextureSources {
 		node: GraphNode,
 		first: string | undefined,
 	): TextureSource | undefined {
-		const linked = (inputId: string): TextureSource | undefined => {
-			const edge = this.feed(path, node.id, inputId);
-			if (!edge) return undefined;
-			if (!isTexture(this.graph.typeResolver.inferHandleType(edge, instance.bindings))) {
-				return undefined;
-			}
-			const resolved = this.output(path, edge.source, edge.sourceHandle);
-			return resolved.kind === "invalid" || resolved.kind === "empty" ? undefined : resolved;
-		};
-		return linked(RENDER_LIKE) ?? (first === undefined ? undefined : linked(first));
+		return (
+			this.linkedTexture(path, instance, node.id, RENDER_LIKE) ??
+			(first === undefined ? undefined : this.linkedTexture(path, instance, node.id, first))
+		);
 	}
 
-	private renderSize(
+	/**
+	 * The size the size inputs `handles` of a node give, in `mode`: the
+	 * stored numbers, or the frame values linked to them once a frame
+	 * compiler is sizing.
+	 */
+	private sizeOf(
 		path: readonly string[],
 		node: GraphNode,
+		handles: SizeHandles,
+		mode: ItemSizeMode,
 		like: TextureSource | undefined,
 	): TextureSize {
-		const stored = storedSize(node.data, like ? { resource: like.id } : "canvas");
+		const stored = storedSize(
+			node.data,
+			handles,
+			mode,
+			like ? { resource: like.id } : "canvas",
+		);
 		const sizing = this.sizing;
 		if (!sizing) return stored;
 		const arg = (inputId: string, component: number, fallback: FrameArg): FrameArg =>
@@ -427,11 +460,11 @@ export class TextureSources {
 		if (stored.kind === "pixels") {
 			return {
 				kind: "pixels",
-				width: arg(RENDER_PIXELS, 0, stored.width),
-				height: arg(RENDER_PIXELS, 1, stored.height),
+				width: arg(handles.pixels, 0, stored.width),
+				height: arg(handles.pixels, 1, stored.height),
 			};
 		}
-		return { ...stored, scale: arg(RENDER_SCALE, 0, stored.scale) };
+		return { ...stored, scale: arg(handles.scale, 0, stored.scale) };
 	}
 
 	private simulations = new Map<string, SimulationState | undefined>();
@@ -451,14 +484,32 @@ export class TextureSources {
 		if (instance && input && analysed?.kind === "simulation") {
 			const outputs = this.typesIn(instance.doc, input, instance.bindings).resolvedOutputs;
 			const zone = zoneItems(instance.doc.nodesById.get(analysed.outputId));
-			const sizes = itemSizes(ref, zone);
 			const items = zone.map((item): StateItem => {
 				const type = outputs.find((o) => o.id === item.id)?.type ?? "f32";
+				// Sizes read other textures, which may be this simulation's own
+				// state: they're found when first asked for, once it exists.
+				let sizing: { size: TextureSize; like?: TextureSource } | undefined;
+				let resolving = false;
+				const sized = () => {
+					// Items sized from each other have the canvas' size.
+					if (resolving) return { size: CANVAS_SIZE };
+					if (!sizing) {
+						resolving = true;
+						sizing = this.itemSizing(path, instance, input, item);
+						resolving = false;
+					}
+					return sizing;
+				};
 				return {
 					item,
 					type,
 					format: item.format ?? stateFormat(type),
-					size: sizes.get(item.id) ?? CANVAS_SIZE,
+					get size() {
+						return sized().size;
+					},
+					get like() {
+						return sized().like;
+					},
 					texture: stateTextureId(ref, item.id),
 				};
 			});
@@ -466,6 +517,25 @@ export class TextureSources {
 		}
 		this.simulations.set(id, state);
 		return state;
+	}
+
+	/** The size of the texture keeping a state item, and the texture it's relative to. */
+	private itemSizing(
+		path: readonly string[],
+		instance: Instance,
+		input: GraphNode,
+		item: ZoneItem,
+	): { size: TextureSize; like?: TextureSource } {
+		if (!item.size) return { size: CANVAS_SIZE };
+		const handles = itemSizeHandles(item.id);
+		const like =
+			item.size === "scale"
+				? this.linkedTexture(path, instance, input.id, handles.like)
+				: undefined;
+		return {
+			size: this.sizeOf(path, input, handles, item.size, like),
+			...(like ? { like } : {}),
+		};
 	}
 
 	/** A state item of the simulation computed at `path` that a boundary node gives. */

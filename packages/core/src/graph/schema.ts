@@ -71,20 +71,11 @@ const VariableTypeSchemas = [
 
 const HandleTypeSchema = v.union([v.picklist(SOCKET_TYPES), ...VariableTypeSchemas]);
 
-const ItemSizeSchema = v.variant("kind", [
-	v.strictObject({
-		kind: v.literal("scale"),
-		scale: FiniteSchema,
-		of: v.optional(IdSchema),
-	}),
-	v.strictObject({ kind: v.literal("pixels"), width: FiniteSchema, height: FiniteSchema }),
-]);
-
 const ZoneItemSchema = v.object({
 	...HandleFields,
 	type: HandleTypeSchema,
 	format: v.optional(v.picklist(TEXTURE_FORMATS)),
-	size: v.optional(ItemSizeSchema),
+	size: v.optional(v.picklist(["scale", "pixels"])),
 });
 
 const GroupHandleSchema = v.object({

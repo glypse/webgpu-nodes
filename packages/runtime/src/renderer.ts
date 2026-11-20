@@ -361,7 +361,6 @@ export class CompiledPlan {
 		state: SimulationState,
 		{ timing, media }: { timing?: FrameTiming; media?: TextureOf } = {},
 	) {
-		const steps = state.advance(this.plan, frame, target);
 		const canvas: Size = { width: target.width, height: target.height };
 		const mediaOf: TextureOf = media ?? ((source) => this.media.texture(source, frame.time));
 		// Sizes are resolved once per frame, in the order of the passes writing them:
@@ -396,7 +395,7 @@ export class CompiledPlan {
 				: 1;
 		};
 		const textureSize = (id: string) => {
-			const size = sizes.get(id) ?? mediaSize(id);
+			const size = sizeOf(id);
 			return size && { ...size, levels: levelsOf(id) };
 		};
 		const sizeOf = (id: string): Size | undefined => {
@@ -404,11 +403,7 @@ export class CompiledPlan {
 			if (known) return known;
 			const resource = this.resources.get(id);
 			if (resource?.kind === "media") return mediaSize(id);
-			if (resource?.kind === "state") {
-				const texture = state.texture(resource.texture, resource.read);
-				return texture ? { width: texture.width, height: texture.height } : canvas;
-			}
-			if (resource?.kind !== "transient") return undefined;
+			if (resource?.kind !== "transient" && resource?.kind !== "state") return undefined;
 			// A size that depends on itself has nothing to start from.
 			if (resolving.has(id)) return canvas;
 			resolving.add(id);
@@ -446,6 +441,8 @@ export class CompiledPlan {
 			if (resource?.kind === "state") return stateTexture(resource.texture, resource.read);
 			return transient(id);
 		};
+		// State is sized by frame values too, so it's kept once sizes can be resolved.
+		const steps = state.advance(this.plan, frame, (id) => sizeOf(id) ?? canvas);
 		// A simulation's start only draws on the frames it starts.
 		const drawn = this.passes.filter(({ decl }) => {
 			const simulation = decl.simulation;

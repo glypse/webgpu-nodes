@@ -47,7 +47,6 @@ describe("SimulationState", () => {
 	const fake = () => {
 		const made: Made[] = [];
 		const device = {
-			limits: { maxTextureDimension2D: 8192 },
 			createTexture: ({ size }: { size: { width: number; height: number } }) => {
 				const texture = {
 					...size,
@@ -62,66 +61,48 @@ describe("SimulationState", () => {
 		};
 		return { made, state: new SimulationState(device as unknown as GPUDevice) };
 	};
-	const item = (
-		name: string,
-		size: Extract<RenderPlan["resources"][number], { kind: "state" }>["size"],
-	) => ({
+	const item = (name: string) => ({
 		id: `state:s:${name}:current`,
 		kind: "state" as const,
 		texture: `state:s:${name}`,
 		read: "current" as const,
 		format: "r32float" as const,
-		size,
+		size: { kind: "scale", scale: 1, of: "canvas" } as const,
 		simulation: "s",
 	});
-	const plan = (...resources: ReturnType<typeof item>[]): RenderPlan => ({
-		resources,
+	const plan = (...names: string[]): RenderPlan => ({
+		resources: names.map(item),
 		passes: [],
 		uniforms: {},
 		frame: { steps: [] },
 	});
-	const canvas = { width: 640, height: 360 };
 
-	it("keeps each item at its own size", () => {
+	it("keeps each item at the size it's given", () => {
 		const { made, state } = fake();
-		const half = { kind: "scale", scale: 0.5, of: "canvas" } as const;
-		const row = { kind: "pixels", width: 1024, height: 1 } as const;
-		state.advance(plan(item("a", half), item("b", row)), at(0), canvas);
+		const sizes: Record<string, { width: number; height: number }> = {
+			"state:s:a:current": { width: 320, height: 180 },
+			"state:s:b:current": { width: 1024, height: 1 },
+		};
+		state.advance(plan("a", "b"), at(0), (id) => sizes[id] ?? { width: 1, height: 1 });
 		expect(made.map((t) => [t.width, t.height])).toEqual([
 			[320, 180],
 			[320, 180],
 			[1024, 1],
 			[1024, 1],
 		]);
-		const of = { kind: "scale", scale: 0.25, of: { resource: "state:s:a:current" } } as const;
-		const { made: more, state: other } = fake();
-		other.advance(plan(item("c", of), item("a", half)), at(0), canvas);
-		expect(more.map((t) => [t.width, t.height])).toEqual([
-			[80, 45],
-			[80, 45],
-			[320, 180],
-			[320, 180],
-		]);
 	});
 
-	it("starts over when the size an item resolves to changes", () => {
+	it("starts over when the size an item is given changes, and only then", () => {
 		const { made, state } = fake();
-		const row = { kind: "pixels", width: 1024, height: 1 } as const;
-		const items = plan(item("a", row));
-		expect(state.advance(items, at(0), canvas).get("s")?.kind).toBe("start");
-		expect(state.advance(items, at(1), canvas).get("s")?.kind).toBe("advance");
+		const items = plan("a");
+		let size = { width: 1024, height: 1 };
+		const advance = (frame: number) => state.advance(items, at(frame), () => size);
+		expect(advance(0).get("s")?.kind).toBe("start");
+		expect(advance(1).get("s")?.kind).toBe("advance");
 		expect(made.length).toBe(2);
-		const wider = plan(item("a", { kind: "pixels", width: 2048, height: 1 }));
-		expect(state.advance(wider, at(2), canvas).get("s")?.kind).toBe("start");
+		size = { width: 2048, height: 1 };
+		expect(advance(2).get("s")?.kind).toBe("start");
 		expect(made.slice(0, 2).every((t) => t.destroyed)).toBe(true);
-		// Pixels don't follow the canvas; a scale of it does.
-		expect(state.advance(wider, at(3), { width: 800, height: 600 }).get("s")?.kind).toBe(
-			"advance",
-		);
-		const scaled = plan(item("a", { kind: "scale", scale: 1, of: "canvas" }));
-		state.advance(scaled, at(4), canvas);
-		expect(state.advance(scaled, at(5), { width: 800, height: 600 }).get("s")?.kind).toBe(
-			"start",
-		);
+		expect(advance(3).get("s")?.kind).toBe("advance");
 	});
 });

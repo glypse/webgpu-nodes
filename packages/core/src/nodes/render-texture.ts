@@ -1,4 +1,5 @@
-import { canMip, TEXTURE_FORMATS, type TextureFormat, type TextureSize } from "../passes/textures";
+import { DEFAULT_SIZE_PIXELS, NODE_SIZE_HANDLES } from "../passes/item-size";
+import { canMip, TEXTURE_FORMATS, type TextureFormat } from "../passes/textures";
 import {
 	defineSetting,
 	type NodeData,
@@ -13,11 +14,11 @@ import {
 export const RENDER_TEXTURE = "render-texture";
 
 /** The input of the scale a texture is relative to its base. */
-export const RENDER_SCALE = "scale";
+export const RENDER_SCALE = NODE_SIZE_HANDLES.scale;
 /** The input of the size in pixels. */
-export const RENDER_PIXELS = "pixels";
+export const RENDER_PIXELS = NODE_SIZE_HANDLES.pixels;
 /** The input of the texture a scale is relative to. */
-export const RENDER_LIKE = "like";
+export const RENDER_LIKE = NODE_SIZE_HANDLES.like;
 
 export const RENDER_MODE_SETTING = defineSetting({
 	key: "mode",
@@ -43,8 +44,6 @@ export const DEFAULT_RENDER_FORMAT: TextureFormat = "rgba16float";
 const DEFAULT_ITEMS: ZoneItem[] = [
 	{ id: "color", label: "Color", type: "vec4f", format: DEFAULT_RENDER_FORMAT },
 ];
-
-const DEFAULT_PIXELS = 256;
 
 export function renderTextureItems(data: NodeData): ZoneItem[] {
 	return data.items ?? DEFAULT_ITEMS;
@@ -74,24 +73,6 @@ export function mipsProblem(data: NodeData): string | undefined {
 	if (!rendersMips(data)) return undefined;
 	const item = renderTextureItems(data).find((i) => !canMip(renderItemFormat(i)));
 	return item && `"${item.label}" is kept in integers, which can't be averaged into mip levels.`;
-}
-
-/** The size inputs a Render Texture's scale and pixels stand for, as a size when nothing is linked. */
-export function storedSize(data: NodeData, base: "canvas" | { resource: string }): TextureSize {
-	const values = data.values ?? {};
-	const number = (id: string, key: "x" | "y" | undefined, fallback: number): number => {
-		const stored = values[id];
-		const value = typeof stored === "object" ? stored[key ?? "x"] : stored;
-		return typeof value === "number" ? value : fallback;
-	};
-	if (rendersInPixels(data)) {
-		return {
-			kind: "pixels",
-			width: number(RENDER_PIXELS, "x", DEFAULT_PIXELS),
-			height: number(RENDER_PIXELS, "y", DEFAULT_PIXELS),
-		};
-	}
-	return { kind: "scale", scale: number(RENDER_SCALE, undefined, 1), of: base };
 }
 
 export function isRenderFormat(value: unknown): value is TextureFormat {
@@ -145,7 +126,7 @@ export function buildRenderTextureDescriptor(data: NodeData): NodeDescriptor {
 			settings: { mode: "scale", mips: "off" },
 			values: {
 				[RENDER_SCALE]: 1,
-				[RENDER_PIXELS]: { x: DEFAULT_PIXELS, y: DEFAULT_PIXELS },
+				[RENDER_PIXELS]: { x: DEFAULT_SIZE_PIXELS, y: DEFAULT_SIZE_PIXELS },
 			},
 		},
 		wgsl: () => [],

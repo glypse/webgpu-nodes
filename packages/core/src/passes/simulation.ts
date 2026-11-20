@@ -8,14 +8,8 @@ import {
 	type WgslType,
 	type ZoneItem,
 } from "../types";
-import {
-	CANVAS_SIZE,
-	sameSize,
-	scalarOf,
-	texelBytes,
-	type TextureFormat,
-	type TextureSize,
-} from "./textures";
+import type { TextureSource } from "./sources";
+import { sameSize, scalarOf, texelBytes, type TextureFormat, type TextureSize } from "./textures";
 
 /**
  * A simulation zone as computed at `path` (the group nodes it's computed
@@ -70,6 +64,8 @@ export type StateItem = {
 	type: SocketType;
 	format: TextureFormat;
 	size: TextureSize;
+	/** The texture its size is relative to, if it has one: it exists before the item's passes. */
+	like?: TextureSource;
 	/** The id of the texture keeping it (see `stateTextureId`). */
 	texture: string;
 };
@@ -92,45 +88,6 @@ export type StateRead = "previous" | "current";
 /** The id of the texture resource a state read is: one per state texture and frame. */
 export function stateReadId(texture: string, read: StateRead): string {
 	return `${texture}:${read}`;
-}
-
-/**
- * The size each item of a simulation is kept at, by id. An item scaled from
- * another follows its size; one whose chain loops back on itself, or that
- * names an item that isn't there, is scaled from the canvas.
- */
-export function itemSizes(
-	ref: SimulationRef,
-	items: readonly ZoneItem[],
-): ReadonlyMap<string, TextureSize> {
-	const byId = new Map(items.map((i) => [i.id, i]));
-	const sizes = new Map<string, TextureSize>();
-	const resolve = (item: ZoneItem, seen: ReadonlySet<string>): TextureSize => {
-		const known = sizes.get(item.id);
-		if (known) return known;
-		const stored = item.size;
-		let size: TextureSize = CANVAS_SIZE;
-		if (stored?.kind === "pixels") {
-			size = { kind: "pixels", width: stored.width, height: stored.height };
-		} else if (stored) {
-			const base = stored.of === undefined ? undefined : byId.get(stored.of);
-			// A base at the canvas' size is the canvas.
-			if (!base?.size || seen.has(base.id) || base.id === item.id) {
-				size = { kind: "scale", scale: stored.scale, of: "canvas" };
-			} else {
-				resolve(base, new Set([...seen, item.id]));
-				size = {
-					kind: "scale",
-					scale: stored.scale,
-					of: { resource: stateReadId(stateTextureId(ref, base.id), "current") },
-				};
-			}
-		}
-		sizes.set(item.id, size);
-		return size;
-	};
-	for (const item of items) resolve(item, new Set());
-	return sizes;
 }
 
 /**

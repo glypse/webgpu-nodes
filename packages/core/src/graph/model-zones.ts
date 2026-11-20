@@ -1,5 +1,6 @@
+import { defaultSizeValues, itemSizeHandles, itemSizeInputIds } from "../passes/item-size";
 import type { TextureFormat } from "../passes/textures";
-import { isTexture, type ItemSize, type SocketType, type WgslType, type ZoneItem } from "../types";
+import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
 	carriesItem,
@@ -161,8 +162,14 @@ export abstract class ZoneModel extends GraphModelBase {
 		const doc = this.activeDocument;
 		const boundary = new Set([zone.input.id, zone.output.id]);
 		const fixed = FIXED_ZONE_HANDLES;
+		const sizes = itemSizeInputIds(items);
 		doc.edges = doc.edges.filter((e) => {
-			if (boundary.has(e.target) && !fixed.has(e.targetHandle) && !ids.has(e.targetHandle)) {
+			if (
+				boundary.has(e.target) &&
+				!fixed.has(e.targetHandle) &&
+				!ids.has(e.targetHandle) &&
+				!(e.target === zone.input.id && sizes.has(e.targetHandle))
+			) {
 				return false;
 			}
 			if (boundary.has(e.source) && !fixed.has(e.sourceHandle) && !ids.has(e.sourceHandle)) {
@@ -251,25 +258,26 @@ export abstract class ZoneModel extends GraphModelBase {
 	}
 
 	/**
-	 * Set the size a simulation's item is kept at, or (`undefined`) the
-	 * canvas'. Returns whether it was applied: an item can't be sized from
-	 * itself, or from items sized from it. The simulation starts over.
+	 * Set how a simulation's item is sized, or (`undefined`) to the canvas'
+	 * size. Its size inputs on the zone's input node follow the mode, and
+	 * links to those it no longer has are dropped.
 	 */
-	setZoneItemSize(zoneId: string, itemId: string, size: ItemSize | undefined): boolean {
-		if (this.zoneKind(zoneId) !== "simulation") return false;
-		const items = this.getZoneItems(zoneId);
-		if (size?.kind === "scale" && size.of !== undefined) {
-			const byId = new Map(items.map((i) => [i.id, i]));
-			if (!byId.has(size.of)) return false;
-			for (let id: string | undefined = size.of; id !== undefined;) {
-				if (id === itemId) return false;
-				const next: ItemSize | undefined = byId.get(id)?.size;
-				id = next?.kind === "scale" ? next.of : undefined;
-			}
+	setZoneItemSize(zoneId: string, itemId: string, size: ZoneItem["size"]) {
+		const zone = this.zoneNodes(zoneId);
+		if (zone?.kind !== "simulation" || this.isLocked) return;
+		const input = zone.input;
+		const handle = size === undefined ? undefined : itemSizeHandles(itemId)[size];
+		const unset = handle === undefined ? false : input.data.values?.[handle] === undefined;
+		if (size !== undefined && unset) {
+			const values = {
+				...input.data.values,
+				...defaultSizeValues(itemSizeHandles(itemId), size),
+			};
+			this.patchNodeData(new Map([[input.id, { ...input.data, values }]]));
 		}
 		this.setZoneItems(
 			zoneId,
-			items.map((item) => {
+			this.getZoneItems(zoneId).map((item) => {
 				if (item.id !== itemId) return item;
 				const next: ZoneItem = { ...item };
 				if (size === undefined) delete next.size;
@@ -277,7 +285,6 @@ export abstract class ZoneModel extends GraphModelBase {
 				return next;
 			}),
 		);
-		return true;
 	}
 
 	/** Move a state item up (-1) or down (+1) in the list. */

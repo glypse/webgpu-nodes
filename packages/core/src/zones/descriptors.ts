@@ -1,5 +1,6 @@
 import type { HydratedGraphDocument } from "../graph/document";
 import { MAX_ITERATIONS } from "../graph/limits";
+import { itemSizeHandles, sizeInputs } from "../passes/item-size";
 import {
 	boundType,
 	isTexture,
@@ -251,7 +252,10 @@ export function buildSimulationInputDescriptor(
 	const items = zoneItems(findNode(pairedOutputId(node), definitions));
 	return {
 		...zoneDescriptorBase(SIMULATION_INPUT, "Simulation Input"),
-		inputs: items.map((item) => itemInput(item, variables)),
+		inputs: [
+			...items.map((item) => itemInput(item, variables)),
+			...items.flatMap((item) => sizeInputs(itemSizeHandles(item.id), item.size, item.label)),
+		],
 		outputs: [
 			{ id: DELTA_TIME_HANDLE, label: "Delta Time", type: "f32" },
 			...items.map((item) => itemOutput(item, variables)),

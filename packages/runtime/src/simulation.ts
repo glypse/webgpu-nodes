@@ -1,4 +1,4 @@
-import { type RenderPlan, resolveSize, type StateRead, type TextureFormat } from "$core";
+import type { RenderPlan, StateRead, TextureFormat } from "$core";
 
 import type { FrameInputs, Size } from "./renderer";
 
@@ -20,8 +20,6 @@ export function nextStep(last: StepRecord | undefined, frame: FrameInputs): Step
 	// Frames may have been skipped: the step covers all the time since the last.
 	return { kind: "advance", delta: Math.max(0, frame.time - last.time) };
 }
-
-type StateResource = Extract<RenderPlan["resources"][number], { kind: "state" }>;
 
 /** The two textures keeping a state item, which swap roles as frames go by. */
 type Pair = {
@@ -46,39 +44,24 @@ export class SimulationState {
 	constructor(private device: GPUDevice) {}
 
 	/**
-	 * Begin drawing `frame` of `plan` at `size`: make the textures it keeps
+	 * Begin drawing `frame` of `plan`: make the textures it keeps
 	 * state in where they're missing or don't fit (their simulations then
 	 * start over), and step each simulation. Returns their steps, by id.
-	 * `size` is the canvas', which sizes are relative to.
+	 * `sizeOf` gives the size a state texture is to have, by resource id.
 	 */
-	advance(plan: RenderPlan, frame: FrameInputs, size: Size): ReadonlyMap<string, Step> {
+	advance(
+		plan: RenderPlan,
+		frame: FrameInputs,
+		sizeOf: (resource: string) => Size,
+	): ReadonlyMap<string, Step> {
 		const fresh = new Set<string>();
 		const used = new Set<string>();
 		const simulations = new Set<string>();
-		const states = new Map<string, StateResource>();
 		for (const resource of plan.resources) {
-			if (resource.kind === "state") states.set(resource.id, resource);
-		}
-		const sizes = new Map<string, Size>();
-		/** A state texture's size; a texture sized from itself is the canvas'. */
-		const sizeOf = (id: string): Size | undefined => {
-			const known = sizes.get(id);
-			if (known) return known;
-			const resource = states.get(id);
-			if (!resource) return undefined;
-			sizes.set(id, size);
-			const resolved = resolveSize(resource.size, {
-				canvas: size,
-				resource: sizeOf,
-				maxDimension: this.device.limits.maxTextureDimension2D,
-			});
-			sizes.set(id, resolved);
-			return resolved;
-		};
-		for (const resource of states.values()) {
+			if (resource.kind !== "state") continue;
 			used.add(resource.texture);
 			simulations.add(resource.simulation);
-			const resolved = sizeOf(resource.id) ?? size;
+			const resolved = sizeOf(resource.id);
 			const pair = this.pairs.get(resource.texture);
 			const [texture] = pair?.textures ?? [];
 			if (

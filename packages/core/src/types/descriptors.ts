@@ -90,17 +90,13 @@ export type ZoneItem = Omit<HandleDef, "type"> & {
 	type: ItemType;
 	/** What it's kept in, where it isn't decided by its type. */
 	format?: TextureFormat;
-	/** The size of the texture keeping it; the canvas' own unless set. */
-	size?: ItemSize;
+	/**
+	 * How the texture keeping it is sized: a scale of the canvas or of a
+	 * texture, or pixels. The canvas' own size unless set. The numbers and
+	 * the texture are inputs of the zone's input node.
+	 */
+	size?: "scale" | "pixels";
 };
-
-/**
- * A size a simulation's item is kept at, as Render Texture's are: a scale of
- * the canvas or of another item of the zone (`of`, by id), or pixels.
- */
-export type ItemSize =
-	| { kind: "scale"; scale: number; of?: string }
-	| { kind: "pixels"; width: number; height: number };
 
 /** A socket of a group's boundary node: a handle whose type may be decided per group node. */
 export type GroupHandleDef = Omit<HandleDef, "type"> & {
