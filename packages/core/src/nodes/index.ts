@@ -16,3 +16,4 @@ export * from "./custom";
 export * from "./color";
 export * from "./color-ramp";
 export * from "./texture";
+export * from "./render-texture";

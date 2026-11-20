@@ -35,6 +35,7 @@
 	import CodeWidget from "./widgets/CodeWidget.svelte";
 	import ColorWidget from "./widgets/ColorWidget.svelte";
 	import CurveWidget from "./widgets/CurveWidget.svelte";
+	import ItemsWidget from "./widgets/ItemsWidget.svelte";
 	import RampWidget from "./widgets/RampWidget.svelte";
 
 	let {
@@ -435,6 +436,8 @@
 			<CodeWidget {id} {data} disabled={isLocked} />
 		{:else if descriptor.widget?.kind === "cases"}
 			<CasesWidget {id} {data} disabled={isLocked} />
+		{:else if descriptor.widget?.kind === "items"}
+			<ItemsWidget {id} {data} disabled={isLocked} />
 		{:else if descriptor.widget?.kind === "asset"}
 			<AssetWidget {id} media={descriptor.widget.media} {data} disabled={isLocked} />
 		{/if}

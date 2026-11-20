@@ -4,7 +4,12 @@ import { componentKeys, readComponent } from "../graph/values";
 import { coerce } from "../nodes/cpu";
 import { nodeRegistry } from "../nodes/registry";
 import { TEXTURE_SIZE } from "../nodes/texture";
-import { type TextureGraph, TextureSources } from "../passes/sources";
+import {
+	readSource,
+	type TextureGraph,
+	type TextureSource,
+	TextureSources,
+} from "../passes/sources";
 import type { FrameArg, Size } from "../passes/textures";
 import {
 	inputControl,
@@ -121,7 +126,8 @@ export class FrameValues {
 
 	/** A number of the program: a literal, or one component of a step's output. */
 	arg(arg: FrameArg): number {
-		return typeof arg === "number" ? arg : (this.ref(arg.frame)[arg.frame.component ?? 0] ?? 0);
+		// A reference to a component is that component alone.
+		return typeof arg === "number" ? arg : (this.ref(arg.frame)[0] ?? 0);
 	}
 }
 
@@ -259,6 +265,7 @@ export class FrameCompiler {
 	private zones = new Map<string, number>();
 	private uniformScopes: ReadonlySet<string>;
 	private textureSize: boolean;
+	private sized = new Map<string, TextureSource>();
 
 	constructor(
 		private graph: TextureGraph,
@@ -268,6 +275,12 @@ export class FrameCompiler {
 	) {
 		this.uniformScopes = uniformScopes;
 		this.textureSize = textureSize;
+		sources.sizing = this;
+	}
+
+	/** The textures whose sizes the program reads: they must exist for it to be evaluated. */
+	sizedTextures(): TextureSource[] {
+		return [...this.sized.values()];
 	}
 
 	/** The program of everything compiled so far. */
@@ -380,6 +393,8 @@ export class FrameCompiler {
 			case TEXTURE_SIZE: {
 				if (!this.textureSize) return undefined;
 				const texture = this.sources.input(path, nodeId, "texture");
+				const read = readSource(texture);
+				if (read.kind !== "empty") this.sized.set(read.id, read);
 				const size = { source: `texture-size:${texture.id}` } as const;
 				const ref = this.push(
 					{ kind: "texel", size, loop: this.loopOf(path, nodeId) },

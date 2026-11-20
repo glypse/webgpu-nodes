@@ -119,10 +119,8 @@ export function generateRenderPlan(
 	options: Omit<ShaderOptions, "target" | "sources"> = {},
 ): RenderPlan {
 	const sources = new TextureSources(graph);
-	// Texture sizes aren't read yet: the textures a shader only sizes aren't bound.
 	const frame = new FrameCompiler(graph, new FrameValueAnalysis(graph, sources), sources, {
 		uniformScopes: new Set(options.uniformScopes ?? []),
-		textureSize: false,
 	});
 	const passes: PassDecl[] = [];
 	const resources = new Map<string, ResourceDecl>();
@@ -137,12 +135,47 @@ export function generateRenderPlan(
 		);
 	};
 
+	/** Declares a texture a pass reads, and adds the passes making it before the one reading it. */
+	const include = (source: TextureSource) => {
+		resources.set(source.id, resourceOf(source));
+		if (source.kind === "render") {
+			const draw = source.draw;
+			if (draw) {
+				visit(
+					`textures:${draw.run.map((i) => i.id).join(",")}`,
+					draw.run.map((i) => i.id),
+					{ renderTexture: { path: draw.path, node: draw.node, items: draw.run } },
+					undefined,
+					source.size,
+					draw.like,
+				);
+				for (const item of draw.run) {
+					resources.set(item.id, {
+						id: item.id,
+						kind: "transient",
+						size: source.size,
+						format: item.format,
+					});
+				}
+			} else {
+				visit(source.id, [source.id], source.target, undefined, source.size);
+			}
+		}
+		if (source.kind === "state") {
+			const stage = source.read === "current" ? "step" : "start";
+			const items = runOf(source.simulation, source.texture);
+			if (items) visitSimulation(source.simulation, stage, items);
+		}
+	};
+
 	const visit = (
 		key: string,
 		writes: string[],
 		target?: ShaderTarget,
 		simulation?: PassDecl["simulation"],
 		targetSize?: TextureSize,
+		/** A texture the pass doesn't read, but its size follows. */
+		sizedBy?: TextureSource,
 	) => {
 		if (visited.has(key)) return;
 		visited.add(key);
@@ -153,24 +186,15 @@ export function generateRenderPlan(
 			frame,
 			targetSize: targetSize ?? CANVAS_SIZE,
 		});
-		for (const { source } of generated.textures) {
-			resources.set(source.id, resourceOf(source));
-			if (source.kind === "render") {
-				visit(source.id, [source.id], source.target, undefined, source.size);
-			}
-			if (source.kind === "state") {
-				const stage = source.read === "current" ? "step" : "start";
-				const items = runOf(source.simulation, source.texture);
-				if (items) visitSimulation(source.simulation, stage, items);
-			}
-		}
+		const read = generated.textures.map((t) => t.source);
+		for (const source of sizedBy ? [...read, sizedBy] : read) include(source);
 		Object.assign(uniforms, generated.uniforms);
 		const inline = generated.simulation;
 		passes.push({
 			id: `pass:${key}`,
 			kind: "render",
 			program: buildProgram(generated.shader, generated.uniforms, generated),
-			reads: generated.textures.map((t) => t.source.id),
+			reads: read.map((s) => s.id),
 			writes,
 			...(simulation
 				? { simulation }
@@ -208,6 +232,10 @@ export function generateRenderPlan(
 	};
 
 	visit(PLAN_TARGET, [PLAN_TARGET]);
+	// Frame values may read the size of a texture no pass reads.
+	for (const source of frame.sizedTextures()) {
+		if (!resources.has(source.id)) resources.set(source.id, resourceOf(source));
+	}
 	Object.assign(uniforms, frame.uniforms);
 	return { resources: [...resources.values()], passes, uniforms, frame: frame.program() };
 }

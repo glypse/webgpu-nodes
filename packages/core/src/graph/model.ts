@@ -63,6 +63,8 @@ const WIDGET_ROWS: Record<NodeWidget["kind"], number> = {
 	cases: 1,
 	// The thumbnail and the asset picker.
 	asset: 5,
+	// A row per item, two by default.
+	items: 2,
 };
 
 export type TypeChoice = {

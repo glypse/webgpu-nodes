@@ -9,6 +9,7 @@ import {
 import { buildIndexSwitchDescriptor, INDEX_SWITCH } from "../nodes/index-switch";
 import { buildMatchDescriptor } from "../nodes/match";
 import { nodeRegistry } from "../nodes/registry";
+import { buildRenderTextureDescriptor, RENDER_TEXTURE } from "../nodes/render-texture";
 import { type NodeDescriptor, withDefaults } from "../types";
 import { buildZoneDescriptor, isZoneNodeType } from "../zones";
 import {
@@ -47,6 +48,9 @@ export function resolveDescriptor(
 	}
 	if (node.type === INDEX_SWITCH) {
 		return buildIndexSwitchDescriptor(node.data);
+	}
+	if (node.type === RENDER_TEXTURE) {
+		return buildRenderTextureDescriptor(node.data);
 	}
 	if (node.type === COLOR_RAMP) {
 		return buildColorRampDescriptor(node.data);

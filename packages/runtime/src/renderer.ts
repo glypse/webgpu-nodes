@@ -289,6 +289,7 @@ export class CompiledPlan {
 	 * frame values its programs read.
 	 */
 	update(plan: RenderPlan) {
+		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
 		this.frameProgram = plan.frame;
 		plan.passes.forEach((decl, i) => {
 			this.passes[i]?.program.setFrameValues(decl.program.frameValues);
@@ -298,8 +299,18 @@ export class CompiledPlan {
 
 	/** Decode the media the plan reads at `time` (see `MediaLibrary.prepare`). */
 	prepare(time: number): Promise<TextureOf> {
-		const sources = this.passes.flatMap(({ program }) =>
-			program.program.textures.map((t) => t.source),
+		// Media only sized by frame values has to be decoded too, to know its size.
+		const sources = [...this.resources.values()].flatMap((r) =>
+			r.kind === "media"
+				? [
+						{
+							kind: "media" as const,
+							id: r.id,
+							asset: r.asset,
+							...(r.video ? { video: r.video } : {}),
+						},
+					]
+				: [],
 		);
 		return this.media.prepare(sources, time);
 	}
@@ -336,19 +347,51 @@ export class CompiledPlan {
 	) {
 		const steps = state.advance(this.plan, frame, target);
 		const canvas: Size = { width: target.width, height: target.height };
-		// Sizes are resolved once per frame, a resource's after those it's relative to.
+		const mediaOf: TextureOf = media ?? ((source) => this.media.texture(source, frame.time));
+		// Sizes are resolved once per frame, in the order of the passes writing them:
+		// a size may read the size of a texture an earlier pass made.
 		const sizes = new Map<string, Size>();
+		const resolving = new Set<string>();
+		const frameValues = (): FrameValues =>
+			evaluateFrame(this.frameProgram, {
+				time: frame.time,
+				delta: frame.delta,
+				frame: frame.frame,
+				canvas,
+				passSize: canvas,
+				textureSize: (id) => sizes.get(id) ?? mediaSize(id),
+				uniforms: this.uniforms,
+			} satisfies FrameEnv);
+		const mediaSize = (id: string): Size | undefined => {
+			const resource = this.resources.get(id);
+			if (resource?.kind !== "media") return undefined;
+			const texture = mediaOf({
+				kind: "media",
+				id,
+				asset: resource.asset,
+				...(resource.video ? { video: resource.video } : {}),
+			});
+			return { width: texture.width, height: texture.height };
+		};
 		const sizeOf = (id: string): Size | undefined => {
 			const known = sizes.get(id);
 			if (known) return known;
 			const resource = this.resources.get(id);
-			if (resource?.kind !== "transient")
+			if (resource?.kind === "media") return mediaSize(id);
+			if (resource?.kind !== "transient") {
 				return resource?.kind === "state" ? canvas : undefined;
+			}
+			// A size that depends on itself has nothing to start from.
+			if (resolving.has(id)) return canvas;
+			resolving.add(id);
+			let values: FrameValues | undefined;
 			const size = resolveSize(resource.size, {
 				canvas,
 				resource: sizeOf,
 				maxDimension: this.device.limits.maxTextureDimension2D,
+				frame: (ref) => (values ??= frameValues()).arg({ frame: ref }),
 			});
+			resolving.delete(id);
 			sizes.set(id, size);
 			return size;
 		};
@@ -360,7 +403,6 @@ export class CompiledPlan {
 				resource?.kind === "transient" ? resource.format : LINEAR_FORMAT,
 			);
 		};
-		const mediaOf: TextureOf = media ?? ((source) => this.media.texture(source, frame.time));
 		const stateTexture = (texture: string, read: "previous" | "current") =>
 			state.texture(texture, read) ?? this.media.emptyTexture;
 		const textureOf: TextureOf = (source) =>
@@ -380,6 +422,8 @@ export class CompiledPlan {
 			const simulation = decl.simulation;
 			return simulation?.stage !== "start" || steps.get(simulation.id)?.kind === "start";
 		});
+		// Every size is known before any pass is encoded, so frame values can read them.
+		for (const { decl } of drawn) for (const id of decl.writes) sizeOf(id);
 		const frameValuesOf: FrameValuesOf = (passSize) =>
 			evaluateFrame(this.frameProgram, {
 				time: frame.time,
@@ -387,6 +431,7 @@ export class CompiledPlan {
 				frame: frame.frame,
 				canvas,
 				passSize,
+				textureSize: (id) => sizes.get(id) ?? mediaSize(id),
 				uniforms: this.uniforms,
 			} satisfies FrameEnv);
 		const writes = timing?.pass();

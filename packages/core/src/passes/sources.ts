@@ -10,8 +10,18 @@ import {
 import type { GraphEdge, GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
+import {
+	RENDER_LIKE,
+	RENDER_PIXELS,
+	RENDER_SCALE,
+	RENDER_TEXTURE,
+	renderItemFormat,
+	renderItemType,
+	renderTextureItems,
+	storedSize,
+} from "../nodes/render-texture";
 import { IMAGE, VIDEO } from "../nodes/texture";
-import { isTexture, type TypeBindings, unavailableEdges } from "../types";
+import { isTexture, type TypeBindings, unavailableEdges, type WgslType } from "../types";
 import {
 	analyzeZones,
 	simulatingDefinitions,
@@ -21,6 +31,7 @@ import {
 	zoneItems,
 } from "../zones";
 import {
+	attachmentGroups,
 	simulationId,
 	type SimulationRef,
 	type SimulationState,
@@ -30,7 +41,7 @@ import {
 	stateReadId,
 	stateTextureId,
 } from "./simulation";
-import { CANVAS_SIZE, type TextureFormat, type TextureSize } from "./textures";
+import { CANVAS_SIZE, type FrameArg, type TextureFormat, type TextureSize } from "./textures";
 
 /** What a value linked to a Texture input is rendered into: the canvas' size, in half float. */
 export const IMPLICIT_RENDER = { size: CANVAS_SIZE, format: "rgba16float" } as const;
@@ -52,6 +63,8 @@ export type TextureSource =
 			target: SocketRef;
 			size: TextureSize;
 			format: TextureFormat;
+			/** Set for an item of a Render Texture node, drawn with the others of its run. */
+			draw?: RenderDraw;
 	  }
 	/** A simulation's state item, kept in a canvas-sized texture between frames. */
 	| {
@@ -64,6 +77,28 @@ export type TextureSource =
 			simulation: SimulationRef;
 	  }
 	| { kind: "empty"; id: typeof EMPTY_TEXTURE };
+
+/** An item of a Render Texture node as a pass draws it. */
+export type RenderItemDraw = {
+	/** The id of the texture it's drawn into. */
+	id: string;
+	/** The id of the item on the node. */
+	item: string;
+	type: WgslType;
+	format: TextureFormat;
+};
+
+/**
+ * How an item of a Render Texture node is drawn: one pass draws a run of its
+ * items, as colour attachments, at the node's size.
+ */
+export type RenderDraw = {
+	path: readonly string[];
+	node: string;
+	run: readonly RenderItemDraw[];
+	/** The texture its size is relative to, if it has one: it exists before the pass. */
+	like?: TextureSource;
+};
 
 /** An output of a node of the document computed at `path` (see `TextureSources.instance`). */
 export type SocketRef = { path: readonly string[]; node: string; handle: string };
@@ -93,6 +128,19 @@ export function mediaTextureId(asset: string, video?: VideoPlayback): string {
 		: `media:${asset}`;
 }
 
+/**
+ * Compiles the frame values sizes are made of. Sources have none until a
+ * plan gives them one: sizes then are the node's stored numbers.
+ */
+export type FrameSizing = {
+	inputArg(
+		path: readonly string[],
+		nodeId: string,
+		inputId: string,
+		component?: number,
+	): FrameArg | undefined;
+};
+
 export type TextureGraph = Pick<
 	GraphModel,
 	"root" | "project" | "typeResolver" | "resolveDescriptor" | "assets"
@@ -121,6 +169,9 @@ export class TextureSources {
 	private instances = new Map<string, Instance | undefined>();
 	private resolved = new Map<string, TextureResolution>();
 	private assets: ReadonlyMap<string, Asset>;
+	private visiting = new Set<string>();
+	/** Where the sizes of Render Textures' textures read their frame values. */
+	sizing?: FrameSizing;
 
 	constructor(private graph: TextureGraph) {
 		this.assets = new Map(graph.assets.map((a) => [a.id, a]));
@@ -269,6 +320,8 @@ export class TextureSources {
 					? this.unknownCase(node, "an enum known while compiling")
 					: this.input(path, nodeId, picked);
 			}
+			case RENDER_TEXTURE:
+				return this.renderTexture(path, instance, node, handleId);
 			case INDEX_SWITCH: {
 				const index = this.knownIndex(instance, node);
 				if (index === undefined)
@@ -279,6 +332,97 @@ export class TextureSources {
 			default:
 				return EMPTY;
 		}
+	}
+
+	/** An item of the Render Texture node `node`, drawn with the items of its run. */
+	private renderTexture(
+		path: readonly string[],
+		instance: Instance,
+		node: GraphNode,
+		handleId: string,
+	): TextureResolution {
+		const items = renderTextureItems(node.data).map((item) => ({
+			item,
+			type: renderItemType(item),
+			format: renderItemFormat(item),
+		}));
+		const own = items.find((i) => i.item.id === handleId);
+		if (!own) return EMPTY;
+		const feed = this.feed(path, node.id, handleId);
+		// A value is rendered once per frame: it can't change per iteration of a loop.
+		if (feed && this.readsZoneState(path, feed.source, feed.sourceHandle)) {
+			return {
+				kind: "invalid",
+				id: EMPTY_TEXTURE,
+				reason: "A value computed in a repeat zone can't be rendered to a texture: it changes with every iteration.",
+				edge: feed.id,
+			};
+		}
+		const run =
+			attachmentGroups(items).find((r) => r.some((i) => i.item.id === handleId)) ?? [];
+		const like = this.likeOf(path, instance, node, items[0]?.item.id);
+		const size = this.renderSize(path, node, like);
+		const target = { path, node: node.id, handle: handleId };
+		return {
+			kind: "render",
+			id: renderTextureId(target),
+			target,
+			size,
+			format: own.format,
+			draw: {
+				path,
+				node: node.id,
+				run: run.map((i) => ({
+					id: renderTextureId({ path, node: node.id, handle: i.item.id }),
+					item: i.item.id,
+					type: i.type,
+					format: i.format,
+				})),
+				...(like ? { like } : {}),
+			},
+		};
+	}
+
+	/**
+	 * What a Render Texture's scale is relative to: its `like` texture, else
+	 * the texture linked to its first item, else the canvas.
+	 */
+	private likeOf(
+		path: readonly string[],
+		instance: Instance,
+		node: GraphNode,
+		first: string | undefined,
+	): TextureSource | undefined {
+		const linked = (inputId: string): TextureSource | undefined => {
+			const edge = this.feed(path, node.id, inputId);
+			if (!edge) return undefined;
+			if (!isTexture(this.graph.typeResolver.inferHandleType(edge, instance.bindings))) {
+				return undefined;
+			}
+			const resolved = this.output(path, edge.source, edge.sourceHandle);
+			return resolved.kind === "invalid" || resolved.kind === "empty" ? undefined : resolved;
+		};
+		return linked(RENDER_LIKE) ?? (first === undefined ? undefined : linked(first));
+	}
+
+	private renderSize(
+		path: readonly string[],
+		node: GraphNode,
+		like: TextureSource | undefined,
+	): TextureSize {
+		const stored = storedSize(node.data, like ? { resource: like.id } : "canvas");
+		const sizing = this.sizing;
+		if (!sizing) return stored;
+		const arg = (inputId: string, component: number, fallback: FrameArg): FrameArg =>
+			sizing.inputArg(path, node.id, inputId, component) ?? fallback;
+		if (stored.kind === "pixels") {
+			return {
+				kind: "pixels",
+				width: arg(RENDER_PIXELS, 0, stored.width),
+				height: arg(RENDER_PIXELS, 1, stored.height),
+			};
+		}
+		return { ...stored, scale: arg(RENDER_SCALE, 0, stored.scale) };
 	}
 
 	private simulations = new Map<string, SimulationState | undefined>();
@@ -428,7 +572,18 @@ export class TextureSources {
 	private memo(key: string, compute: () => TextureResolution): TextureResolution {
 		const done = this.resolved.get(key);
 		if (done) return done;
+		// A texture sized by itself, through frame values, has no size to start from.
+		if (this.visiting.has(key)) {
+			return {
+				kind: "invalid",
+				id: EMPTY_TEXTURE,
+				reason: "A texture can't depend on itself.",
+				edge: "",
+			};
+		}
+		this.visiting.add(key);
 		const result = compute();
+		this.visiting.delete(key);
 		this.resolved.set(key, result);
 		return result;
 	}

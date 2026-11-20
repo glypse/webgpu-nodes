@@ -9,8 +9,17 @@ import {
 	type SocketSide,
 } from "../nodes/custom";
 import { clampCases, INDEX_SWITCH, indexSwitchCases } from "../nodes/index-switch";
+import {
+	DEFAULT_RENDER_FORMAT,
+	RENDER_LIKE,
+	RENDER_PIXELS,
+	RENDER_SCALE,
+	RENDER_TEXTURE,
+	renderTextureItems,
+} from "../nodes/render-texture";
+import type { TextureFormat } from "../passes/textures";
 import { isRampStopId, type RampStop, sortedRampStops } from "../ramp";
-import type { HandleDef, InputValue, WgslType } from "../types";
+import type { HandleDef, InputValue, WgslType, ZoneItem } from "../types";
 import type { GraphNode } from "./document";
 import { indexDocument } from "./hydrate";
 import { MAX_CODE_LENGTH } from "./limits";
@@ -18,7 +27,8 @@ import { GroupModel } from "./model-groups";
 
 /**
  * Editing nodes whose sockets are their own data: Custom WGSL nodes' code
- * and sockets, Index Switches' cases, Color Ramps' stops.
+ * and sockets, Index Switches' cases, Color Ramps' stops, Render Textures'
+ * items.
  */
 export abstract class CustomWgslModel extends GroupModel {
 	private customNode(nodeId: string): GraphNode | undefined {
@@ -168,5 +178,115 @@ export abstract class CustomWgslModel extends GroupModel {
 		indexDocument(doc);
 		this.invalidateTypes([node.id]);
 		this.rebuildTypeCache();
+	}
+
+	private renderNode(nodeId: string): GraphNode | undefined {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		return node?.type === RENDER_TEXTURE && !this.isLocked ? node : undefined;
+	}
+
+	/** The items of a Render Texture. */
+	getRenderItems(nodeId: string): ZoneItem[] {
+		const node = this.activeDocument.nodesById.get(nodeId);
+		return node?.type === RENDER_TEXTURE ? renderTextureItems(node.data) : [];
+	}
+
+	/** Write a Render Texture's items, dropping links to those gone or no longer fitting. */
+	private setRenderItems(node: GraphNode, items: ZoneItem[]) {
+		this.patchNodeData(new Map([[node.id, { ...node.data, items }]]));
+		this.invalidateTypes([node.id]);
+		const ids = new Set(items.map((i) => i.id));
+		const fixed = new Set([RENDER_SCALE, RENDER_PIXELS, RENDER_LIKE]);
+		const doc = this.activeDocument;
+		doc.edges = doc.edges.filter((e) => {
+			if (e.target === node.id && !fixed.has(e.targetHandle) && !ids.has(e.targetHandle)) {
+				return false;
+			}
+			if (e.source === node.id && !ids.has(e.sourceHandle)) return false;
+			if (e.source !== node.id && e.target !== node.id) return true;
+			const source = doc.nodesById.get(e.source);
+			const target = doc.nodesById.get(e.target);
+			return (
+				!!source &&
+				!!target &&
+				this.isTypeCompatible(source, e.sourceHandle, target, e.targetHandle)
+			);
+		});
+		indexDocument(doc);
+		this.rebuildTypeCache();
+	}
+
+	/** Append an item to a Render Texture, named freely; returns it. */
+	addRenderItem(
+		nodeId: string,
+		type: ZoneItem["type"] = "vec4f",
+		format: TextureFormat = DEFAULT_RENDER_FORMAT,
+	): ZoneItem | undefined {
+		const node = this.renderNode(nodeId);
+		if (!node) return undefined;
+		const items = renderTextureItems(node.data);
+		const labels = new Set(items.map((i) => i.label));
+		let label = "Color";
+		for (let n = 2; labels.has(label); n++) label = `Color ${String(n)}`;
+		const item: ZoneItem = { id: crypto.randomUUID(), label, type, format };
+		this.setRenderItems(node, [...items, item]);
+		return item;
+	}
+
+	removeRenderItem(nodeId: string, itemId: string) {
+		const node = this.renderNode(nodeId);
+		if (!node) return;
+		this.setRenderItems(
+			node,
+			renderTextureItems(node.data).filter((i) => i.id !== itemId),
+		);
+	}
+
+	/** Rename an item; rejects empty or duplicate names, returning whether it was applied. */
+	renameRenderItem(nodeId: string, itemId: string, label: string): boolean {
+		const node = this.renderNode(nodeId);
+		const name = label.trim();
+		if (!node || !name) return false;
+		const items = renderTextureItems(node.data);
+		if (items.some((i) => i.id !== itemId && i.label === name)) return false;
+		this.setRenderItems(
+			node,
+			items.map((i) => (i.id === itemId ? { ...i, label: name } : i)),
+		);
+		return true;
+	}
+
+	/** Change the format an item is kept in. */
+	setRenderItemFormat(nodeId: string, itemId: string, format: TextureFormat) {
+		const node = this.renderNode(nodeId);
+		if (!node) return;
+		this.setRenderItems(
+			node,
+			renderTextureItems(node.data).map((i) => (i.id === itemId ? { ...i, format } : i)),
+		);
+	}
+
+	/** Change the type of the values an item draws; links that no longer fit are removed. */
+	setRenderItemType(nodeId: string, itemId: string, type: WgslType) {
+		const node = this.renderNode(nodeId);
+		if (!node) return;
+		this.setRenderItems(
+			node,
+			renderTextureItems(node.data).map((i) => (i.id === itemId ? { ...i, type } : i)),
+		);
+	}
+
+	/** Move an item up (-1) or down (+1) among the node's. */
+	moveRenderItem(nodeId: string, itemId: string, offset: -1 | 1) {
+		const node = this.renderNode(nodeId);
+		if (!node) return;
+		const items = [...renderTextureItems(node.data)];
+		const index = items.findIndex((i) => i.id === itemId);
+		const other = items[index + offset];
+		const item = items[index];
+		if (!item || !other) return;
+		items[index] = other;
+		items[index + offset] = item;
+		this.setRenderItems(node, items);
 	}
 }

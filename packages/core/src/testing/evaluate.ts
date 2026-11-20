@@ -1,11 +1,15 @@
 import { clipToGamut } from "../color/display";
+import { FrameValueAnalysis } from "../frame/analysis";
+import { evaluateFrame, FrameCompiler } from "../frame/program";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
 import { coerce } from "../nodes/cpu";
 import { SAMPLE_TEXTURE, TEXTURE_SIZE } from "../nodes/texture";
+import { texelType } from "../passes/simulation";
 import { readSource, type TextureSource, TextureSources } from "../passes/sources";
+import { channelsOf, resolveSize, type Size, type TextureFormat } from "../passes/textures";
 import {
 	type CpuCtx,
 	isTexture,
@@ -45,6 +49,10 @@ type Env = {
 	images: ReadonlyMap<string, CpuTexture>;
 	/** Values rendered to textures so far, by texture id. */
 	renders: Map<string, CpuTexture>;
+	/** The frame values the sizes of textures read. */
+	frame: FrameCompiler;
+	/** The size of every texture resolved so far, by texture id. */
+	sizes: Map<string, Size>;
 };
 
 type Frame = {
@@ -82,7 +90,9 @@ export function evaluate(
 	resolution: readonly [number, number] = [1, 1],
 	{ uv = [0.5, 0.5], images = new Map() }: EvaluateOptions = {},
 ): Value {
-	const env: Env = { sources: new TextureSources(model), images, renders: new Map() };
+	const sources = new TextureSources(model);
+	const frame = new FrameCompiler(model, new FrameValueAnalysis(model, sources), sources);
+	const env: Env = { sources, images, renders: new Map(), frame, sizes: new Map() };
 	return output(model, rootFrame(model, env, uv, colorSpace, resolution), nodeId, handleId);
 }
 
@@ -133,16 +143,47 @@ function groupFrame(model: GraphModel, frame: Frame, node: GraphNode): Frame {
 
 const EMPTY_IMAGE: CpuTexture = { width: 1, height: 1, texel: () => [0, 0, 0, 0] };
 
+/** The size a render draws at, as the frame values of its plan are at the first moment. */
+function renderSize(model: GraphModel, frame: Frame, source: TextureSource & { kind: "render" }) {
+	const { env } = frame;
+	const canvas = { width: frame.resolution[0], height: frame.resolution[1] };
+	// What the size is made of is resolved before it's read.
+	const resolve = (texture: TextureSource) => {
+		if (texture.kind !== "empty") textureOf(model, frame, texture);
+	};
+	if (source.draw?.like) resolve(source.draw.like);
+	for (const texture of env.frame.sizedTextures()) resolve(texture);
+	const values = evaluateFrame(env.frame.program(), {
+		time: 0,
+		delta: 0,
+		frame: 0,
+		canvas,
+		passSize: canvas,
+		textureSize: (id) => env.sizes.get(id),
+	});
+	return resolveSize(source.size, {
+		canvas,
+		resource: (id) => env.sizes.get(id),
+		frame: (ref) => values.arg({ frame: ref }),
+	});
+}
+
 /** The image a texture source reads, rendering a value over the canvas when it's a render. */
 function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuTexture {
-	if (source.kind === "media") return frame.env.images.get(source.asset) ?? EMPTY_IMAGE;
+	const { env } = frame;
+	if (source.kind === "media") {
+		const image = env.images.get(source.asset) ?? EMPTY_IMAGE;
+		env.sizes.set(source.id, { width: image.width, height: image.height });
+		return image;
+	}
 	// Simulations aren't run here: their state reads nothing.
 	if (source.kind === "empty" || source.kind === "state") return EMPTY_IMAGE;
-	const done = frame.env.renders.get(source.id);
+	const done = env.renders.get(source.id);
 	if (done) return done;
-	const [width, height] = frame.resolution;
+	const { width, height } = renderSize(model, frame, source);
+	env.sizes.set(source.id, { width, height });
 	const texels = new Map<number, Value>();
-	const { target } = source;
+	const { target, draw } = source;
 	const texture: CpuTexture = {
 		width,
 		height,
@@ -151,7 +192,9 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 			const known = texels.get(key);
 			if (known) return known;
 			const uv = [(x + 0.5) / width, 1 - (y + 0.5) / height] as const;
-			let at = rootFrame(model, frame.env, uv, frame.colorSpace, frame.resolution);
+			// The pass' size is what its Resolution node gives.
+			const resolution = draw ? ([width, height] as const) : frame.resolution;
+			let at = rootFrame(model, env, uv, frame.colorSpace, resolution);
 			for (const id of target.path) {
 				const node = at.doc.nodesById.get(id);
 				if (!node) throw new Error(`no group node "${id}"`);
@@ -159,17 +202,37 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 			}
 			const node = at.doc.nodesById.get(target.node);
 			if (!node) throw new Error(`no node "${target.node}"`);
-			const type = valueType(
-				typesIn(model, at, node).resolvedOutputs.find((o) => o.id === target.handle)
-					?.type ?? "f32",
-			);
-			const value = fieldColor(output(model, at, target.node, target.handle), type);
+			let value: Value;
+			if (draw) {
+				const item = draw.run.find((i) => i.item === target.handle);
+				value = packTexel(
+					input(model, at, node, target.handle),
+					item?.type ?? "vec4f",
+					source.format,
+				);
+			} else {
+				const type = valueType(
+					typesIn(model, at, node).resolvedOutputs.find((o) => o.id === target.handle)
+						?.type ?? "f32",
+				);
+				value = fieldColor(output(model, at, target.node, target.handle), type);
+			}
 			texels.set(key, value);
 			return value;
 		},
 	};
-	frame.env.renders.set(source.id, texture);
+	env.renders.set(source.id, texture);
 	return texture;
+}
+
+/** A value as the texel of `format` keeping it, read back as a colour. */
+function packTexel(value: Value, type: WgslType, format: TextureFormat): Value {
+	const texel = coerce(coerce(value, type), texelType(format));
+	const channels = channelsOf(format);
+	return texel.map((c, i) => {
+		if (i >= channels) return i === 3 ? 1 : 0;
+		return format === "rgba8unorm" ? Math.round(Math.min(Math.max(c, 0), 1) * 255) / 255 : c;
+	});
 }
 
 /** A value as the colour it's rendered as (see codegen's `fieldColor`). */
@@ -249,14 +312,18 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 			frame.env.sources.output(frame.path, edge.source, edge.sourceHandle),
 		);
 		const texture = textureOf(model, frame, source);
-		const color =
-			source.kind === "render"
-				? texelAt(
-						texture,
-						Math.floor(frame.uv[0] * texture.width),
-						Math.floor((1 - frame.uv[1]) * texture.height),
-					)
-				: sampleTexture(texture, [...frame.uv], 0, 0);
+		// A render made for this size is read at the pixel, any other is stretched over it.
+		const exact =
+			source.kind === "render" &&
+			texture.width === frame.resolution[0] &&
+			texture.height === frame.resolution[1];
+		const color = exact
+			? texelAt(
+					texture,
+					Math.floor(frame.uv[0] * texture.width),
+					Math.floor((1 - frame.uv[1]) * texture.height),
+				)
+			: sampleTexture(texture, [...frame.uv], 0, 0);
 		return coerce(color, type);
 	}
 	if (edge) return coerce(output(model, frame, edge.source, edge.sourceHandle), type);

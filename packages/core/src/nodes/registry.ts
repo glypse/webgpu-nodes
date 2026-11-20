@@ -102,6 +102,7 @@ const DESCRIPTORS = {
 	[nodes.VIDEO]: nodes.videoNode,
 	[nodes.SAMPLE_TEXTURE]: nodes.sampleTextureNode,
 	[nodes.TEXTURE_SIZE]: nodes.textureSizeNode,
+	[nodes.RENDER_TEXTURE]: nodes.buildRenderTextureDescriptor({}),
 
 	// Misc
 	reroute: nodes.rerouteNode,

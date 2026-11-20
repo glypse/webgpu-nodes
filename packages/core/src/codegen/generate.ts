@@ -4,6 +4,7 @@ import { type FrameCompiler, frameValueField } from "../frame/program";
 import { type GraphEdge, ROOT_ID } from "../graph/document";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
+import { RENDER_TEXTURE } from "../nodes/render-texture";
 import {
 	MEDIA_NODE_TYPES,
 	SAMPLE_TEXTURE,
@@ -20,6 +21,7 @@ import {
 } from "../passes/simulation";
 import {
 	readSource,
+	type RenderItemDraw,
 	type SocketRef,
 	sourceFormat,
 	sourceSize,
@@ -418,10 +420,19 @@ export type SimulationTarget = {
 	items: readonly StateItem[];
 };
 
-export type ShaderTarget = SocketRef | SimulationTarget;
+/** Some of a Render Texture node's items, each drawn into the texture it gives. */
+export type RenderTextureTarget = {
+	renderTexture: { path: readonly string[]; node: string; items: readonly RenderItemDraw[] };
+};
+
+export type ShaderTarget = SocketRef | SimulationTarget | RenderTextureTarget;
 
 function isSimulationTarget(target: ShaderTarget): target is SimulationTarget {
 	return "simulation" in target;
+}
+
+function isRenderTextureTarget(target: ShaderTarget): target is RenderTextureTarget {
+	return "renderTexture" in target;
 }
 
 /**
@@ -434,9 +445,14 @@ function isSimulationTarget(target: ShaderTarget): target is SimulationTarget {
 type Probe = { path: readonly string[] } & (
 	| { kind: "socket"; node: string; handle: string }
 	| { kind: "simulation"; zone: string; stage: SimulationStage; items: readonly StateItem[] }
+	| { kind: "textures"; node: string; items: readonly RenderItemDraw[] }
 );
 
 function probeOf(target: ShaderTarget): Probe {
+	if (isRenderTextureTarget(target)) {
+		const { path, node, items } = target.renderTexture;
+		return { kind: "textures", path, node, items };
+	}
 	if (!isSimulationTarget(target)) return { kind: "socket", ...target };
 	const { simulation, stage, items } = target;
 	return { kind: "simulation", path: simulation.path, zone: simulation.zone, stage, items };
@@ -449,13 +465,17 @@ function innerProbe(probe: Probe): Probe {
 
 function probeKey(probe: Probe): string {
 	if (probe.kind === "socket") return `${[...probe.path, probe.node].join("/")}:${probe.handle}`;
+	if (probe.kind === "textures") {
+		return `${[...probe.path, probe.node].join("/")}:textures:${probe.items.map((i) => i.item).join(",")}`;
+	}
 	const items = probe.items.map((i) => i.texture).join(",");
 	return `${[...probe.path, probe.zone].join("/")}:${probe.stage}:${items}`;
 }
 
 /** The types of the values a probe gives: a colour, or a texel per state item. */
 function probeTypes(probe: Probe): WgslType[] {
-	return probe.kind === "socket" ? ["vec4f"] : probe.items.map((i) => texelType(i.format));
+	if (probe.kind === "socket") return ["vec4f"];
+	return probe.items.map((i) => texelType(i.format));
 }
 
 /** The output struct field of a group giving its caller a probe's `index`th value. */
@@ -684,6 +704,14 @@ class BodyEmitter {
 		const [inner] = probe.path;
 		if (inner) return probeTypes(probe).map((_, k) => `${getVarName(inner)}.${probeField(k)}`);
 		if (probe.kind === "simulation") return this.simulationFields;
+		if (probe.kind === "textures") {
+			const node = this.nodeMap.get(probe.node);
+			return node
+				? probe.items.map((i) =>
+						packState(this.inputExpr(node, i.item, i.type), i.type, i.format),
+					)
+				: [];
+		}
 		const edge = {
 			id: "",
 			source: probe.node,
@@ -786,7 +814,7 @@ class BodyEmitter {
 		const texture = (id: string) => isTexture(outputs.find((o) => o.id === id)?.type);
 		const probe = this.probe;
 		const seed =
-			probe && (probe.path[0] ?? (probe.kind === "socket" ? probe.node : "")) === node.id;
+			probe && (probe.path[0] ?? (probe.kind === "simulation" ? "" : probe.node)) === node.id;
 		if (outputs.length > 0 && read.every(texture) && !seed) return;
 		if (node.type === "node-group") {
 			this.emitGroupCall(node, indent);
@@ -1061,11 +1089,11 @@ function emitDocumentBody(
 	const probeNode =
 		probe &&
 		(probe.path[0] ??
-			(probe.kind === "socket"
-				? probe.node
-				: probe.stage === "start"
+			(probe.kind === "simulation"
+				? probe.stage === "start"
 					? probe.zone
-					: probeZone?.outputId));
+					: probeZone?.outputId
+				: probe.node));
 	const simulations = new Map<string, SimulationMode>();
 	for (const zone of zones.zones.values()) {
 		if (zone.kind !== "simulation") continue;
@@ -1121,11 +1149,22 @@ function emitDocumentBody(
 			)
 		);
 	};
+	// A Render Texture's values are computed by the pass drawing them, and only its items'.
+	const intoRenderTexture = (e: GraphEdge) => {
+		if (nodeMap.get(e.target)?.type !== RENDER_TEXTURE) return false;
+		return !(
+			probe?.kind === "textures" &&
+			probe.path.length === 0 &&
+			probe.node === e.target &&
+			probe.items.some((i) => i.item === e.targetHandle)
+		);
+	};
 	const validEdges = doc.edges.filter(
 		(e) =>
 			!zones.invalidEdges.has(e.id) &&
 			!unavailable.has(e.id) &&
 			!intoTexture(e) &&
+			!intoRenderTexture(e) &&
 			intoSimulation(e),
 	);
 	const edgesByTarget = new Map<string, GraphEdge[]>();
@@ -1339,6 +1378,7 @@ const TEXTURE_NODE_TYPES: ReadonlySet<string> = new Set([
 	TEXTURE_SIZE,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
+	RENDER_TEXTURE,
 ]);
 
 /** Whether a definition reads textures: itself, through its sockets or the groups it nests. */
@@ -1618,7 +1658,7 @@ export function generateShader(
 		probe,
 	);
 	const output = graph.root.nodes.find((n) => n.type === "frag-output");
-	const targets = probe?.kind === "simulation" ? probeTypes(probe) : undefined;
+	const targets = probe && probe.kind !== "socket" ? probeTypes(probe) : undefined;
 	const fields = probe && body.probeFields();
 	const result = targets
 		? `${TARGETS_STRUCT}(${(fields ?? []).join(", ")})`

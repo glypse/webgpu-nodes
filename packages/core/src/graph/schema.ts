@@ -6,6 +6,7 @@ import { CURVE_POINT_KINDS } from "../curve";
 import { FRAME_TINTS } from "../frames/analysis";
 import { isSocketName } from "../nodes/custom";
 import { NODE_TYPES } from "../nodes/registry";
+import { TEXTURE_FORMATS } from "../passes/textures";
 import { isRampStopId } from "../ramp/ramp";
 import { ScreenSchema, ViewportSchema } from "../screen/schema";
 import { COLOR_DISPLAYS, type NodeWidget, SOCKET_TYPES, WGSL_TYPES } from "../types";
@@ -70,7 +71,11 @@ const VariableTypeSchemas = [
 
 const HandleTypeSchema = v.union([v.picklist(SOCKET_TYPES), ...VariableTypeSchemas]);
 
-const ZoneItemSchema = v.object({ ...HandleFields, type: HandleTypeSchema });
+const ZoneItemSchema = v.object({
+	...HandleFields,
+	type: HandleTypeSchema,
+	format: v.optional(v.picklist(TEXTURE_FORMATS)),
+});
 
 const GroupHandleSchema = v.object({
 	...HandleFields,
@@ -231,4 +236,5 @@ export const NodeWidgetSchema = v.variant("kind", [
 	v.object({ kind: v.literal("code") }),
 	v.object({ kind: v.literal("cases") }),
 	v.object({ kind: v.literal("asset"), media: v.picklist(ASSET_KINDS) }),
+	v.object({ kind: v.literal("items") }),
 ]) satisfies v.GenericSchema<unknown, NodeWidget>;

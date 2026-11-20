@@ -86,7 +86,11 @@ export type ItemType = HandleType;
  * variables, so a loop carries values as wide as the group's; or (inferred)
  * the type of its initial value.
  */
-export type ZoneItem = Omit<HandleDef, "type"> & { type: ItemType };
+export type ZoneItem = Omit<HandleDef, "type"> & {
+	type: ItemType;
+	/** What it's kept in, where it isn't decided by its type. */
+	format?: TextureFormat;
+};
 
 /** A socket of a group's boundary node: a handle whose type may be decided per group node. */
 export type GroupHandleDef = Omit<HandleDef, "type"> & {
@@ -246,7 +250,8 @@ export type NodeWidget =
 	| NodeRampWidget
 	| NodeCodeWidget
 	| NodeCasesWidget
-	| NodeAssetWidget;
+	| NodeAssetWidget
+	| NodeItemsWidget;
 
 /** A hue / saturation wheel and a value ramp, editing the values of a colour's inputs. */
 export type NodeColorWidget = {
@@ -274,6 +279,9 @@ export type NodeCasesWidget = { kind: "cases" };
 
 /** The project asset of kind `media` the node reads (`NodeData.asset`), and how a video plays. */
 export type NodeAssetWidget = { kind: "asset"; media: AssetKind };
+
+/** The node's items (`NodeData.items`), each with a name and a format, added and removed. */
+export type NodeItemsWidget = { kind: "items" };
 
 export type ColorWidgetMode = {
 	space: ColorMode;
