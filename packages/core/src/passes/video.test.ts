@@ -3,7 +3,7 @@ import { describe, expect, it } from "bun:test";
 import * as v from "valibot";
 
 import { type Asset, AssetSchema, frameInterval } from "../assets/assets";
-import { generateShader } from "../codegen";
+import { generateRenderPlan, generateShader } from "../codegen";
 import { evaluateFrame, FrameCompiler } from "../frame/program";
 import { GraphModel } from "../graph/model";
 import { rootProject, type TestEdge, type TestNode } from "../testing/graph";
@@ -64,5 +64,70 @@ describe("video frame rate", () => {
 			[["vid", "interval", "out", "color"]],
 		);
 		expect(generateShader(graph).shader).toContain("f32(0.0399999");
+	});
+});
+
+function twoFrames() {
+	return model(
+		[
+			{ id: "now", type: "video", data: { asset: "v" } },
+			{ id: "before", type: "video", data: { asset: "v" } },
+			{ id: "time", type: "time" },
+			{ id: "back", type: "sub" },
+			{ id: "diff", type: "sub" },
+			{ id: "a", type: "sample-texture" },
+			{ id: "b", type: "sample-texture" },
+		],
+		[
+			["time", "seconds", "back", "a"],
+			["now", "interval", "back", "b"],
+			["back", "result", "before", "time"],
+			["now", "texture", "a", "texture"],
+			["before", "texture", "b", "texture"],
+			["a", "color", "diff", "a"],
+			["b", "color", "diff", "b"],
+			["diff", "result", "out", "color"],
+		],
+	);
+}
+
+describe("video time", () => {
+	it("gives every Video node a texture of its own, even on one asset", () => {
+		const plan = generateRenderPlan(twoFrames());
+		const videos = plan.resources.filter((r) => r.kind === "media");
+		expect(videos.map((r) => r.asset)).toEqual(["v", "v"]);
+		expect(new Set(videos.map((r) => r.id)).size).toBe(2);
+	});
+
+	it("shows the frame time by default, and the time linked to it otherwise", () => {
+		const plan = generateRenderPlan(twoFrames());
+		const [now, before] = plan.resources.filter((r) => r.kind === "media");
+		expect(now?.time).toBeUndefined();
+		const time = before?.time;
+		expect(typeof time).toBe("object");
+		const values = evaluateFrame(plan.frame, {
+			time: 3,
+			delta: 0,
+			frame: 0,
+			canvas: { width: 8, height: 8 },
+			passSize: { width: 8, height: 8 },
+		});
+		expect(time && values.arg(time)).toBe(Math.fround(3 - Math.fround(0.04)));
+	});
+
+	it("refuses a time computed per pixel", () => {
+		const graph = model(
+			[
+				{ id: "vid", type: "video", data: { asset: "v" } },
+				{ id: "uv", type: "uv" },
+				{ id: "x", type: "separate-vector" },
+			],
+			[
+				["uv", "uv", "x", "v"],
+				["x", "x", "vid", "time"],
+			],
+		);
+		const into = graph.root.edges.find((e) => e.target === "vid");
+		expect(into && graph.frameValueAnalysis().link([], into)?.kind).toBe("invalid");
 	});
 });

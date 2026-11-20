@@ -10,7 +10,12 @@ import {
 	stateReadId,
 } from "../passes/simulation";
 import { stateSource, type TextureSource, TextureSources } from "../passes/sources";
-import { CANVAS_SIZE, type TextureFormat, type TextureSize } from "../passes/textures";
+import {
+	CANVAS_SIZE,
+	type FrameArg,
+	type TextureFormat,
+	type TextureSize,
+} from "../passes/textures";
 import {
 	type CodegenGraph,
 	generateShader,
@@ -35,7 +40,8 @@ export type ResourceDecl =
 			/** Whether it has a full chain of mip levels, made after its pass. */
 			mips?: true;
 	  }
-	| { id: string; kind: "media"; asset: string; video?: VideoPlayback }
+	/** A video's `time`, if it has one: the project time it shows, else the frame's. */
+	| { id: string; kind: "media"; asset: string; video?: VideoPlayback; time?: FrameArg }
 	/**
 	 * A simulation's state item, as of the previous frame or this one: one of
 	 * the two textures keeping it (`texture`), which swap roles as frames go
@@ -101,6 +107,7 @@ function resourceOf(source: TextureSource): ResourceDecl {
 				kind: "media",
 				asset: source.asset,
 				...(source.video ? { video: source.video } : {}),
+				...(source.time === undefined ? {} : { time: source.time }),
 			};
 		case "state":
 			return {

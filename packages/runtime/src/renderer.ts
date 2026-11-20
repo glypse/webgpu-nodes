@@ -301,8 +301,24 @@ export class CompiledPlan {
 		this.setUniforms(plan.uniforms);
 	}
 
-	/** Decode the media the plan reads at `time` (see `MediaLibrary.prepare`). */
-	prepare(time: number): Promise<TextureOf> {
+	/**
+	 * The project time a media resource shows at `frame`: the frame's, unless
+	 * a video's `time` says another. `values` runs the frame program, only
+	 * when one is needed.
+	 */
+	private mediaTime(
+		id: string,
+		frame: FrameInputs,
+		values: () => FrameValues | undefined,
+	): number {
+		const resource = this.resources.get(id);
+		const time = resource?.kind === "media" ? resource.time : undefined;
+		if (time === undefined) return frame.time;
+		return typeof time === "number" ? time : (values()?.arg(time) ?? frame.time);
+	}
+
+	/** Decode the media the plan reads at `frame` (see `MediaLibrary.prepare`). */
+	prepare(frame: FrameInputs, canvas: Size): Promise<TextureOf> {
 		// Media only sized by frame values has to be decoded too, to know its size.
 		const sources = [...this.resources.values()].flatMap((r) =>
 			r.kind === "media"
@@ -316,7 +332,17 @@ export class CompiledPlan {
 					]
 				: [],
 		);
-		return this.media.prepare(sources, time);
+		let values: FrameValues | undefined;
+		const evaluated = () =>
+			(values ??= evaluateFrame(this.frameProgram, {
+				time: frame.time,
+				delta: frame.delta,
+				frame: frame.frame,
+				canvas,
+				passSize: canvas,
+				uniforms: this.uniforms,
+			} satisfies FrameEnv));
+		return this.media.prepare(sources, (source) => this.mediaTime(source.id, frame, evaluated));
 	}
 
 	/** A pass's own texture, of `size` and `format`, with all its mip levels if `mips`. */
@@ -362,7 +388,22 @@ export class CompiledPlan {
 		{ timing, media }: { timing?: FrameTiming; media?: TextureOf } = {},
 	) {
 		const canvas: Size = { width: target.width, height: target.height };
-		const mediaOf: TextureOf = media ?? ((source) => this.media.texture(source, frame.time));
+		// A time that reads the size of media is what's being decided: it has
+		// nothing to start from, so the frame's time stands in.
+		let evaluatingTimes = false;
+		let timeValues: FrameValues | undefined;
+		const timeOf = (id: string) =>
+			this.mediaTime(id, frame, () => {
+				if (evaluatingTimes) return undefined;
+				evaluatingTimes = true;
+				try {
+					return (timeValues ??= frameValues());
+				} finally {
+					evaluatingTimes = false;
+				}
+			});
+		const mediaOf: TextureOf =
+			media ?? ((source) => this.media.texture(source, timeOf(source.id)));
 		// Sizes are resolved once per frame, in the order of the passes writing them:
 		// a size may read the size of a texture an earlier pass made.
 		const sizes = new Map<string, Size>();
@@ -724,7 +765,7 @@ export class Renderer {
 		let start = performance.now();
 		for (const frame of frames) {
 			signal?.throwIfAborted();
-			const media = await plan.prepare(frame.time);
+			const media = await plan.prepare(frame, size);
 			const encoder = this.device.createCommandEncoder();
 			plan.encode(encoder, linear, frame, "srgb", state, { media });
 			this.device.queue.submit([encoder.finish()]);
@@ -765,7 +806,7 @@ export class Renderer {
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
 		});
 		try {
-			const media = await plan.prepare(frame.time);
+			const media = await plan.prepare(frame, size);
 			const encoder = this.device.createCommandEncoder();
 			plan.encode(encoder, linear, frame, colorSpace, state, { media });
 			this.presenter.encode(encoder, linear, output.createView(), {

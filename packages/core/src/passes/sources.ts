@@ -20,7 +20,7 @@ import {
 	rendersMips,
 	renderTextureItems,
 } from "../nodes/render-texture";
-import { IMAGE, VIDEO } from "../nodes/texture";
+import { IMAGE, VIDEO, VIDEO_TIME } from "../nodes/texture";
 import {
 	isTexture,
 	type TypeBindings,
@@ -62,8 +62,11 @@ export const EMPTY_TEXTURE = "empty";
  * sockets reading the same image have the same id.
  */
 export type TextureSource =
-	/** An asset's file, a video's frame at the project's time. */
-	| { kind: "media"; id: string; asset: string; video?: VideoPlayback }
+	/**
+	 * An asset's file, a video's frame at the project's time or, with `time`,
+	 * at that project time instead.
+	 */
+	| { kind: "media"; id: string; asset: string; video?: VideoPlayback; time?: FrameArg }
 	/** A value rendered over a texture of `size` and `format`, in a pass of its own. */
 	| {
 			kind: "render";
@@ -132,10 +135,13 @@ export type TextureResolution =
 
 const EMPTY: TextureSource = { kind: "empty", id: EMPTY_TEXTURE };
 
-/** The id of the texture an asset gives, played as `video` says when it's a video. */
-export function mediaTextureId(asset: string, video?: VideoPlayback): string {
+/**
+ * The id of the texture an asset gives, played as `video` says when it's a
+ * video: one per Video node (`owner`), as each shows a time of its own.
+ */
+export function mediaTextureId(asset: string, video?: VideoPlayback, owner = ""): string {
 	return video
-		? `media:${asset}:${String(video.start)}:${String(video.speed)}:${video.end}`
+		? `media:${asset}:${owner}:${String(video.start)}:${String(video.speed)}:${video.end}`
 		: `media:${asset}`;
 }
 
@@ -304,7 +310,7 @@ export class TextureSources {
 		switch (node.type) {
 			case IMAGE:
 			case VIDEO:
-				return this.media(node);
+				return this.media(path, node);
 			case SIMULATION_INPUT:
 				return this.state(path, instance, nodeId, handleId, "previous");
 			case SIMULATION_OUTPUT:
@@ -553,12 +559,17 @@ export class TextureSources {
 		return stateSource(state.ref, item, read);
 	}
 
-	private media(node: GraphNode): TextureSource {
+	private media(path: readonly string[], node: GraphNode): TextureSource {
 		const asset = node.data.asset;
 		if (asset === undefined || !this.assets.has(asset)) return EMPTY;
 		if (node.type !== VIDEO) return { kind: "media", id: mediaTextureId(asset), asset };
 		const video = node.data.playback ?? DEFAULT_PLAYBACK;
-		return { kind: "media", id: mediaTextureId(asset, video), asset, video };
+		const id = mediaTextureId(asset, video, [...path, node.id].join("/"));
+		// A time that isn't a frame value can't be read: the link is invalid.
+		const time = this.feed(path, node.id, VIDEO_TIME)
+			? this.sizing?.inputArg(path, node.id, VIDEO_TIME)
+			: undefined;
+		return { kind: "media", id, asset, video, ...(time === undefined ? {} : { time }) };
 	}
 
 	/** An Index Switch's index while compiling: set by the calling group node, or stored while unlinked. */

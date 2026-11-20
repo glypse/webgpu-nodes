@@ -18,6 +18,8 @@ export const SAMPLE_TEXTURE = "sample-texture";
 export const TEXTURE_SIZE = "texture-size";
 export const LOAD_TEXEL = "load-texel";
 
+/** The input of a Video node taking the time to show. */
+export const VIDEO_TIME = "time";
 /** The output of a Video node giving the seconds between its file's frames. */
 export const VIDEO_INTERVAL = "interval";
 /** The outputs of a Video node that are its file's, known while compiling. */
@@ -96,14 +98,18 @@ export const imageNode = defineNode({
 	],
 });
 
-/** A video file's frame at the project's time, played as its node's `playback` says. */
+/**
+ * A video file's frame at a time, played as its node's `playback` says. The
+ * time is the project's unless `time` is linked, which gives the project
+ * time to show instead.
+ */
 export const videoNode = defineNode({
 	type: VIDEO,
 	label: "Video",
 	aliases: ["Movie", "Movie File In", "Footage", "Clip", "Video Texture"],
 	category: "texture",
 	staticOutputTypes: true,
-	inputs: [],
+	inputs: [{ id: VIDEO_TIME, label: "time", types: ["f32"], frame: true, fallback: true }],
 	outputs: [
 		{ id: MEDIA_TEXTURE, label: "texture", type: "texture" },
 		{ id: "size", label: "size", type: "vec2f" },

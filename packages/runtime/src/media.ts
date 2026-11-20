@@ -12,6 +12,8 @@ import {
 const MEDIA_FORMAT: GPUTextureFormat = "rgba16float";
 /** Videos nothing has drawn for this long are closed, freeing their decoder. */
 const IDLE_SECONDS = 10;
+/** How many decoded samples of a video are kept, for sources showing the frames just before. */
+const RECENT_SAMPLES = 4;
 /** How far ahead a video decodes frame by frame rather than looking for a later key frame. */
 const SEEK_AHEAD_SECONDS = 2;
 
@@ -114,8 +116,9 @@ export class MediaLibrary {
 	private images = new Map<string, Image>();
 	private videos = new Map<string, VideoStream>();
 	/**
-	 * The videos `prepare` decodes. A stream holds a single frame, which drawing
-	 * `videos` at another time would otherwise replace before it's read.
+	 * The videos `prepare` decodes. A stream keeps the frames last decoded,
+	 * which drawing `videos` at other times would otherwise replace before
+	 * they're read.
 	 */
 	private preparedVideos = new Map<string, VideoStream>();
 	private copyDecoder: Decoder;
@@ -171,47 +174,63 @@ export class MediaLibrary {
 		return this.empty;
 	}
 
-	/** The texture `source` shows at project time `time`, decoded so far. */
+	/**
+	 * The texture `source` shows at project time `time` (what the source's own
+	 * `time` evaluates to, for a video), decoded so far.
+	 */
 	texture(source: TextureSource, time: number): GPUTexture {
 		if (source.kind !== "media") return this.empty;
 		const file = this.files(source.asset);
 		if (!file) return this.empty;
 		if (source.video) {
-			const stream = this.video(this.videos, source.id, file, source.video, () => {
+			const stream = this.video(this.videos, source.asset, file, () => {
 				this.onChange();
 			});
-			return stream.frameAt(time);
+			return stream.frameAt({ view: source.id, playback: source.video, time });
 		}
 		return this.image(source.asset, file).texture ?? this.empty;
 	}
 
 	/**
-	 * Decode what `sources` show at `time`, e.g. before reading an exported frame
-	 * back, whatever `texture` is asked for meanwhile. Returns their textures.
+	 * Decode what `sources` show, each at the project time `timeOf` gives it,
+	 * e.g. before reading an exported frame back, whatever `texture` is asked
+	 * for meanwhile. Returns their textures.
 	 */
-	async prepare(sources: readonly TextureSource[], time: number): Promise<TextureOf> {
+	async prepare(
+		sources: readonly TextureSource[],
+		timeOf: (source: TextureSource) => number,
+	): Promise<TextureOf> {
 		const frames = new Map<string, GPUTexture>();
-		await Promise.all(
-			sources.map(async (source) => {
-				if (source.kind !== "media") return;
-				const file = this.files(source.asset);
-				if (!file) return;
-				if (source.video) {
-					const stream = this.video(
-						this.preparedVideos,
-						source.id,
-						file,
-						source.video,
-						() => undefined,
-					);
-					await stream.decode(time);
-					frames.set(source.id, stream.current(time));
-				} else {
-					await this.loadImage(source.asset, file);
-				}
-			}),
-		);
-		return (source) => frames.get(source.id) ?? this.texture(source, time);
+		const groups = new Map<string, { stream: VideoStream; requests: VideoRequest[] }>();
+		const videos: { source: TextureSource; request: VideoRequest; stream: VideoStream }[] = [];
+		const loading: Promise<void>[] = [];
+		for (const source of sources) {
+			if (source.kind !== "media") continue;
+			const file = this.files(source.asset);
+			if (!file) continue;
+			if (source.video) {
+				const stream = this.video(this.preparedVideos, source.asset, file, () => undefined);
+				const request = {
+					view: source.id,
+					playback: source.video,
+					time: timeOf(source),
+				};
+				videos.push({ source, request, stream });
+				const group = groups.get(source.asset) ?? { stream, requests: [] };
+				group.requests.push(request);
+				groups.set(source.asset, group);
+			} else {
+				loading.push(this.loadImage(source.asset, file));
+			}
+		}
+		await Promise.all([
+			...loading,
+			...[...groups.values()].map((group) => group.stream.decode(group.requests)),
+		]);
+		for (const { source, request, stream } of videos) {
+			frames.set(source.id, stream.current(request));
+		}
+		return (source) => frames.get(source.id) ?? this.texture(source, timeOf(source));
 	}
 
 	destroy() {
@@ -269,19 +288,19 @@ export class MediaLibrary {
 		return texture;
 	}
 
+	/** The stream decoding an asset's video, one for all the sources showing it. */
 	private video(
 		videos: Map<string, VideoStream>,
-		id: string,
+		asset: string,
 		file: Blob,
-		playback: VideoPlayback,
 		onFrame: () => void,
 	): VideoStream {
 		this.closeIdleVideos();
-		const known = videos.get(id);
+		const known = videos.get(asset);
 		if (known?.file === file) return known;
 		known?.close();
-		const stream = new VideoStream(file, playback, this, onFrame);
-		videos.set(id, stream);
+		const stream = new VideoStream(file, this, onFrame);
+		videos.set(asset, stream);
 		return stream;
 	}
 
@@ -289,7 +308,10 @@ export class MediaLibrary {
 		const now = performance.now() / 1000;
 		for (const videos of [this.videos, this.preparedVideos]) {
 			for (const [id, stream] of videos) {
-				if (now - stream.lastUsed < IDLE_SECONDS) continue;
+				if (now - stream.lastUsed < IDLE_SECONDS) {
+					stream.dropIdleViews();
+					continue;
+				}
 				stream.close();
 				videos.delete(id);
 			}
@@ -399,31 +421,38 @@ export class MediaLibrary {
 	}
 }
 
+/** What a stream keeps of a source showing it: its texture, and the sample that's in it. */
+type View = { texture?: GPUTexture; shown?: VideoSample; lastUsed: number };
+
+/** What a source asks of a stream: the project time it shows, played as its node says. */
+export type VideoRequest = { view: string; playback: VideoPlayback; time: number };
+
 /**
- * One video played one way: decodes the frame each requested time shows,
- * frame by frame while it moves forward, seeking otherwise. Only the latest
- * request waiting is decoded, so a frame that must be the one asked for needs
- * a stream nothing else requests from. The texture only takes the last frame
- * decoded when it's read, so frames nothing draws cost no GPU time, and a
+ * One video file, shared by every source showing it. Decodes the frames
+ * the sources' times need, frame by frame while they move forward, seeking
+ * otherwise, and keeps the latest few decoded samples, so a source showing
+ * the frame before another's costs no decode. Only the latest request of
+ * each source waiting is decoded, so a frame that must be the one asked for
+ * needs a stream nothing else requests from. A source's texture only takes
+ * a sample when it's read, so frames nothing draws cost no GPU time, and a
  * video decoding slower than it plays keeps moving, late, until it seeks.
  */
 class VideoStream {
 	lastUsed = performance.now() / 1000;
 	private input: Input;
 	private sink: Promise<OpenVideo | undefined>;
-	private texture: GPUTexture | undefined;
+	private views = new Map<string, View>();
 	private samples: AsyncGenerator<VideoSample, void> | undefined;
-	/** The last sample read from `samples`, still open. */
-	private ahead: VideoSample | undefined;
-	/** The sample the texture shows. */
-	private shown: VideoSample | undefined;
+	/** The samples read most recently, in order: the last is the one read last. */
+	private recent: VideoSample[] = [];
+	private capacity = RECENT_SAMPLES;
 	private decoding: Promise<void> | undefined;
-	private wanted: number | undefined;
+	private wanted = new Map<string, number>();
+	private duration: number | undefined;
 	private closed = false;
 
 	constructor(
 		readonly file: Blob,
-		private playback: VideoPlayback,
 		private library: MediaLibrary,
 		private onFrame: () => void,
 	) {
@@ -448,53 +477,86 @@ class VideoStream {
 		}
 	}
 
-	/** The frame shown at project time `time`, decoded so far; it asks for the right one. */
-	frameAt(time: number): GPUTexture {
+	/** The frame a source shows, decoded so far; it asks for the right one. */
+	frameAt(request: VideoRequest): GPUTexture {
 		this.lastUsed = performance.now() / 1000;
-		this.request(time).catch((error: unknown) => {
+		this.request([request]).catch((error: unknown) => {
 			console.error("[media] can't decode a video frame", error);
 		});
-		return this.current(time);
+		return this.current(request);
 	}
 
-	/** Decode the frame shown at project time `time`. */
-	async decode(time: number): Promise<void> {
+	/** Decode the frames sources show, together: one may need what another read. */
+	async decode(requests: readonly VideoRequest[]): Promise<void> {
 		this.lastUsed = performance.now() / 1000;
-		await this.request(time);
+		this.capacity = Math.max(RECENT_SAMPLES, requests.length + 1);
+		await this.request(requests);
 	}
 
-	current(time: number): GPUTexture {
-		const sample = this.ahead;
-		if (sample && sample !== this.shown) {
+	current({ view, playback, time }: VideoRequest): GPUTexture {
+		const entry = this.view(view);
+		const t = this.timeIn(playback, time);
+		const sample = t === undefined ? undefined : this.sampleAt(t);
+		if (sample && sample !== entry.shown) {
 			const frame = sample.toVideoFrame();
-			this.texture = this.library.uploadFrame(
+			entry.texture = this.library.uploadFrame(
 				frame,
 				Math.round(sample.rotation / 90),
-				this.texture,
+				entry.texture,
 			);
 			frame.close();
-			this.shown = sample;
+			entry.shown = sample;
 		}
-		return this.texture && this.timeIn(time) !== undefined
-			? this.texture
-			: this.library.emptyTexture;
+		return entry.texture && t !== undefined ? entry.texture : this.library.emptyTexture;
+	}
+
+	private view(id: string): View {
+		let view = this.views.get(id);
+		if (!view) {
+			view = { lastUsed: 0 };
+			this.views.set(id, view);
+		}
+		view.lastUsed = performance.now() / 1000;
+		return view;
+	}
+
+	/** Frees the textures of sources nothing has drawn for a while. */
+	dropIdleViews() {
+		const now = performance.now() / 1000;
+		for (const [id, view] of this.views) {
+			if (now - view.lastUsed < IDLE_SECONDS) continue;
+			view.texture?.destroy();
+			this.views.delete(id);
+		}
 	}
 
 	/** Video time at project time `time`, given the file's duration once known. */
-	private timeIn(time: number, duration = this.duration): number | undefined {
-		return duration === undefined ? undefined : videoTime(this.playback, time, duration);
+	private timeIn(playback: VideoPlayback, time: number): number | undefined {
+		return this.duration === undefined ? undefined : videoTime(playback, time, this.duration);
 	}
 
-	private duration: number | undefined;
+	/** The sample showing at video time `t`, else the closest read before it, or after. */
+	private sampleAt(t: number): VideoSample | undefined {
+		const covering = this.covering(t);
+		if (covering) return covering;
+		let before: VideoSample | undefined;
+		for (const sample of this.recent) if (sample.timestamp <= t) before = sample;
+		return before ?? this.recent[0];
+	}
 
-	private async request(time: number): Promise<void> {
+	private covering(t: number): VideoSample | undefined {
+		return this.recent.find((s) => t >= s.timestamp && t < sampleEnd(s));
+	}
+
+	private async request(requests: readonly VideoRequest[]): Promise<void> {
 		const opened = await this.sink;
 		if (!opened || this.closed) return;
 		this.duration = opened.duration;
-		const t = this.timeIn(time, opened.duration);
-		const ahead = this.ahead;
-		if (t === undefined || (ahead && t >= ahead.timestamp && t < sampleEnd(ahead))) return;
-		this.wanted = t;
+		for (const { view, playback, time } of requests) {
+			const t = this.timeIn(playback, time);
+			if (t !== undefined && !this.covering(t)) this.wanted.set(view, t);
+		}
+		if (this.wanted.size === 0) return;
 		this.decoding ??= this.decodeWanted(opened)
 			.catch((error: unknown) => {
 				// Closing disposes of the input it's reading.
@@ -507,16 +569,20 @@ class VideoStream {
 	}
 
 	private async decodeWanted(video: OpenVideo) {
-		while (this.wanted !== undefined && !this.closed) {
-			const t = this.wanted;
-			this.wanted = undefined;
-			await this.readTo(video, t);
+		// Sources asking in the same turn are decoded together, earliest first, so
+		// reading forward to a later one doesn't throw away an earlier one's.
+		await Promise.resolve();
+		while (this.wanted.size > 0 && !this.closed) {
+			const times = [...this.wanted.values()].sort((a, b) => a - b);
+			this.wanted.clear();
+			for (const t of times) await this.readTo(video, t);
 		}
 	}
 
 	/** Read samples up to the one shown at video time `t`, from the last one or a seek. */
 	private async readTo(video: OpenVideo, t: number) {
-		const from = this.ahead?.timestamp;
+		if (this.covering(t)) return;
+		const from = this.recent.at(-1)?.timestamp;
 		if (!this.samples || from === undefined || t < from) {
 			await this.seek(video, t);
 		} else if (t > from + SEEK_AHEAD_SECONDS) {
@@ -527,37 +593,34 @@ class VideoStream {
 			if (key && key.timestamp > from) await this.seek(video, key.timestamp);
 		}
 		for (;;) {
-			const ahead = this.ahead;
+			const ahead = this.recent.at(-1);
 			if (ahead && sampleEnd(ahead) > t) return;
 			const next = await this.samples?.next();
 			if (!next || next.done) return;
-			ahead?.close();
-			if (this.isClosed()) {
+			if (this.closed) {
 				next.value.close();
 				return;
 			}
-			this.ahead = next.value;
+			this.recent.push(next.value);
+			while (this.recent.length > this.capacity) this.recent.shift()?.close();
 			this.onFrame();
 		}
 	}
 
 	private async seek({ sink }: OpenVideo, t: number) {
 		await this.samples?.return();
-		this.ahead?.close();
-		this.ahead = undefined;
+		for (const sample of this.recent) sample.close();
+		this.recent = [];
 		this.samples = sink.samples(t);
-	}
-
-	private isClosed(): boolean {
-		return this.closed;
 	}
 
 	close() {
 		this.closed = true;
 		void this.samples?.return();
-		this.ahead?.close();
-		this.ahead = undefined;
-		this.texture?.destroy();
+		for (const sample of this.recent) sample.close();
+		this.recent = [];
+		for (const view of this.views.values()) view.texture?.destroy();
+		this.views.clear();
 		this.input.dispose();
 	}
 }
