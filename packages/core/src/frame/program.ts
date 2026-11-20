@@ -1,9 +1,16 @@
+import { frameInterval } from "../assets/assets";
 import { identSuffix, uniformName, type UniformValue, uniformValue } from "../codegen/literals";
 import { ROOT_ID } from "../graph/document";
 import { componentKeys, readComponent } from "../graph/values";
 import { coerce } from "../nodes/cpu";
 import { nodeRegistry } from "../nodes/registry";
-import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL } from "../nodes/texture";
+import {
+	TEXTURE_SIZE,
+	TEXTURE_SIZE_LEVEL,
+	VIDEO,
+	VIDEO_INTERVAL,
+	VIDEO_METADATA,
+} from "../nodes/texture";
 import {
 	readSource,
 	type TextureGraph,
@@ -415,6 +422,12 @@ export class FrameCompiler {
 					handleId,
 				);
 				return this.ref(ref);
+			}
+			case VIDEO: {
+				if (!VIDEO_METADATA.has(handleId)) return undefined;
+				const asset = this.graph.assets.find((a) => a.id === node.data.asset);
+				if (handleId === VIDEO_INTERVAL) return literal([frameInterval(asset)]);
+				return literal([Math.fround(asset?.kind === "video" ? asset.duration : 0)]);
 			}
 			case "group-input": {
 				const parent = path.at(-1);

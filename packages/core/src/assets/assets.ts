@@ -47,6 +47,8 @@ export const AssetSchema = v.pipe(
 			...AssetFields,
 			/** Seconds. */
 			duration: v.pipe(FiniteSchema, v.minValue(0)),
+			/** Frames per second, averaged for a variable frame rate. */
+			frameRate: v.pipe(FiniteSchema, v.minValue(0)),
 		}),
 	]),
 	v.check(
@@ -114,6 +116,11 @@ export const VideoPlaybackSchema = v.object({
 export type VideoPlayback = v.InferOutput<typeof VideoPlaybackSchema>;
 
 export const DEFAULT_PLAYBACK: VideoPlayback = { start: 0, speed: 1, end: "loop" };
+
+/** The seconds between a video's frames: 0 when its frame rate isn't known. */
+export function frameInterval(asset: Asset | undefined): number {
+	return asset?.kind === "video" && asset.frameRate > 0 ? Math.fround(1 / asset.frameRate) : 0;
+}
 
 /**
  * The time in a video of `duration` seconds shown at project time `time`,

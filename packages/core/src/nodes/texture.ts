@@ -1,3 +1,4 @@
+import { frameInterval } from "../assets/assets";
 import { formatWgslLiteral } from "../codegen/literals";
 import { FRAGMENT_VAR } from "../codegen/program";
 import { readTexture } from "../codegen/texture-read";
@@ -16,6 +17,11 @@ export const VIDEO = "video";
 export const SAMPLE_TEXTURE = "sample-texture";
 export const TEXTURE_SIZE = "texture-size";
 export const LOAD_TEXEL = "load-texel";
+
+/** The output of a Video node giving the seconds between its file's frames. */
+export const VIDEO_INTERVAL = "interval";
+/** The outputs of a Video node that are its file's, known while compiling. */
+export const VIDEO_METADATA: ReadonlySet<string> = new Set(["duration", VIDEO_INTERVAL]);
 
 /** The output of an Image or Video node giving its file's frames. */
 export const MEDIA_TEXTURE = "texture";
@@ -102,6 +108,7 @@ export const videoNode = defineNode({
 		{ id: MEDIA_TEXTURE, label: "texture", type: "texture" },
 		{ id: "size", label: "size", type: "vec2f" },
 		{ id: "duration", label: "duration", type: "f32" },
+		{ id: VIDEO_INTERVAL, label: "frame interval", type: "f32" },
 	],
 	defaultData: {},
 	widget: { kind: "asset", media: "video" },
@@ -111,6 +118,7 @@ export const videoNode = defineNode({
 		return [
 			`let ${ctx.outputVars.size ?? "size"} = vec2f(textureDimensions(${ctx.texture(MEDIA_TEXTURE)}));`,
 			`let ${ctx.outputVars.duration ?? "duration"} = ${formatWgslLiteral("f32", duration)};`,
+			`let ${ctx.outputVars[VIDEO_INTERVAL] ?? "interval"} = ${formatWgslLiteral("f32", frameInterval(asset))};`,
 		];
 	},
 });

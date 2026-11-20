@@ -1,6 +1,6 @@
 import { MATCH, matchedCase, WIDTH_SWITCH, widthCase } from "../enums";
 import type { GraphEdge } from "../graph/document";
-import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL } from "../nodes/texture";
+import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL, VIDEO, VIDEO_METADATA } from "../nodes/texture";
 import { COMPONENT_COUNT } from "../nodes/vector";
 import { type TextureGraph, TextureSources } from "../passes/sources";
 import { isTexture } from "../types";
@@ -164,6 +164,9 @@ export class FrameValueAnalysis {
 		if (FRAME_SOURCES.has(type)) return YES;
 		// A texture's size is known to the runtime, at the level asked for.
 		if (type === TEXTURE_SIZE) return this.input(path, nodeId, TEXTURE_SIZE_LEVEL);
+		if (type === VIDEO) {
+			return VIDEO_METADATA.has(handleId) ? YES : no(`${label}'s frame is read per pixel.`);
+		}
 		if (type === "group-input") {
 			const parent = path.at(-1);
 			return parent === undefined

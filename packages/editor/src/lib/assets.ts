@@ -2,6 +2,9 @@ import { type Asset, assetFile, assetHash, assetKindOf, assetName } from "$core"
 import { ALL_FORMATS, BlobSource, Input } from "mediabunny";
 import { SvelteMap } from "svelte/reactivity";
 
+/** Enough packets for a good estimate without reading a whole file. */
+const PACKETS_FOR_FRAME_RATE = 600;
+
 async function probeVideo(file: Blob) {
 	const input = new Input({ formats: ALL_FORMATS, source: new BlobSource(file) });
 	try {
@@ -11,6 +14,7 @@ async function probeVideo(file: Blob) {
 			width: await track.getDisplayWidth(),
 			height: await track.getDisplayHeight(),
 			duration: await input.computeDuration(),
+			frameRate: (await track.computePacketStats(PACKETS_FOR_FRAME_RATE)).averagePacketRate,
 		};
 	} finally {
 		input.dispose();
