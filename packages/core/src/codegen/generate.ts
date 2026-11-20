@@ -3,7 +3,6 @@ import { constantAt, type EnumDocument, groupConstants, liveEdges } from "../enu
 import { type GraphEdge, ROOT_ID } from "../graph/document";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
-import { componentKeys, readComponent } from "../graph/values";
 import {
 	MEDIA_NODE_TYPES,
 	SAMPLE_TEXTURE,
@@ -49,7 +48,6 @@ import {
 	isUniformControl,
 	makeType,
 	typeComponents,
-	typeKind,
 	unavailableEdges,
 	valueType,
 	valueTypes,
@@ -75,7 +73,13 @@ import {
 	zoneMaxIterations,
 } from "../zones";
 import { HelperRegistry } from "./helpers";
-import { formatWgslLiteral, scalarNumber } from "./literals";
+import {
+	formatWgslLiteral,
+	identSuffix,
+	uniformName,
+	type UniformValue,
+	uniformValue,
+} from "./literals";
 import {
 	FRAGMENT_VAR,
 	FRAME_VAR,
@@ -223,11 +227,6 @@ function neededEdges(
 	}
 }
 
-/** WGSL identifiers can't contain characters like "-" from a UUID's dashes. */
-function identSuffix(id: string): string {
-	return id.replace(/[^A-Za-z0-9_]/g, "_");
-}
-
 function getVarName(nodeId: string): string {
 	return `v_${identSuffix(nodeId)}`;
 }
@@ -365,13 +364,6 @@ type ShaderState = {
 	/** The simulation the shader computes something of (by `simulationId`), if any. */
 	simulation?: string;
 };
-
-/**
- * A uniform's value: a number for an f32, its components for a vecNf.
- * Uniforms are always floats, converted to the input's type in the shader.
- */
-export type UniformValue =
-	number | [number, number] | [number, number, number] | [number, number, number, number];
 
 /** A generated fragment, the uniform values it reads and the textures it samples. */
 export type ShaderSource = {
@@ -722,11 +714,7 @@ class BodyEmitter {
 				.resolveDescriptor(node)
 				.inputs.find((i) => i.id === inputId);
 			if (!input || isUniformControl(inputControl(input, target))) {
-				return this.uniformExpr(
-					`u_${identSuffix(node.id)}_${identSuffix(inputId)}`,
-					target,
-					value,
-				);
+				return this.uniformExpr(uniformName(node.id, inputId), target, value);
 			}
 		}
 		return formatWgslLiteral(target, value);
@@ -739,28 +727,17 @@ class BodyEmitter {
 		const [x = 0, y = 0, z = 0, w = 0] = components;
 		const stored: InputValue = components.length === 1 ? x : { x, y, z, w };
 		if (this.uniforms) {
-			return this.uniformExpr(`u_${identSuffix(node.id)}_${identSuffix(key)}`, type, stored);
+			return this.uniformExpr(uniformName(node.id, key), type, stored);
 		}
 		return formatWgslLiteral(type, stored);
 	}
 
 	/** Declare a uniform holding `value`, and read it as `target`. */
 	private uniformExpr(name: string, target: WgslType, value: InputValue | undefined): string {
-		const kind = typeKind(target);
-		const components = componentKeys(target).map((c) =>
-			scalarNumber(kind, readComponent(value, c)),
-		);
-		const [x = 0, y = 0, z = 0, w = 0] = components;
-		const uniform: UniformValue =
-			components.length === 1
-				? x
-				: components.length === 2
-					? [x, y]
-					: components.length === 3
-						? [x, y, z]
-						: [x, y, z, w];
+		const uniform = uniformValue(target, value);
+		const components = typeComponents(target);
 		this.state.uniforms.set(name, uniform);
-		const source = makeType("f32", components.length);
+		const source = makeType("f32", components);
 		return convertVar(`${UNIFORMS_VAR}.${name}`, source, target);
 	}
 

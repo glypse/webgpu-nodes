@@ -15,8 +15,8 @@ import {
 	type ShaderOptions,
 	type ShaderTarget,
 	type SimulationStage,
-	type UniformValue,
 } from "./generate";
+import type { UniformValue } from "./literals";
 import { buildProgram, type ShaderProgram } from "./program";
 
 /** What the last pass of a plan writes: the frame drawn. */

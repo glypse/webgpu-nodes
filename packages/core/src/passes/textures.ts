@@ -1,3 +1,5 @@
+import type { FrameRef } from "../frame/program";
+
 export const TEXTURE_FORMATS = [
 	"rgba16float",
 	"rg16float",
@@ -15,8 +17,8 @@ export const TEXTURE_FORMATS = [
 ] as const;
 export type TextureFormat = (typeof TEXTURE_FORMATS)[number];
 
-/** A frame value as plans carry it. Only literals until frame values exist. */
-export type FrameArg = number;
+/** A frame value as plans carry it: a literal, or a value of the plan's frame program. */
+export type FrameArg = number | { frame: FrameRef };
 
 /** A size: a scale of the canvas or of another resource, or pixels. */
 export type TextureSize =
@@ -32,6 +34,8 @@ export type SizeEnv = {
 	resource: (id: string) => Size | undefined;
 	/** WebGPU's `maxTextureDimension2D`. */
 	maxDimension?: number;
+	/** The value of a frame program's output, which sizes made of frame values need. */
+	frame?: (ref: FrameRef) => number;
 };
 
 /** The canvas' own size. */
@@ -117,14 +121,24 @@ export function sameSize(a: TextureSize, b: TextureSize): boolean {
 		return (
 			a.kind === "pixels" &&
 			b.kind === "pixels" &&
-			a.width === b.width &&
-			a.height === b.height
+			sameArg(a.width, b.width) &&
+			sameArg(a.height, b.height)
 		);
 	}
 	const sameBase =
 		a.of === b.of ||
 		(typeof a.of === "object" && typeof b.of === "object" && a.of.resource === b.of.resource);
-	return sameBase && a.scale === b.scale;
+	return sameBase && sameArg(a.scale, b.scale);
+}
+
+/** Whether two frame arguments are the same literal or the same value of the frame program. */
+export function sameArg(a: FrameArg, b: FrameArg): boolean {
+	if (typeof a === "number" || typeof b === "number") return a === b;
+	return (
+		a.frame.step === b.frame.step &&
+		a.frame.output === b.frame.output &&
+		(a.frame.component ?? 0) === (b.frame.component ?? 0)
+	);
 }
 
 /** Whether `size` is the canvas' own. */
@@ -144,16 +158,22 @@ function pixels(value: number, max: number): number {
  */
 export function resolveSize(size: TextureSize, env: SizeEnv): Size {
 	const max = env.maxDimension ?? Infinity;
+	const arg = (value: FrameArg): number => {
+		if (typeof value === "number") return value;
+		if (!env.frame) throw new Error("A size reads a frame value, but none were computed.");
+		return env.frame(value.frame);
+	};
 	if (size.kind === "pixels") {
-		return { width: pixels(size.width, max), height: pixels(size.height, max) };
+		return { width: pixels(arg(size.width), max), height: pixels(arg(size.height), max) };
 	}
+	const scale = arg(size.scale);
 	let base: Size | undefined = env.canvas;
 	if (size.of !== "canvas") {
 		base = env.resource(size.of.resource);
 		if (!base) throw new Error(`Unknown resource "${size.of.resource}" in a size.`);
 	}
 	return {
-		width: pixels(base.width * size.scale, max),
-		height: pixels(base.height * size.scale, max),
+		width: pixels(base.width * scale, max),
+		height: pixels(base.height * scale, max),
 	};
 }

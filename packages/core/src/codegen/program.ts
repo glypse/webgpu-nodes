@@ -1,7 +1,7 @@
 import { sourceFormat, type TextureSource } from "../passes/sources";
 import { sampleTypeOf, type TextureSampleType } from "../passes/textures";
 import { type SamplerAddress, type SamplerFilter, type WgslType, wgslTypeName } from "../types";
-import type { UniformValue } from "./generate";
+import type { UniformValue } from "./literals";
 
 /** What the generated code reads per draw: the frame's timing and the target's size and gamut. */
 export const FRAME_VAR = "runtime_frame";

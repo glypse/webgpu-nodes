@@ -56,6 +56,40 @@ export class FrameValueAnalysis {
 		return result.frame ? undefined : result.reason;
 	}
 
+	/**
+	 * The inputs of a node of the document computed at `path` its value
+	 * depends on: those a Match, Width Switch or Fallback doesn't pick are
+	 * left out, as is whatever a Component Count reads (only its type).
+	 */
+	inputsRead(path: readonly string[], nodeId: string): string[] {
+		const instance = this.sources.instance(path);
+		const node = instance?.doc.nodesById.get(nodeId);
+		if (!instance || !node) return [];
+		const ids = this.graph.typeResolver
+			.resolveNodeTypes(node, instance.doc.edgesByTarget.get(nodeId) ?? [], instance.bindings)
+			.resolvedInputs.map((i) => i.id);
+		switch (node.type) {
+			case MATCH: {
+				const picked = matchedCase(instance.enums, nodeId, instance.constants);
+				return picked === undefined ? ids : [picked];
+			}
+			case WIDTH_SWITCH: {
+				const picked = widthCase(instance.enums, nodeId);
+				return picked === undefined ? ids : [picked];
+			}
+			case COMPONENT_COUNT:
+				return [];
+			case "fallback": {
+				const linked = instance.edgesByTarget
+					.get(nodeId)
+					?.some((e) => e.targetHandle === "value");
+				return [linked ? "value" : "default"];
+			}
+			default:
+				return ids;
+		}
+	}
+
 	private input(path: readonly string[], nodeId: string, inputId: string): FrameResult {
 		const edges = this.sources
 			.instance(path)
@@ -119,21 +153,7 @@ export class FrameValueAnalysis {
 
 		const cpu = this.graph.resolveDescriptor(node).cpu;
 		if (!cpu) return no(`${label} is computed for each pixel.`);
-		let ids = types.resolvedInputs.map((i) => i.id);
-		if (type === MATCH) {
-			const picked = matchedCase(instance.enums, nodeId, instance.constants);
-			if (picked !== undefined) ids = [picked];
-		} else if (type === WIDTH_SWITCH) {
-			const picked = widthCase(instance.enums, nodeId);
-			if (picked !== undefined) ids = [picked];
-		} else if (type === COMPONENT_COUNT) {
-			ids = [];
-		} else if (type === "fallback") {
-			const linked = instance.edgesByTarget
-				.get(nodeId)
-				?.some((e) => e.targetHandle === "value");
-			ids = [linked ? "value" : "default"];
-		}
+		const ids = this.inputsRead(path, nodeId);
 		for (const id of ids) {
 			const result = this.input(path, nodeId, id);
 			if (!result.frame) return result;
@@ -151,7 +171,7 @@ export class FrameValueAnalysis {
 		const zone = instance?.zones.zones.get(instance.zones.zoneOfBoundary.get(nodeId) ?? "");
 		if (!instance || !zone) return no("The zone isn't paired.");
 		const inside = instance.doc.nodesById.get(nodeId)?.type === REPEAT_INPUT;
-		if (inside && this.assuming.has(zone.id)) return YES;
+		if (inside && this.assuming.has(`${path.join("/")}|${zone.id}`)) return YES;
 		return this.zoneResult(path, zone.id);
 	}
 
@@ -164,7 +184,8 @@ export class FrameValueAnalysis {
 		const output = instance?.doc.nodesById.get(zone?.outputId ?? "");
 		if (!instance || !zone || !output) return no("The zone isn't paired.");
 		const handles = [ITERATIONS_HANDLE, ...zoneItems(output).map((item) => item.id)];
-		this.assuming.add(zoneId);
+		const assumed = `${path.join("/")}|${zoneId}`;
+		this.assuming.add(assumed);
 		let result: FrameResult = YES;
 		for (const id of handles) {
 			const read = this.input(path, zone.inputId, id);
@@ -176,7 +197,7 @@ export class FrameValueAnalysis {
 				if (!read.frame) result = read;
 			}
 		}
-		this.assuming.delete(zoneId);
+		this.assuming.delete(assumed);
 		if (this.assuming.size === 0) {
 			this.scratch.clear();
 			this.memo.set(key, result);

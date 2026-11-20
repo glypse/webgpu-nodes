@@ -1,3 +1,4 @@
+import { componentKeys, readComponent } from "../graph/values";
 import type { InputValue, ScalarKind, ScalarValue, WgslType } from "../types";
 import { typeComponents, typeKind, WGSL_DEFAULTS, wgslTypeName } from "../types";
 
@@ -40,4 +41,39 @@ export function formatWgslLiteral(type: WgslType, value: InputValue | undefined)
 		return `${wgslTypeName(type)}(${parts.join(", ")})`;
 	}
 	return `${wgslTypeName(type)}(${scalarLiteral(kind, value)})`;
+}
+
+/** WGSL identifiers can't contain characters like "-" from a UUID's dashes. */
+export function identSuffix(id: string): string {
+	return id.replace(/[^A-Za-z0-9_]/g, "_");
+}
+
+/**
+ * A uniform's value: a number for an f32, its components for a vecNf.
+ * Uniforms are always floats, converted to the input's type in the shader.
+ */
+export type UniformValue =
+	number | [number, number] | [number, number, number] | [number, number, number, number];
+
+/** The uniform holding `value`, read as `target`. */
+export function uniformValue(target: WgslType, value: InputValue | undefined): UniformValue {
+	const kind = typeKind(target);
+	const [x = 0, y = 0, z = 0, w = 0] = componentKeys(target).map((c) =>
+		scalarNumber(kind, readComponent(value, c)),
+	);
+	switch (typeComponents(target)) {
+		case 1:
+			return x;
+		case 2:
+			return [x, y];
+		case 3:
+			return [x, y, z];
+		case 4:
+			return [x, y, z, w];
+	}
+}
+
+/** The name of the uniform holding a node's unlinked input or own number. */
+export function uniformName(nodeId: string, key: string): string {
+	return `u_${identSuffix(nodeId)}_${identSuffix(key)}`;
 }
