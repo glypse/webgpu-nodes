@@ -404,9 +404,11 @@ export class CompiledPlan {
 			if (known) return known;
 			const resource = this.resources.get(id);
 			if (resource?.kind === "media") return mediaSize(id);
-			if (resource?.kind !== "transient") {
-				return resource?.kind === "state" ? canvas : undefined;
+			if (resource?.kind === "state") {
+				const texture = state.texture(resource.texture, resource.read);
+				return texture ? { width: texture.width, height: texture.height } : canvas;
 			}
+			if (resource?.kind !== "transient") return undefined;
 			// A size that depends on itself has nothing to start from.
 			if (resolving.has(id)) return canvas;
 			resolving.add(id);

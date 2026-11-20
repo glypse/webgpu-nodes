@@ -8,7 +8,14 @@ import {
 	type WgslType,
 	type ZoneItem,
 } from "../types";
-import { scalarOf, texelBytes, type TextureFormat } from "./textures";
+import {
+	CANVAS_SIZE,
+	sameSize,
+	scalarOf,
+	texelBytes,
+	type TextureFormat,
+	type TextureSize,
+} from "./textures";
 
 /**
  * A simulation zone as computed at `path` (the group nodes it's computed
@@ -62,6 +69,7 @@ export type StateItem = {
 	/** Its type there: a texture item's is a texture, its values colours. */
 	type: SocketType;
 	format: TextureFormat;
+	size: TextureSize;
 	/** The id of the texture keeping it (see `stateTextureId`). */
 	texture: string;
 };
@@ -87,18 +95,63 @@ export function stateReadId(texture: string, read: StateRead): string {
 }
 
 /**
+ * The size each item of a simulation is kept at, by id. An item scaled from
+ * another follows its size; one whose chain loops back on itself, or that
+ * names an item that isn't there, is scaled from the canvas.
+ */
+export function itemSizes(
+	ref: SimulationRef,
+	items: readonly ZoneItem[],
+): ReadonlyMap<string, TextureSize> {
+	const byId = new Map(items.map((i) => [i.id, i]));
+	const sizes = new Map<string, TextureSize>();
+	const resolve = (item: ZoneItem, seen: ReadonlySet<string>): TextureSize => {
+		const known = sizes.get(item.id);
+		if (known) return known;
+		const stored = item.size;
+		let size: TextureSize = CANVAS_SIZE;
+		if (stored?.kind === "pixels") {
+			size = { kind: "pixels", width: stored.width, height: stored.height };
+		} else if (stored) {
+			const base = stored.of === undefined ? undefined : byId.get(stored.of);
+			// A base at the canvas' size is the canvas.
+			if (!base?.size || seen.has(base.id) || base.id === item.id) {
+				size = { kind: "scale", scale: stored.scale, of: "canvas" };
+			} else {
+				resolve(base, new Set([...seen, item.id]));
+				size = {
+					kind: "scale",
+					scale: stored.scale,
+					of: { resource: stateReadId(stateTextureId(ref, base.id), "current") },
+				};
+			}
+		}
+		sizes.set(item.id, size);
+		return size;
+	};
+	for (const item of items) resolve(item, new Set());
+	return sizes;
+}
+
+/**
  * `items` in order, split into runs each one pass can write as colour
  * attachments: a simulation whose state takes more is computed by several.
+ * A pass draws at one size, so items of other sizes are in runs of their own.
  */
-export function attachmentGroups<T extends { format: TextureFormat }>(items: readonly T[]): T[][] {
+export function attachmentGroups<T extends { format: TextureFormat; size?: TextureSize }>(
+	items: readonly T[],
+): T[][] {
 	const groups: T[][] = [];
 	let current: T[] = [];
 	let bytes = 0;
 	for (const item of items) {
 		const size = texelBytes(item.format);
+		const first = current[0];
 		if (
 			current.length > 0 &&
-			(current.length === MAX_COLOR_ATTACHMENTS || bytes + size > MAX_COLOR_ATTACHMENT_BYTES)
+			(current.length === MAX_COLOR_ATTACHMENTS ||
+				bytes + size > MAX_COLOR_ATTACHMENT_BYTES ||
+				(first?.size && item.size && !sameSize(first.size, item.size)))
 		) {
 			groups.push(current);
 			current = [];

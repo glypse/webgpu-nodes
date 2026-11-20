@@ -34,6 +34,7 @@ import {
 } from "../zones";
 import {
 	attachmentGroups,
+	itemSizes,
 	simulationId,
 	type SimulationRef,
 	type SimulationState,
@@ -70,7 +71,7 @@ export type TextureSource =
 			/** Set for an item of a Render Texture node, drawn with the others of its run. */
 			draw?: RenderDraw;
 	  }
-	/** A simulation's state item, kept in a canvas-sized texture between frames. */
+	/** A simulation's state item, kept in a texture between frames. */
 	| {
 			kind: "state";
 			id: string;
@@ -78,6 +79,7 @@ export type TextureSource =
 			texture: string;
 			read: StateRead;
 			format: TextureFormat;
+			size: TextureSize;
 			simulation: SimulationRef;
 	  }
 	| { kind: "empty"; id: typeof EMPTY_TEXTURE };
@@ -448,17 +450,18 @@ export class TextureSources {
 		let state: SimulationState | undefined;
 		if (instance && input && analysed?.kind === "simulation") {
 			const outputs = this.typesIn(instance.doc, input, instance.bindings).resolvedOutputs;
-			const items = zoneItems(instance.doc.nodesById.get(analysed.outputId)).map(
-				(item): StateItem => {
-					const type = outputs.find((o) => o.id === item.id)?.type ?? "f32";
-					return {
-						item,
-						type,
-						format: item.format ?? stateFormat(type),
-						texture: stateTextureId(ref, item.id),
-					};
-				},
-			);
+			const zone = zoneItems(instance.doc.nodesById.get(analysed.outputId));
+			const sizes = itemSizes(ref, zone);
+			const items = zone.map((item): StateItem => {
+				const type = outputs.find((o) => o.id === item.id)?.type ?? "f32";
+				return {
+					item,
+					type,
+					format: item.format ?? stateFormat(type),
+					size: sizes.get(item.id) ?? CANVAS_SIZE,
+					texture: stateTextureId(ref, item.id),
+				};
+			});
 			state = { ref, id, items };
 		}
 		this.simulations.set(id, state);
@@ -607,10 +610,18 @@ function through(edge: GraphEdge, resolution: TextureResolution): TextureResolut
 /** The texture keeping a state item, as read in `read`'s frame. */
 export function stateSource(
 	simulation: SimulationRef,
-	{ texture, format }: Pick<StateItem, "texture" | "format">,
+	{ texture, format, size }: Pick<StateItem, "texture" | "format" | "size">,
 	read: StateRead,
 ): Extract<TextureSource, { kind: "state" }> {
-	return { kind: "state", id: stateReadId(texture, read), texture, read, format, simulation };
+	return {
+		kind: "state",
+		id: stateReadId(texture, read),
+		texture,
+		read,
+		format,
+		size,
+		simulation,
+	};
 }
 
 /** The image a resolution reads: nothing for an invalid one. */
@@ -627,9 +638,8 @@ export function sourceFormat(source: TextureSource): TextureFormat {
 export function sourceSize(source: TextureSource): TextureSize | undefined {
 	switch (source.kind) {
 		case "render":
-			return source.size;
 		case "state":
-			return CANVAS_SIZE;
+			return source.size;
 		default:
 			return undefined;
 	}

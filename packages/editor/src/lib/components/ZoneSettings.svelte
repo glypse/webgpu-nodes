@@ -2,6 +2,7 @@
 	import {
 		DEFAULT_MAX_ITERATIONS,
 		isInferredItem,
+		type ItemSize,
 		SOCKET_TYPES,
 		type SocketType,
 		TEXTURE_FORMATS,
@@ -53,6 +54,24 @@
 			if (!(item.id in labelBuffer)) labelBuffer[item.id] = item.label;
 		}
 	});
+
+	/** The picker's value for the canvas' size. */
+	const CANVAS = "\0canvas";
+	const DEFAULT_PIXELS = 256;
+
+	function sizeKind(item: ZoneItem): "canvas" | "scale" | "pixels" {
+		return item.size?.kind ?? "canvas";
+	}
+
+	function pickSizeKind(item: ZoneItem, kind: string) {
+		if (kind === sizeKind(item)) return;
+		let size: ItemSize | undefined;
+		if (kind === "scale") size = { kind: "scale", scale: 1 };
+		else if (kind === "pixels") {
+			size = { kind: "pixels", width: DEFAULT_PIXELS, height: DEFAULT_PIXELS };
+		}
+		graph.setZoneItemSize(zoneId, item.id, size);
+	}
 
 	function commitLabel(itemId: string) {
 		const value = labelBuffer[itemId] ?? "";
@@ -192,6 +211,28 @@
 							{/each}
 						</Select.Content>
 					</Select.Root>
+					<Select.Root
+						type="single"
+						name="{zoneId}-{item.id}-size"
+						value={sizeKind(item)}
+						disabled={locked}
+						onValueChange={(value: string) => {
+							pickSizeKind(item, value);
+						}}
+					>
+						<Select.Trigger class="w-20 shrink-0" title="Size it's kept at">
+							{sizeKind(item) === "canvas"
+								? "Canvas"
+								: sizeKind(item) === "scale"
+									? "Scale"
+									: "Pixels"}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value="canvas" label="Canvas">Canvas</Select.Item>
+							<Select.Item value="scale" label="Scale">Scale</Select.Item>
+							<Select.Item value="pixels" label="Pixels">Pixels</Select.Item>
+						</Select.Content>
+					</Select.Root>
 				{/if}
 				<Button
 					variant="ghost"
@@ -221,6 +262,84 @@
 					<TrashIcon />
 				</Button>
 			</div>
+			{#if simulation && item.size}
+				<div class="flex items-center gap-1 pl-4">
+					{#if item.size.kind === "scale"}
+						{@const size = item.size}
+						<Scrubbable
+							min={0}
+							readonly={locked}
+							value={size.scale}
+							title="Scale"
+							oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+								graph.setZoneItemSize(zoneId, item.id, {
+									...size,
+									scale: Number(e.currentTarget.value),
+								});
+							}}
+						/>
+						<span class="text-muted-foreground shrink-0 text-xs">of</span>
+						<Select.Root
+							type="single"
+							name="{zoneId}-{item.id}-of"
+							value={size.of ?? CANVAS}
+							disabled={locked}
+							onValueChange={(value: string) => {
+								graph.setZoneItemSize(
+									zoneId,
+									item.id,
+									value === CANVAS
+										? { kind: "scale", scale: size.scale }
+										: { kind: "scale", scale: size.scale, of: value },
+								);
+							}}
+						>
+							<Select.Trigger
+								class="w-28 shrink-0"
+								title="What the scale is relative to"
+							>
+								{items.find((i) => i.id === size.of)?.label ?? "Canvas"}
+							</Select.Trigger>
+							<Select.Content>
+								<Select.Item value={CANVAS} label="Canvas">Canvas</Select.Item>
+								{#each items.filter((i) => i.id !== item.id) as other (other.id)}
+									<Select.Item value={other.id} label={other.label}>
+										{other.label}
+									</Select.Item>
+								{/each}
+							</Select.Content>
+						</Select.Root>
+					{:else}
+						{@const size = item.size}
+						<Scrubbable
+							integer
+							min={1}
+							readonly={locked}
+							value={size.width}
+							title="Width in pixels"
+							oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+								graph.setZoneItemSize(zoneId, item.id, {
+									...size,
+									width: Number(e.currentTarget.value),
+								});
+							}}
+						/>
+						<Scrubbable
+							integer
+							min={1}
+							readonly={locked}
+							value={size.height}
+							title="Height in pixels"
+							oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
+								graph.setZoneItemSize(zoneId, item.id, {
+									...size,
+									height: Number(e.currentTarget.value),
+								});
+							}}
+						/>
+					{/if}
+				</div>
+			{/if}
 		{/each}
 		{#if !locked}
 			<TypePicker

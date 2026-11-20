@@ -1323,8 +1323,16 @@ function emitDocumentBody(
 		const mode = simulations.get(zone.id) ?? "opaque";
 		const vars = simulationVarNames(zone, emitter.zoneItems(zone));
 		const index = new Map(emitter.zoneItems(zone).map((item, k) => [item.id, k]));
-		const load = (item: StateItem, read: "previous" | "current") =>
-			`textureLoad(${emitter.textureVar(stateSource(simulation.ref, item, read))}, vec2i(${FRAGMENT_VAR}.position), 0)`;
+		// A texel of an item kept at another size than the pass is the nearest to the pixel.
+		const load = (item: StateItem, read: "previous" | "current") => {
+			const texture = emitter.textureVar(stateSource(simulation.ref, item, read));
+			if (sameSize(item.size, state.targetSize)) {
+				return `textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`;
+			}
+			const dimensions = `vec2f(textureDimensions(${texture}))`;
+			const coordinates = textureCoordinates(`${FRAGMENT_VAR}.uv`);
+			return `textureLoad(${texture}, vec2i(clamp(${coordinates} * ${dimensions}, vec2f(0.0), ${dimensions} - 1.0)), 0)`;
+		};
 		// A texture item's values are read where they're used, as a texture.
 		const values = simulation.items.filter((i) => !isTexture(i.type));
 		const targeted = probe?.kind === "simulation" ? probe.items : [];

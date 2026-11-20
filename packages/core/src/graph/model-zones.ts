@@ -1,5 +1,5 @@
 import type { TextureFormat } from "../passes/textures";
-import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
+import { isTexture, type ItemSize, type SocketType, type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
 	carriesItem,
@@ -248,6 +248,36 @@ export abstract class ZoneModel extends GraphModelBase {
 				return next;
 			}),
 		);
+	}
+
+	/**
+	 * Set the size a simulation's item is kept at, or (`undefined`) the
+	 * canvas'. Returns whether it was applied: an item can't be sized from
+	 * itself, or from items sized from it. The simulation starts over.
+	 */
+	setZoneItemSize(zoneId: string, itemId: string, size: ItemSize | undefined): boolean {
+		if (this.zoneKind(zoneId) !== "simulation") return false;
+		const items = this.getZoneItems(zoneId);
+		if (size?.kind === "scale" && size.of !== undefined) {
+			const byId = new Map(items.map((i) => [i.id, i]));
+			if (!byId.has(size.of)) return false;
+			for (let id: string | undefined = size.of; id !== undefined;) {
+				if (id === itemId) return false;
+				const next: ItemSize | undefined = byId.get(id)?.size;
+				id = next?.kind === "scale" ? next.of : undefined;
+			}
+		}
+		this.setZoneItems(
+			zoneId,
+			items.map((item) => {
+				if (item.id !== itemId) return item;
+				const next: ZoneItem = { ...item };
+				if (size === undefined) delete next.size;
+				else next.size = size;
+				return next;
+			}),
+		);
+		return true;
 	}
 
 	/** Move a state item up (-1) or down (+1) in the list. */

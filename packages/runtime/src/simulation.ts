@@ -1,4 +1,4 @@
-import type { RenderPlan, StateRead, TextureFormat } from "$core";
+import { type RenderPlan, resolveSize, type StateRead, type TextureFormat } from "$core";
 
 import type { FrameInputs, Size } from "./renderer";
 
@@ -21,6 +21,8 @@ export function nextStep(last: StepRecord | undefined, frame: FrameInputs): Step
 	return { kind: "advance", delta: Math.max(0, frame.time - last.time) };
 }
 
+type StateResource = Extract<RenderPlan["resources"][number], { kind: "state" }>;
+
 /** The two textures keeping a state item, which swap roles as frames go by. */
 type Pair = {
 	format: TextureFormat;
@@ -35,7 +37,7 @@ type Pair = {
  * target (a preview, an export): each state item's texture of the previous
  * frame and of this one, and how each simulation last stepped. It outlives
  * plans: a new one keeps the state of the simulations it shares with the
- * last, as long as their items keep their formats and the size stays the same.
+ * last, as long as their items keep their formats and sizes.
  */
 export class SimulationState {
 	private pairs = new Map<string, Pair>();
@@ -47,22 +49,43 @@ export class SimulationState {
 	 * Begin drawing `frame` of `plan` at `size`: make the textures it keeps
 	 * state in where they're missing or don't fit (their simulations then
 	 * start over), and step each simulation. Returns their steps, by id.
+	 * `size` is the canvas', which sizes are relative to.
 	 */
 	advance(plan: RenderPlan, frame: FrameInputs, size: Size): ReadonlyMap<string, Step> {
 		const fresh = new Set<string>();
 		const used = new Set<string>();
 		const simulations = new Set<string>();
+		const states = new Map<string, StateResource>();
 		for (const resource of plan.resources) {
-			if (resource.kind !== "state") continue;
+			if (resource.kind === "state") states.set(resource.id, resource);
+		}
+		const sizes = new Map<string, Size>();
+		/** A state texture's size; a texture sized from itself is the canvas'. */
+		const sizeOf = (id: string): Size | undefined => {
+			const known = sizes.get(id);
+			if (known) return known;
+			const resource = states.get(id);
+			if (!resource) return undefined;
+			sizes.set(id, size);
+			const resolved = resolveSize(resource.size, {
+				canvas: size,
+				resource: sizeOf,
+				maxDimension: this.device.limits.maxTextureDimension2D,
+			});
+			sizes.set(id, resolved);
+			return resolved;
+		};
+		for (const resource of states.values()) {
 			used.add(resource.texture);
 			simulations.add(resource.simulation);
+			const resolved = sizeOf(resource.id) ?? size;
 			const pair = this.pairs.get(resource.texture);
 			const [texture] = pair?.textures ?? [];
 			if (
 				pair?.format === resource.format &&
 				pair.simulation === resource.simulation &&
-				texture?.width === size.width &&
-				texture.height === size.height
+				texture?.width === resolved.width &&
+				texture.height === resolved.height
 			) {
 				continue;
 			}
@@ -71,8 +94,8 @@ export class SimulationState {
 				format: resource.format,
 				simulation: resource.simulation,
 				textures: [
-					this.createTexture(resource.format, size),
-					this.createTexture(resource.format, size),
+					this.createTexture(resource.format, resolved),
+					this.createTexture(resource.format, resolved),
 				],
 				current: 0,
 			});

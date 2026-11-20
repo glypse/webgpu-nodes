@@ -9,7 +9,7 @@ import {
 	type StateRead,
 	stateReadId,
 } from "../passes/simulation";
-import { type TextureSource, TextureSources } from "../passes/sources";
+import { stateSource, type TextureSource, TextureSources } from "../passes/sources";
 import { CANVAS_SIZE, type TextureFormat, type TextureSize } from "../passes/textures";
 import {
 	type CodegenGraph,
@@ -38,8 +38,8 @@ export type ResourceDecl =
 	| { id: string; kind: "media"; asset: string; video?: VideoPlayback }
 	/**
 	 * A simulation's state item, as of the previous frame or this one: one of
-	 * the two canvas-sized textures keeping it (`texture`), which swap roles
-	 * as frames go by.
+	 * the two textures keeping it (`texture`), which swap roles as frames go
+	 * by. The simulation starts over when the size they resolve to changes.
 	 */
 	| {
 			id: string;
@@ -47,6 +47,7 @@ export type ResourceDecl =
 			texture: string;
 			read: StateRead;
 			format: TextureFormat;
+			size: TextureSize;
 			/** The simulation it's state of, by `simulationId`. */
 			simulation: string;
 	  }
@@ -108,6 +109,7 @@ function resourceOf(source: TextureSource): ResourceDecl {
 				texture: source.texture,
 				read: source.read,
 				format: source.format,
+				size: source.size,
 				simulation: simulationId(source.simulation),
 			};
 		case "empty":
@@ -143,6 +145,19 @@ export function generateRenderPlan(
 		);
 	};
 
+	/** Declares the state item a state texture's size is a scale of: the runtime reads its size. */
+	const declareSizeBase = (source: Extract<TextureSource, { kind: "state" }>) => {
+		const base = source.size.kind === "scale" ? source.size.of : "canvas";
+		if (base === "canvas" || resources.has(base.resource)) return;
+		const item = sources
+			.simulation(source.simulation.path, source.simulation.zone)
+			?.items.find((i) => stateReadId(i.texture, "current") === base.resource);
+		if (!item) return;
+		const declared = stateSource(source.simulation, item, "current");
+		resources.set(declared.id, resourceOf(declared));
+		declareSizeBase(declared);
+	};
+
 	/** Declares a texture a pass reads, and adds the passes making it before the one reading it. */
 	const include = (source: TextureSource) => {
 		resources.set(source.id, resourceOf(source));
@@ -171,6 +186,7 @@ export function generateRenderPlan(
 			}
 		}
 		if (source.kind === "state") {
+			declareSizeBase(source);
 			const stage = source.read === "current" ? "step" : "start";
 			const items = runOf(source.simulation, source.texture);
 			if (items) visitSimulation(source.simulation, stage, items);
@@ -223,20 +239,16 @@ export function generateRenderPlan(
 		const writes = items.map((i) => stateReadId(i.texture, read));
 		for (const [i, item] of items.entries()) {
 			const write = writes[i] ?? "";
-			resources.set(write, {
-				id: write,
-				kind: "state",
-				texture: item.texture,
-				read,
-				format: item.format,
-				simulation: id,
-			});
+			const declared = stateSource(ref, item, read);
+			resources.set(write, resourceOf(declared));
+			declareSizeBase(declared);
 		}
 		visit(
 			`${stage}:${writes.join(",")}`,
 			writes,
 			{ simulation: ref, stage, items },
 			{ id, stage },
+			items[0]?.size,
 		);
 	};
 
