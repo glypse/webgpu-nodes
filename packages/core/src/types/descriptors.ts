@@ -1,5 +1,6 @@
 import type { Asset, AssetKind } from "../assets/assets";
 import type { ColorMode } from "../color/modes";
+import type { TextureFormat } from "../passes/textures";
 import type { InputControl } from "./controls";
 import type { NodeData } from "./node-data";
 import { type SocketType, type WgslType } from "./values";
@@ -358,6 +359,8 @@ export type WgslCtx = {
 	 * output), as a module-scope `texture_2d<f32>` of the shader.
 	 */
 	texture: (id: string) => string;
+	/** The format of the texels of the texture `texture(id)` names. */
+	textureFormat: (id: string) => TextureFormat;
 	/** A sampler of the shader filtering and addressing as asked. */
 	sampler: (filter: SamplerFilter, address: SamplerAddress) => string;
 	/** The project asset the node reads (`NodeData.asset`), if it exists. */

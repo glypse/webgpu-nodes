@@ -3,12 +3,12 @@ import {
 	attachmentGroups,
 	simulationId,
 	type SimulationRef,
-	type StateFormat,
 	type StateItem,
 	type StateRead,
 	stateReadId,
 } from "../passes/simulation";
 import { type TextureSource, TextureSources } from "../passes/sources";
+import { CANVAS_SIZE, type TextureFormat, type TextureSize } from "../passes/textures";
 import {
 	type CodegenGraph,
 	generateShader,
@@ -22,13 +22,10 @@ import { buildProgram, type ShaderProgram } from "./program";
 /** What the last pass of a plan writes: the frame drawn. */
 export const PLAN_TARGET = "target";
 
-/**
- * A texture a plan reads or writes. Open to more kinds: buffers (compute),
- * sizes other than the canvas'.
- */
+/** A texture a plan reads or writes. Open to more kinds: buffers (compute). */
 export type ResourceDecl =
-	/** Written by a pass, then read: a texture of the canvas' size (`relative` times it). */
-	| { id: string; kind: "transient"; size: { relative: number }; format: "rgba16float" }
+	/** Written by a pass, then read. */
+	| { id: string; kind: "transient"; size: TextureSize; format: TextureFormat }
 	| { id: string; kind: "media"; asset: string; video?: VideoPlayback }
 	/**
 	 * A simulation's state item, as of the previous frame or this one: one of
@@ -40,7 +37,7 @@ export type ResourceDecl =
 			kind: "state";
 			texture: string;
 			read: StateRead;
-			format: StateFormat;
+			format: TextureFormat;
 			/** The simulation it's state of, by `simulationId`. */
 			simulation: string;
 	  }
@@ -82,8 +79,8 @@ function resourceOf(source: TextureSource): ResourceDecl {
 			return {
 				id: source.id,
 				kind: "transient",
-				size: { relative: 1 },
-				format: "rgba16float",
+				size: source.size,
+				format: source.format,
 			};
 		case "media":
 			return {
@@ -136,13 +133,21 @@ export function generateRenderPlan(
 		writes: string[],
 		target?: ShaderTarget,
 		simulation?: PassDecl["simulation"],
+		targetSize?: TextureSize,
 	) => {
 		if (visited.has(key)) return;
 		visited.add(key);
-		const generated = generateShader(graph, { ...options, target, sources });
+		const generated = generateShader(graph, {
+			...options,
+			target,
+			sources,
+			targetSize: targetSize ?? CANVAS_SIZE,
+		});
 		for (const { source } of generated.textures) {
 			resources.set(source.id, resourceOf(source));
-			if (source.kind === "render") visit(source.id, [source.id], source.target);
+			if (source.kind === "render") {
+				visit(source.id, [source.id], source.target, undefined, source.size);
+			}
 			if (source.kind === "state") {
 				const stage = source.read === "current" ? "step" : "start";
 				const items = runOf(source.simulation, source.texture);

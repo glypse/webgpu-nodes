@@ -1,5 +1,5 @@
-import { stateScalar } from "../passes/simulation";
-import type { TextureSource } from "../passes/sources";
+import { sourceFormat, type TextureSource } from "../passes/sources";
+import { sampleTypeOf, type TextureSampleType } from "../passes/textures";
 import { type SamplerAddress, type SamplerFilter, type WgslType, wgslTypeName } from "../types";
 import type { UniformValue } from "./generate";
 
@@ -39,22 +39,10 @@ export type UniformBlock = {
 /** A module-scope `texture_2d` of a generated fragment, and the image it reads. */
 export type TextureBinding = { name: string; source: TextureSource };
 
-/**
- * How a texture is read: a filterable float image, but a state item's,
- * kept exactly, which is read texel by texel.
- */
-export type TextureSampleType = "float" | "unfilterable-float" | "sint" | "uint";
+export type { TextureSampleType };
 
 export function textureSampleType(source: TextureSource): TextureSampleType {
-	if (source.kind !== "state" || source.format === "rgba16float") return "float";
-	switch (stateScalar(source.format)) {
-		case "i32":
-			return "sint";
-		case "u32":
-			return "uint";
-		default:
-			return "unfilterable-float";
-	}
+	return sampleTypeOf(sourceFormat(source));
 }
 
 const TEXEL_SCALARS: Record<TextureSampleType, string> = {

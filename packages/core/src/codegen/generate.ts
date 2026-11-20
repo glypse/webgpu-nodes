@@ -21,10 +21,13 @@ import {
 import {
 	readSource,
 	type SocketRef,
+	sourceFormat,
+	sourceSize,
 	stateSource,
 	type TextureSource,
 	TextureSources,
 } from "../passes/sources";
+import { CANVAS_SIZE, sameSize, type TextureFormat, type TextureSize } from "../passes/textures";
 import type {
 	GroupHandleDef,
 	InputValue,
@@ -82,6 +85,7 @@ import {
 	type TextureBinding,
 	UNIFORMS_VAR,
 } from "./program";
+import { readTexture, texelAsColor } from "./texture-read";
 
 // ── Graph walking ────────────────────────────────────────────────────────────
 
@@ -349,6 +353,7 @@ type ShaderState = {
 	uniformScopes: ReadonlySet<string>;
 	uniforms: Map<string, UniformValue>;
 	sources: TextureSources;
+	targetSize: TextureSize;
 	/** The textures the shader reads, by `TextureSource.id`. */
 	textures: Map<string, TextureBinding>;
 	/** The samplers the shader uses, by filter and address. */
@@ -390,6 +395,8 @@ export type ShaderOptions = {
 	target?: ShaderTarget;
 	/** The graph's texture sources, shared by the shaders of one graph state. */
 	sources?: TextureSources;
+	/** The size of what the shader draws into; the canvas' by default. */
+	targetSize?: TextureSize;
 };
 
 /** A simulation's state at its start (its initial values), or this frame's (its step). */
@@ -626,15 +633,27 @@ class BodyEmitter {
 		return valueType(this.typeResolver.inferHandleType(edge, this.bindings));
 	}
 
-	/** A texture linked to a value: its colour at the pixel, stretched over the canvas. */
+	/** A texture linked to a value: its colour at the pixel, stretched over the target. */
 	private sampleAtPixel(source: TextureSource): string {
 		const texture = this.textureVar(source);
-		// Rendered at the canvas' size: its pixel is read exactly.
-		if (source.kind === "render" || source.kind === "state") {
-			return `textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`;
+		const format = sourceFormat(source);
+		const size = sourceSize(source);
+		// Made for this pass' size, proved while compiling: its pixel is read exactly.
+		if (size && sameSize(size, this.state.targetSize)) {
+			return texelAsColor(
+				`textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`,
+				format,
+			);
 		}
-		const sampler = this.samplerVar("linear", "clamp");
-		return `textureSampleLevel(${texture}, ${sampler}, ${textureCoordinates(`${FRAGMENT_VAR}.uv`)}, 0.0)`;
+		return this.sampleAt(texture, format, `${FRAGMENT_VAR}.uv`);
+	}
+
+	/** A texture's colour at `uv`, read as its format allows. */
+	private sampleAt(texture: string, format: TextureFormat, uv: string): string {
+		return readTexture(texture, format, textureCoordinates(uv), {
+			sampler: (filter, address) => this.samplerVar(filter, address),
+			define: (name, source) => this.state.helpers.define(name, source),
+		});
 	}
 
 	/** The outputs of a node something reads, the probe's included. */
@@ -773,14 +792,13 @@ class BodyEmitter {
 		const { resolvedInputs, resolvedOutputs } = resolved;
 		const inputTypes = valueTypes(resolved.inputTypes);
 		const outputType = valueType(resolved.outputType);
-		const textureOf = (id: string) =>
-			this.textureVar(
-				readSource(
-					resolvedInputs.some((i) => i.id === id)
-						? this.state.sources.input(this.path, node.id, id)
-						: this.state.sources.output(this.path, node.id, id),
-				),
+		const textureSourceOf = (id: string) =>
+			readSource(
+				resolvedInputs.some((i) => i.id === id)
+					? this.state.sources.input(this.path, node.id, id)
+					: this.state.sources.output(this.path, node.id, id),
 			);
+		const textureOf = (id: string) => this.textureVar(textureSourceOf(id));
 
 		const outputVars: Record<string, string> = {};
 		for (const outputDef of resolvedOutputs) {
@@ -834,6 +852,7 @@ class BodyEmitter {
 			param: (key, value) => this.paramExpr(node, key, value),
 			fn: (name, source) => this.state.helpers.define(name, source),
 			texture: textureOf,
+			textureFormat: (id) => sourceFormat(textureSourceOf(id)),
 			sampler: (filter, address) => this.samplerVar(filter, address),
 			asset: () => graph.assets.find((a) => a.id === node.data.asset),
 		});
@@ -1476,7 +1495,12 @@ function emitGroupFunction(
  */
 export function generateShader(
 	graph: CodegenGraph,
-	{ uniformScopes = [], target, sources = new TextureSources(graph) }: ShaderOptions = {},
+	{
+		uniformScopes = [],
+		target,
+		sources = new TextureSources(graph),
+		targetSize = CANVAS_SIZE,
+	}: ShaderOptions = {},
 ): {
 	shader: string;
 	lineMap: LineMap;
@@ -1494,6 +1518,7 @@ export function generateShader(
 		uniformScopes: new Set(uniformScopes),
 		uniforms: new Map(),
 		sources,
+		targetSize,
 		textures: new Map(),
 		samplers: new Map(),
 		textureVariants: new Map(),

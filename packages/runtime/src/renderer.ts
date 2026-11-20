@@ -4,11 +4,13 @@ import {
 	type PassDecl,
 	PLAN_TARGET,
 	type RenderPlan,
+	resolveSize,
 	type ResourceDecl,
 	type SamplerAddress,
 	type SamplerFilter,
 	type ShaderProgram,
 	SIMULATION_DELTA_FIELD,
+	type TextureFormat,
 	type UniformValue,
 } from "$core";
 
@@ -49,7 +51,7 @@ export class ProgramError extends Error {
 }
 
 /** The format programs draw into: linear, and wide enough for colours outside sRGB. */
-const LINEAR_FORMAT: GPUTextureFormat = "rgba16float";
+const LINEAR_FORMAT: TextureFormat = "rgba16float";
 const READBACK_FORMAT: GPUTextureFormat = "rgba8unorm";
 /** Compiled pipelines kept for programs not in use, e.g. while switching between documents. */
 const PIPELINE_CACHE_SIZE = 8;
@@ -73,6 +75,16 @@ const COMPLETION_SAMPLES = 5;
  */
 const SIMULATE_BATCH_LATENCIES = 3;
 const MIN_SIMULATE_BATCH_MS = 50;
+
+const REQUESTED_LIMITS = [
+	"maxTextureDimension2D",
+	"maxStorageTexturesPerShaderStage",
+	"maxComputeInvocationsPerWorkgroup",
+	"maxComputeWorkgroupSizeX",
+	"maxComputeWorkgroupSizeY",
+	"maxComputeWorkgroupSizeZ",
+	"maxComputeWorkgroupStorageSize",
+] as const satisfies readonly (keyof GPUSupportedLimits)[];
 
 const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
 	clamp: "clamp-to-edge",
@@ -199,8 +211,8 @@ export class CompiledProgram {
 type CompiledPass = { program: CompiledProgram; decl: PassDecl };
 
 /**
- * A compiled `RenderPlan`: its passes in order, each drawing canvas-sized
- * textures of its own (kept while the size stays the same) or of the
+ * A compiled `RenderPlan`: its passes in order, each drawing textures of its
+ * own (kept while their size and format stay the same) or of the
  * simulations' state, but the last, which draws the frame.
  */
 export class CompiledPlan {
@@ -233,14 +245,16 @@ export class CompiledPlan {
 		return this.media.prepare(sources, time);
 	}
 
-	/** A pass's own texture, the size of `like`. */
-	private transient(id: string, like: GPUTexture): GPUTexture {
+	/** A pass's own texture, of `size` and `format`. */
+	private transient(id: string, { width, height }: Size, format: TextureFormat): GPUTexture {
 		const existing = this.transients.get(id);
-		if (existing?.width === like.width && existing.height === like.height) return existing;
+		if (existing?.width === width && existing.height === height && existing.format === format) {
+			return existing;
+		}
 		existing?.destroy();
 		const texture = this.device.createTexture({
-			size: { width: like.width, height: like.height },
-			format: LINEAR_FORMAT,
+			size: { width, height },
+			format,
 			usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
 		});
 		this.transients.set(id, texture);
@@ -262,12 +276,37 @@ export class CompiledPlan {
 		{ timing, media }: { timing?: FrameTiming; media?: TextureOf } = {},
 	) {
 		const steps = state.advance(this.plan, frame, target);
+		const canvas: Size = { width: target.width, height: target.height };
+		// Sizes are resolved once per frame, a resource's after those it's relative to.
+		const sizes = new Map<string, Size>();
+		const sizeOf = (id: string): Size | undefined => {
+			const known = sizes.get(id);
+			if (known) return known;
+			const resource = this.resources.get(id);
+			if (resource?.kind !== "transient")
+				return resource?.kind === "state" ? canvas : undefined;
+			const size = resolveSize(resource.size, {
+				canvas,
+				resource: sizeOf,
+				maxDimension: this.device.limits.maxTextureDimension2D,
+			});
+			sizes.set(id, size);
+			return size;
+		};
+		const transient = (id: string): GPUTexture => {
+			const resource = this.resources.get(id);
+			return this.transient(
+				id,
+				sizeOf(id) ?? canvas,
+				resource?.kind === "transient" ? resource.format : LINEAR_FORMAT,
+			);
+		};
 		const mediaOf: TextureOf = media ?? ((source) => this.media.texture(source, frame.time));
 		const stateTexture = (texture: string, read: "previous" | "current") =>
 			state.texture(texture, read) ?? this.media.emptyTexture;
 		const textureOf: TextureOf = (source) =>
 			source.kind === "render"
-				? this.transient(source.id, target)
+				? transient(source.id)
 				: source.kind === "state"
 					? stateTexture(source.texture, source.read)
 					: mediaOf(source);
@@ -275,7 +314,7 @@ export class CompiledPlan {
 			if (id === PLAN_TARGET) return target;
 			const resource = this.resources.get(id);
 			if (resource?.kind === "state") return stateTexture(resource.texture, resource.read);
-			return this.transient(id, target);
+			return transient(id);
 		};
 		// A simulation's start only draws on the frames it starts.
 		const drawn = this.passes.filter(({ decl }) => {
@@ -375,9 +414,14 @@ export class Renderer {
 		const adapter = await navigator.gpu.requestAdapter();
 		if (!adapter) throw new Error("No WebGPU adapter is available.");
 		const timestamps = adapter.features.has("timestamp-query");
+		// Limits that sizes, storage textures and compute passes are bound by are
+		// asked for as far as the adapter goes, not left at the defaults.
+		const requiredLimits: Record<string, number> = {};
+		for (const name of REQUESTED_LIMITS) requiredLimits[name] = adapter.limits[name];
 		return new Renderer(
 			await adapter.requestDevice({
 				requiredFeatures: timestamps ? ["timestamp-query"] : [],
+				requiredLimits,
 			}),
 		);
 	}
@@ -392,7 +436,9 @@ export class Renderer {
 		const resources = new Map(plan.resources.map((r) => [r.id, r]));
 		const formatOf = (id: string): GPUTextureFormat => {
 			const resource = resources.get(id);
-			return resource?.kind === "state" ? resource.format : LINEAR_FORMAT;
+			return resource?.kind === "state" || resource?.kind === "transient"
+				? resource.format
+				: LINEAR_FORMAT;
 		};
 		const passes = await Promise.all(
 			plan.passes.map(async (decl) => ({

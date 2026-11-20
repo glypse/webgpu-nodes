@@ -8,6 +8,7 @@ import {
 	type WgslType,
 	type ZoneItem,
 } from "../types";
+import { scalarOf, texelBytes, type TextureFormat } from "./textures";
 
 /**
  * A simulation zone as computed at `path` (the group nodes it's computed
@@ -20,66 +21,35 @@ export function simulationId({ path, zone }: SimulationRef): string {
 	return [...path, zone].join("/");
 }
 
-/**
- * How a state item's values are kept between frames, in a texture of the
- * canvas' size: exactly, at 32 bits per component, but a texture item's,
- * a filterable image like any other texture.
- */
-export type StateFormat =
-	| "r32float"
-	| "rg32float"
-	| "rgba32float"
-	| "r32sint"
-	| "rg32sint"
-	| "rgba32sint"
-	| "r32uint"
-	| "rg32uint"
-	| "rgba32uint"
-	| "rgba16float";
-
-export const TEXTURE_STATE_FORMAT = "rgba16float" satisfies StateFormat;
+export const TEXTURE_STATE_FORMAT = "rgba16float" satisfies TextureFormat;
 
 /** The format keeping the values of an item of `type`; a bool's as unsigned integers. */
-export function stateFormat(type: SocketType): StateFormat {
+export function stateFormat(type: SocketType): TextureFormat {
 	if (isTexture(type)) return TEXTURE_STATE_FORMAT;
 	const channels = ["r", "rg", "rgba", "rgba"][typeComponents(type) - 1] ?? "rgba";
 	switch (typeKind(type)) {
 		case "f32":
-			return `${channels}32float` as StateFormat;
+			return `${channels}32float` as TextureFormat;
 		case "i32":
-			return `${channels}32sint` as StateFormat;
+			return `${channels}32sint` as TextureFormat;
 		default:
-			return `${channels}32uint` as StateFormat;
+			return `${channels}32uint` as TextureFormat;
 	}
 }
 
-/** The scalar a format's texels are read and written as. */
-export function stateScalar(format: StateFormat): "f32" | "i32" | "u32" {
-	if (format.endsWith("sint")) return "i32";
-	if (format.endsWith("uint")) return "u32";
-	return "f32";
-}
-
 /** The type of a texel of `format`, as WGSL reads and writes it. */
-export function texelType(format: StateFormat): WgslType {
-	return makeType(stateScalar(format), 4);
+export function texelType(format: TextureFormat): WgslType {
+	return makeType(scalarOf(format), 4);
 }
 
 /** A value of `type` as the texel of `format` keeping it. */
-export function packState(expr: string, type: WgslType, format: StateFormat): string {
+export function packState(expr: string, type: WgslType, format: TextureFormat): string {
 	return convertVar(expr, type, texelType(format));
 }
 
 /** A texel of `format` as the value of `type` it keeps. */
-export function unpackState(texel: string, type: WgslType, format: StateFormat): string {
+export function unpackState(texel: string, type: WgslType, format: TextureFormat): string {
 	return convertVar(texel, texelType(format), type);
-}
-
-/** The bytes a texel of a format takes among a pass's colour attachments. */
-function attachmentBytes(format: StateFormat): number {
-	if (format === TEXTURE_STATE_FORMAT) return 8;
-	if (format.startsWith("rgba")) return 16;
-	return format.startsWith("rg") ? 8 : 4;
 }
 
 /** What one pass can write, by WebGPU's default limits. */
@@ -91,7 +61,7 @@ export type StateItem = {
 	item: ZoneItem;
 	/** Its type there: a texture item's is a texture, its values colours. */
 	type: SocketType;
-	format: StateFormat;
+	format: TextureFormat;
 	/** The id of the texture keeping it (see `stateTextureId`). */
 	texture: string;
 };
@@ -120,12 +90,12 @@ export function stateReadId(texture: string, read: StateRead): string {
  * `items` in order, split into runs each one pass can write as colour
  * attachments: a simulation whose state takes more is computed by several.
  */
-export function attachmentGroups<T extends { format: StateFormat }>(items: readonly T[]): T[][] {
+export function attachmentGroups<T extends { format: TextureFormat }>(items: readonly T[]): T[][] {
 	const groups: T[][] = [];
 	let current: T[] = [];
 	let bytes = 0;
 	for (const item of items) {
-		const size = attachmentBytes(item.format);
+		const size = texelBytes(item.format);
 		if (
 			current.length > 0 &&
 			(current.length === MAX_COLOR_ATTACHMENTS || bytes + size > MAX_COLOR_ATTACHMENT_BYTES)

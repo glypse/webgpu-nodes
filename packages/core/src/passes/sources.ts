@@ -24,13 +24,16 @@ import {
 	simulationId,
 	type SimulationRef,
 	type SimulationState,
-	type StateFormat,
 	stateFormat,
 	type StateItem,
 	type StateRead,
 	stateReadId,
 	stateTextureId,
 } from "./simulation";
+import { CANVAS_SIZE, type TextureFormat, type TextureSize } from "./textures";
+
+/** What a value linked to a Texture input is rendered into: the canvas' size, in half float. */
+export const IMPLICIT_RENDER = { size: CANVAS_SIZE, format: "rgba16float" } as const;
 
 /** The id of the texture an unlinked Texture input reads: transparent black. */
 export const EMPTY_TEXTURE = "empty";
@@ -42,8 +45,14 @@ export const EMPTY_TEXTURE = "empty";
 export type TextureSource =
 	/** An asset's file, a video's frame at the project's time. */
 	| { kind: "media"; id: string; asset: string; video?: VideoPlayback }
-	/** A value rendered over a canvas-sized texture, in a pass of its own. */
-	| { kind: "render"; id: string; target: SocketRef }
+	/** A value rendered over a texture of `size` and `format`, in a pass of its own. */
+	| {
+			kind: "render";
+			id: string;
+			target: SocketRef;
+			size: TextureSize;
+			format: TextureFormat;
+	  }
 	/** A simulation's state item, kept in a canvas-sized texture between frames. */
 	| {
 			kind: "state";
@@ -51,7 +60,7 @@ export type TextureSource =
 			/** The texture keeping it (see `stateTextureId`), whichever frame is read. */
 			texture: string;
 			read: StateRead;
-			format: StateFormat;
+			format: TextureFormat;
 			simulation: SimulationRef;
 	  }
 	| { kind: "empty"; id: typeof EMPTY_TEXTURE };
@@ -211,7 +220,7 @@ export class TextureSources {
 				};
 			}
 			const target = { path, node: edge.source, handle: edge.sourceHandle };
-			return { kind: "render", id: renderTextureId(target), target };
+			return { kind: "render", id: renderTextureId(target), target, ...IMPLICIT_RENDER };
 		});
 	}
 
@@ -445,4 +454,21 @@ export function stateSource(
 /** The image a resolution reads: nothing for an invalid one. */
 export function readSource(resolution: TextureResolution): TextureSource {
 	return resolution.kind === "invalid" ? EMPTY : resolution;
+}
+
+/** The format a source's texels are in; media is half float. */
+export function sourceFormat(source: TextureSource): TextureFormat {
+	return source.kind === "render" || source.kind === "state" ? source.format : "rgba16float";
+}
+
+/** The size of a source made by a pass, if it's known while compiling: media has its own. */
+export function sourceSize(source: TextureSource): TextureSize | undefined {
+	switch (source.kind) {
+		case "render":
+			return source.size;
+		case "state":
+			return CANVAS_SIZE;
+		default:
+			return undefined;
+	}
 }

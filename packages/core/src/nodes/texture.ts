@@ -1,5 +1,7 @@
 import { formatWgslLiteral } from "../codegen/literals";
 import { FRAGMENT_VAR } from "../codegen/program";
+import { readTexture } from "../codegen/texture-read";
+import { isFilterable } from "../passes/textures";
 import {
 	defineNode,
 	type EnumVariant,
@@ -151,15 +153,25 @@ export const sampleTextureNode = defineNode({
 		const coords = `${color}_coords`;
 		const lines = [`let ${coords} = ${textureCoordinates(uv)};`];
 
-		// A known extension is the sampler's addressing; otherwise the
-		// coordinates are wrapped before a clamping sampler.
-		const address = extension === undefined ? "clamp" : (ADDRESS_OF[extension] ?? "clamp");
-		const sampled =
-			extension === undefined
-				? `${ctx.fn(EXTEND_FN, EXTEND_SOURCE)}(${coords}, ${ctx.promoteInput("extension")})`
-				: coords;
+		// Where the texture is sampled by hardware, a known extension is the
+		// sampler's addressing; otherwise the coordinates are wrapped before a
+		// clamping read.
+		const format = ctx.textureFormat("texture");
+		const hardware = isFilterable(format);
+		const wraps = extension === EXTENSION_REPEAT || extension === EXTENSION_MIRROR;
+		const wrapped = extension === undefined || (!hardware && wraps);
+		const address =
+			extension === undefined || !hardware ? "clamp" : (ADDRESS_OF[extension] ?? "clamp");
+		const sampled = wrapped
+			? `${ctx.fn(EXTEND_FN, EXTEND_SOURCE)}(${coords}, ${extension === undefined ? ctx.promoteInput("extension") : `${String(extension)}u`})`
+			: coords;
 		const sample = (filter: SamplerFilter) =>
-			`textureSampleLevel(${texture}, ${ctx.sampler(filter, address)}, ${sampled}, 0.0)`;
+			readTexture(texture, format, sampled, {
+				filter,
+				address,
+				sampler: ctx.sampler,
+				define: ctx.fn,
+			});
 		const raw =
 			interpolation === undefined
 				? `select(${sample("linear")}, ${sample("nearest")}, ${ctx.promoteInput("interpolation")} == 1u)`

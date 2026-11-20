@@ -63,7 +63,7 @@ describe("implicit renders", () => {
 		expect(plan.resources).toContainEqual({
 			id: "render:uv:uv",
 			kind: "transient",
-			size: { relative: 1 },
+			size: { kind: "scale", scale: 1, of: "canvas" },
 			format: "rgba16float",
 		});
 		const link = graph.passAnalysis().link([], graph.root.edges[0] ?? edge(["", "", "", ""]));

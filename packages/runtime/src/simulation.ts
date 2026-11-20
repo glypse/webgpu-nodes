@@ -1,4 +1,4 @@
-import type { RenderPlan, StateFormat, StateRead } from "$core";
+import type { RenderPlan, StateRead, TextureFormat } from "$core";
 
 import type { FrameInputs, Size } from "./renderer";
 
@@ -23,7 +23,7 @@ export function nextStep(last: StepRecord | undefined, frame: FrameInputs): Step
 
 /** The two textures keeping a state item, which swap roles as frames go by. */
 type Pair = {
-	format: StateFormat;
+	format: TextureFormat;
 	simulation: string;
 	textures: [GPUTexture, GPUTexture];
 	/** The index of this frame's texture; the other is the previous frame's. */
@@ -119,7 +119,7 @@ export class SimulationState {
 		this.reset();
 	}
 
-	private createTexture(format: StateFormat, { width, height }: Size): GPUTexture {
+	private createTexture(format: TextureFormat, { width, height }: Size): GPUTexture {
 		return this.device.createTexture({
 			size: { width, height },
 			format,

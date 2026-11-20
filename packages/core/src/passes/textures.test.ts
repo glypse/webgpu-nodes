@@ -1,12 +1,13 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Asset } from "../assets/assets";
-import { generateShader } from "../codegen";
+import { buildProgram, generateShader } from "../codegen";
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import { edge, rootProject, type TestEdge, type TestNode } from "../testing/graph";
 import { fragmentOf, nagaBin, validateFragment } from "../testing/wgsl";
-import { EMPTY_TEXTURE, mediaTextureId } from "./sources";
+import { EMPTY_TEXTURE, mediaTextureId, type TextureResolution, TextureSources } from "./sources";
+import { CANVAS_SIZE, type TextureFormat, type TextureSize } from "./textures";
 
 const at = { x: 0, y: 0 };
 
@@ -201,5 +202,94 @@ describe("textures", () => {
 			targetHandle: "__new_item__",
 		});
 		expect(graph.getZoneItems(zone)).toEqual(items);
+	});
+});
+
+/** Sources whose Image nodes are renders of the given size and format, as Render Texture will make. */
+class Rendered extends TextureSources {
+	constructor(
+		graph: GraphModel,
+		private size: TextureSize,
+		private format: TextureFormat,
+	) {
+		super(graph);
+	}
+
+	override output(path: readonly string[], node: string, handle: string): TextureResolution {
+		return {
+			kind: "render",
+			id: `render:${node}`,
+			target: { path, node, handle },
+			size: this.size,
+			format: this.format,
+		};
+	}
+}
+
+describe("textures of any size and format", () => {
+	const half: TextureSize = { kind: "scale", scale: 0.5, of: "canvas" };
+
+	function read(size: TextureSize, format: TextureFormat, sample: boolean) {
+		const nodes: TestNode[] = [{ id: "img", type: "image", data: { asset: "a" } }];
+		const edges: TestEdge[] = [
+			["img", "texture", sample ? "s" : "out", sample ? "texture" : "color"],
+		];
+		if (sample) {
+			nodes.push({ id: "s", type: "sample-texture" });
+			edges.push(["s", "color", "out", "color"]);
+		}
+		const graph = new GraphModel(project(nodes, edges));
+		const generated = generateShader(graph, { sources: new Rendered(graph, size, format) });
+		expectValid(generated);
+		const program = buildProgram(generated.shader, generated.uniforms, generated);
+		return { generated, program };
+	}
+
+	it("are read exactly at the pixel when made for the pass' size", () => {
+		const { generated } = read(CANVAS_SIZE, "rgba16float", false);
+		expect(generated.shader).toContain(
+			"textureLoad(runtime_texture_0, vec2i(runtime_fragment.position), 0)",
+		);
+		expect(read(CANVAS_SIZE, "r32uint", false).generated.shader).toContain(
+			"vec4f(textureLoad(runtime_texture_0, vec2i(runtime_fragment.position), 0))",
+		);
+	});
+
+	it("are sampled when made for another size", () => {
+		const { generated } = read(half, "rgba16float", false);
+		expect(generated.shader).toContain("textureSampleLevel(runtime_texture_0");
+		expect(generated.shader).not.toContain("textureLoad");
+	});
+
+	it("are read exactly where the pass' size is the texture's, whatever the canvas", () => {
+		const graph = new GraphModel(
+			project(
+				[{ id: "img", type: "image", data: { asset: "a" } }],
+				[["img", "texture", "out", "color"]],
+			),
+		);
+		const generated = generateShader(graph, {
+			sources: new Rendered(graph, half, "rgba16float"),
+			targetSize: half,
+		});
+		expect(generated.shader).toContain("textureLoad(runtime_texture_0, vec2i(");
+	});
+
+	it("are filtered by hand when 32-bit floats", () => {
+		const { generated, program } = read(CANVAS_SIZE, "rgba32float", true);
+		expect(generated.samplers).toEqual([]);
+		expect(generated.shader).toContain("fn texture_bilinear(");
+		expect(generated.shader).toContain("texture_bilinear(runtime_texture_0,");
+		expect(program.textures.map((t) => t.sampleType)).toEqual(["unfilterable-float"]);
+	});
+
+	it("are read at the nearest texel when integers", () => {
+		const { generated, program } = read(half, "r32uint", false);
+		expect(generated.shader).toContain("vec4f(textureLoad(runtime_texture_0, vec2i(clamp(");
+		expect(program.textures.map((t) => t.sampleType)).toEqual(["uint"]);
+		expect(program.code).toContain("texture_2d<u32>");
+		const sampled = read(half, "rgba32sint", true);
+		expect(sampled.generated.samplers).toEqual([]);
+		expect(sampled.program.code).toContain("texture_2d<i32>");
 	});
 });
