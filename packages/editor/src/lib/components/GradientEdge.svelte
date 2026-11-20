@@ -71,13 +71,35 @@
 		}),
 	);
 
+	/**
+	 * What the link does with frame values: it carries one (the same for the
+	 * whole frame, so it can set sizes and counts), or gives a per-pixel value
+	 * to an input that needs one.
+	 */
+	const frameLink = $derived(
+		graph.frameValueAnalysis().link(view.path, {
+			id,
+			source,
+			sourceHandle: sourceHandleId ?? "",
+			target,
+			targetHandle: targetHandleId ?? "",
+		}),
+	);
+
 	/** Links breaking zone rules, or reading no texture, are drawn red and ignored by codegen. */
-	const invalid = $derived(graph.isEdgeInvalid(id) || textureLink?.kind === "invalid");
+	const invalid = $derived(
+		graph.isEdgeInvalid(id) || textureLink?.kind === "invalid" || frameLink?.kind === "invalid",
+	);
 	const invalidReason = $derived(
 		textureLink?.kind === "invalid"
 			? textureLink.reason
-			: "Invalid link: it can't leave the zone it starts in",
+			: frameLink?.kind === "invalid"
+				? frameLink.reason
+				: "Invalid link: it can't leave the zone it starts in",
 	);
+
+	/** Frame values are drawn dotted, apart from the solid links of other values and the dashed ones of hidden links. */
+	const frameValue = $derived(frameLink?.kind === "frame");
 
 	/** Textures are drawn thicker. */
 	const texture = $derived(sourceType === "texture" || textureLink?.kind === "render");
@@ -219,7 +241,9 @@
 				d={path}
 				fill="none"
 				stroke="url(#edge-gradient-{id})"
-				stroke-width={texture ? 2.5 : 1}
+				stroke-width={texture ? 2.5 : frameValue ? 2 : 1}
+				stroke-dasharray={frameValue ? "0.1 4" : undefined}
+				stroke-linecap={frameValue ? "round" : undefined}
 				class="transition-opacity {selected ? 'opacity-100' : 'opacity-60'}"
 			/>
 		{/if}
@@ -261,6 +285,10 @@
 			stroke="transparent"
 			stroke-width="20"
 			class={view.locked ? undefined : "cursor-pointer"}
-		/>
+		>
+			{#if frameValue && !invalid}
+				<title>The same for the whole frame</title>
+			{/if}
+		</path>
 	</g>
 {/if}

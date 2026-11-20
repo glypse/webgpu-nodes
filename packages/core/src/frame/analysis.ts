@@ -1,4 +1,5 @@
 import { MATCH, matchedCase, WIDTH_SWITCH, widthCase } from "../enums";
+import type { GraphEdge } from "../graph/document";
 import { TEXTURE_SIZE } from "../nodes/texture";
 import { COMPONENT_COUNT } from "../nodes/vector";
 import { type TextureGraph, TextureSources } from "../passes/sources";
@@ -7,6 +8,18 @@ import { ITERATIONS_HANDLE, REPEAT_INPUT, zoneItems, zoneKindOf } from "../zones
 
 /** Whether a value is the same for the whole frame, and if not, why. */
 export type FrameResult = { frame: true } | { frame: false; reason: string };
+
+/** Why a link into an input needing a frame value is invalid. */
+export const FRAME_VALUE_REQUIRED = "Needs a value that's the same for the whole frame";
+
+/** What a link does with frame values, at a group instance. */
+export type FrameLink =
+	/** It carries a value that's the same for the whole frame. */
+	| { kind: "frame" }
+	/** It gives a value computed per pixel to an input that needs a frame value. */
+	| { kind: "invalid"; reason: string };
+
+const TEXTURE_REASON = "A texture isn't a value.";
 
 const YES: FrameResult = { frame: true };
 const no = (reason: string): FrameResult => ({ frame: false, reason });
@@ -43,6 +56,25 @@ export class FrameValueAnalysis {
 	reason(path: readonly string[], node: string, handle: string): string | undefined {
 		const result = this.output(path, node, handle);
 		return result.frame ? undefined : result.reason;
+	}
+
+	/** What `edge`, of the document computed at `path`, does with frame values, if anything. */
+	link(path: readonly string[], edge: GraphEdge): FrameLink | undefined {
+		const instance = this.sources.instance(path);
+		const target = instance?.doc.nodesById.get(edge.target);
+		if (!instance || !target) return undefined;
+		const result = this.output(path, edge.source, edge.sourceHandle);
+		if (result.frame) return { kind: "frame" };
+		if (result.reason === TEXTURE_REASON) return undefined;
+		const input = this.graph
+			.resolveDescriptor(target)
+			.inputs.find((i) => i.id === edge.targetHandle);
+		return input?.frame
+			? {
+					kind: "invalid",
+					reason: `${FRAME_VALUE_REQUIRED}: ${result.reason.replace(/\.$/, "")}.`,
+				}
+			: undefined;
 	}
 
 	/** Whether what a node's input reads is a frame value: an unlinked one is. */
@@ -125,7 +157,7 @@ export class FrameValueAnalysis {
 			instance.bindings,
 		);
 		if (isTexture(types.resolvedOutputs.find((o) => o.id === handleId)?.type)) {
-			return no("A texture isn't a value.");
+			return no(TEXTURE_REASON);
 		}
 		const label = this.graph.resolveDescriptor(node).label;
 		const type = node.type;

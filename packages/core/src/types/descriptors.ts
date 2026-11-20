@@ -179,6 +179,11 @@ export type NodeInputDef = {
 	 */
 	control?: InputControl;
 	/**
+	 * The input needs a value that's the same for the whole frame (a size, a
+	 * count, a time): linking a value computed per pixel makes the link invalid.
+	 */
+	frame?: boolean;
+	/**
 	 * The node computes its own value when this socket is unlinked (a group
 	 * node, by a Fallback node inside it), so no editor is shown for it.
 	 */

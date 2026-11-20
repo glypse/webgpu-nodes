@@ -3,6 +3,7 @@ import { describe, expect, it } from "bun:test";
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import { edge, rootProject, type TestEdge, type TestNode } from "../testing/graph";
+import { FrameValueAnalysis } from "./analysis";
 
 const at = { x: 0, y: 0 };
 
@@ -177,5 +178,54 @@ describe("frame values", () => {
 		expect(graph.frameValueAnalysis()).toBe(first);
 		graph.addNode("add", at);
 		expect(graph.frameValueAnalysis()).not.toBe(first);
+	});
+});
+
+describe("frame value links", () => {
+	/** `sin`'s input `e` needs a frame value, as sizes' inputs will. */
+	function needing(graph: GraphModel): GraphModel {
+		return Object.assign(Object.create(graph) as GraphModel, {
+			resolveDescriptor: (node: Parameters<GraphModel["resolveDescriptor"]>[0]) => {
+				const descriptor = graph.resolveDescriptor(node);
+				return {
+					...descriptor,
+					inputs: descriptor.inputs.map((i) =>
+						i.id === "e" ? { ...i, frame: true } : i,
+					),
+				};
+			},
+		});
+	}
+
+	it("tell frame values from per-pixel ones, and refuse those into inputs needing a frame value", () => {
+		const graph = model(
+			[
+				{ id: "time", type: "time" },
+				{ id: "uv", type: "uv" },
+				{ id: "x", type: "separate-vector" },
+				{ id: "now", type: "sin" },
+				{ id: "here", type: "sin" },
+			],
+			[
+				["time", "seconds", "now", "e"],
+				["uv", "uv", "x", "v"],
+				["x", "x", "here", "e"],
+			],
+		);
+		const frame = new FrameValueAnalysis(needing(graph), graph.passAnalysis().sources);
+		const link = (id: string) => {
+			const found = graph.root.edges.find((e) => e.id === id);
+			return found && frame.link([], found);
+		};
+		expect(link("time.seconds->now.e")).toEqual({ kind: "frame" });
+		expect(link("x.x->here.e")).toEqual({
+			kind: "invalid",
+			reason: "Needs a value that's the same for the whole frame: UV is computed for each pixel.",
+		});
+		// Without the requirement, a per-pixel value links as it always did.
+		const plain = graph.frameValueAnalysis();
+		expect(
+			plain.link([], graph.root.edges.find((e) => e.target === "here") ?? ({} as never)),
+		).toBeUndefined();
 	});
 });
