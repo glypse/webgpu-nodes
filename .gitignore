@@ -64,5 +64,4 @@ vite.config.*.timestamp*
 **/.github/prompts
 **/.github/skills
 **/.opencode
-**/CLAUDE.md
 **/opencode.json
