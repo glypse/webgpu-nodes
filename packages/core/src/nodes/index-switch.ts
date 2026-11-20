@@ -42,6 +42,10 @@ export function buildIndexSwitchDescriptor(data: NodeData): NodeDescriptor {
 		],
 		outputs: [{ id: "result", label: "result", type: "f32" }],
 		defaultData: { cases: DEFAULT_CASES },
+		cpu: (ctx) => {
+			const index = Math.min(Math.max(ctx.input(INDEX_SWITCH_INDEX)[0] ?? 0, 0), count - 1);
+			return { result: ctx.input(caseHandle(index)) };
+		},
 		wgsl: (ctx) => {
 			const index = ctx.promoteInput(INDEX_SWITCH_INDEX);
 			if (count === 1) return [`let ${ctx.varName} = ${ctx.promoteInput(caseHandle(0))};`];

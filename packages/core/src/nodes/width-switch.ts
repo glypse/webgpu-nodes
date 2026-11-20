@@ -23,6 +23,10 @@ export const widthSwitchNode = defineNode({
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: {},
 	resolveOutputType: (type, inputTypes) => inputTypes[caseHandle(typeComponents(type))] ?? "f32",
+	cpu: (ctx) => {
+		const type = ctx.inputTypes[WIDTH_SWITCH_VALUE] ?? "f32";
+		return { result: ctx.input(caseHandle(typeComponents(type))) };
+	},
 	wgsl: (ctx) => {
 		const type = ctx.inputTypes[WIDTH_SWITCH_VALUE] ?? "f32";
 		return [`let ${ctx.varName} = ${ctx.promoteInput(caseHandle(typeComponents(type)))};`];

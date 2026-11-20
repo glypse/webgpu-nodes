@@ -367,6 +367,28 @@ export type WgslCtx = {
 	asset: () => Asset | undefined;
 };
 
+/** A value as its components. */
+export type Value = number[];
+
+/**
+ * What a node's CPU implementation reads. Inputs are converted to their
+ * resolved types and read lazily: a Switch computes only the case it picks.
+ */
+export type CpuCtx = {
+	/** The value of an input. */
+	input: (id: string) => Value;
+	/** The values of a variadic input's operands, each converted to its resolved type. */
+	operands: (id: string) => Value[];
+	/** Whether something feeds the input (see `WgslCtx.isPresent`). */
+	isPresent: (id: string) => boolean;
+	inputTypes: Record<string, WgslType>;
+	/** The resolved type of each active output. */
+	outputTypes: Record<string, WgslType>;
+	outputType: WgslType;
+	resolvedInputs: NodeInputDef[];
+	data: NodeData;
+};
+
 export const SAMPLER_FILTERS = ["linear", "nearest"] as const;
 export type SamplerFilter = (typeof SAMPLER_FILTERS)[number];
 export const SAMPLER_ADDRESSES = ["clamp", "repeat", "mirror"] as const;
@@ -437,6 +459,13 @@ export type NodeDescriptor<
 	typeFamily?: { key: string; types: readonly WgslType[] };
 	/** An editor drawn in the node's body, for the values of its inputs. */
 	widget?: NodeWidget;
+	/**
+	 * The node's outputs computed on the CPU, one value per output id, for
+	 * evaluating graphs without a GPU. f32 results are rounded with
+	 * `Math.fround` and integers wrap as in WGSL, so both agree. Nodes with no
+	 * meaning on the CPU (they read a pixel, a texture or custom code) have none.
+	 */
+	cpu?: (ctx: CpuCtx) => Record<string, Value>;
 	/** Emit WGSL line(s) that define `varName`.
 	 *  Each returned string becomes one statement in the current scope.
 	 *  The `let ` / `var ` prefix is the node's own choice. */

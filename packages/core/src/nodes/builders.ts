@@ -20,6 +20,7 @@ import {
 	WGSL_TYPES,
 	wgslTypeName,
 } from "../types";
+import { coerce, roundHalfEven } from "./cpu";
 
 // ── Factory: unary function (sin, abs, floor, ...) ───────────────────────────
 
@@ -216,6 +217,17 @@ export function convertNode(
 		},
 		settings: rounding ? [ROUNDING_SETTING] : undefined,
 		resolveOutputType: (t) => makeType(kind, typeComponents(t)),
+		cpu: (ctx) => {
+			const mode = rounding ? settingValue(ctx.data, ROUNDING_SETTING) : "trunc";
+			const round = {
+				trunc: Math.trunc,
+				floor: Math.floor,
+				ceil: Math.ceil,
+				round: roundHalfEven,
+			}[mode];
+			const e = ctx.input("e");
+			return { result: coerce(rounding && round ? e.map(round) : e, ctx.outputType) };
+		},
 		wgsl: (ctx) => {
 			const sourceType = ctx.inputTypes.e ?? "f32";
 			let expr = ctx.promoteInput("e");

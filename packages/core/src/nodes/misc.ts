@@ -24,6 +24,7 @@ export const rerouteNode = defineNode({
 	inputs: [{ id: "in", label: "in", types: SOCKET_TYPES }],
 	outputs: [{ id: "out", label: "out", type: "f32" }],
 	defaultData: {},
+	cpu: (ctx) => ({ out: ctx.input("in") }),
 	wgsl: (ctx) => [`let ${ctx.varName} = ${ctx.promoteInput("in")};`],
 });
 

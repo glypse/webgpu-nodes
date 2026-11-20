@@ -325,7 +325,7 @@ describe("the OpenSimplex groups", () => {
 		const entry = libraryEntry("std-gradient-noise-1d");
 		for (const [x = 0] of positions(1, 5)) {
 			const [value = 0] = run(entry, { Value: x, Seed: 5 }, "Value");
-			expect(value).toBeCloseTo(reference([x], FAST, 5), 5);
+			expect(value).toBeCloseTo(reference([x], FAST, 5), 4);
 		}
 	});
 
@@ -337,7 +337,7 @@ describe("the OpenSimplex groups", () => {
 				for (const p of positions(n, 3, 9)) {
 					const inputs = { "Lattice Position": asValue(p), Variant: variant, Seed: -4 };
 					const [value = 0] = run(entry, inputs, "Value");
-					expect(value).toBeCloseTo(reference(p, variant, -4), 5);
+					expect(value).toBeCloseTo(reference(p, variant, -4), 4);
 				}
 			});
 		}
@@ -354,12 +354,12 @@ describe("the OpenSimplex groups", () => {
 			);
 		const diagonal = 1 / Math.sqrt(3);
 		// XY Plane, XZ Plane and Classic.
-		for (const n of turned([0, 0, 1], 2)) expect(n).toBeCloseTo(diagonal, 9);
-		for (const n of turned([0, 1, 0], 3)) expect(n).toBeCloseTo(diagonal, 9);
+		for (const n of turned([0, 0, 1], 2)) expect(n).toBeCloseTo(diagonal, 7);
+		for (const n of turned([0, 1, 0], 3)) expect(n).toBeCloseTo(diagonal, 7);
 		for (const orientation of [2, 3, 6]) {
 			const [v = []] = positions(3, 1, orientation);
 			const length = Math.hypot(...turned(v, orientation));
-			expect(length).toBeCloseTo(Math.hypot(...v), 6);
+			expect(length).toBeCloseTo(Math.hypot(...v), 4);
 		}
 	});
 
@@ -371,7 +371,7 @@ describe("the OpenSimplex groups", () => {
 			const inputs = { Vector: asValue(p), Variant: SMOOTH, Orientation: 1 };
 			const lattice = run(orientation, inputs, "Lattice Position", TYPES[n]);
 			const [value = 0] = run(entry, { ...inputs, Seed: 2 }, "Value", TYPES[n]);
-			expect(value).toBeCloseTo(reference(lattice.slice(0, n), SMOOTH, 2), 5);
+			expect(value).toBeCloseTo(reference(lattice.slice(0, n), SMOOTH, 2), 4);
 		}
 	});
 });

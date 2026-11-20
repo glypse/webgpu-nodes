@@ -31,6 +31,7 @@ export const declareNode = defineNode({
 			types: [scalar],
 		}));
 	},
+	cpu: (ctx) => ({ value: ctx.resolvedInputs.map((i) => ctx.input(i.id)[0] ?? 0) }),
 	wgsl: (ctx) => {
 		const args = ctx.resolvedInputs.map((i) => ctx.promoteInput(i.id)).join(", ");
 		if (typeComponents(ctx.outputType) === 1) return [`let ${ctx.varName} = ${args};`];

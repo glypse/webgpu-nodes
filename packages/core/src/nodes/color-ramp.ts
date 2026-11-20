@@ -2,6 +2,7 @@ import { LINEAR_RGB_TO_LMS, LMS_TO_LINEAR_RGB, LMS_TO_OKLAB, OKLAB_TO_LMS } from
 import { wgslMat3 } from "../color/display";
 import {
 	DEFAULT_RAMP,
+	evaluateRamp,
 	HUE_DECREASING,
 	HUE_INCREASING,
 	HUE_LONGER,
@@ -28,9 +29,11 @@ import {
 	type NodeData,
 	type NodeDescriptor,
 	type NodeInputDef,
+	typeComponents,
 	type VectorValue,
 	type WgslCtx,
 } from "../types";
+import { coerce } from "./cpu";
 
 export const COLOR_RAMP = "color-ramp";
 export const RAMP_FACTOR = "factor";
@@ -376,6 +379,20 @@ export function buildColorRampDescriptor(data: NodeData): NodeDescriptor {
 					}),
 				),
 			},
+		},
+		cpu: (ctx) => {
+			const mode = (id: string) => ctx.input(id)[0] ?? 0;
+			const width = typeComponents(ctx.outputType);
+			const colors = stops.map((stop) => {
+				const [r = 0, g = 0, b = 0, a = 1] = ctx.input(stop.id);
+				return { position: stop.position, color: [r, g, b, width === 4 ? a : 1] as const };
+			});
+			const color = evaluateRamp(colors, ctx.input(RAMP_FACTOR)[0] ?? 0, {
+				interpolation: mode(RAMP_INTERPOLATION),
+				space: mode(RAMP_SPACE),
+				hue: mode(RAMP_HUE),
+			});
+			return { color: coerce(color.slice(0, width), ctx.outputType) };
 		},
 		wgsl: (ctx) => {
 			const v = ctx.varName;

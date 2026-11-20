@@ -9,6 +9,7 @@ import {
 	type WgslType,
 } from "../types";
 import { binaryNode, unaryFn } from "./builders";
+import { coerce, zip } from "./cpu";
 
 /** Measurable as WGSL's `length` and `distance` measure them: a scalar as its absolute value. */
 const MEASURED_TYPES: readonly WgslType[] = [...FLOAT_VEC_TYPES, "f32"];
@@ -23,6 +24,12 @@ export const dotNode = defineNode({
 		ids: ["e1", "e2"],
 		category: "vector",
 	}),
+	cpu: (ctx) => ({
+		result: coerce(
+			[zip([ctx.input("e1"), ctx.input("e2")], (a, b) => a * b).reduce((a, b) => a + b, 0)],
+			ctx.outputType,
+		),
+	}),
 	aliases: ["Scalar Product", "Inner Product", "Vector Math"],
 	resolveOutputType: () => "f32",
 });
@@ -31,6 +38,11 @@ export const distanceNode = defineNode({
 		types: MEASURED_TYPES,
 		ids: ["e1", "e2"],
 		category: "vector",
+	}),
+	cpu: (ctx) => ({
+		result: [
+			Math.fround(Math.hypot(...zip([ctx.input("e1"), ctx.input("e2")], (a, b) => a - b))),
+		],
 	}),
 	aliases: ["Vector Math"],
 	resolveOutputType: () => "f32",
@@ -44,10 +56,21 @@ export const lengthNode = defineNode({
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { values: { e1: 0 } },
 	resolveOutputType: () => "f32",
+	cpu: (ctx) => ({ result: [Math.fround(Math.hypot(...ctx.input("e1")))] }),
 	wgsl: (ctx) => [`let ${ctx.varName} = length(${ctx.promoteInput("e1")});`],
 });
 export const normalizeNode = defineNode({
 	...unaryFn("normalize", "Normalize", "normalize", FLOAT_VEC_TYPES, "vector"),
+	cpu: (ctx) => {
+		const v = ctx.input("e");
+		const length = Math.hypot(...v);
+		return {
+			result: coerce(
+				v.map((n) => n / length),
+				ctx.outputType,
+			),
+		};
+	},
 	aliases: ["Normalise", "Unit Vector", "Vector Math"],
 });
 export const crossNode = defineNode({
@@ -56,6 +79,11 @@ export const crossNode = defineNode({
 		ids: ["e1", "e2"],
 		category: "vector",
 	}),
+	cpu: (ctx) => {
+		const [a = 0, b = 0, c = 0] = ctx.input("e1");
+		const [d = 0, e = 0, f = 0] = ctx.input("e2");
+		return { result: coerce([b * f - c * e, c * d - a * f, a * e - b * d], "vec3f") };
+	},
 	aliases: ["Vector Product", "Vector Math"],
 	resolveOutputType: () => "vec3f",
 });
@@ -83,6 +111,9 @@ export const componentCountNode = defineNode({
 	outputs: [{ id: "count", label: "count", type: "u32" }],
 	staticOutputTypes: true,
 	defaultData: {},
+	cpu: (ctx) => ({
+		count: [typeComponents(ctx.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32")],
+	}),
 	wgsl: (ctx) => {
 		const type = ctx.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32";
 		return [`let ${ctx.varName} = ${String(typeComponents(type))}u;`];
@@ -116,6 +147,10 @@ export const separateVectorNode = defineNode({
 			label: c,
 			type: makeType(typeKind(resolvedInputType), 1),
 		})),
+	cpu: (ctx) => {
+		const v = ctx.input("v");
+		return Object.fromEntries(SEPARATE_COMPONENTS.map((c, i) => [c, [v[i] ?? 0]]));
+	},
 	wgsl: (ctx) => {
 		const src = ctx.promoteInput("v");
 		return ctx.resolvedOutputs.map((o) => {

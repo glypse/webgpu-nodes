@@ -1,5 +1,6 @@
-import { CURVE_SOLVE_STEPS, curveSegments, LINEAR_CURVE } from "../curve";
+import { CURVE_SOLVE_STEPS, curveSegments, evaluateCurve, LINEAR_CURVE } from "../curve";
 import { defineNode, FLOAT_TYPES, typeComponents, wgslTypeName } from "../types";
+import { coerce } from "./cpu";
 
 const SEGMENT_FN = "curveSegment";
 
@@ -73,6 +74,19 @@ export const curveNode = defineNode({
 	primaryInput: "value",
 	defaultData: { values: { factor: 1, value: 0 }, curve: [...LINEAR_CURVE] },
 	widget: { kind: "curve" },
+	cpu: (ctx) => {
+		const points = ctx.data.curve ?? LINEAR_CURVE;
+		const factor = ctx.input("factor")[0] ?? 0;
+		return {
+			result: coerce(
+				ctx.input("value").map((x) => {
+					const y = evaluateCurve(points, x);
+					return x * (1 - factor) + y * factor;
+				}),
+				ctx.outputType,
+			),
+		};
+	},
 	wgsl: (ctx) => {
 		const points = ctx.data.curve ?? LINEAR_CURVE;
 		const segments = curveSegments(points);

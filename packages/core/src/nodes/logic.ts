@@ -9,7 +9,17 @@ import {
 	WGSL_TYPES,
 } from "../types";
 import { binaryNode, unaryFn } from "./builders";
+import { coerce, unaryCpu, zip } from "./cpu";
 import { SAMPLE_TEXTURE, SAMPLE_TEXTURE_UV } from "./texture";
+
+const COMPARE: Record<string, (a: number, b: number) => boolean> = {
+	"<": (a, b) => a < b,
+	"<=": (a, b) => a <= b,
+	"==": (a, b) => a === b,
+	"!=": (a, b) => a !== b,
+	">=": (a, b) => a >= b,
+	">": (a, b) => a > b,
+};
 
 const COMPARE_SETTING = defineSetting({
 	key: "op",
@@ -37,6 +47,15 @@ export const compareNode = defineNode({
 	defaultData: { values: { a: 0, b: 0 }, settings: { op: "<" } },
 	settings: [COMPARE_SETTING],
 	resolveOutputType: (t) => makeType("bool", typeComponents(t)),
+	cpu: (ctx) => {
+		const op = COMPARE[settingValue(ctx.data, COMPARE_SETTING)];
+		return {
+			result: coerce(
+				zip([ctx.input("a"), ctx.input("b")], (a, b) => Number(op?.(a, b))),
+				ctx.outputType,
+			),
+		};
+	},
 	wgsl: (ctx) => {
 		const op = settingValue(ctx.data, COMPARE_SETTING);
 		return [`let ${ctx.varName} = ${ctx.promoteInput("a")} ${op} ${ctx.promoteInput("b")};`];
@@ -56,6 +75,14 @@ export const switchNode = defineNode({
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { values: { condition: false, false: 0, true: 1 } },
+	cpu: (ctx) => ({
+		result: coerce(
+			zip([ctx.input("condition"), ctx.input("false"), ctx.input("true")], (c, f, t) =>
+				c ? t : f,
+			),
+			ctx.outputType,
+		),
+	}),
 	wgsl: (ctx) => {
 		const valueType = ctx.outputType;
 		const conditionType = ctx.inputTypes.condition ?? "bool";
@@ -93,6 +120,15 @@ const BOOLEAN_MATH_EXPR: Record<string, (a: string, b: string) => string> = {
 	xnor: (a, b) => `${a} == ${b}`,
 };
 
+const BOOLEAN_MATH: Record<string, (a: boolean, b: boolean) => boolean> = {
+	and: (a, b) => a && b,
+	or: (a, b) => a || b,
+	xor: (a, b) => a !== b,
+	nand: (a, b) => !(a && b),
+	nor: (a, b) => !(a || b),
+	xnor: (a, b) => a === b,
+};
+
 export const booleanMathNode = defineNode({
 	...binaryNode(
 		"boolean-math",
@@ -103,6 +139,15 @@ export const booleanMathNode = defineNode({
 		},
 		{ types: BOOL_TYPES, category: "logic" },
 	),
+	cpu: (ctx) => {
+		const op = BOOLEAN_MATH[settingValue(ctx.data, BOOLEAN_MATH_SETTING)];
+		return {
+			result: coerce(
+				zip([ctx.input("a"), ctx.input("b")], (a, b) => Number(op?.(!!a, !!b))),
+				ctx.outputType,
+			),
+		};
+	},
 	aliases: ["And", "Or", "Xor", "Nand", "Nor", "Logic"],
 	defaultData: { values: { a: false, b: false }, settings: { op: "and" } },
 	settings: [BOOLEAN_MATH_SETTING],
@@ -112,6 +157,7 @@ export const notNode = defineNode({
 	...unaryFn("not", "Not", "", BOOL_TYPES, "logic"),
 	aliases: ["Logical Not", "Boolean Not", "Invert Boolean"],
 	defaultData: { values: { e: false } },
+	cpu: unaryCpu((n) => Number(!n)),
 	wgsl: (ctx) => [`let ${ctx.varName} = !(${ctx.promoteInput("e")});`],
 });
 
@@ -130,6 +176,11 @@ export const reduceBooleanNode = defineNode({
 	defaultData: { values: { e: false }, settings: { op: "any" } },
 	settings: [REDUCE_SETTING],
 	resolveOutputType: () => "bool",
+	cpu: (ctx) => {
+		const values = ctx.input("e");
+		const any = settingValue(ctx.data, REDUCE_SETTING) === "any";
+		return { result: [Number(any ? values.some(Boolean) : values.every(Boolean))] };
+	},
 	wgsl: (ctx) => [
 		`let ${ctx.varName} = ${settingValue(ctx.data, REDUCE_SETTING)}(${ctx.promoteInput("e")});`,
 	],
@@ -153,6 +204,9 @@ export const fallbackNode = defineNode({
 	],
 	outputs: [{ id: "result", label: "result", type: "f32" }],
 	defaultData: { values: { default: 0 } },
+	cpu: (ctx) => ({
+		result: coerce(ctx.input(ctx.isPresent("value") ? "value" : "default"), ctx.outputType),
+	}),
 	wgsl: (ctx) => {
 		const chosen = ctx.isPresent("value") ? "value" : "default";
 		return [`let ${ctx.varName} = ${ctx.promoteInput(chosen)};`];

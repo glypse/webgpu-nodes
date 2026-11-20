@@ -1,30 +1,18 @@
 import { clipToGamut } from "../color/display";
-import { evaluateCurve, LINEAR_CURVE } from "../curve";
-import { caseHandle, MATCH_SELECTOR, WIDTH_SWITCH_VALUE } from "../enums";
 import type { GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
-import {
-	COLOR_RAMP,
-	colorRampStops,
-	RAMP_FACTOR,
-	RAMP_HUE,
-	RAMP_INTERPOLATION,
-	RAMP_SPACE,
-} from "../nodes/color-ramp";
-import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
+import { coerce } from "../nodes/cpu";
 import { SAMPLE_TEXTURE, TEXTURE_SIZE } from "../nodes/texture";
-import { COMPONENT_COUNT, COMPONENT_COUNT_INPUT } from "../nodes/vector";
 import { readSource, type TextureSource, TextureSources } from "../passes/sources";
-import { evaluateRamp } from "../ramp";
 import {
-	enumValue,
+	type CpuCtx,
 	isTexture,
 	type ResolvedNodeTypes,
 	type TypeBindings,
 	typeComponents,
-	typeKind,
+	type Value,
 	valueType,
 	type WgslType,
 } from "../types";
@@ -36,9 +24,6 @@ import {
 	zoneItems,
 	zoneMaxIterations,
 } from "../zones";
-
-/** A value as its components. */
-export type Value = number[];
 
 /** An image as the evaluator reads it: straight-alpha linear RGBA texels, rows top first. */
 export type CpuTexture = {
@@ -81,97 +66,6 @@ type Frame = {
 	finals: Map<string, ReadonlyMap<string, Value>>;
 	/** Outputs computed in this frame, by node and handle id. */
 	computed: Map<string, Value>;
-};
-
-const map = (v: Value, f: (n: number) => number) => v.map(f);
-
-/** Component-wise `f`, a single component standing for all of them. */
-function zip(values: Value[], f: (...n: number[]) => number): Value {
-	const width = Math.max(...values.map((v) => v.length));
-	return Array.from({ length: width }, (_, i) =>
-		f(...values.map((v) => v[v.length === 1 ? 0 : i] ?? 0)),
-	);
-}
-
-function fit(value: Value, width: number): Value {
-	if (value.length === 1) return Array.from({ length: width }, () => value[0] ?? 0);
-	return Array.from({ length: width }, (_, i) => value[i] ?? 0);
-}
-
-/** A number as a value of `type`'s kind: integers wrap as in WGSL. */
-function asKind(type: WgslType): (n: number) => number {
-	switch (typeKind(type)) {
-		case "i32":
-			return (n) => Math.trunc(n) | 0;
-		case "u32":
-			return (n) => Math.trunc(n) >>> 0;
-		case "bool":
-			return (n) => Number(n !== 0);
-		default:
-			return (n) => n;
-	}
-}
-
-const UNARY: Record<string, (n: number) => number> = {
-	abs: Math.abs,
-	sign: Math.sign,
-	sin: Math.sin,
-	cos: Math.cos,
-	fract: (n) => n - Math.floor(n),
-	floor: Math.floor,
-	ceil: Math.ceil,
-	sqrt: Math.sqrt,
-	log: Math.log,
-	exp: Math.exp,
-	// WGSL rounds halves to even.
-	round: (n) => (Math.abs(n % 1) === 0.5 ? 2 * Math.round(n / 2) : Math.round(n)),
-	negate: (n) => -n,
-	"to-float": (n) => n,
-};
-
-const VARIADIC: Record<string, (a: number, b: number) => number> = {
-	add: (a, b) => a + b,
-	mul: (a, b) => a * b,
-	max: Math.max,
-	min: Math.min,
-};
-
-/** Integer multiplication wraps where the product exceeds a float's precision. */
-const INT_VARIADIC: Record<string, (a: number, b: number) => number> = {
-	mul: Math.imul,
-};
-
-const BINARY: Record<string, [string, string, (a: number, b: number) => number]> = {
-	sub: ["a", "b", (a, b) => a - b],
-	div: ["a", "b", (a, b) => (b === 0 ? 0 : a / b)],
-	mod: ["a", "b", (a, b) => (b === 0 ? 0 : a % b)],
-	pow: ["e1", "e2", (a, b) => (b === 0 ? 1 : a ** b)],
-	atan2: ["e1", "e2", Math.atan2],
-	step: ["e1", "e2", (edge, x) => Number(x >= edge)],
-};
-
-const BITWISE: Record<string, (a: number, b: number) => number> = {
-	"&": (a, b) => a & b,
-	"|": (a, b) => a | b,
-	"^": (a, b) => a ^ b,
-};
-
-const COMPARE: Record<string, (a: number, b: number) => boolean> = {
-	"<": (a, b) => a < b,
-	"<=": (a, b) => a <= b,
-	"==": (a, b) => a === b,
-	"!=": (a, b) => a !== b,
-	">=": (a, b) => a >= b,
-	">": (a, b) => a > b,
-};
-
-const BOOLEAN: Record<string, (a: boolean, b: boolean) => boolean> = {
-	and: (a, b) => a && b,
-	or: (a, b) => a || b,
-	xor: (a, b) => a !== b,
-	nand: (a, b) => !(a && b),
-	nor: (a, b) => !(a || b),
-	xnor: (a, b) => a === b,
 };
 
 /**
@@ -348,7 +242,6 @@ function typesIn(model: GraphModel, frame: Frame, node: GraphNode): ResolvedNode
 
 function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value {
 	const type = valueType(typesIn(model, frame, node).inputTypes[inputId] ?? "f32");
-	const width = typeComponents(type);
 	const edge = frame.doc.edgesByTarget.get(node.id)?.find((e) => e.targetHandle === inputId);
 	if (edge && isTexture(model.typeResolver.inferHandleType(edge, frame.bindings))) {
 		// Sampled at the pixel: a render exactly, other images stretched over the canvas.
@@ -364,19 +257,22 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 						Math.floor((1 - frame.uv[1]) * texture.height),
 					)
 				: sampleTexture(texture, [...frame.uv], 0, 0);
-		return map(fit(color, width), asKind(type));
+		return coerce(color, type);
 	}
-	if (edge)
-		return map(fit(output(model, frame, edge.source, edge.sourceHandle), width), asKind(type));
+	if (edge) return coerce(output(model, frame, edge.source, edge.sourceHandle), type);
 	const stored =
 		node.data.values?.[inputId] ?? model.resolveDescriptor(node).defaultData.values?.[inputId];
 	const keys = componentKeys(type);
-	return keys.map((k) => readComponent(stored, k));
+	return coerce(
+		keys.map((k) => readComponent(stored, k)),
+		type,
+	);
 }
 
-function inputs(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value[] {
+function operands(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value[] {
+	const type = valueType(typesIn(model, frame, node).inputTypes[inputId] ?? "f32");
 	const edges = frame.doc.edgesByTarget.get(node.id)?.filter((e) => e.targetHandle === inputId);
-	return (edges ?? []).map((e) => output(model, frame, e.source, e.sourceHandle));
+	return (edges ?? []).map((e) => coerce(output(model, frame, e.source, e.sourceHandle), type));
 }
 
 function output(model: GraphModel, frame: Frame, nodeId: string, handleId: string): Value {
@@ -393,12 +289,6 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 	if (!node?.type) throw new Error(`no node "${nodeId}"`);
 	const type = node.type;
 	const get = (id: string) => input(model, frame, node, id);
-	const resolved = typesIn(model, frame, node);
-	const outputType = valueType(
-		resolved.resolvedOutputs.find((o) => o.id === handleId)?.type ?? resolved.outputType,
-	);
-	const width = typeComponents(outputType);
-	const integer = typeKind(outputType) === "i32" || typeKind(outputType) === "u32";
 
 	if (type === "group-input") {
 		const value = frame.groupInputs.get(handleId);
@@ -416,20 +306,6 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		if (!out) throw new Error("no group output");
 		return input(model, inner, out, handleId);
 	}
-	if (type === "reroute") return get("in");
-	const unary = UNARY[type];
-	if (unary) return map(map(get("e"), unary), asKind(outputType));
-	const variadic = (integer ? INT_VARIADIC[type] : undefined) ?? VARIADIC[type];
-	if (variadic) {
-		const operands = inputs(model, frame, node, "operands");
-		return map(
-			fit(
-				operands.reduce((a, b) => zip([a, b], variadic)),
-				width,
-			),
-			asKind(outputType),
-		);
-	}
 	if (type === REPEAT_INPUT) {
 		const zone = frame.zones.get(nodeId);
 		if (!zone) throw new Error(`repeat input "${nodeId}" read outside its zone`);
@@ -437,88 +313,8 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		return zone.state.get(handleId) ?? [0];
 	}
 	if (type === REPEAT_OUTPUT) return runZone(model, frame, node).get(handleId) ?? [0];
-	const binary = BINARY[type];
-	if (binary) {
-		return map(
-			fit(zip([get(binary[0]), get(binary[1])], binary[2]), width),
-			asKind(outputType),
-		);
-	}
 
 	switch (type) {
-		case "declare":
-			return resolved.resolvedInputs.map((i) => get(i.id)[0] ?? 0);
-		case "separate-vector":
-			return [get("v")["xyzw".indexOf(handleId)] ?? 0];
-		case COMPONENT_COUNT:
-			return [typeComponents(valueType(resolved.inputTypes[COMPONENT_COUNT_INPUT] ?? "f32"))];
-		case "width-switch":
-			return get(
-				caseHandle(
-					typeComponents(valueType(resolved.inputTypes[WIDTH_SWITCH_VALUE] ?? "f32")),
-				),
-			);
-		case "distance":
-			return [Math.hypot(...zip([get("e1"), get("e2")], (a, b) => a - b))];
-		case "not":
-			return map(get("e"), (n) => Number(!n));
-		case "boolean-math": {
-			const op = BOOLEAN[node.data.settings?.op ?? "and"];
-			return zip([get("a"), get("b")], (a, b) => Number(op?.(!!a, !!b)));
-		}
-		case "cross": {
-			const [a = 0, b = 0, c = 0] = get("e1");
-			const [d = 0, e = 0, f = 0] = get("e2");
-			return [b * f - c * e, c * d - a * f, a * e - b * d];
-		}
-		case "dot":
-			return [zip([get("e1"), get("e2")], (a, b) => a * b).reduce((a, b) => a + b, 0)];
-		case "length":
-			return [Math.hypot(...get("e1"))];
-		case "normalize": {
-			const v = get("e");
-			const length = Math.hypot(...v);
-			return map(v, (n) => n / length);
-		}
-		case "smoothstep":
-			return zip([get("low"), get("high"), get("x")], (low, high, x) => {
-				const t = Math.min(1, Math.max(0, (x - low) / (high - low)));
-				return t * t * (3 - 2 * t);
-			});
-		case "bitwise": {
-			const op = BITWISE[node.data.settings?.op ?? "&"];
-			return map(
-				zip([get("a"), get("b")], (a, b) => op?.(a, b) ?? 0),
-				asKind(outputType),
-			);
-		}
-		case "bit-shift": {
-			const right = node.data.settings?.op === ">>";
-			const unsigned = typeKind(outputType) === "u32";
-			return map(
-				zip([get("a"), get("b")], (a, b) =>
-					right ? (unsigned ? a >>> (b & 31) : a >> (b & 31)) : a << (b & 31),
-				),
-				asKind(outputType),
-			);
-		}
-		case "to-int":
-		case "to-uint": {
-			const mode = node.data.settings?.rounding ?? "trunc";
-			const round =
-				mode === "floor"
-					? Math.floor
-					: mode === "ceil"
-						? Math.ceil
-						: mode === "round"
-							? Math.round
-							: Math.trunc;
-			return map(map(get("e"), round), asKind(outputType));
-		}
-		case "clamp":
-			return zip([get("e"), get("low"), get("high")], (e, lo, hi) =>
-				Math.min(hi, Math.max(lo, e)),
-			);
 		case "resolution":
 			return [...frame.resolution];
 		case "uv":
@@ -545,61 +341,29 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			const clipped = clipToGamut({ r, g, b }, frame.colorSpace);
 			return [clipped.r, clipped.g, clipped.b];
 		}
-		case "mix":
-			return zip([get("e1"), get("e2"), get("e3")], (a, b, t) => a * (1 - t) + b * t);
-		case "curve": {
-			const points = node.data.curve ?? LINEAR_CURVE;
-			const factor = get("factor")[0] ?? 0;
-			return map(fit(get("value"), width), (x) => {
-				const y = evaluateCurve(points, x);
-				return x * (1 - factor) + y * factor;
-			});
-		}
-		case "compare": {
-			const op = COMPARE[node.data.settings?.op ?? "<"];
-			return zip([get("a"), get("b")], (a, b) => Number(op?.(a, b)));
-		}
-		case "switch":
-			return zip([get("condition"), get("false"), get("true")], (c, f, t) => (c ? t : f));
-		case "fallback": {
-			const edge = frame.doc.edgesByTarget
-				.get(nodeId)
-				?.find((e) => e.targetHandle === "value");
-			return get(edge ? "value" : "default");
-		}
-		case "match": {
-			const variants = model
-				.resolveDescriptor(node)
-				.inputs.filter((i) => i.id !== MATCH_SELECTOR);
-			const selected = get(MATCH_SELECTOR)[0] ?? 0;
-			const values = variants.map((i) => Number(i.id.slice("case-".length)));
-			const value = enumValue(
-				selected,
-				values.map((v) => ({ value: v, label: "" })),
-			);
-			return get(caseHandle(value ?? 0));
-		}
-		case COLOR_RAMP: {
-			const mode = (id: string) => get(id)[0] ?? 0;
-			const stops = colorRampStops(node.data).map((stop) => {
-				const [r = 0, g = 0, b = 0, a = 1] = get(stop.id);
-				return { position: stop.position, color: [r, g, b, width === 4 ? a : 1] as const };
-			});
-			const color = evaluateRamp(stops, get(RAMP_FACTOR)[0] ?? 0, {
-				interpolation: mode(RAMP_INTERPOLATION),
-				space: mode(RAMP_SPACE),
-				hue: mode(RAMP_HUE),
-			});
-			return color.slice(0, width);
-		}
-		case INDEX_SWITCH: {
-			const last = indexSwitchCases(node.data) - 1;
-			const index = Math.min(Math.max(get(INDEX_SWITCH_INDEX)[0] ?? 0, 0), last);
-			return get(caseHandle(index));
-		}
-		default:
-			throw new Error(`can't evaluate a "${type}" node`);
 	}
+
+	const cpu = model.resolveDescriptor(node).cpu;
+	if (!cpu) throw new Error(`can't evaluate a "${type}" node`);
+	const resolved = typesIn(model, frame, node);
+	const ctx: CpuCtx = {
+		input: get,
+		operands: (id) => operands(model, frame, node, id),
+		isPresent: (id) =>
+			frame.doc.edgesByTarget.get(nodeId)?.some((e) => e.targetHandle === id) ?? false,
+		inputTypes: Object.fromEntries(
+			Object.entries(resolved.inputTypes).map(([id, t]) => [id, valueType(t)]),
+		),
+		outputTypes: Object.fromEntries(
+			resolved.resolvedOutputs.map((o) => [o.id, valueType(o.type)]),
+		),
+		outputType: valueType(resolved.outputType),
+		resolvedInputs: resolved.resolvedInputs,
+		data: node.data,
+	};
+	const outputs = cpu(ctx);
+	for (const [id, value] of Object.entries(outputs)) frame.computed.set(`${nodeId}:${id}`, value);
+	return outputs[handleId] ?? [0];
 }
 
 /** Run a repeat zone to its end, as its loop does: every next value from the current ones. */
