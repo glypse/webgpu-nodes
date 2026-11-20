@@ -1,6 +1,6 @@
 import { MATCH, matchedCase, WIDTH_SWITCH, widthCase } from "../enums";
 import type { GraphEdge } from "../graph/document";
-import { TEXTURE_SIZE } from "../nodes/texture";
+import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL } from "../nodes/texture";
 import { COMPONENT_COUNT } from "../nodes/vector";
 import { type TextureGraph, TextureSources } from "../passes/sources";
 import { isTexture } from "../types";
@@ -25,7 +25,7 @@ const YES: FrameResult = { frame: true };
 const no = (reason: string): FrameResult => ({ frame: false, reason });
 
 /** Nodes whose outputs the runtime knows before drawing, with no inputs of their own to check. */
-const FRAME_SOURCES: ReadonlySet<string> = new Set(["time", "delta", "resolution", TEXTURE_SIZE]);
+const FRAME_SOURCES: ReadonlySet<string> = new Set(["time", "delta", "resolution"]);
 
 /**
  * Which values of the graph are the same for a whole frame (the *frame* tier
@@ -162,6 +162,8 @@ export class FrameValueAnalysis {
 		const label = this.graph.resolveDescriptor(node).label;
 		const type = node.type;
 		if (FRAME_SOURCES.has(type)) return YES;
+		// A texture's size is known to the runtime, at the level asked for.
+		if (type === TEXTURE_SIZE) return this.input(path, nodeId, TEXTURE_SIZE_LEVEL);
 		if (type === "group-input") {
 			const parent = path.at(-1);
 			return parent === undefined

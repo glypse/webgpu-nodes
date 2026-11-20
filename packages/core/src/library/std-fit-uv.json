@@ -81,7 +81,11 @@
 			{
 				"id": "176fb707-1276-45b3-8b27-d5cc249456ff",
 				"type": "texture-size",
-				"data": {},
+				"data": {
+					"values": {
+						"level": 0
+					}
+				},
 				"position": {
 					"x": 489,
 					"y": 819
@@ -96,7 +100,7 @@
 				},
 				"position": {
 					"x": 289,
-					"y": 875
+					"y": 903
 				},
 				"frame": "2b2f041f-aa86-434f-abcb-dc729695f4b3"
 			},

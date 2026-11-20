@@ -48,7 +48,7 @@ function tapSpacing<I extends string>(g: Kernel<I>, radius: Operand, reach: Oper
 
 /** `texture`'s colour at `at`, premultiplied by its alpha, else transparent pixels darken their neighbours. */
 function premultipliedTap<I extends string>(g: Kernel<I>, texture: Ref, at: Ref, edges: Ref): Ref {
-	const { color } = g.sampleTexture(texture, at, 0, edges);
+	const { color } = g.sampleTexture(texture, at, 0, edges, 0);
 	const { x, y, z, w: alpha } = g.separateVector(color);
 	return g.vec("vec4f", g.mul(x, alpha), g.mul(y, alpha), g.mul(z, alpha), alpha);
 }

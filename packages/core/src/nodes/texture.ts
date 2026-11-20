@@ -19,6 +19,10 @@ export const TEXTURE_SIZE = "texture-size";
 export const MEDIA_TEXTURE = "texture";
 /** Sample Texture's input taking the coordinates to sample at. */
 export const SAMPLE_TEXTURE_UV = "uv";
+/** Sample Texture's input taking the mip level to read. */
+export const SAMPLE_TEXTURE_LEVEL = "level";
+/** Texture Size's input taking the mip level it gives the size of. */
+export const TEXTURE_SIZE_LEVEL = "level";
 
 /** Node types reading a project asset (`NodeData.asset`). */
 export const MEDIA_NODE_TYPES: ReadonlySet<string> = new Set([IMAGE, VIDEO]);
@@ -136,12 +140,13 @@ export const sampleTextureNode = defineNode({
 			types: ["u32"],
 			control: { kind: "enum", variants: EXTENSIONS },
 		},
+		{ id: SAMPLE_TEXTURE_LEVEL, label: "level", types: ["f32"] },
 	],
 	outputs: [
 		{ id: "color", label: "color", type: "vec4f" },
 		{ id: "alpha", label: "alpha", type: "f32" },
 	],
-	defaultData: { values: { interpolation: 0, extension: 0 } },
+	defaultData: { values: { interpolation: 0, extension: 0, [SAMPLE_TEXTURE_LEVEL]: 0 } },
 	wgsl: (ctx) => {
 		const color = ctx.outputVars.color ?? ctx.varName;
 		const texture = ctx.texture("texture");
@@ -169,6 +174,7 @@ export const sampleTextureNode = defineNode({
 			readTexture(texture, format, sampled, {
 				filter,
 				address,
+				level: ctx.promoteInput(SAMPLE_TEXTURE_LEVEL),
 				sampler: ctx.sampler,
 				define: ctx.fn,
 			});
@@ -194,24 +200,35 @@ export const sampleTextureNode = defineNode({
 	},
 });
 
-/** A texture's size in pixels, and the step from one of its pixels to the next in UV. */
+/**
+ * A texture's size in pixels at a mip level, the step from one of its pixels
+ * to the next in UV, and how many levels it has.
+ */
 export const textureSizeNode = defineNode({
 	type: TEXTURE_SIZE,
 	label: "Texture Size",
 	aliases: ["Image Size", "Texture Dimensions", "Texel Size", "Resolution"],
 	category: "texture",
 	staticOutputTypes: true,
-	inputs: [{ id: "texture", label: "texture", types: ["texture"] }],
+	inputs: [
+		{ id: "texture", label: "texture", types: ["texture"] },
+		{ id: TEXTURE_SIZE_LEVEL, label: "level", types: ["i32"], frame: true },
+	],
 	outputs: [
 		{ id: "size", label: "size", type: "vec2f" },
 		{ id: "texel", label: "texel", type: "vec2f" },
+		{ id: "levels", label: "levels", type: "i32" },
 	],
-	defaultData: {},
+	defaultData: { values: { [TEXTURE_SIZE_LEVEL]: 0 } },
 	wgsl: (ctx) => {
 		const size = ctx.outputVars.size ?? ctx.varName;
+		const texture = ctx.texture("texture");
+		const levels = `i32(textureNumLevels(${texture}))`;
+		const level = `clamp(${ctx.promoteInput(TEXTURE_SIZE_LEVEL)}, 0, ${levels} - 1)`;
 		return [
-			`let ${size} = vec2f(textureDimensions(${ctx.texture("texture")}));`,
+			`let ${size} = vec2f(textureDimensions(${texture}, ${level}));`,
 			`let ${ctx.outputVars.texel ?? "texel"} = 1.0 / ${size};`,
+			`let ${ctx.outputVars.levels ?? "levels"} = ${levels};`,
 		];
 	},
 });

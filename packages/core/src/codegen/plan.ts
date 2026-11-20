@@ -27,7 +27,14 @@ export const PLAN_TARGET = "target";
 /** A texture a plan reads or writes. Open to more kinds: buffers (compute). */
 export type ResourceDecl =
 	/** Written by a pass, then read. */
-	| { id: string; kind: "transient"; size: TextureSize; format: TextureFormat }
+	| {
+			id: string;
+			kind: "transient";
+			size: TextureSize;
+			format: TextureFormat;
+			/** Whether it has a full chain of mip levels, made after its pass. */
+			mips?: true;
+	  }
 	| { id: string; kind: "media"; asset: string; video?: VideoPlayback }
 	/**
 	 * A simulation's state item, as of the previous frame or this one: one of
@@ -85,6 +92,7 @@ function resourceOf(source: TextureSource): ResourceDecl {
 				kind: "transient",
 				size: source.size,
 				format: source.format,
+				...(source.mips ? { mips: true as const } : {}),
 			};
 		case "media":
 			return {
@@ -155,6 +163,7 @@ export function generateRenderPlan(
 						kind: "transient",
 						size: source.size,
 						format: item.format,
+						...(source.mips ? { mips: true as const } : {}),
 					});
 				}
 			} else {

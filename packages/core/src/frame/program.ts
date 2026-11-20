@@ -3,7 +3,7 @@ import { ROOT_ID } from "../graph/document";
 import { componentKeys, readComponent } from "../graph/values";
 import { coerce } from "../nodes/cpu";
 import { nodeRegistry } from "../nodes/registry";
-import { TEXTURE_SIZE } from "../nodes/texture";
+import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL } from "../nodes/texture";
 import {
 	readSource,
 	type TextureGraph,
@@ -90,8 +90,11 @@ export type FrameStep =
 	| RepeatStep
 	/** A source or loop value given as an output, `value`. */
 	| (StepBase & { kind: "read"; input: FrameInput })
-	/** A texture's size (`size`) and the step from one texel to the next (`texel`). */
-	| (StepBase & { kind: "texel"; size: FrameInput });
+	/**
+	 * A texture's size at a mip level (`size`), the step from one texel to the
+	 * next (`texel`) and how many levels it has (`levels`).
+	 */
+	| (StepBase & { kind: "texel"; size: FrameInput; level?: FrameInput });
 
 /** The frame values a plan needs, as steps in order each reading only earlier ones. */
 export type FrameProgram = { steps: FrameStep[] };
@@ -108,8 +111,8 @@ export type FrameEnv = {
 	passSize: Size;
 	/** The current iteration of each loop of the plan, by id. */
 	iteration?: (loop: string) => number | undefined;
-	/** The size of a resource's texture, by id. */
-	textureSize?: (resource: string) => Size | undefined;
+	/** The size of a resource's texture, by id, and how many mip levels it has (one without). */
+	textureSize?: (resource: string) => (Size & { levels?: number }) | undefined;
 	/** The values of uniform inputs, by name. */
 	uniforms?: Readonly<Record<string, number | readonly number[]>>;
 };
@@ -149,7 +152,7 @@ function sourceValue(source: FrameSource, env: FrameEnv): Value {
 	if (kind === "iteration") return [env.iteration?.(id) ?? 0];
 	if (kind === "texture-size") {
 		const size = env.textureSize?.(id) ?? { width: 1, height: 1 };
-		return [size.width, size.height];
+		return [size.width, size.height, size.levels ?? 1];
 	}
 	const uniform = env.uniforms?.[id];
 	return uniform === undefined ? [0] : typeof uniform === "number" ? [uniform] : [...uniform];
@@ -202,8 +205,16 @@ export function evaluateFrame(program: FrameProgram, env: FrameEnv): FrameValues
 				outputs[index] = { value: read(step.input) };
 				break;
 			case "texel": {
-				const [width = 1, height = 1] = read(step.size);
-				outputs[index] = { size: [width, height], texel: [1 / width, 1 / height] };
+				const [base = 1, tall = 1, levels = 1] = read(step.size);
+				const wanted = step.level ? Math.trunc(read(step.level)[0] ?? 0) : 0;
+				const level = Math.min(Math.max(wanted, 0), levels - 1);
+				const width = Math.max(1, Math.floor(base / 2 ** level));
+				const height = Math.max(1, Math.floor(tall / 2 ** level));
+				outputs[index] = {
+					size: [width, height],
+					texel: [Math.fround(1 / width), Math.fround(1 / height)],
+					levels: [levels],
+				};
 				break;
 			}
 			case "repeat": {
@@ -396,8 +407,10 @@ export class FrameCompiler {
 				const read = readSource(texture);
 				if (read.kind !== "empty") this.sized.set(read.id, read);
 				const size = { source: `texture-size:${texture.id}` } as const;
+				const level = this.input(path, nodeId, TEXTURE_SIZE_LEVEL);
+				if (!level) return undefined;
 				const ref = this.push(
-					{ kind: "texel", size, loop: this.loopOf(path, nodeId) },
+					{ kind: "texel", size, level: level.input, loop: this.loopOf(path, nodeId) },
 					true,
 					handleId,
 				);

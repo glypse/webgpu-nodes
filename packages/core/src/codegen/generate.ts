@@ -29,7 +29,13 @@ import {
 	type TextureSource,
 	TextureSources,
 } from "../passes/sources";
-import { CANVAS_SIZE, sameSize, type TextureFormat, type TextureSize } from "../passes/textures";
+import {
+	CANVAS_SIZE,
+	sameSize,
+	scalarOf,
+	type TextureFormat,
+	type TextureSize,
+} from "../passes/textures";
 import type {
 	GroupHandleDef,
 	InputValue,
@@ -707,9 +713,13 @@ class BodyEmitter {
 		if (probe.kind === "textures") {
 			const node = this.nodeMap.get(probe.node);
 			return node
-				? probe.items.map((i) =>
-						packState(this.inputExpr(node, i.item, i.type), i.type, i.format),
-					)
+				? probe.items.map((i) => {
+						const value = this.inputExpr(node, i.item, i.type);
+						// Floats are colours, as any value rendered to a texture is; integers are kept as they are.
+						return scalarOf(i.format) === "f32"
+							? fieldColor(value, i.type)
+							: packState(value, i.type, i.format);
+					})
 				: [];
 		}
 		const edge = {

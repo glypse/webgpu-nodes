@@ -1,4 +1,4 @@
-import { TEXTURE_FORMATS, type TextureFormat, type TextureSize } from "../passes/textures";
+import { canMip, TEXTURE_FORMATS, type TextureFormat, type TextureSize } from "../passes/textures";
 import {
 	defineSetting,
 	type NodeData,
@@ -28,6 +28,15 @@ export const RENDER_MODE_SETTING = defineSetting({
 	],
 });
 
+export const RENDER_MIPS_SETTING = defineSetting({
+	key: "mips",
+	label: "Mips",
+	options: [
+		{ value: "off", label: "No mips" },
+		{ value: "on", label: "Mips" },
+	],
+});
+
 /** The format an item has unless it's given one. */
 export const DEFAULT_RENDER_FORMAT: TextureFormat = "rgba16float";
 
@@ -53,6 +62,18 @@ export function renderItemFormat(item: ZoneItem): TextureFormat {
 /** Whether a Render Texture draws its size from pixels rather than a scale. */
 export function rendersInPixels(data: NodeData): boolean {
 	return settingValue(data, RENDER_MODE_SETTING) === "pixels";
+}
+
+/** Whether a Render Texture keeps all the mip levels of its textures. */
+export function rendersMips(data: NodeData): boolean {
+	return settingValue(data, RENDER_MIPS_SETTING) === "on";
+}
+
+/** Why a Render Texture can't have the mips it asks for, if it can't. */
+export function mipsProblem(data: NodeData): string | undefined {
+	if (!rendersMips(data)) return undefined;
+	const item = renderTextureItems(data).find((i) => !canMip(renderItemFormat(i)));
+	return item && `"${item.label}" is kept in integers, which can't be averaged into mip levels.`;
 }
 
 /** The size inputs a Render Texture's scale and pixels stand for, as a size when nothing is linked. */
@@ -104,7 +125,7 @@ export function buildRenderTextureDescriptor(data: NodeData): NodeDescriptor {
 		category: "texture",
 		staticOutputTypes: true,
 		widget: { kind: "items" },
-		settings: [RENDER_MODE_SETTING],
+		settings: [RENDER_MODE_SETTING, RENDER_MIPS_SETTING],
 		inputs: [
 			size,
 			{ id: RENDER_LIKE, label: "like", types: ["texture"] },
@@ -121,7 +142,7 @@ export function buildRenderTextureDescriptor(data: NodeData): NodeDescriptor {
 		})),
 		defaultData: {
 			items: structuredClone(DEFAULT_ITEMS),
-			settings: { mode: "scale" },
+			settings: { mode: "scale", mips: "off" },
 			values: {
 				[RENDER_SCALE]: 1,
 				[RENDER_PIXELS]: { x: DEFAULT_PIXELS, y: DEFAULT_PIXELS },

@@ -11,12 +11,14 @@ import type { GraphEdge, GraphNode, HydratedGraphDocument } from "../graph/docum
 import type { GraphModel } from "../graph/model";
 import { INDEX_SWITCH, INDEX_SWITCH_INDEX, indexSwitchCases } from "../nodes/index-switch";
 import {
+	mipsProblem,
 	RENDER_LIKE,
 	RENDER_PIXELS,
 	RENDER_SCALE,
 	RENDER_TEXTURE,
 	renderItemFormat,
 	renderItemType,
+	rendersMips,
 	renderTextureItems,
 	storedSize,
 } from "../nodes/render-texture";
@@ -63,6 +65,8 @@ export type TextureSource =
 			target: SocketRef;
 			size: TextureSize;
 			format: TextureFormat;
+			/** Whether it has a full chain of mip levels. */
+			mips?: true;
 			/** Set for an item of a Render Texture node, drawn with the others of its run. */
 			draw?: RenderDraw;
 	  }
@@ -348,6 +352,8 @@ export class TextureSources {
 		}));
 		const own = items.find((i) => i.item.id === handleId);
 		if (!own) return EMPTY;
+		const problem = mipsProblem(node.data);
+		if (problem) return { kind: "invalid", id: EMPTY_TEXTURE, reason: problem, edge: "" };
 		const feed = this.feed(path, node.id, handleId);
 		// A value is rendered once per frame: it can't change per iteration of a loop.
 		if (feed && this.readsZoneState(path, feed.source, feed.sourceHandle)) {
@@ -369,6 +375,7 @@ export class TextureSources {
 			target,
 			size,
 			format: own.format,
+			...(rendersMips(node.data) ? { mips: true as const } : {}),
 			draw: {
 				path,
 				node: node.id,

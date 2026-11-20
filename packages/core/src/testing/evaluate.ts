@@ -6,10 +6,22 @@ import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
 import { coerce } from "../nodes/cpu";
-import { SAMPLE_TEXTURE, TEXTURE_SIZE } from "../nodes/texture";
+import {
+	SAMPLE_TEXTURE,
+	SAMPLE_TEXTURE_LEVEL,
+	TEXTURE_SIZE,
+	TEXTURE_SIZE_LEVEL,
+} from "../nodes/texture";
 import { texelType } from "../passes/simulation";
 import { readSource, type TextureSource, TextureSources } from "../passes/sources";
-import { channelsOf, resolveSize, type Size, type TextureFormat } from "../passes/textures";
+import {
+	channelsOf,
+	mipLevelCount,
+	resolveSize,
+	scalarOf,
+	type Size,
+	type TextureFormat,
+} from "../passes/textures";
 import {
 	type CpuCtx,
 	isTexture,
@@ -33,6 +45,8 @@ import {
 export type CpuTexture = {
 	width: number;
 	height: number;
+	/** How many mip levels it has; one without. */
+	levels?: number;
 	texel(x: number, y: number): Value;
 };
 
@@ -51,8 +65,8 @@ type Env = {
 	renders: Map<string, CpuTexture>;
 	/** The frame values the sizes of textures read. */
 	frame: FrameCompiler;
-	/** The size of every texture resolved so far, by texture id. */
-	sizes: Map<string, Size>;
+	/** The size of every texture resolved so far, by texture id, and its mip levels. */
+	sizes: Map<string, Size & { levels?: number }>;
 };
 
 type Frame = {
@@ -173,7 +187,11 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 	const { env } = frame;
 	if (source.kind === "media") {
 		const image = env.images.get(source.asset) ?? EMPTY_IMAGE;
-		env.sizes.set(source.id, { width: image.width, height: image.height });
+		env.sizes.set(source.id, {
+			width: image.width,
+			height: image.height,
+			levels: levelsOf(image),
+		});
 		return image;
 	}
 	// Simulations aren't run here: their state reads nothing.
@@ -181,12 +199,14 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 	const done = env.renders.get(source.id);
 	if (done) return done;
 	const { width, height } = renderSize(model, frame, source);
-	env.sizes.set(source.id, { width, height });
+	const levels = source.mips ? mipLevelCount({ width, height }) : 1;
+	env.sizes.set(source.id, { width, height, levels });
 	const texels = new Map<number, Value>();
 	const { target, draw } = source;
 	const texture: CpuTexture = {
 		width,
 		height,
+		levels,
 		texel: (x, y) => {
 			const key = y * width + x;
 			const known = texels.get(key);
@@ -227,7 +247,11 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 
 /** A value as the texel of `format` keeping it, read back as a colour. */
 function packTexel(value: Value, type: WgslType, format: TextureFormat): Value {
-	const texel = coerce(coerce(value, type), texelType(format));
+	// Floats are colours, integers are kept as they are.
+	const texel =
+		scalarOf(format) === "f32"
+			? fieldColor(coerce(value, type), type)
+			: coerce(coerce(value, type), texelType(format));
 	const channels = channelsOf(format);
 	return texel.map((c, i) => {
 		if (i >= channels) return i === 3 ? 1 : 0;
@@ -255,6 +279,45 @@ function textureInput(model: GraphModel, frame: Frame, node: GraphNode, id: stri
 	return textureOf(model, frame, readSource(frame.env.sources.input(frame.path, node.id, id)));
 }
 
+const levelsOf = (texture: CpuTexture) => texture.levels ?? 1;
+
+const mipChains = new WeakMap<CpuTexture, CpuTexture[]>();
+
+/** A texture's mip level: every texel the mean of the 2x2 block of the level before it. */
+function mipLevel(texture: CpuTexture, level: number): CpuTexture {
+	if (level <= 0) return texture;
+	let chain = mipChains.get(texture);
+	if (!chain) {
+		chain = [texture];
+		mipChains.set(texture, chain);
+	}
+	for (let n = chain.length; n <= level; n++) {
+		const parent = chain[n - 1] ?? texture;
+		const known = new Map<number, Value>();
+		const width = Math.max(1, Math.floor(parent.width / 2));
+		chain.push({
+			width,
+			height: Math.max(1, Math.floor(parent.height / 2)),
+			texel: (x, y) => {
+				const key = y * width + x;
+				const done = known.get(key);
+				if (done) return done;
+				const taps = [0, 1].flatMap((dy) =>
+					[0, 1].map((dx) =>
+						texelAt(parent, Math.min(2 * x + dx, parent.width - 1), 2 * y + dy),
+					),
+				);
+				const mean = [0, 1, 2, 3].map(
+					(c) => taps.reduce((sum, t) => sum + (t[c] ?? 0), 0) / taps.length,
+				);
+				known.set(key, mean);
+				return mean;
+			},
+		});
+	}
+	return chain[level] ?? texture;
+}
+
 /** A texel, its coordinates clamped into the texture. */
 function texelAt(texture: CpuTexture, x: number, y: number): Value {
 	const cx = Math.min(Math.max(x, 0), texture.width - 1);
@@ -264,6 +327,23 @@ function texelAt(texture: CpuTexture, x: number, y: number): Value {
 
 /** Sample Texture's lookup: UV flipped to texture coordinates, extended, then filtered. */
 function sampleTexture(
+	texture: CpuTexture,
+	uv: Value,
+	interpolation: number,
+	extension: number,
+	level = 0,
+): Value {
+	const wanted = Math.min(Math.max(level, 0), levelsOf(texture) - 1);
+	const base = Math.floor(wanted);
+	const mix = wanted - base;
+	const at = (n: number) => sampleLevel(mipLevel(texture, n), uv, interpolation, extension);
+	// Between two levels, as a trilinear sampler reads them.
+	return mix === 0
+		? at(base)
+		: at(base).map((c, i) => c * (1 - mix) + (at(base + 1)[i] ?? 0) * mix);
+}
+
+function sampleLevel(
 	texture: CpuTexture,
 	uv: Value,
 	interpolation: number,
@@ -394,14 +474,22 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 					: [...frame.uv],
 				get("interpolation")[0] ?? 0,
 				get("extension")[0] ?? 0,
+				get(SAMPLE_TEXTURE_LEVEL)[0] ?? 0,
 			);
 			return handleId === "alpha" ? [color[3] ?? 0] : color;
 		}
 		case TEXTURE_SIZE: {
 			const texture = textureInput(model, frame, node, "texture");
+			const levels = levelsOf(texture);
+			if (handleId === "levels") return [levels];
+			const level = Math.min(
+				Math.max(Math.trunc(get(TEXTURE_SIZE_LEVEL)[0] ?? 0), 0),
+				levels - 1,
+			);
+			const { width, height } = mipLevel(texture, level);
 			return handleId === "texel"
-				? [1 / texture.width, 1 / texture.height]
-				: [texture.width, texture.height];
+				? [Math.fround(1 / width), Math.fround(1 / height)]
+				: [width, height];
 		}
 		case "display-gamut-clip": {
 			const [r = 0, g = 0, b = 0] = get("color");

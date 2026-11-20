@@ -100,6 +100,11 @@ export function canMip(format: TextureFormat): boolean {
 	return scalarOf(format) === "f32";
 }
 
+/** How many levels a full mip chain of a texture of this size has. */
+export function mipLevelCount({ width, height }: Size): number {
+	return Math.floor(Math.log2(Math.max(width, height, 1))) + 1;
+}
+
 /** How many components its texels have. */
 export function channelsOf(format: TextureFormat): 1 | 2 | 4 {
 	if (format.startsWith("rgba")) return 4;

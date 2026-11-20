@@ -4,18 +4,18 @@ import type { SamplerAddress, SamplerFilter } from "../types";
 export const BILINEAR_FN = "texture_bilinear";
 
 /** Linear filtering by hand, for 32-bit floats, which hardware filtering can't read. */
-export const BILINEAR_SOURCE = `fn ${BILINEAR_FN}(t: texture_2d<f32>, coords: vec2f) -> vec4f {
-	let size = vec2f(textureDimensions(t));
+export const BILINEAR_SOURCE = `fn ${BILINEAR_FN}(t: texture_2d<f32>, coords: vec2f, level: i32) -> vec4f {
+	let size = vec2f(textureDimensions(t, level));
 	let p = coords * size - 0.5;
 	let base = vec2i(floor(p));
 	let f = p - floor(p);
 	let hi = vec2i(size) - 1;
 	let i0 = clamp(base, vec2i(0), hi);
 	let i1 = clamp(base + 1, vec2i(0), hi);
-	let a = textureLoad(t, i0, 0);
-	let b = textureLoad(t, vec2i(i1.x, i0.y), 0);
-	let c = textureLoad(t, vec2i(i0.x, i1.y), 0);
-	let d = textureLoad(t, i1, 0);
+	let a = textureLoad(t, i0, level);
+	let b = textureLoad(t, vec2i(i1.x, i0.y), level);
+	let c = textureLoad(t, vec2i(i0.x, i1.y), level);
+	let d = textureLoad(t, i1, level);
 	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }`;
 
@@ -38,22 +38,30 @@ export function readTexture(
 	{
 		filter = "linear",
 		address = "clamp",
+		level,
 		sampler,
 		define,
 	}: {
 		filter?: SamplerFilter;
 		address?: SamplerAddress;
+		/** The mip level, an f32 expression: the base level without. */
+		level?: string;
 		sampler: (filter: SamplerFilter, address: SamplerAddress) => string;
 		define: (name: string, source: string) => string;
 	},
 ): string {
 	if (isFilterable(format)) {
-		return `textureSampleLevel(${texture}, ${sampler(filter, address)}, ${coords}, 0.0)`;
+		return `textureSampleLevel(${texture}, ${sampler(filter, address)}, ${coords}, ${level ?? "0.0"})`;
 	}
+	// Texel reads take whole levels, which have to exist.
+	const whole =
+		level === undefined
+			? "0"
+			: `clamp(i32(round(${level})), 0, i32(textureNumLevels(${texture})) - 1)`;
 	if (scalarOf(format) === "f32" && filter === "linear") {
-		return `${define(BILINEAR_FN, BILINEAR_SOURCE)}(${texture}, ${coords})`;
+		return `${define(BILINEAR_FN, BILINEAR_SOURCE)}(${texture}, ${coords}, ${whole})`;
 	}
-	const size = `vec2f(textureDimensions(${texture}))`;
-	const load = `textureLoad(${texture}, vec2i(clamp((${coords}) * ${size}, vec2f(0.0), ${size} - 1.0)), 0)`;
+	const size = `vec2f(textureDimensions(${texture}, ${whole}))`;
+	const load = `textureLoad(${texture}, vec2i(clamp((${coords}) * ${size}, vec2f(0.0), ${size} - 1.0)), ${whole})`;
 	return texelAsColor(load, format);
 }

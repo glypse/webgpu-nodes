@@ -11,7 +11,7 @@ import { nagaBin, validatePlan } from "../testing/wgsl";
 import type { ZoneItem } from "../types";
 import { texelType } from "./simulation";
 import { type TextureSources } from "./sources";
-import { TEXTURE_FORMATS, type TextureFormat } from "./textures";
+import { mipLevelCount, TEXTURE_FORMATS, type TextureFormat } from "./textures";
 
 const image = (id: string, width = 4, height = 2): Asset => ({
 	kind: "image",
@@ -341,5 +341,165 @@ describe("every format", () => {
 		const repeat = model.createRepeatZone({ x: 0, y: 0 }) ?? "";
 		model.setZoneItemFormat(repeat, model.getZoneItems(repeat)[0]?.id ?? "", "r32uint");
 		expect(model.getZoneItems(repeat)[0]).not.toHaveProperty("format");
+	});
+});
+
+describe("mips", () => {
+	const withMips = (extra: TestNode["data"] = {}) => ({
+		settings: { mips: "on" },
+		...extra,
+	});
+
+	it("are a full chain on the texture, drawn after its pass", () => {
+		const [nodes, edges] = drawn(
+			withMips(),
+			[["uv", "uv", "rt", "color"]],
+			[{ id: "uv", type: "uv" }],
+		);
+		const plan = generateRenderPlan(managerFor(nodes, edges));
+		const resource = plan.resources.find((r) => r.id === "render:rt:color");
+		expect(resource?.kind === "transient" && resource.mips).toBe(true);
+		expect(mipLevelCount({ width: 1001, height: 500 })).toBe(10);
+		expect(mipLevelCount({ width: 1, height: 1 })).toBe(1);
+	});
+
+	it("are read by Sample Texture at the level asked, in every format that can have them", () => {
+		for (const format of ["rgba16float", "rgba32float", "r16float", "rgba8unorm"] as const) {
+			const [nodes, edges] = drawn(
+				withMips({ items: [color("color", format)] }),
+				[
+					["uv", "uv", "rt", "color"],
+					["t", "seconds", "s", "level"],
+				],
+				[
+					{ id: "uv", type: "uv" },
+					{ id: "t", type: "time" },
+				],
+			);
+			const model = managerFor(nodes, edges);
+			const plan = generateRenderPlan(model);
+			const code = plan.passes.at(-1)?.program.code ?? "";
+			expect(code).toContain(
+				format === "rgba32float" ? "texture_bilinear(" : "textureSampleLevel(",
+			);
+			expect(code).toContain("runtime_frame.time");
+			expectValid(model);
+		}
+	});
+
+	it("can't be made of integers", () => {
+		const [nodes, edges] = drawn(
+			withMips({ items: [color("color", "rgba32uint")] }),
+			[["uv", "uv", "rt", "color"]],
+			[{ id: "uv", type: "uv" }],
+		);
+		const model = managerFor(nodes, edges);
+		const link = model
+			.passAnalysis()
+			.link(
+				[],
+				model.root.edges.find((e) => e.source === "rt") ??
+					model.root.edges[0] ??
+					({} as never),
+			);
+		expect(link?.kind).toBe("invalid");
+	});
+
+	it("give a texture's size at a level to the frame values sizes are made of", () => {
+		const [nodes, edges] = drawn(
+			withMips(),
+			[
+				["uv", "uv", "rt", "color"],
+				["rt", "color", "size", "texture"],
+				["size", "size", "small", "pixels"],
+			],
+			[
+				{ id: "uv", type: "uv" },
+				{ id: "size", type: "texture-size", data: { values: { level: 2 } } },
+				{
+					id: "small",
+					type: "render-texture",
+					data: { settings: { mode: "pixels" } },
+				},
+			],
+		);
+		edges.push(["small", "color", "s2", "texture"], ["s2", "color", "sum", "operands"]);
+		nodes.push({ id: "s2", type: "sample-texture" }, { id: "sum", type: "add" });
+		edges[edges.findIndex((e) => e[3] === "color" && e[2] === "out")] = [
+			"s",
+			"color",
+			"sum",
+			"operands",
+		];
+		edges.push(["sum", "result", "out", "color"]);
+		const model = managerFor(nodes, edges);
+		const plan = generateRenderPlan(model);
+		const small = plan.resources.find((r) => r.id === "render:small:color");
+		const size = small?.kind === "transient" ? small.size : undefined;
+		const values = evaluateFrame(plan.frame, {
+			time: 0,
+			delta: 0,
+			frame: 0,
+			canvas: { width: 1001, height: 500 },
+			passSize: { width: 1001, height: 500 },
+			textureSize: (id) =>
+				id === "render:rt:color" ? { width: 1001, height: 500, levels: 10 } : undefined,
+		});
+		expect(
+			size?.kind === "pixels" && [values.arg(size.width), values.arg(size.height)],
+		).toEqual([250, 125]);
+		expectValid(model);
+	});
+
+	it("are means of 2x2 texels, counted by Texture Size", () => {
+		const [nodes, edges] = drawn(
+			withMips(),
+			[
+				["img", "texture", "rt", "color"],
+				["rt", "color", "size", "texture"],
+			],
+			[
+				{ id: "img", type: "image", data: { asset: "a" } },
+				{ id: "size", type: "texture-size", data: { values: { level: 1 } } },
+			],
+		);
+		nodes[1] = {
+			id: "s",
+			type: "sample-texture",
+			data: { values: { interpolation: 1, level: 1 } },
+		};
+		const model = new GraphModel({
+			...rootProject(nodes, edges),
+			assets: [image("a", 4, 4)],
+		});
+		const source: CpuTexture = {
+			width: 4,
+			height: 4,
+			texel: (x, y) => [x + 10 * y, 0, 0, 1],
+		};
+		const options = { images: new Map([["a", source]]) };
+		// Level 1 is 2x2: its first texel is the mean of the top left block.
+		const first = evaluate(model, "s", "color", "srgb", [4, 4], {
+			...options,
+			uv: [0.25, 0.75],
+		});
+		expect(first[0]).toBeCloseTo((0 + 1 + 10 + 11) / 4, 5);
+		const last = evaluate(model, "s", "color", "srgb", [4, 4], {
+			...options,
+			uv: [0.75, 0.25],
+		});
+		expect(last[0]).toBeCloseTo((22 + 23 + 32 + 33) / 4, 5);
+		expect(evaluate(model, "size", "size", "srgb", [4, 4], options)).toEqual([2, 2]);
+		expect(evaluate(model, "size", "levels", "srgb", [4, 4], options)).toEqual([3]);
+	});
+
+	it("count the levels of any size", () => {
+		const [nodes, edges] = drawn(
+			withMips(),
+			[["rt", "color", "size", "texture"]],
+			[{ id: "size", type: "texture-size" }],
+		);
+		const model = managerFor(nodes, edges);
+		expect(evaluate(model, "size", "levels", "srgb", [1001, 500])).toEqual([10]);
 	});
 });

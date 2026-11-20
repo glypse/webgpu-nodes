@@ -4,7 +4,7 @@
 	"aliases": ["Blur", "Mean Blur", "Average"],
 	"category": "texture",
 	"section": ["Blur"],
-	"dependencies": ["std-box-blur-once@1b10d3349a54c4"],
+	"dependencies": ["std-box-blur-once@15398ff92cf5e1"],
 	"definition": {
 		"nodes": [
 			{
@@ -16,7 +16,7 @@
 					"y": 127
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -40,7 +40,7 @@
 					"y": 182
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -53,7 +53,7 @@
 					"y": 237
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -66,7 +66,7 @@
 					"y": 292
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -79,7 +79,7 @@
 					"y": 347
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -92,7 +92,7 @@
 					"y": 402
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -105,7 +105,7 @@
 					"y": 457
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},
@@ -118,7 +118,7 @@
 					"y": 552
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@1b10d3349a54c4",
+					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
 					"locked": true
 				}
 			},

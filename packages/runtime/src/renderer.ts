@@ -5,6 +5,7 @@ import {
 	type FrameEnv,
 	type FrameProgram,
 	type FrameValues,
+	mipLevelCount,
 	type PassDecl,
 	PLAN_TARGET,
 	type RenderPlan,
@@ -20,6 +21,7 @@ import {
 
 import { type FrameTiming, GpuTimer } from "./gpu-timer";
 import { MediaLibrary, type TextureOf } from "./media";
+import { MipGenerator } from "./mips";
 import { Presenter } from "./present";
 import type { SimulationState } from "./simulation";
 import { packBlock } from "./uniforms";
@@ -230,7 +232,8 @@ export class CompiledProgram {
 		}
 		const pass = encoder.beginRenderPass({
 			colorAttachments: targets.map((target) => ({
-				view: target.createView(),
+				// One level at a time: the rest are made after the pass.
+				view: target.createView({ baseMipLevel: 0, mipLevelCount: 1 }),
 				loadOp: "clear" as const,
 				storeOp: "store" as const,
 			})),
@@ -268,6 +271,7 @@ export class CompiledPlan {
 		readonly plan: RenderPlan,
 		private passes: readonly CompiledPass[],
 		private media: MediaLibrary,
+		private mips: MipGenerator,
 	) {
 		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
 		this.frameProgram = plan.frame;
@@ -315,16 +319,28 @@ export class CompiledPlan {
 		return this.media.prepare(sources, time);
 	}
 
-	/** A pass's own texture, of `size` and `format`. */
-	private transient(id: string, { width, height }: Size, format: TextureFormat): GPUTexture {
+	/** A pass's own texture, of `size` and `format`, with all its mip levels if `mips`. */
+	private transient(
+		id: string,
+		{ width, height }: Size,
+		format: TextureFormat,
+		mips: boolean,
+	): GPUTexture {
+		const levels = mips ? mipLevelCount({ width, height }) : 1;
 		const existing = this.transients.get(id);
-		if (existing?.width === width && existing.height === height && existing.format === format) {
+		if (
+			existing?.width === width &&
+			existing.height === height &&
+			existing.format === format &&
+			existing.mipLevelCount === levels
+		) {
 			return existing;
 		}
 		existing?.destroy();
 		const texture = this.device.createTexture({
 			size: { width, height },
 			format,
+			mipLevelCount: levels,
 			usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
 		});
 		this.transients.set(id, texture);
@@ -359,7 +375,7 @@ export class CompiledPlan {
 				frame: frame.frame,
 				canvas,
 				passSize: canvas,
-				textureSize: (id) => sizes.get(id) ?? mediaSize(id),
+				textureSize,
 				uniforms: this.uniforms,
 			} satisfies FrameEnv);
 		const mediaSize = (id: string): Size | undefined => {
@@ -372,6 +388,16 @@ export class CompiledPlan {
 				...(resource.video ? { video: resource.video } : {}),
 			});
 			return { width: texture.width, height: texture.height };
+		};
+		const levelsOf = (id: string): number => {
+			const resource = this.resources.get(id);
+			return resource?.kind === "transient" && resource.mips
+				? mipLevelCount(sizes.get(id) ?? canvas)
+				: 1;
+		};
+		const textureSize = (id: string) => {
+			const size = sizes.get(id) ?? mediaSize(id);
+			return size && { ...size, levels: levelsOf(id) };
 		};
 		const sizeOf = (id: string): Size | undefined => {
 			const known = sizes.get(id);
@@ -401,6 +427,7 @@ export class CompiledPlan {
 				id,
 				sizeOf(id) ?? canvas,
 				resource?.kind === "transient" ? resource.format : LINEAR_FORMAT,
+				resource?.kind === "transient" && resource.mips === true,
 			);
 		};
 		const stateTexture = (texture: string, read: "previous" | "current") =>
@@ -431,7 +458,7 @@ export class CompiledPlan {
 				frame: frame.frame,
 				canvas,
 				passSize,
-				textureSize: (id) => sizes.get(id) ?? mediaSize(id),
+				textureSize,
 				uniforms: this.uniforms,
 			} satisfies FrameEnv);
 		const writes = timing?.pass();
@@ -444,11 +471,15 @@ export class CompiledPlan {
 				...(last ? { endOfPassWriteIndex: writes.endOfPassWriteIndex } : {}),
 			};
 			const simulation = decl.simulation && steps.get(decl.simulation.id);
-			program.encode(encoder, decl.writes.map(written), frame, colorSpace, textureOf, {
+			const targets = decl.writes.map(written);
+			program.encode(encoder, targets, frame, colorSpace, textureOf, {
 				simulationDelta: simulation?.delta ?? 0,
 				frameValuesOf,
 				...(first || last ? { timestampWrites } : {}),
 			});
+			for (const texture of targets) {
+				if (texture.mipLevelCount > 1) this.mips.generate(encoder, texture);
+			}
 		});
 	}
 
@@ -470,6 +501,7 @@ export class Renderer {
 	readonly timer: GpuTimer | undefined;
 	/** The images and videos programs read. */
 	readonly media: MediaLibrary;
+	private mips: MipGenerator;
 	private pipelines = new Map<string, Promise<Pipeline>>();
 	private samplers = new Map<string, GPUSampler>();
 	private linearTextures = new Map<string, GPUTexture>();
@@ -496,6 +528,7 @@ export class Renderer {
 		});
 		this.presenter = new Presenter(device);
 		this.timer = GpuTimer.create(device);
+		this.mips = new MipGenerator(device);
 		this.media = new MediaLibrary(device);
 		this.media.onError = (message) => {
 			this.onError(message);
@@ -514,6 +547,7 @@ export class Renderer {
 			sampler = this.device.createSampler({
 				magFilter: filter,
 				minFilter: filter,
+				mipmapFilter: filter,
 				addressModeU: mode,
 				addressModeV: mode,
 			});
@@ -560,7 +594,7 @@ export class Renderer {
 				decl,
 			})),
 		);
-		return new CompiledPlan(this.device, plan, passes, this.media);
+		return new CompiledPlan(this.device, plan, passes, this.media, this.mips);
 	}
 
 	/** Compile `program`, drawing into textures of `formats`. */

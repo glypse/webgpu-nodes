@@ -26,7 +26,7 @@ export const fitUv = group({
 					const { x: width, y: height } = g.separateVector(size);
 					return g.div(width, g.max(height, 1));
 				};
-				return g.div(aspect(g.resolution()), aspect(g.textureSize(texture).size));
+				return g.div(aspect(g.resolution()), aspect(g.textureSize(texture, 0).size));
 			},
 		);
 		const scale = g.frame(

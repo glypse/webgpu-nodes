@@ -4,7 +4,7 @@
 	"aliases": ["Blur", "Soften", "Defocus", "Gaussian"],
 	"category": "texture",
 	"section": ["Blur"],
-	"dependencies": ["std-gaussian-blur-1d@18d8c287a78dd6", "std-gaussian-blur-2d@128cbe5657be9b"],
+	"dependencies": ["std-gaussian-blur-1d@116c2bba6d8557", "std-gaussian-blur-2d@07103c56e2d7a4"],
 	"definition": {
 		"nodes": [
 			{
@@ -96,7 +96,7 @@
 				"type": "separate-vector",
 				"data": {},
 				"position": {
-					"x": 3012,
+					"x": 3010,
 					"y": 657
 				}
 			},
@@ -118,7 +118,7 @@
 				"type": "separate-vector",
 				"data": {},
 				"position": {
-					"x": 2732,
+					"x": 2731,
 					"y": 392
 				}
 			},
@@ -134,7 +134,7 @@
 					}
 				},
 				"position": {
-					"x": 3012,
+					"x": 3010,
 					"y": 364
 				}
 			},
@@ -143,11 +143,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3288,
-					"y": 345
+					"x": 3284,
+					"y": 399
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-1d@18d8c287a78dd6",
+					"definitionRef": "std-gaussian-blur-1d@116c2bba6d8557",
 					"locked": true
 				}
 			},
@@ -158,8 +158,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 2732,
-					"y": 116
+					"x": 2731,
+					"y": 137
 				}
 			},
 			{
@@ -174,7 +174,7 @@
 					}
 				},
 				"position": {
-					"x": 3288,
+					"x": 3284,
 					"y": 672
 				}
 			},
@@ -183,11 +183,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3564,
-					"y": 633
+					"x": 3560,
+					"y": 687
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-1d@18d8c287a78dd6",
+					"definitionRef": "std-gaussian-blur-1d@116c2bba6d8557",
 					"locked": true
 				}
 			},
@@ -196,11 +196,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 3288,
-					"y": 72
+					"x": 3284,
+					"y": 126
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-2d@128cbe5657be9b",
+					"definitionRef": "std-gaussian-blur-2d@07103c56e2d7a4",
 					"locked": true
 				}
 			},
@@ -331,7 +331,7 @@
 					"y": 1052
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-1d@18d8c287a78dd6",
+					"definitionRef": "std-gaussian-blur-1d@116c2bba6d8557",
 					"locked": true
 				},
 				"frame": "b4450333-03ba-4907-a341-6edf35ad863f"
@@ -341,8 +341,8 @@
 				"type": "match",
 				"data": {},
 				"position": {
-					"x": 3849,
-					"y": 61
+					"x": 3845,
+					"y": 115
 				}
 			},
 			{
@@ -350,8 +350,8 @@
 				"type": "match",
 				"data": {},
 				"position": {
-					"x": 4146,
-					"y": 5
+					"x": 4139,
+					"y": 59
 				}
 			},
 			{
@@ -361,8 +361,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 4406,
-					"y": 37
+					"x": 4399,
+					"y": 91
 				}
 			},
 			{
@@ -391,7 +391,7 @@
 				"data": {},
 				"position": {
 					"x": 2611,
-					"y": 96
+					"y": 117
 				}
 			},
 			{
@@ -399,8 +399,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 3093,
-					"y": 196
+					"x": 3091,
+					"y": 250
 				}
 			},
 			{
@@ -408,7 +408,7 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 3093,
+					"x": 3091,
 					"y": 607
 				}
 			},
