@@ -447,7 +447,7 @@ export class TextureSources {
 					return {
 						item,
 						type,
-						format: stateFormat(type),
+						format: item.format ?? stateFormat(type),
 						texture: stateTextureId(ref, item.id),
 					};
 				},

@@ -4,11 +4,12 @@
 		isInferredItem,
 		SOCKET_TYPES,
 		type SocketType,
+		TEXTURE_FORMATS,
 		WGSL_TYPES,
 		type ZoneItem,
 		zoneMaxIterations,
 	} from "$core";
-	import { Button, DropdownMenu, Input, Scrubbable } from "$theme";
+	import { Button, DropdownMenu, Input, Scrubbable, Select } from "$theme";
 	import ArrowDownIcon from "phosphor-svelte/lib/ArrowDownIcon";
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CheckIcon from "phosphor-svelte/lib/CheckIcon";
@@ -43,6 +44,9 @@
 
 	// Local buffer for label inputs: commit on blur so typing doesn't
 	// regenerate the shader on every keystroke.
+	/** The picker's value for the format an item's type decides. */
+	const DEFAULT_FORMAT = "\0default";
+
 	const labelBuffer = $state<Record<string, string>>({});
 	$effect(() => {
 		for (const item of items) {
@@ -167,6 +171,28 @@
 						{/if}
 					{/snippet}
 				</TypePicker>
+				{#if simulation}
+					<Select.Root
+						type="single"
+						name="{zoneId}-{item.id}-format"
+						value={item.format ?? DEFAULT_FORMAT}
+						disabled={locked}
+						onValueChange={(value: string) => {
+							const format = TEXTURE_FORMATS.find((f) => f === value);
+							graph.setZoneItemFormat(zoneId, item.id, format);
+						}}
+					>
+						<Select.Trigger class="w-28 shrink-0" title="Format it's kept in">
+							{item.format ?? "Auto"}
+						</Select.Trigger>
+						<Select.Content>
+							<Select.Item value={DEFAULT_FORMAT} label="Auto">Auto</Select.Item>
+							{#each TEXTURE_FORMATS as format (format)}
+								<Select.Item value={format} label={format}>{format}</Select.Item>
+							{/each}
+						</Select.Content>
+					</Select.Root>
+				{/if}
 				<Button
 					variant="ghost"
 					size="icon-sm"

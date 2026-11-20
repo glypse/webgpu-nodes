@@ -1,3 +1,4 @@
+import type { TextureFormat } from "../passes/textures";
 import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
 import {
 	analyzeZones,
@@ -228,6 +229,24 @@ export abstract class ZoneModel extends GraphModelBase {
 		this.setZoneItems(
 			zoneId,
 			items.map((i) => (i.id === itemId ? { ...i, type } : i)),
+		);
+	}
+
+	/**
+	 * Set the format a simulation's item is kept in, or (`undefined`) the one
+	 * its type has by default. A repeat zone's items aren't kept in textures.
+	 */
+	setZoneItemFormat(zoneId: string, itemId: string, format: TextureFormat | undefined) {
+		if (this.zoneKind(zoneId) !== "simulation") return;
+		this.setZoneItems(
+			zoneId,
+			this.getZoneItems(zoneId).map((item) => {
+				if (item.id !== itemId) return item;
+				const next: ZoneItem = { ...item };
+				if (format === undefined) delete next.format;
+				else next.format = format;
+				return next;
+			}),
 		);
 	}
 

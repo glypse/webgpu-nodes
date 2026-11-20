@@ -9,8 +9,9 @@ import { type CpuTexture, evaluate } from "../testing/evaluate";
 import { managerFor, rootProject, type TestEdge, type TestNode } from "../testing/graph";
 import { nagaBin, validatePlan } from "../testing/wgsl";
 import type { ZoneItem } from "../types";
+import { texelType } from "./simulation";
 import { type TextureSources } from "./sources";
-import type { TextureFormat } from "./textures";
+import { TEXTURE_FORMATS, type TextureFormat } from "./textures";
 
 const image = (id: string, width = 4, height = 2): Asset => ({
 	kind: "image",
@@ -264,5 +265,81 @@ describe("Render Texture", () => {
 			});
 		expect(read(0.25)[0]).toBeCloseTo(5.5, 5);
 		expect(read(0.75)[0]).toBeCloseTo(7.5, 5);
+	});
+});
+
+describe("every format", () => {
+	it("is drawn into by a pass writing the texel type it keeps, and read back", () => {
+		for (const format of TEXTURE_FORMATS) {
+			const [nodes, edges] = drawn(
+				{ items: [color("color", format)] },
+				[["uv", "uv", "rt", "color"]],
+				[{ id: "uv", type: "uv" }],
+			);
+			const model = managerFor(nodes, edges);
+			const plan = generateRenderPlan(model);
+			expect(plan.passes[0]?.program.targets).toEqual([texelType(format)]);
+			const resource = plan.resources.find((r) => r.id === "render:rt:color");
+			expect(resource?.kind === "transient" && resource.format).toBe(format);
+			if (nagaBin) expect(validatePlan(plan)).toEqual([]);
+		}
+	});
+
+	it("is what a simulation's item is kept in, instead of its type's", () => {
+		const plan = (format?: TextureFormat) => {
+			const model = managerFor(
+				[
+					{
+						id: "s_in",
+						type: "simulation-input",
+						data: { pairedOutput: "s_out", values: { acc: 1 } },
+					},
+					{
+						id: "s_out",
+						type: "simulation-output",
+						data: {
+							items: [
+								{
+									id: "acc",
+									label: "Accumulator",
+									type: "f32",
+									...(format ? { format } : {}),
+								},
+							],
+						},
+					},
+					{ id: "body", type: "add" },
+				],
+				[
+					["s_in", "acc", "body", "operands"],
+					["s_in", "delta-time", "body", "operands"],
+					["body", "result", "s_out", "acc"],
+					["s_out", "acc", "out", "color"],
+				],
+			);
+			const generated = generateRenderPlan(model);
+			if (nagaBin) expect(validatePlan(generated)).toEqual([]);
+			return generated;
+		};
+		const formats = (p: ReturnType<typeof plan>) => [
+			...new Set(p.resources.flatMap((r) => (r.kind === "state" ? [r.format] : []))),
+		];
+		expect(formats(plan())).toEqual(["r32float"]);
+		for (const format of ["rgba8unorm", "r32uint", "rg16float", "rgba32sint"] as const) {
+			expect(formats(plan(format))).toEqual([format]);
+		}
+	});
+
+	it("can be set on a simulation's items", () => {
+		const model = managerFor([], []);
+		const zone = model.createSimulationZone({ x: 0, y: 0 }) ?? "";
+		const item = model.getZoneItems(zone)[0]?.id ?? "";
+		model.setZoneItemFormat(zone, item, "r32uint");
+		expect(model.getZoneItems(zone)[0]?.format).toBe("r32uint");
+		model.setZoneItemFormat(zone, item, undefined);
+		expect(model.getZoneItems(zone)[0]).not.toHaveProperty("format");
+		const repeat = model.createRepeatZone({ x: 0, y: 0 }) ?? "";
+		model.setZoneItemFormat(repeat, model.getZoneItems(repeat)[0]?.id ?? "", "r32uint");
+		expect(model.getZoneItems(repeat)[0]).not.toHaveProperty("format");
 	});
 });
