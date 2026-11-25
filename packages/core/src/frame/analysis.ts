@@ -157,7 +157,7 @@ export class FrameValueAnalysis {
 	}
 
 	private output(path: readonly string[], nodeId: string, handleId: string): FrameResult {
-		const key = `${path.join("/")}|${nodeId}|${handleId}`;
+		const key = `${this.sources.pathKey(path)}|${nodeId}|${handleId}`;
 		const cache = this.assuming.size > 0 ? this.scratch : this.memo;
 		const known = this.memo.get(key) ?? cache.get(key);
 		if (known) return known;
@@ -232,12 +232,12 @@ export class FrameValueAnalysis {
 		const zone = instance?.zones.zones.get(instance.zones.zoneOfBoundary.get(nodeId) ?? "");
 		if (!instance || !zone) return no("The zone isn't paired.");
 		const inside = instance.doc.nodesById.get(nodeId)?.type === REPEAT_INPUT;
-		if (inside && this.assuming.has(`${path.join("/")}|${zone.id}`)) return YES;
+		if (inside && this.assuming.has(`${this.sources.pathKey(path)}|${zone.id}`)) return YES;
 		return this.zoneResult(path, zone.id);
 	}
 
 	private zoneResult(path: readonly string[], zoneId: string): FrameResult {
-		const key = `${path.join("/")}|zone|${zoneId}`;
+		const key = `${this.sources.pathKey(path)}|zone|${zoneId}`;
 		const known = this.memo.get(key) ?? this.scratch.get(key);
 		if (known) return known;
 		const instance = this.sources.instance(path);
@@ -245,7 +245,7 @@ export class FrameValueAnalysis {
 		const output = instance?.doc.nodesById.get(zone?.outputId ?? "");
 		if (!instance || !zone || !output) return no("The zone isn't paired.");
 		const handles = [ITERATIONS_HANDLE, ...zoneItems(output).map((item) => item.id)];
-		const assumed = `${path.join("/")}|${zoneId}`;
+		const assumed = `${this.sources.pathKey(path)}|${zoneId}`;
 		// Its own final value read from inside it can never be known first.
 		if (this.assuming.has(assumed)) return no("It depends on its own result.");
 		this.assuming.add(assumed);

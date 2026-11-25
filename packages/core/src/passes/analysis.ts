@@ -20,7 +20,10 @@ export class PassAnalysis {
 	readonly sources: TextureSources;
 	private renderCache: ReadonlyMap<string, SocketRef> | undefined;
 	/** Every link is drawn, and redrawn whenever a node moves. */
-	private links = new Map<string, TextureLink | undefined>();
+	private links = new Map<
+		string,
+		Map<string, { edge: GraphEdge; link: TextureLink | undefined }[]>
+	>();
 
 	constructor(private graph: TextureGraph) {
 		this.sources = new TextureSources(graph);
@@ -28,10 +31,29 @@ export class PassAnalysis {
 
 	/** What `edge`, of the document computed at `path`, does with a texture, if anything. */
 	link(path: readonly string[], edge: GraphEdge): TextureLink | undefined {
-		const key = `${path.join("/")}|${edge.id}|${edge.source}|${edge.sourceHandle}|${edge.target}|${edge.targetHandle}`;
-		if (this.links.has(key)) return this.links.get(key);
+		const pathKey = this.sources.pathKey(path);
+		let byEdge = this.links.get(pathKey);
+		if (!byEdge) {
+			byEdge = new Map();
+			this.links.set(pathKey, byEdge);
+		}
+		// Callers may hold copies of the document's edges, so equal edges share an entry.
+		let entries = byEdge.get(edge.id);
+		if (!entries) {
+			entries = [];
+			byEdge.set(edge.id, entries);
+		}
+		const known = entries.find(
+			(e) =>
+				e.edge === edge ||
+				(e.edge.source === edge.source &&
+					e.edge.sourceHandle === edge.sourceHandle &&
+					e.edge.target === edge.target &&
+					e.edge.targetHandle === edge.targetHandle),
+		);
+		if (known) return known.link;
 		const link = this.computeLink(path, edge);
-		this.links.set(key, link);
+		entries.push({ edge, link });
 		return link;
 	}
 
@@ -73,7 +95,7 @@ export class PassAnalysis {
 			if (!instance) return;
 			const queue = [...seeds];
 			for (const id of queue) {
-				const key = `${path.join("/")}|${id}`;
+				const key = `${this.sources.pathKey(path)}|${id}`;
 				if (seen.has(key)) continue;
 				seen.add(key);
 				const node = instance.doc.nodesById.get(id);

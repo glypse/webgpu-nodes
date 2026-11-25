@@ -179,6 +179,8 @@ export type TextureGraph = Pick<
 	"root" | "project" | "typeResolver" | "resolveDescriptor" | "assets"
 >;
 
+type PathTrie = { id: string; children: Map<string, PathTrie> };
+
 /** A document as computed for one group node (the root for the empty path). */
 type Instance = {
 	path: readonly string[];
@@ -211,9 +213,33 @@ export class TextureSources {
 		this.assets = new Map(graph.assets.map((a) => [a.id, a]));
 	}
 
+	private pathIds = new WeakMap<readonly string[], string>();
+	private pathTrie: PathTrie = { id: "0", children: new Map() };
+	private pathCount = 0;
+
+	/**
+	 * A short string naming `path` for memo keys: equal paths have equal keys.
+	 * Deep group nesting makes joined ids long, and every lookup builds one.
+	 */
+	pathKey(path: readonly string[]): string {
+		const known = this.pathIds.get(path);
+		if (known !== undefined) return known;
+		let node = this.pathTrie;
+		for (const id of path) {
+			let next = node.children.get(id);
+			if (!next) {
+				next = { id: String(++this.pathCount), children: new Map() };
+				node.children.set(id, next);
+			}
+			node = next;
+		}
+		this.pathIds.set(path, node.id);
+		return node.id;
+	}
+
 	/** The document computed at `path`, as group nodes there bind and set it. */
 	instance(path: readonly string[]): Instance | undefined {
-		const key = path.join("/");
+		const key = this.pathKey(path);
 		if (this.instances.has(key)) return this.instances.get(key);
 		const instance = this.createInstance(path);
 		this.instances.set(key, instance);
@@ -289,7 +315,7 @@ export class TextureSources {
 
 	/** What a node's Texture input reads, at `path`. */
 	input(path: readonly string[], nodeId: string, inputId: string): TextureResolution {
-		return this.memo(`in|${path.join("/")}|${nodeId}|${inputId}`, () => {
+		return this.memo(`in|${this.pathKey(path)}|${nodeId}|${inputId}`, () => {
 			const instance = this.instance(path);
 			const edge = this.feed(path, nodeId, inputId);
 			if (!instance || !edge) return EMPTY;
@@ -313,7 +339,7 @@ export class TextureSources {
 
 	/** What a node's Texture output gives, at `path`. */
 	output(path: readonly string[], nodeId: string, handleId: string): TextureResolution {
-		return this.memo(`out|${path.join("/")}|${nodeId}|${handleId}`, () =>
+		return this.memo(`out|${this.pathKey(path)}|${nodeId}|${handleId}`, () =>
 			this.computeOutput(path, nodeId, handleId),
 		);
 	}
@@ -706,7 +732,7 @@ export class TextureSources {
 			done.set(key, reads);
 			return reads;
 		};
-		const key = `${path.join("/")}|${nodeId}|${handle}`;
+		const key = `${this.pathKey(path)}|${nodeId}|${handle}`;
 		const known = this.zoneState.get(key);
 		if (known !== undefined) return known;
 		const reads = visit(nodeId, handle, new Set());

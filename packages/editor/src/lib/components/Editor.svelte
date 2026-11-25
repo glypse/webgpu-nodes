@@ -1,5 +1,6 @@
 <script lang="ts">
 	import {
+		editableScopes,
 		generateRenderPlan,
 		planPasses,
 		planUniformInputs,
@@ -59,19 +60,11 @@
 	/** The plan shown, the inputs its uniforms hold, and the hash of the rest. */
 	let shown: { plan: RenderPlan; inputs: ReadonlySet<string>; hash: string } | undefined;
 
-	// The values of the documents graph areas show are uniforms: editing them
-	// only changes the uniforms, while the fragment (and its compiled
-	// pipeline) stays the same, whichever area is used.
-	const uniformScopes = $derived(
-		[
-			...new Set(
-				graph
-					.graphAreas()
-					.filter((a) => !graph.isLockedAt(a.editor.path))
-					.map((a) => graph.definitionRefAt(a.editor.path)),
-			),
-		].toSorted(),
-	);
+	// The values of every unlocked document are uniforms: editing them only
+	// changes the uniforms, while the fragment (and its compiled pipeline)
+	// stays the same, whichever document is shown. Tying this to the graph
+	// areas would recompile the shader on every navigation.
+	const uniformScopes = $derived(editableScopes(graph.project));
 
 	$effect(() => {
 		const hash = `${uniformScopes.join(",")}|${reachableShaderHash(graph.project, graph.assets)}`;

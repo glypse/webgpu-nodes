@@ -104,9 +104,13 @@
 
 	/** Textures are drawn thicker. */
 	const texture = $derived(sourceType === "texture" || textureLink?.kind === "render");
-	// Walking every render of the frame is costly: only links that render need it.
-	const passes = $derived(
-		textureLink?.kind === "render" ? graph.passAnalysis().renders().size + 1 : 0,
+	let labelHovered = $state(false);
+	// Counting the frame's passes walks every group instance, which costs more
+	// than the rest of an edit: only a pass tag being pointed at needs it.
+	const passes = $derived.by(() =>
+		labelHovered && textureLink?.kind === "render"
+			? graph.passAnalysis().renders().size + 1
+			: 0,
 	);
 	const conversion = $derived(
 		textureLink?.kind === "sample"
@@ -271,7 +275,13 @@
 		{/if}
 
 		{#if conversion && !invalid}
-			<g transform="translate({midX} {midY})" class="link-conversion">
+			<g
+				transform="translate({midX} {midY})"
+				class="link-conversion"
+				role="img"
+				onpointerenter={() => (labelHovered = true)}
+				onpointerleave={() => (labelHovered = false)}
+			>
 				<title>{conversion.title}</title>
 				<rect x="-18" y="-7" width="36" height="14" rx="7" />
 				<text text-anchor="middle" dominant-baseline="central">{conversion.label}</text>

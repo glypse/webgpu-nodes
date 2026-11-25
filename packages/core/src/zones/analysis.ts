@@ -79,24 +79,56 @@ function implicitZoneEdges(zones: Iterable<Zone>): { source: string; target: str
 
 type Definitions = ReadonlyMap<string, { nodes: readonly MinimalNode[] }>;
 
-type HoldingEntry = { nodes: (readonly MinimalNode[])[]; result: ReadonlySet<string> };
+type HoldingEntry = { keys: readonly object[]; result: ReadonlySet<string> };
+
+const zoneStructures = new WeakMap<
+	{ nodes: readonly MinimalNode[] },
+	{ nodes: readonly MinimalNode[]; key: object }
+>();
+
+/**
+ * A key of a document's nodes that only changes when what zone analysis
+ * reads of them does: their ids, types, zone pairing and group. Moving,
+ * resizing or editing values replaces the nodes array without touching it.
+ */
+export function zoneStructure(doc: { nodes: readonly MinimalNode[] }): object {
+	const known = zoneStructures.get(doc);
+	if (known?.nodes === doc.nodes) return known.key;
+	const same =
+		known?.nodes.length === doc.nodes.length &&
+		known.nodes.every((n, i) => {
+			const m = doc.nodes[i];
+			return (
+				m !== undefined &&
+				(n === m ||
+					(n.id === m.id &&
+						n.type === m.type &&
+						n.data.pairedOutput === m.data.pairedOutput &&
+						n.group?.definitionRef === m.group?.definitionRef))
+			);
+		});
+	const key = same ? known.key : {};
+	zoneStructures.set(doc, { nodes: doc.nodes, key });
+	return key;
+}
 
 const definitionCache = new WeakMap<Definitions, Map<string, HoldingEntry>>();
 
 /**
  * The definitions holding a node `own` says, themselves or through the
- * groups they nest, among `definitions`. Memoised on their node arrays.
+ * groups they nest, among `definitions`. Memoised on their zone structure.
  */
 function definitionsHolding(
 	key: string,
 	definitions: Definitions,
 	own: (node: MinimalNode) => boolean,
 ): ReadonlySet<string> {
-	const nodes = [...definitions.values()].map((d) => d.nodes);
+	const docs = [...definitions.values()];
+	const keys = docs.map(zoneStructure);
 	const caches = definitionCache.get(definitions) ?? new Map<string, HoldingEntry>();
 	definitionCache.set(definitions, caches);
 	const cached = caches.get(key);
-	if (cached?.nodes.length === nodes.length && cached.nodes.every((n, i) => n === nodes[i])) {
+	if (cached?.keys.length === keys.length && cached.keys.every((k, i) => k === keys[i])) {
 		return cached.result;
 	}
 	const holding = new Set<string>();
@@ -114,13 +146,13 @@ function definitionsHolding(
 			}
 		}
 	}
-	caches.set(key, { nodes, result: holding });
+	caches.set(key, { keys, result: holding });
 	return holding;
 }
 
 /**
  * The definitions computing a simulation zone, themselves or through the
- * groups they nest, among `definitions`. Memoised on their node arrays.
+ * groups they nest, among `definitions`. Memoised on their zone structure.
  */
 export function simulatingDefinitions(definitions: Definitions): ReadonlySet<string> {
 	return definitionsHolding("simulating", definitions, (n) => n.type === SIMULATION_INPUT);

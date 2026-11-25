@@ -318,6 +318,20 @@ function hashDoc(
 }
 
 /**
+ * The definitions whose values a user can edit: every unlocked one, the root
+ * included. Making them all uniform scopes keeps the shader independent of
+ * which documents are being looked at, so navigating never recompiles it.
+ */
+export function editableScopes(project: {
+	definitions: ReadonlyMap<string, { locked: boolean }>;
+}): string[] {
+	return [...project.definitions]
+		.filter(([, doc]) => !doc.locked)
+		.map(([ref]) => ref)
+		.toSorted();
+}
+
+/**
  * Hash only the subset of the project that actually contributes to the shader
  * output: nodes reachable from frag-output in the root document, the edges
  * between them, and any group definitions they reference (recursively).

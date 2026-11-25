@@ -2,7 +2,7 @@ import { describe, expect, it } from "bun:test";
 
 import { LAYOUT_FRAME } from "../frames";
 import type { GraphNode, HydratedGraphDocument } from "./document";
-import { nodesStructure } from "./structure";
+import { edgesStructure, nodesStructure } from "./structure";
 
 function doc(nodes: GraphNode[]): HydratedGraphDocument {
 	return { nodes } as HydratedGraphDocument;
@@ -61,5 +61,21 @@ describe("nodesStructure", () => {
 		expect(edited).not.toBe(before);
 		d.nodes = [{ ...node, data: { values: { x: 5, y: 3 }, label: "L" } }];
 		expect(nodesStructure(d, inert)).not.toBe(edited);
+	});
+});
+
+describe("edgesStructure", () => {
+	const edge = { id: "e", source: "a", sourceHandle: "out", target: "b", targetHandle: "in" };
+
+	it("stays the same when edges are only selected, changes when they connect differently", () => {
+		const d = { nodes: [], edges: [edge] } as unknown as HydratedGraphDocument;
+		const before = edgesStructure(d);
+		d.edges = [{ ...edge, selected: true }];
+		expect(edgesStructure(d)).toBe(before);
+		d.edges = [{ ...edge, targetHandle: "other" }];
+		const moved = edgesStructure(d);
+		expect(moved).not.toBe(before);
+		d.edges = [];
+		expect(edgesStructure(d)).not.toBe(moved);
 	});
 });

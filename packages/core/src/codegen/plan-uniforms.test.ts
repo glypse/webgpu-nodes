@@ -2,10 +2,11 @@ import { describe, expect, it } from "bun:test";
 
 import { caseHandle, CASES_FAMILY } from "../enums";
 import { ROOT_ID } from "../graph/document";
-import type { GraphModel } from "../graph/model";
+import { GraphModel } from "../graph/model";
+import demo from "../scenes/default.json";
 import { managerFor, type TestEdge, type TestNode } from "../testing/graph";
 import { TEXTURE } from "../types";
-import { reachableShaderHash } from "./generate";
+import { editableScopes, reachableShaderHash } from "./generate";
 import { uniformInputKey } from "./literals";
 import {
 	generateRenderPlan,
@@ -191,5 +192,30 @@ describe("reachableShaderHash", () => {
 		const before = hashOf();
 		model.setInputValue("ix", "index", 1);
 		expect(hashOf()).not.toBe(before);
+	});
+});
+
+describe("editable scopes", () => {
+	it("keep the shader the same while values inside groups are edited", async () => {
+		const model = new GraphModel();
+		const loaded = await model.loadProject(demo);
+		expect(loaded.ok).toBe(true);
+		const scopes = editableScopes(model.project);
+		const hashOf = (inputs: ReadonlySet<string>) =>
+			reachableShaderHash(model.project, model.assets, inputs);
+		const plan = generateRenderPlan(model, { uniformScopes: scopes });
+		const inputs = planUniformInputs(plan);
+		const inside = [...plan.uniformInputs.entries()].find(
+			([, { node }]) => !model.root.nodesById.has(node),
+		);
+		expect(inside).toBeDefined();
+		if (!inside) return;
+		const [name, { node, input }] = inside;
+		const before = hashOf(inputs);
+		model.setInputValue(node, input, 0.123);
+		expect(hashOf(inputs)).toBe(before);
+		expect(planUniforms(plan, model)[name]).toBeDefined();
+		const again = generateRenderPlan(model, { uniformScopes: scopes });
+		expect(planUniformInputs(again)).toEqual(inputs);
 	});
 });

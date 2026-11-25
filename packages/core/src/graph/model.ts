@@ -50,7 +50,7 @@ import { AssetModel, MEDIA_NODE_OF } from "./model-assets";
 import { emptyProject, withEntry } from "./model-base";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
-import { nodesStructure } from "./structure";
+import { edgesStructure, nodesStructure, sameEdges } from "./structure";
 import { type LoadResult, parseJson, type ValidatedProject, validateProject } from "./validate";
 
 /** Rows a widget takes, for estimating node sizes. */
@@ -469,7 +469,7 @@ export class GraphModel extends AssetModel {
 			this.state.typeCaches,
 			...[...this.project.definitions.values()].flatMap((d) => [
 				nodesStructure(d, this.inertInput),
-				d.edges,
+				edgesStructure(d),
 			]),
 		];
 		const cached = this.passCache;
@@ -526,9 +526,12 @@ export class GraphModel extends AssetModel {
 	setDocumentEdges(definitionRef: string, edges: GraphEdge[]) {
 		const doc = this.project.definitions.get(definitionRef);
 		if (!doc) return;
+		// Selecting a link hands the edges back with only UI fields changed;
+		// types and links depend on nothing else.
+		const same = sameEdges(doc.edges, edges);
 		doc.edges = edges;
 		indexDocument(doc);
-		this.rebuildTypeCache();
+		if (!same) this.rebuildTypeCache();
 	}
 
 	/** Check saved JSON against every rule of a project, changing nothing. */

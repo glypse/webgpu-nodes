@@ -49,6 +49,7 @@ import {
 	isZoneInput,
 	type ZoneAnalysis,
 	zoneOptions,
+	zoneStructure,
 } from "../zones";
 import {
 	createPlainDocument,
@@ -72,6 +73,7 @@ import {
 	resolveDescriptor,
 } from "./hydrate";
 import { defaultSettings, type ProjectSettings, ProjectSettingsSchema } from "./settings";
+import { edgesStructure } from "./structure";
 import { readComponent } from "./values";
 
 export type ResolvedTypes = ResolvedNodeTypes;
@@ -467,8 +469,34 @@ export abstract class GraphModelBase {
 
 	/** Zone membership and invalid links of a document, and which groups simulate. */
 	zoneAnalysis(doc: HydratedGraphDocument): ZoneAnalysis {
-		return analyzeZones(doc.nodes, doc.edges, zoneOptions(this.project.definitions));
+		const options = zoneOptions(this.project.definitions);
+		const nodes = zoneStructure(doc);
+		const edges = edgesStructure(doc);
+		const cached = this.zoneCache.get(doc);
+		if (
+			cached?.nodes === nodes &&
+			cached.edges === edges &&
+			cached.simulating === options.simulating &&
+			cached.looping === options.looping
+		) {
+			return cached.analysis;
+		}
+		const analysis = analyzeZones(doc.nodes, doc.edges, options);
+		this.zoneCache.set(doc, { nodes, edges, ...options, analysis });
+		return analysis;
 	}
+
+	// The analysis holds ids only, so a document's moves and selections keep it.
+	private zoneCache = new WeakMap<
+		HydratedGraphDocument,
+		{
+			nodes: object;
+			edges: object;
+			simulating?: ReadonlySet<string>;
+			looping?: ReadonlySet<string>;
+			analysis: ZoneAnalysis;
+		}
+	>();
 
 	/** Zone analysis of the currently-viewed document. */
 	get activeZones(): ZoneAnalysis {
@@ -482,11 +510,21 @@ export abstract class GraphModelBase {
 		{ nodes: GraphNode[]; analysis: FrameAnalysis }
 	>();
 
-	/** The frames of a document and what they hold, memoised on its nodes. */
+	/**
+	 * The frames of a document and what they hold, memoised on its nodes. It
+	 * reads only ids, types and frame membership, never geometry, so a
+	 * replaced array with the same membership (a node being dragged) keeps it.
+	 */
 	frameAnalysis(doc: HydratedGraphDocument): FrameAnalysis {
 		const cached = this.frameCache.get(doc);
 		if (cached?.nodes === doc.nodes) return cached.analysis;
-		const analysis = analyzeFrames(doc.nodes);
+		const same =
+			cached?.nodes.length === doc.nodes.length &&
+			cached.nodes.every((n, i) => {
+				const m = doc.nodes[i];
+				return n.id === m?.id && n.type === m.type && n.frame === m.frame;
+			});
+		const analysis = cached && same ? cached.analysis : analyzeFrames(doc.nodes);
 		this.frameCache.set(doc, { nodes: doc.nodes, analysis });
 		return analysis;
 	}

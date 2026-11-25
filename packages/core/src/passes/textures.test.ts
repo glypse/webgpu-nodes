@@ -334,3 +334,30 @@ describe("textures of any size and format", () => {
 		expect(sampled.program.code).toContain("texture_2d<i32>");
 	});
 });
+
+describe("analysis keys", () => {
+	it("name a path by its ids, whichever array holds them", () => {
+		const sources = new TextureSources(new GraphModel(rootProject([], [])));
+		const key = sources.pathKey(["a", "b"]);
+		expect(sources.pathKey(["a", "b"])).toBe(key);
+		expect(sources.pathKey(["a", "b/c"])).not.toBe(key);
+		expect(sources.pathKey(["a", "b", "c"])).not.toBe(key);
+		expect(sources.pathKey(["b"])).not.toBe(sources.pathKey(["a"]));
+		expect(sources.pathKey([])).not.toBe(sources.pathKey(["a"]));
+	});
+
+	it("give a copy of an edge the link of the edge", () => {
+		const graph = new GraphModel(
+			project(
+				[{ id: "img", type: "image", data: { asset: "a" } }],
+				[["img", "texture", "out", "color"]],
+			),
+		);
+		const analysis = graph.passAnalysis();
+		const [linked] = graph.root.edges;
+		if (!linked) throw new Error("no edge");
+		const link = analysis.link([], linked);
+		expect(link).toEqual({ kind: "sample" });
+		expect(analysis.link([], { ...linked })).toBe(link);
+	});
+});

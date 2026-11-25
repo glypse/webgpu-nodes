@@ -428,13 +428,31 @@ export class TypeResolver {
 		};
 	}
 
+	/**
+	 * Keys by the identity of the bindings and variables they complete: a
+	 * group instance resolves every node of its document with one bindings
+	 * object, and bindings are never mutated once given.
+	 */
+	private keys = new WeakMap<TypeBindings, WeakMap<readonly TypeVariable[], string>>();
+
 	private key(nodeId: string, bindings: TypeBindings): string {
 		let variables = this.variables.get(nodeId);
 		if (!variables) {
 			variables = definitionOf(nodeId, this.env.definitions())?.typeVariables ?? [];
 			this.variables.set(nodeId, variables);
 		}
-		return variables.length === 0 ? "" : bindingsKey(completeBindings(variables, bindings));
+		if (variables.length === 0) return "";
+		let byVariables = this.keys.get(bindings);
+		if (!byVariables) {
+			byVariables = new WeakMap();
+			this.keys.set(bindings, byVariables);
+		}
+		let key = byVariables.get(variables);
+		if (key === undefined) {
+			key = bindingsKey(completeBindings(variables, bindings));
+			byVariables.set(variables, key);
+		}
+		return key;
 	}
 
 	private forget(nodeId: string) {

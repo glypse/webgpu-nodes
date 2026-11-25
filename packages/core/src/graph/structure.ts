@@ -1,5 +1,5 @@
 import { LAYOUT_FRAME } from "../frames";
-import type { GraphNode, HydratedGraphDocument } from "./document";
+import type { GraphDocumentEdge, GraphNode, HydratedGraphDocument } from "./document";
 
 const structures = new WeakMap<
 	HydratedGraphDocument,
@@ -77,4 +77,49 @@ function sameData(a: GraphNode, b: GraphNode, inert: InertInput | undefined): bo
 	}
 	const ids = new Set([...Object.keys(valuesA ?? {}), ...Object.keys(valuesB ?? {})]);
 	return [...ids].every((id) => valuesA?.[id] === valuesB?.[id] || inert(a, id));
+}
+
+const edgeStructures = new WeakMap<
+	HydratedGraphDocument,
+	{ edges: readonly GraphDocumentEdge[]; key: object }
+>();
+
+/**
+ * Whether two edge lists connect the same handles in the same order. The
+ * front end adds fields of its own (selection) to the edges it hands back,
+ * so a list can be replaced without the graph having changed.
+ */
+export function sameEdges(
+	a: readonly GraphDocumentEdge[],
+	b: readonly GraphDocumentEdge[],
+): boolean {
+	return (
+		a === b ||
+		(a.length === b.length &&
+			a.every((e, i) => {
+				const f = b[i];
+				return (
+					f !== undefined &&
+					(e === f ||
+						(e.id === f.id &&
+							e.source === f.source &&
+							e.sourceHandle === f.sourceHandle &&
+							e.target === f.target &&
+							e.targetHandle === f.targetHandle))
+				);
+			}))
+	);
+}
+
+/**
+ * A key of a document's edges that only changes when what they connect
+ * does: not when they are selected. Like `nodesStructure`, for analyses that
+ * would otherwise be rebuilt for every new edges array.
+ */
+export function edgesStructure(doc: HydratedGraphDocument): object {
+	const known = edgeStructures.get(doc);
+	if (known?.edges === doc.edges) return known.key;
+	const key = known && sameEdges(known.edges, doc.edges) ? known.key : {};
+	edgeStructures.set(doc, { edges: doc.edges, key });
+	return key;
 }
