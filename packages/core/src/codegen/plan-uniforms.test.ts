@@ -113,6 +113,22 @@ describe("planUniforms", () => {
 });
 
 describe("reachableShaderHash", () => {
+	it("doesn't change with layout frames", () => {
+		const model = scene();
+		const hashOf = () =>
+			reachableShaderHash(
+				model.project,
+				model.assets,
+				planUniformInputs(generateRenderPlan(model, options)),
+			);
+		const before = hashOf();
+		const frame = model.frameNodes(["sum"]);
+		expect(frame).toBeDefined();
+		expect(hashOf()).toBe(before);
+		model.removeFromFrame(["sum"]);
+		expect(hashOf()).toBe(before);
+	});
+
 	it("doesn't change with the uniform inputs' values", () => {
 		const model = scene();
 		const plan = generateRenderPlan(model, options);

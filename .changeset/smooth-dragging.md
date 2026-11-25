@@ -3,4 +3,4 @@
 "$editor": patch
 ---
 
-Moving, resizing and selecting nodes no longer recomputes what every link does with textures and frame values, so dragging stays smooth in large graphs.
+Moving, resizing and selecting nodes, scrubbing their values, and putting them in or out of frames no longer recompute what every link does with textures and frame values, so the editor stays smooth in large graphs.

@@ -129,6 +129,20 @@ describe("Render Texture", () => {
 		expectValid(model);
 	});
 
+	it("keeps its analyses while a uniform input is edited, but not a size", () => {
+		const [nodes, edges] = drawn(
+			{ values: { scale: 0.5 } },
+			[["m", "result", "rt", "color"]],
+			[{ id: "m", type: "mix", data: { values: { e1: 0, e2: 1, t: 0.5 } } }],
+		);
+		const model = managerFor(nodes, edges);
+		const before = model.passAnalysis();
+		model.setInputValue("m", "e1", 0.25);
+		expect(model.passAnalysis()).toBe(before);
+		model.setInputValue("rt", "scale", 0.25);
+		expect(model.passAnalysis()).not.toBe(before);
+	});
+
 	it("reads its size from uniforms, so editing it doesn't change the code", () => {
 		const [nodes, edges] = drawn({ values: { scale: 0.5 } });
 		const model = managerFor(nodes, edges);

@@ -12,12 +12,14 @@ import {
 	type NodeGeometry,
 	type NodeRows,
 } from "../layout";
+import { INDEX_SWITCH } from "../nodes/index-switch";
 import { defaultDataForType, nodeRegistry, type NodeType } from "../nodes/registry";
 import { PassAnalysis } from "../passes/analysis";
 import { err, ok } from "../result";
 import {
 	isSocketCompatible,
 	isTexture,
+	isUniformControl,
 	type NodeData,
 	type NodeWidget,
 	pickableTypes,
@@ -439,6 +441,21 @@ export class GraphModel extends AssetModel {
 		return created;
 	}
 
+	/**
+	 * Inputs edited with a number, toggle or colour are shader uniforms: what
+	 * the analyses compute doesn't read their values. Enums and compiled
+	 * values pick what is computed, frame inputs set sizes and counts, and an
+	 * Index Switch's index picks a texture.
+	 *
+	 * Rust: a property of the input's definition, not a list here.
+	 */
+	private inertInput = (node: GraphNode, inputId: string): boolean => {
+		if (node.type === INDEX_SWITCH) return false;
+		const input = this.resolveDescriptor(node).inputs.find((i) => i.id === inputId);
+		if (!input || input.frame) return false;
+		return input.control === undefined || isUniformControl(input.control);
+	};
+
 	private passCache: { inputs: readonly unknown[]; analysis: PassAnalysis } | undefined;
 
 	/**
@@ -450,7 +467,10 @@ export class GraphModel extends AssetModel {
 		const inputs = [
 			this.assets,
 			this.state.typeCaches,
-			...[...this.project.definitions.values()].flatMap((d) => [nodesStructure(d), d.edges]),
+			...[...this.project.definitions.values()].flatMap((d) => [
+				nodesStructure(d, this.inertInput),
+				d.edges,
+			]),
 		];
 		const cached = this.passCache;
 		if (

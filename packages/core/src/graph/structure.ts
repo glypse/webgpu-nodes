@@ -1,3 +1,4 @@
+import { LAYOUT_FRAME } from "../frames";
 import type { GraphNode, HydratedGraphDocument } from "./document";
 
 const structures = new WeakMap<
@@ -17,28 +18,63 @@ const structures = new WeakMap<
  * Rust: the document would carry a structure revision bumped by the edits
  * that change it, instead of comparing node lists.
  */
-export function nodesStructure(doc: HydratedGraphDocument): object {
+export function nodesStructure(doc: HydratedGraphDocument, inert?: InertInput): object {
 	const known = structures.get(doc);
 	if (known?.nodes === doc.nodes) return known.key;
-	const key = known && sameStructure(known.nodes, doc.nodes) ? known.key : {};
+	const key = known && sameStructure(known.nodes, doc.nodes, inert) ? known.key : {};
 	structures.set(doc, { nodes: doc.nodes, key });
 	return key;
 }
 
-function sameStructure(a: readonly GraphNode[], b: readonly GraphNode[]): boolean {
+/**
+ * Layout frames and each node's `frame` are decorative: codegen and the
+ * analyses never read them, so putting nodes in or out of a frame, or
+ * editing a frame, keeps the structure.
+ */
+function sameStructure(
+	a: readonly GraphNode[],
+	b: readonly GraphNode[],
+	inert: InertInput | undefined,
+): boolean {
+	const computing = (nodes: readonly GraphNode[]) => nodes.filter((n) => n.type !== LAYOUT_FRAME);
+	const ca = computing(a);
+	const cb = computing(b);
 	return (
-		a.length === b.length &&
-		a.every((n, i) => {
-			const m = b[i];
+		ca.length === cb.length &&
+		ca.every((n, i) => {
+			const m = cb[i];
 			return (
 				m !== undefined &&
 				(n === m ||
 					(n.id === m.id &&
 						n.type === m.type &&
-						n.data === m.data &&
-						n.group === m.group &&
-						n.frame === m.frame))
+						(n.data === m.data || sameData(n, m, inert)) &&
+						n.group === m.group))
 			);
 		})
 	);
+}
+
+/** Whether the value stored for `input` of `node` is read by nothing that analyses the graph. */
+export type InertInput = (node: GraphNode, input: string) => boolean;
+
+/**
+ * Whether two versions of a node's data differ only in the stored values
+ * of inert inputs, which is what editing a number or colour changes.
+ */
+function sameData(a: GraphNode, b: GraphNode, inert: InertInput | undefined): boolean {
+	if (!inert) return false;
+	const { values: valuesA, ...restA } = a.data;
+	const { values: valuesB, ...restB } = b.data;
+	const keys = Object.keys(restA);
+	if (keys.length !== Object.keys(restB).length) return false;
+	if (
+		!keys.every(
+			(k) => (restA as Record<string, unknown>)[k] === (restB as Record<string, unknown>)[k],
+		)
+	) {
+		return false;
+	}
+	const ids = new Set([...Object.keys(valuesA ?? {}), ...Object.keys(valuesB ?? {})]);
+	return [...ids].every((id) => valuesA?.[id] === valuesB?.[id] || inert(a, id));
 }
