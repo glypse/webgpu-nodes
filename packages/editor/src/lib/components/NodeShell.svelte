@@ -6,6 +6,7 @@
 		interfaceOf,
 		isTexture,
 		isZoneNodeType,
+		keepsTextures,
 		NEW_ITEM_HANDLE,
 		type NodeData,
 		type NodeSetting,
@@ -184,8 +185,8 @@
 		);
 	});
 
-	/** What a zone's items can be: a simulation keeps textures too. */
-	const itemTypes = $derived(zoneKindOf(nodeType) === "simulation" ? SOCKET_TYPES : WGSL_TYPES);
+	/** What a zone's items can be: those kept in textures can be textures too. */
+	const itemTypes = $derived(keepsTextures(zoneKindOf(nodeType)) ? SOCKET_TYPES : WGSL_TYPES);
 
 	function addZoneItem(type: SocketType) {
 		if (zoneId) graph.addZoneItem(zoneId, type);

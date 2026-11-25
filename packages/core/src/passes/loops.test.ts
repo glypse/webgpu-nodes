@@ -620,6 +620,41 @@ describe("item sizes per iteration", () => {
 	});
 });
 
+describe("sizes of what loops end as", () => {
+	it("bring the loop into the plan before the passes using the size, though no pass reads it", () => {
+		const graph = new GraphModel({
+			...rootProject(
+				[
+					...loop("p", [{ ...IMG, size: "scale" }], 2),
+					{ id: "img", type: "image", data: { asset: "a" } },
+					{ id: "measure", type: "texture-size" },
+					{ id: "width", type: "separate-vector" },
+					{ id: "scaled", type: "mul" },
+					{ id: "k", type: "declare", data: { values: { x: 1 / 16 } } },
+					{ id: "made", type: "render-texture", data: { settings: { mode: "scale" } } },
+					{ id: "uv", type: "uv" },
+				],
+				[
+					["img", "texture", "p_in", "img"],
+					["p_in", "img", "p_out", "img"],
+					["p_out", "img", "measure", "texture"],
+					["measure", "size", "width", "v"],
+					["width", "x", "scaled", "operands"],
+					["k", "value", "scaled", "operands"],
+					["scaled", "result", "made", "scale"],
+					["uv", "uv", "made", "color"],
+					["made", "color", "out", "color"],
+				],
+			),
+			assets: [image],
+		});
+		const plan = valid(generateRenderPlan(graph));
+		const ids = plan.passes.map((n) => n.id);
+		expect(ids).toContain("p_in");
+		expect(ids.indexOf("p_in")).toBeLessThan(ids.indexOf("pass:textures:render:made:color"));
+	});
+});
+
 describe("frame values of loops", () => {
 	it("depend on the iteration only when they read it", () => {
 		const graph = new GraphModel({

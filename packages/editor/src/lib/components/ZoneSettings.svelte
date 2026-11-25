@@ -2,6 +2,7 @@
 	import {
 		DEFAULT_MAX_ITERATIONS,
 		isInferredItem,
+		keepsTextures,
 		SOCKET_TYPES,
 		type SocketType,
 		TEXTURE_FORMATS,
@@ -23,9 +24,12 @@
 	/** The zone's input node. */
 	let { zoneId }: { zoneId: string } = $props();
 
-	const simulation = $derived(graph.zoneKind(zoneId) === "simulation");
-	/** What its items can be: a simulation keeps textures too. */
-	const itemTypes = $derived(simulation ? SOCKET_TYPES : WGSL_TYPES);
+	const kind = $derived(graph.zoneKind(zoneId));
+	/** Whether its items are kept in textures, with a format and a size. */
+	const kept = $derived(keepsTextures(kind));
+	const itemTypes = $derived(kept ? SOCKET_TYPES : WGSL_TYPES);
+	/** The boundary node holding the item size inputs. */
+	const sizeNode = $derived(kind === "passes" ? "Repeat Passes Output" : "Simulation Input");
 	const items = $derived(graph.getZoneItems(zoneId));
 	const inputNode = $derived(graph.resolveNode(zoneId));
 	const maxIterations = $derived(
@@ -75,7 +79,17 @@
 </script>
 
 <div class="flex flex-col gap-4">
-	{#if simulation}
+	{#if kind === "passes"}
+		<div class="flex flex-col gap-1.5">
+			<span class="text-sm font-medium">Repeat Passes zone</span>
+			<span class="text-muted-foreground text-xs">
+				Repeats the passes that read an item or the iteration, as many times as the count
+				says, within a frame. Each item is kept in a texture between iterations, whose size
+				can change with every one. The count is clamped to a fixed limit. Passes that read
+				neither run once, before the loop.
+			</span>
+		</div>
+	{:else if kind === "simulation"}
 		<div class="flex flex-col gap-1.5">
 			<span class="text-sm font-medium">Simulation zone</span>
 			<span class="text-muted-foreground text-xs">
@@ -94,7 +108,7 @@
 			</span>
 		</div>
 	{/if}
-	{#if !simulation}
+	{#if kind === "repeat"}
 		<div class="flex flex-col gap-1.5">
 			<span class="text-sm font-medium">Maximum iterations</span>
 			<Scrubbable
@@ -175,7 +189,7 @@
 						{/if}
 					{/snippet}
 				</TypePicker>
-				{#if simulation}
+				{#if kept}
 					<Select.Root
 						type="single"
 						name="{zoneId}-{item.id}-format"
@@ -211,7 +225,7 @@
 					>
 						<Select.Trigger
 							class="w-20 shrink-0"
-							title="Size it's kept at: its scale and pixels are inputs of the Simulation Input"
+							title="Size it's kept at: its scale and pixels are inputs of the {sizeNode}"
 						>
 							{sizeKind(item) === "canvas"
 								? "Canvas"

@@ -269,7 +269,9 @@ export function generateRenderPlan(
 		const sized = frame.sizedTextures();
 		for (const id of needs.textures) {
 			const source = sized.find((t) => t.id === id);
-			if (source) for (const loop of insideOfSource(source)) into.add(loop);
+			if (!source) continue;
+			include(source);
+			for (const loop of insideOfSource(source)) into.add(loop);
 		}
 	};
 	const sizeLoops = (size: TextureSize, into: Set<string>) => {

@@ -68,6 +68,7 @@
 	/* Zones: bubble drawn under the nodes they enclose. */
 	--color-zone-repeat: oklch(0.55 0 0);
 	--color-zone-simulation: oklch(0.6 0.13 20);
+	--color-zone-passes: oklch(0.6 0.12 300);
 }
 
 .dark {
@@ -104,6 +105,7 @@
 	--sidebar-ring: oklch(0.556 0 0);
 	--color-zone-repeat: oklch(0.75 0 0);
 	--color-zone-simulation: oklch(0.72 0.12 20);
+	--color-zone-passes: oklch(0.74 0.11 300);
 }
 
 /* =============================================
@@ -158,6 +160,7 @@
 	--color-texture: var(--color-texture);
 	--color-zone-repeat: var(--color-zone-repeat);
 	--color-zone-simulation: var(--color-zone-simulation);
+	--color-zone-passes: var(--color-zone-passes);
 }
 
 /* =============================================
