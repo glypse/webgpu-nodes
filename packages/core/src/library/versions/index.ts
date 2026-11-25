@@ -32,6 +32,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-xyz/06fd57ac200029.json").then((m) => m.default),
 	"std-max-component@0d14bdb467cde4": () =>
 		import("./std-max-component/0d14bdb467cde4.json").then((m) => m.default),
+	"std-warp@1032f0ed094047": () =>
+		import("./std-warp/1032f0ed094047.json").then((m) => m.default),
 	"std-opensimplex-4d@1bd38fd7c8187b": () =>
 		import("./std-opensimplex-4d/1bd38fd7c8187b.json").then((m) => m.default),
 	"std-lattice-gradient@05900a454cf1a6": () =>
@@ -58,6 +60,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-opensimplex-orientation/12616c2a725719.json").then((m) => m.default),
 	"std-fit-uv@1e95b92be32730": () =>
 		import("./std-fit-uv/1e95b92be32730.json").then((m) => m.default),
+	"std-image-gradient@1953d0eb237e1e": () =>
+		import("./std-image-gradient/1953d0eb237e1e.json").then((m) => m.default),
 	"std-voronoi-edges@170764a71f4576": () =>
 		import("./std-voronoi-edges/170764a71f4576.json").then((m) => m.default),
 	"std-color@1c6bb6de3a1d20": () =>
@@ -78,6 +82,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-gaussian-blur-1d/116c2bba6d8557.json").then((m) => m.default),
 	"std-pad-vector@1728760d9cd716": () =>
 		import("./std-pad-vector/1728760d9cd716.json").then((m) => m.default),
+	"std-previous-frame@19df9e98ce2fe2": () =>
+		import("./std-previous-frame/19df9e98ce2fe2.json").then((m) => m.default),
 	"std-hash@195359940b5270": () =>
 		import("./std-hash/195359940b5270.json").then((m) => m.default),
 	"std-component-sum@0e43caf9357ab7": () =>
@@ -86,6 +92,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-gaussian-blur-2d/07103c56e2d7a4.json").then((m) => m.default),
 	"std-remap@18bb11b8c3230a": () =>
 		import("./std-remap/18bb11b8c3230a.json").then((m) => m.default),
+	"std-luma@01c853ca51a3ec": () =>
+		import("./std-luma/01c853ca51a3ec.json").then((m) => m.default),
 	"std-fractal-noise@02ce3657517491": () =>
 		import("./std-fractal-noise/02ce3657517491.json").then((m) => m.default),
 	"std-gradient-noise-1d@1bf7c19db4dbe5": () =>

@@ -40,12 +40,17 @@ import {
 	type ZoneItem,
 } from "../../src/types";
 import {
+	DELTA_TIME_HANDLE,
 	ITERATION_HANDLE,
 	ITERATIONS_HANDLE,
 	PASS_REPEAT_INPUT,
 	PASS_REPEAT_OUTPUT,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
+	SIMULATION_INPUT,
+	SIMULATION_OUTPUT,
+	sizeNodeOf,
+	zoneKindOf,
 } from "../../src/zones";
 
 /**
@@ -663,6 +668,7 @@ class Builder<I extends string, O extends string> {
 		return this.zone(
 			REPEAT_INPUT,
 			REPEAT_OUTPUT,
+			ITERATION_HANDLE,
 			iterations,
 			Object.fromEntries(entries) as Record<K, PassItem>,
 			body,
@@ -679,20 +685,48 @@ class Builder<I extends string, O extends string> {
 		items: Record<K, PassItem>,
 		body: (iteration: Ref, state: Record<K, Ref>) => Record<K, Operand>,
 	): Record<K, Ref> {
-		return this.zone(PASS_REPEAT_INPUT, PASS_REPEAT_OUTPUT, iterations, items, body);
+		return this.zone(
+			PASS_REPEAT_INPUT,
+			PASS_REPEAT_OUTPUT,
+			ITERATION_HANDLE,
+			iterations,
+			items,
+			body,
+		);
+	}
+
+	/**
+	 * A simulation zone: its step runs once per frame, each item kept per pixel
+	 * from frame to frame. `body` gets the seconds since the previous step and
+	 * the items as the previous frame left them, and returns them now. The
+	 * group's outputs take the values this frame ends with.
+	 */
+	simulation<K extends string>(
+		items: Record<K, PassItem>,
+		body: (delta: Ref, state: Record<K, Ref>) => Record<K, Operand>,
+	): Record<K, Ref> {
+		return this.zone(
+			SIMULATION_INPUT,
+			SIMULATION_OUTPUT,
+			DELTA_TIME_HANDLE,
+			undefined,
+			items,
+			body,
+		);
 	}
 
 	private zone<K extends string>(
 		input: NodeType,
 		output: NodeType,
-		iterations: Operand,
+		clock: string,
+		iterations: Operand | undefined,
 		items: Record<K, PassItem>,
-		body: (iteration: Ref, state: Record<K, Ref>) => Record<K, Operand>,
+		body: (clock: Ref, state: Record<K, Ref>) => Record<K, Operand>,
 	): Record<K, Ref> {
 		const zone = this.count;
 		const outputId = this.addNode(output, {});
 		const inputId = this.addNode(input, { pairedOutput: outputId });
-		this.feed(inputId, ITERATIONS_HANDLE, iterations);
+		if (iterations !== undefined) this.feed(inputId, ITERATIONS_HANDLE, iterations);
 		const keys = Object.keys(items) as K[];
 		const handles = new Map<K, ZoneItem>();
 		for (const key of keys) {
@@ -708,17 +742,18 @@ class Builder<I extends string, O extends string> {
 			this.feed(inputId, handle.id, initial);
 			if (!size) continue;
 			const sizeHandles = itemSizeHandles(handle.id);
-			if ("pixels" in size) this.feed(outputId, sizeHandles.pixels, size.pixels);
+			const sizes = sizeNodeOf(zoneKindOf(input) ?? "repeat", inputId, outputId);
+			if ("pixels" in size) this.feed(sizes, sizeHandles.pixels, size.pixels);
 			else {
-				this.feed(outputId, sizeHandles.scale, size.scale ?? 1);
-				if (size.like) this.feed(outputId, sizeHandles.like, size.like);
+				this.feed(sizes, sizeHandles.scale, size.scale ?? 1);
+				if (size.like) this.feed(sizes, sizeHandles.like, size.like);
 			}
 		}
 		this.setData(outputId, (data) => ({ ...data, items: [...handles.values()] }));
 		const state = Object.fromEntries(
 			keys.map((k) => [k, { node: inputId, handle: handles.get(k)?.id ?? "" }]),
 		) as Record<K, Ref>;
-		const next = body({ node: inputId, handle: ITERATION_HANDLE }, state);
+		const next = body({ node: inputId, handle: clock }, state);
 		for (const key of keys) this.feed(outputId, handles.get(key)?.id ?? "", next[key]);
 		return Object.fromEntries(
 			keys.map((k) => [k, { node: outputId, handle: handles.get(k)?.id ?? "" }]),

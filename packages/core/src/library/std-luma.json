@@ -1,0 +1,81 @@
+{
+	"id": "std-luma",
+	"name": "Luma",
+	"aliases": ["Luminance", "Greyscale", "Grayscale", "Brightness"],
+	"category": "color",
+	"section": ["Motion"],
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "7d6756e4-62ff-41cf-bcfb-d1ea744d2a3a",
+				"type": "dot",
+				"data": {
+					"values": {
+						"e2": {
+							"x": 0.2126,
+							"y": 0.7152,
+							"z": 0.0722
+						}
+					}
+				},
+				"position": {
+					"x": 260,
+					"y": 0
+				}
+			},
+			{
+				"id": "e5cc056d-a4aa-44f2-b95f-97fa63b94c57",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 64
+				}
+			},
+			{
+				"id": "a17dfab2-045a-452a-b450-3a6cc78e82db",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 520,
+					"y": 32
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "eb2755dc-c6c0-491e-bf11-6cfb47fc5ddf",
+				"source": "e5cc056d-a4aa-44f2-b95f-97fa63b94c57",
+				"sourceHandle": "206ae0ea-9bb6-4cdd-9546-8165d2b34da7",
+				"target": "7d6756e4-62ff-41cf-bcfb-d1ea744d2a3a",
+				"targetHandle": "e1"
+			},
+			{
+				"id": "9282d6b1-715b-4da4-ac9d-b2ff2130b56a",
+				"source": "7d6756e4-62ff-41cf-bcfb-d1ea744d2a3a",
+				"sourceHandle": "result",
+				"target": "a17dfab2-045a-452a-b450-3a6cc78e82db",
+				"targetHandle": "b3dc9f63-6dd3-4cb3-a284-b799b4255c10"
+			}
+		],
+		"inputs": [
+			{
+				"id": "206ae0ea-9bb6-4cdd-9546-8165d2b34da7",
+				"label": "Linear RGB",
+				"type": "vec3f"
+			}
+		],
+		"outputs": [
+			{
+				"id": "b3dc9f63-6dd3-4cb3-a284-b799b4255c10",
+				"label": "Luma",
+				"type": "f32"
+			}
+		]
+	}
+}

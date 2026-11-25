@@ -1,0 +1,166 @@
+{
+	"id": "std-previous-frame",
+	"name": "Previous Frame",
+	"aliases": ["Last Frame", "Delay Frame", "Feedback", "History"],
+	"category": "texture",
+	"section": ["Motion"],
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "9f43d46d-6593-4aac-95df-e699123d04ca",
+				"type": "simulation-output",
+				"data": {
+					"items": [
+						{
+							"id": "555ad83f-1690-4522-85a1-7ec421508a26",
+							"label": "image",
+							"type": "texture",
+							"size": "scale"
+						},
+						{
+							"id": "3fac0b3f-6d32-45d5-9279-710eee90694d",
+							"label": "previous",
+							"type": "texture",
+							"size": "scale"
+						}
+					]
+				},
+				"position": {
+					"x": 624,
+					"y": 0
+				}
+			},
+			{
+				"id": "fd935c79-9d53-48ed-b1e1-5ed39d858de0",
+				"type": "simulation-input",
+				"data": {
+					"pairedOutput": "9f43d46d-6593-4aac-95df-e699123d04ca",
+					"values": {
+						"scale:555ad83f-1690-4522-85a1-7ec421508a26": 1,
+						"scale:3fac0b3f-6d32-45d5-9279-710eee90694d": 1
+					}
+				},
+				"position": {
+					"x": 414,
+					"y": 0
+				}
+			},
+			{
+				"id": "0d22f78b-c1fa-42f1-a361-94c436fe197f",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 0,
+					"y": 140
+				}
+			},
+			{
+				"id": "16931eba-edbb-4286-b304-5be0b172644e",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 950,
+					"y": 24
+				}
+			},
+			{
+				"id": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 200
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "e178572d-3af5-4e6f-8b0d-d458c1a0adda",
+				"source": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"sourceHandle": "out",
+				"target": "fd935c79-9d53-48ed-b1e1-5ed39d858de0",
+				"targetHandle": "555ad83f-1690-4522-85a1-7ec421508a26"
+			},
+			{
+				"id": "f8ec25b9-93b4-412b-ac12-7ec5ca290a4e",
+				"source": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"sourceHandle": "out",
+				"target": "fd935c79-9d53-48ed-b1e1-5ed39d858de0",
+				"targetHandle": "like:555ad83f-1690-4522-85a1-7ec421508a26"
+			},
+			{
+				"id": "7af69baa-88bc-4a4a-a87e-ed6e3b670a42",
+				"source": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"sourceHandle": "out",
+				"target": "fd935c79-9d53-48ed-b1e1-5ed39d858de0",
+				"targetHandle": "3fac0b3f-6d32-45d5-9279-710eee90694d"
+			},
+			{
+				"id": "60445093-a9f3-4d9e-ad9f-f3a9fce1cdba",
+				"source": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"sourceHandle": "out",
+				"target": "fd935c79-9d53-48ed-b1e1-5ed39d858de0",
+				"targetHandle": "like:3fac0b3f-6d32-45d5-9279-710eee90694d"
+			},
+			{
+				"id": "b8b5e4f2-333e-484f-9b00-ef52d83c91c8",
+				"source": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"sourceHandle": "out",
+				"target": "9f43d46d-6593-4aac-95df-e699123d04ca",
+				"targetHandle": "555ad83f-1690-4522-85a1-7ec421508a26"
+			},
+			{
+				"id": "42205c2a-3f39-4688-b71c-63e98b0acd30",
+				"source": "fd935c79-9d53-48ed-b1e1-5ed39d858de0",
+				"sourceHandle": "555ad83f-1690-4522-85a1-7ec421508a26",
+				"target": "9f43d46d-6593-4aac-95df-e699123d04ca",
+				"targetHandle": "3fac0b3f-6d32-45d5-9279-710eee90694d"
+			},
+			{
+				"id": "ecb56eaf-e2e0-4e7c-a746-4a6193530350",
+				"source": "9f43d46d-6593-4aac-95df-e699123d04ca",
+				"sourceHandle": "3fac0b3f-6d32-45d5-9279-710eee90694d",
+				"target": "16931eba-edbb-4286-b304-5be0b172644e",
+				"targetHandle": "8f9b35f0-d632-412e-be48-330d651389e1"
+			},
+			{
+				"id": "03a80f07-0251-4f96-a1c2-447d7ebdca2e",
+				"source": "9f43d46d-6593-4aac-95df-e699123d04ca",
+				"sourceHandle": "555ad83f-1690-4522-85a1-7ec421508a26",
+				"target": "16931eba-edbb-4286-b304-5be0b172644e",
+				"targetHandle": "cdcecc8a-7fc2-48e8-ac0a-018c61b31331"
+			},
+			{
+				"id": "92125703-49cc-463c-8ef1-54fd4858897c",
+				"source": "0d22f78b-c1fa-42f1-a361-94c436fe197f",
+				"sourceHandle": "c70eaf77-19c2-4946-9c9c-1344c7630840",
+				"target": "02631ff7-6f49-4798-976e-cc651bfcf06b",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "c70eaf77-19c2-4946-9c9c-1344c7630840",
+				"label": "Texture",
+				"type": "texture"
+			}
+		],
+		"outputs": [
+			{
+				"id": "8f9b35f0-d632-412e-be48-330d651389e1",
+				"label": "Previous",
+				"type": "texture"
+			},
+			{
+				"id": "cdcecc8a-7fc2-48e8-ac0a-018c61b31331",
+				"label": "Current",
+				"type": "texture"
+			}
+		]
+	}
+}

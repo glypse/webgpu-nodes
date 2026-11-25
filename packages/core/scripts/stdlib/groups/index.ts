@@ -4,6 +4,7 @@ import type { GroupSpec } from "../builder";
 import blur from "./blur";
 import color from "./color";
 import coordinates from "./coordinates";
+import motion from "./motion";
 import noise from "./noise";
 import texture from "./texture/fit-uv";
 import vector from "./vector";
@@ -15,4 +16,5 @@ export default [
 	...noise,
 	...texture,
 	...blur,
+	...motion,
 ] satisfies GroupSpec[];

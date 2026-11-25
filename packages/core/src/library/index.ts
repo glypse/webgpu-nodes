@@ -20,12 +20,14 @@ import gaussianBlur2d from "./std-gaussian-blur-2d.json";
 import gaussianBlur from "./std-gaussian-blur.json";
 import gradientNoise1d from "./std-gradient-noise-1d.json";
 import hash from "./std-hash.json";
+import imageGradient from "./std-image-gradient.json";
 import inDisplayGamut from "./std-in-display-gamut.json";
 import latticeGradient from "./std-lattice-gradient.json";
 import latticeNeighbor from "./std-lattice-neighbor.json";
 import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
 import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
+import luma from "./std-luma.json";
 import maxComponent from "./std-max-component.json";
 import noiseCoordinates from "./std-noise-coordinates.json";
 import noiseDistortion from "./std-noise-distortion.json";
@@ -43,6 +45,7 @@ import opensimplex4d from "./std-opensimplex-4d.json";
 import opensimplexNoise from "./std-opensimplex-noise.json";
 import opensimplexOrientation from "./std-opensimplex-orientation.json";
 import padVector from "./std-pad-vector.json";
+import previousFrame from "./std-previous-frame.json";
 import remap from "./std-remap.json";
 import simplexKernel from "./std-simplex-kernel.json";
 import voronoiBisector from "./std-voronoi-bisector.json";
@@ -53,6 +56,7 @@ import voronoiPoint from "./std-voronoi-point.json";
 import voronoiRadius from "./std-voronoi-radius.json";
 import voronoiSmooth from "./std-voronoi-smooth.json";
 import voronoiTexture from "./std-voronoi-texture.json";
+import warp from "./std-warp.json";
 import xyzToLinearRgb from "./std-xyz-to-linear-rgb.json";
 import xyzToOklab from "./std-xyz-to-oklab.json";
 import { libraryRef, libraryVersion } from "./version";
@@ -140,6 +144,10 @@ const files: unknown[] = [
 	boxBlurOnce,
 	gaussianBlur2d,
 	boxBlur2d,
+	luma,
+	previousFrame,
+	imageGradient,
+	warp,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {
