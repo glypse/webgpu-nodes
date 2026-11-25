@@ -428,6 +428,83 @@ describe("loop items", () => {
 	});
 });
 
+describe("item sizes per iteration", () => {
+	const SIZE: ZoneItem = { id: "size", label: "Size", type: "vec2f" };
+
+	/**
+	 * An inner loop of one iteration whose image item is scaled to
+	 * 0.5^(outer iteration + 1) of the canvas; the outer loop keeps the size
+	 * it ends with. An item can't read its own loop's iteration (that would
+	 * be a cycle), so an inner loop is what's sized by the outer one.
+	 */
+	function halving(iterations: number): GraphModel {
+		return new GraphModel({
+			...rootProject(
+				[
+					...loop("p", [SIZE], iterations),
+					...loop("q", [{ ...IMG, size: "scale" }], 1),
+					{ id: "img", type: "image", data: { asset: "a" } },
+					{ id: "one", type: "declare", data: { values: { x: 1 } } },
+					{ id: "half", type: "declare", data: { values: { x: 0.5 } } },
+					{ id: "next", type: "add" },
+					{ id: "scale", type: "pow" },
+					{ id: "measure", type: "texture-size" },
+				],
+				[
+					["img", "texture", "q_in", "img"],
+					["p_in", "iteration", "next", "operands"],
+					["one", "value", "next", "operands"],
+					["half", "value", "scale", "e1"],
+					["next", "result", "scale", "e2"],
+					["scale", "result", "q_in", "scale:img"],
+					["q_in", "img", "q_out", "img"],
+					["q_out", "img", "measure", "texture"],
+					["measure", "size", "p_out", "size"],
+					["p_out", "size", "out", "color"],
+				],
+			),
+			assets: [image],
+		});
+	}
+
+	const endsAs = (iterations: number) =>
+		evaluate(halving(iterations), "p_out", "size", "srgb", [8, 8], { images });
+
+	it("resolve with the iteration of the loop around them", () => {
+		const plan = valid(generateRenderPlan(halving(3)));
+		expect(writes(loopOf(plan, "p_in").body)).toEqual(["q_in"]);
+		const item = loopOf(plan, "q_in").items[0];
+		if (item?.size.kind !== "scale" || typeof item.size.scale !== "object") {
+			throw new Error("the size doesn't read a frame value");
+		}
+		const { scale } = item.size;
+		expect([...frameDependencies(plan.frame, [scale.frame]).loops]).toEqual(["p_in"]);
+		const at = (iteration: number) =>
+			evaluateFrame(plan.frame, {
+				time: 0,
+				delta: 0,
+				frame: 0,
+				canvas: { width: 8, height: 8 },
+				passSize: { width: 8, height: 8 },
+				iteration: (id) => (id === "p_in" ? iteration : undefined),
+			}).arg(scale);
+		expect([at(0), at(1), at(2)]).toEqual([0.5, 0.25, 0.125]);
+	});
+
+	it("end a loop of log2(width) halvings at 1x1", () => {
+		expect(endsAs(3)).toEqual([1, 1]);
+	});
+
+	it("end each loop at the size its last iteration says", () => {
+		expect(endsAs(1)).toEqual([4, 4]);
+		expect(endsAs(2)).toEqual([2, 2]);
+	});
+
+	it("end a loop without iterations as its initial value", () => {
+		expect(endsAs(0)).toEqual([0, 0]);
+	});
+});
+
 describe("frame values of loops", () => {
 	it("depend on the iteration only when they read it", () => {
 		const graph = new GraphModel({

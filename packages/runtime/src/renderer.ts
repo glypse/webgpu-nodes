@@ -1,31 +1,29 @@
 import {
 	type ColorSpace,
-	DISPLAY_P3_FIELD,
 	evaluateFrame,
 	type FrameEnv,
 	type FrameProgram,
 	type FrameValues,
 	mipLevelCount,
-	type PassDecl,
-	PLAN_TARGET,
-	type PlanNode,
+	planPasses,
 	type RenderPlan,
-	resolveSize,
 	type ResourceDecl,
 	type SamplerAddress,
 	type SamplerFilter,
 	type ShaderProgram,
-	SIMULATION_DELTA_FIELD,
 	type TextureFormat,
 	type UniformValue,
 } from "$core";
 
 import { type FrameTiming, GpuTimer } from "./gpu-timer";
+import { DependencyCache } from "./loops";
 import { MediaLibrary, type TextureOf } from "./media";
 import { MipGenerator } from "./mips";
+import { PlanWalk } from "./plan-walk";
 import { Presenter } from "./present";
+import { CompiledProgram, encodeDraw } from "./program";
 import type { SimulationState } from "./simulation";
-import { packBlock } from "./uniforms";
+import { TexturePool } from "./texture-pool";
 
 /** The values a program reads per frame. */
 export type FrameInputs = {
@@ -38,9 +36,6 @@ export type FrameInputs = {
 };
 
 export type Size = { width: number; height: number };
-
-/** The frame values of a pass of the size given, which its program reads. */
-type FrameValuesOf = (passSize: Size) => FrameValues;
 
 export type ProgramDiagnostic = {
 	message: string;
@@ -105,186 +100,44 @@ const ADDRESS_MODES: Record<SamplerAddress, GPUAddressMode> = {
 /** A compiled pipeline, and the layout of the resources its program reads. */
 type Pipeline = { pipeline: GPURenderPipeline; layout: GPUBindGroupLayout };
 
-/** A compiled program with its own uniform buffers: one pass of a `CompiledPlan`. */
-export class CompiledProgram {
-	private frameData: ArrayBuffer;
-	private frameBuffer: GPUBuffer;
-	private uniformBuffer: GPUBuffer;
-	private frameValuesData: ArrayBuffer;
-	private frameValuesBuffer: GPUBuffer;
-	/** The frame block's fields, which a plan's update may point at other values. */
-	private frameValues: ShaderProgram["frameValues"];
-	private bindGroup: GPUBindGroup | undefined;
-	/** The textures `bindGroup` binds, in the program's order. */
-	private bound: GPUTexture[] = [];
-
-	constructor(
-		private device: GPUDevice,
-		readonly program: ShaderProgram,
-		readonly pipeline: GPURenderPipeline,
-		private layout: GPUBindGroupLayout,
-		private empty: GPUTexture,
-		private samplers: readonly GPUSampler[],
-	) {
-		this.frameData = new ArrayBuffer(program.frame.size);
-		this.frameBuffer = device.createBuffer({
-			size: program.frame.size,
-			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-		});
-		this.uniformBuffer = device.createBuffer({
-			size: program.uniforms.size,
-			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-		});
-		this.frameValues = program.frameValues;
-		this.frameValuesData = new ArrayBuffer(program.frameValues.size);
-		this.frameValuesBuffer = device.createBuffer({
-			size: program.frameValues.size,
-			usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-		});
-	}
-
-	/** Read the frame values from where `program` (the same code as before) says. */
-	setFrameValues(frameValues: ShaderProgram["frameValues"]) {
-		this.frameValues = frameValues;
-	}
-
-	/** The bind group reading `textureOf`'s textures, made anew when they change. */
-	private bindGroupOf(textureOf: TextureOf): GPUBindGroup {
-		const textures = this.program.textures.map((t) => textureOf(t.source));
-		if (this.bindGroup && textures.every((t, i) => t === this.bound[i])) return this.bindGroup;
-		this.bound = textures;
-		this.bindGroup = this.device.createBindGroup({
-			layout: this.layout,
-			entries: [
-				{ binding: this.program.frame.binding, resource: { buffer: this.frameBuffer } },
-				{
-					binding: this.program.uniforms.binding,
-					resource: { buffer: this.uniformBuffer },
-				},
-				{
-					binding: this.program.frameValues.binding,
-					resource: { buffer: this.frameValuesBuffer },
-				},
-				...this.program.textures.map((t, i) => ({
-					binding: t.binding,
-					resource: (textures[i] ?? this.empty).createView(),
-				})),
-				...this.program.samplers.map((s, i) => ({
-					binding: s.binding,
-					// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- one per program sampler
-					resource: this.samplers[i]!,
-				})),
-			],
-		});
-		return this.bindGroup;
-	}
-
-	setUniforms(values: Readonly<Record<string, UniformValue>>) {
-		this.device.queue.writeBuffer(
-			this.uniformBuffer,
-			0,
-			packBlock(this.program.uniforms, values),
-		);
-	}
-
-	/**
-	 * Encode a pass drawing into `targets` (a colour attachment each, of the
-	 * canvas' size), for a frame presented in `colorSpace`, reading
-	 * `textureOf`'s textures. `simulationDelta` is the step of the
-	 * simulation it computes something of.
-	 */
-	encode(
-		encoder: GPUCommandEncoder,
-		targets: readonly GPUTexture[],
-		frame: FrameInputs,
-		colorSpace: ColorSpace,
-		textureOf: TextureOf,
-		{
-			simulationDelta = 0,
-			timestampWrites,
-			frameValuesOf,
-		}: {
-			simulationDelta?: number;
-			timestampWrites?: GPURenderPassTimestampWrites;
-			frameValuesOf?: FrameValuesOf;
-		} = {},
-	) {
-		const [first] = targets;
-		packBlock(
-			this.program.frame,
-			{
-				...frame,
-				resolution: [first?.width ?? 0, first?.height ?? 0],
-				[DISPLAY_P3_FIELD]: colorSpace === "display-p3" ? 1 : 0,
-				[SIMULATION_DELTA_FIELD]: simulationDelta,
-			},
-			this.frameData,
-		);
-		this.device.queue.writeBuffer(this.frameBuffer, 0, this.frameData);
-		const fields = Object.entries(this.frameValues.fields);
-		if (fields.length > 0 && frameValuesOf) {
-			const values = frameValuesOf({ width: first?.width ?? 0, height: first?.height ?? 0 });
-			packBlock(
-				this.frameValues,
-				Object.fromEntries(fields.map(([name, field]) => [name, values.ref(field.ref)])),
-				this.frameValuesData,
-			);
-			this.device.queue.writeBuffer(this.frameValuesBuffer, 0, this.frameValuesData);
-		}
-		const pass = encoder.beginRenderPass({
-			colorAttachments: targets.map((target) => ({
-				// One level at a time: the rest are made after the pass.
-				view: target.createView({ baseMipLevel: 0, mipLevelCount: 1 }),
-				loadOp: "clear" as const,
-				storeOp: "store" as const,
-			})),
-			...(timestampWrites ? { timestampWrites } : {}),
-		});
-		pass.setPipeline(this.pipeline);
-		pass.setBindGroup(0, this.bindGroupOf(textureOf));
-		pass.draw(3);
-		pass.end();
-	}
-
-	destroy() {
-		this.frameBuffer.destroy();
-		this.uniformBuffer.destroy();
-		this.frameValuesBuffer.destroy();
-	}
-}
-
-/**
- * The passes of a plan that are drawn: loops aren't run yet, so only the
- * passes outside them are.
- */
-function drawnPasses(plan: RenderPlan): PassDecl[] {
-	return plan.passes.filter((node: PlanNode): node is PassDecl => node.kind === "render");
-}
-
-/** A pass of a `CompiledPlan`: its compiled program and what it draws. */
-type CompiledPass = { program: CompiledProgram; decl: PassDecl };
-
 /**
  * A compiled `RenderPlan`: its passes in order, each drawing textures of its
  * own (kept while their size and format stay the same) or of the
- * simulations' state, but the last, which draws the frame.
+ * simulations' state, but the last, which draws the frame. A loop's passes
+ * are drawn once for each iteration, into textures borrowed for it.
+ *
+ * Encoding a plan records its draws in slots of its programs' buffers, which
+ * are written when it's done, so a plan is submitted before it's encoded again.
  */
 export class CompiledPlan {
 	private transients = new Map<string, GPUTexture>();
 	private resources: ReadonlyMap<string, ResourceDecl>;
 	private frameProgram: FrameProgram;
+	private dependencies: DependencyCache;
 	private uniforms: Readonly<Record<string, UniformValue>>;
+	private programs: Map<string, CompiledProgram>;
+	private pool: TexturePool<GPUTexture>;
 
 	constructor(
 		private device: GPUDevice,
-		readonly plan: RenderPlan,
-		private passes: readonly CompiledPass[],
+		public plan: RenderPlan,
+		programs: readonly CompiledProgram[],
 		private media: MediaLibrary,
 		private mips: MipGenerator,
 	) {
 		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
 		this.frameProgram = plan.frame;
+		this.dependencies = new DependencyCache(plan.frame);
 		this.uniforms = plan.uniforms;
+		this.programs = programsById(plan, programs);
+		this.pool = new TexturePool((spec) =>
+			device.createTexture({
+				size: { width: spec.width, height: spec.height },
+				format: spec.format as GPUTextureFormat,
+				mipLevelCount: spec.levels,
+				usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+			}),
+		);
 	}
 
 	/** Whether the plan keeps state between frames, which drawing it then needs. */
@@ -294,19 +147,22 @@ export class CompiledPlan {
 
 	setUniforms(values: Readonly<Record<string, UniformValue>>) {
 		this.uniforms = values;
-		for (const { program } of this.passes) program.setUniforms(values);
+		for (const program of this.programs.values()) program.setUniforms(values);
 	}
 
 	/**
-	 * Take what a newer plan of the same code changes: its uniforms, and the
-	 * frame values its programs read.
+	 * Take what a newer plan of the same code changes: its uniforms, its loops'
+	 * counts and sizes, and the frame values its programs read.
 	 */
 	update(plan: RenderPlan) {
+		this.programs = programsById(plan, [...this.programs.values()]);
+		for (const decl of planPasses(plan.passes)) {
+			this.programs.get(decl.id)?.setFrameValues(decl.program.frameValues);
+		}
+		this.plan = plan;
 		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
 		this.frameProgram = plan.frame;
-		drawnPasses(plan).forEach((decl, i) => {
-			this.passes[i]?.program.setFrameValues(decl.program.frameValues);
-		});
+		this.dependencies = new DependencyCache(plan.frame);
 		this.setUniforms(plan.uniforms);
 	}
 
@@ -406,114 +262,51 @@ export class CompiledPlan {
 				if (evaluatingTimes) return undefined;
 				evaluatingTimes = true;
 				try {
-					return (timeValues ??= frameValues());
+					return (timeValues ??= walk.evaluate(canvas));
 				} finally {
 					evaluatingTimes = false;
 				}
 			});
 		const mediaOf: TextureOf =
 			media ?? ((source) => this.media.texture(source, timeOf(source.id)));
-		// Sizes are resolved once per frame, in the order of the passes writing them:
-		// a size may read the size of a texture an earlier pass made.
-		const sizes = new Map<string, Size>();
-		const resolving = new Set<string>();
-		const frameValues = (): FrameValues =>
-			evaluateFrame(this.frameProgram, {
-				time: frame.time,
-				delta: frame.delta,
-				frame: frame.frame,
-				canvas,
-				passSize: canvas,
-				textureSize,
-				uniforms: this.uniforms,
-			} satisfies FrameEnv);
-		const mediaSize = (id: string): Size | undefined => {
-			const resource = this.resources.get(id);
-			if (resource?.kind !== "media") return undefined;
-			const texture = mediaOf({
-				kind: "media",
-				id,
-				asset: resource.asset,
-				...(resource.video ? { video: resource.video } : {}),
-			});
-			return { width: texture.width, height: texture.height };
-		};
-		const levelsOf = (id: string): number => {
-			const resource = this.resources.get(id);
-			return resource?.kind === "transient" && resource.mips
-				? mipLevelCount(sizes.get(id) ?? canvas)
-				: 1;
-		};
-		const textureSize = (id: string) => {
-			const size = sizeOf(id);
-			return size && { ...size, levels: levelsOf(id) };
-		};
-		const sizeOf = (id: string): Size | undefined => {
-			const known = sizes.get(id);
-			if (known) return known;
-			const resource = this.resources.get(id);
-			if (resource?.kind === "media") return mediaSize(id);
-			if (resource?.kind !== "transient" && resource?.kind !== "state") return undefined;
-			// A size that depends on itself has nothing to start from.
-			if (resolving.has(id)) return canvas;
-			resolving.add(id);
-			let values: FrameValues | undefined;
-			const size = resolveSize(resource.size, {
-				canvas,
-				resource: sizeOf,
-				maxDimension: this.device.limits.maxTextureDimension2D,
-				frame: (ref) => (values ??= frameValues()).arg({ frame: ref }),
-			});
-			resolving.delete(id);
-			sizes.set(id, size);
-			return size;
-		};
-		const transient = (id: string): GPUTexture => {
-			const resource = this.resources.get(id);
-			return this.transient(
-				id,
-				sizeOf(id) ?? canvas,
-				resource?.kind === "transient" ? resource.format : LINEAR_FORMAT,
-				resource?.kind === "transient" && resource.mips === true,
-			);
-		};
-		const stateTexture = (texture: string, read: "previous" | "current") =>
-			state.texture(texture, read) ?? this.media.emptyTexture;
-		const textureOf: TextureOf = (source) =>
-			source.kind === "render"
-				? transient(source.id)
-				: source.kind === "state"
-					? stateTexture(source.texture, source.read)
-					: source.kind === "loop"
-						? this.media.emptyTexture
-						: mediaOf(source);
-		const written = (id: string): GPUTexture => {
-			if (id === PLAN_TARGET) return target;
-			const resource = this.resources.get(id);
-			if (resource?.kind === "state") return stateTexture(resource.texture, resource.read);
-			return transient(id);
-		};
-		// State is sized by frame values too, so it's kept once sizes can be resolved.
-		const steps = state.advance(this.plan, frame, (id) => sizeOf(id) ?? canvas);
-		// A simulation's start only draws on the frames it starts.
-		const drawn = this.passes.filter(({ decl }) => {
-			const simulation = decl.simulation;
-			return simulation?.stage !== "start" || steps.get(simulation.id)?.kind === "start";
+		const walk = new PlanWalk({
+			plan: this.plan,
+			resources: this.resources,
+			frameProgram: this.frameProgram,
+			uniforms: this.uniforms,
+			dependencies: this.dependencies,
+			frame,
+			colorSpace,
+			target,
+			maxDimension: this.device.limits.maxTextureDimension2D,
+			defaultFormat: LINEAR_FORMAT,
+			programOf: (decl) => {
+				const program = this.programs.get(decl.id);
+				if (!program) throw new Error(`The pass "${decl.id}" isn't compiled.`);
+				return program;
+			},
+			mediaOf,
+			mediaSize: (id) => {
+				const resource = this.resources.get(id);
+				if (resource?.kind !== "media") return undefined;
+				const texture = mediaOf({
+					kind: "media",
+					id,
+					asset: resource.asset,
+					...(resource.video ? { video: resource.video } : {}),
+				});
+				return { width: texture.width, height: texture.height };
+			},
+			emptyTexture: this.media.emptyTexture,
+			state,
+			persistent: (id, size, format, mips) => this.transient(id, size, format, mips),
+			pool: this.pool,
 		});
-		// Every size is known before any pass is encoded, so frame values can read them.
-		for (const { decl } of drawn) for (const id of decl.writes) sizeOf(id);
-		const frameValuesOf: FrameValuesOf = (passSize) =>
-			evaluateFrame(this.frameProgram, {
-				time: frame.time,
-				delta: frame.delta,
-				frame: frame.frame,
-				canvas,
-				passSize,
-				textureSize,
-				uniforms: this.uniforms,
-			} satisfies FrameEnv);
+		for (const program of this.programs.values()) program.begin();
+		const drawn = walk.run();
+		for (const program of this.programs.values()) program.flush();
 		const writes = timing?.pass();
-		drawn.forEach(({ program, decl }, i) => {
+		drawn.forEach(({ draw, mips }, i) => {
 			const first = i === 0;
 			const last = i === drawn.length - 1;
 			const timestampWrites = writes && {
@@ -521,24 +314,30 @@ export class CompiledPlan {
 				...(first ? { beginningOfPassWriteIndex: writes.beginningOfPassWriteIndex } : {}),
 				...(last ? { endOfPassWriteIndex: writes.endOfPassWriteIndex } : {}),
 			};
-			const simulation = decl.simulation && steps.get(decl.simulation.id);
-			const targets = decl.writes.map(written);
-			program.encode(encoder, targets, frame, colorSpace, textureOf, {
-				simulationDelta: simulation?.delta ?? 0,
-				frameValuesOf,
-				...(first || last ? { timestampWrites } : {}),
-			});
-			for (const texture of targets) {
-				if (texture.mipLevelCount > 1) this.mips.generate(encoder, texture);
-			}
+			encodeDraw(encoder, draw, first || last ? timestampWrites : undefined);
+			for (const texture of mips) this.mips.generate(encoder, texture);
 		});
 	}
 
 	destroy() {
-		for (const { program } of this.passes) program.destroy();
+		for (const program of this.programs.values()) program.destroy();
 		for (const texture of this.transients.values()) texture.destroy();
 		this.transients.clear();
+		this.pool.destroy();
 	}
+}
+
+/** The compiled programs of a plan's passes, by pass id, given in the order the passes run. */
+function programsById(
+	plan: RenderPlan,
+	programs: readonly CompiledProgram[],
+): Map<string, CompiledProgram> {
+	const found = new Map<string, CompiledProgram>();
+	planPasses(plan.passes).forEach((decl, i) => {
+		const program = programs[i];
+		if (program) found.set(decl.id, program);
+	});
+	return found;
 }
 
 /**
@@ -635,17 +434,18 @@ export class Renderer {
 		const resources = new Map(plan.resources.map((r) => [r.id, r]));
 		const formatOf = (id: string): GPUTextureFormat => {
 			const resource = resources.get(id);
-			return resource?.kind === "state" || resource?.kind === "transient"
+			return resource?.kind === "state" ||
+				resource?.kind === "transient" ||
+				resource?.kind === "loop"
 				? resource.format
 				: LINEAR_FORMAT;
 		};
-		const passes = await Promise.all(
-			drawnPasses(plan).map(async (decl) => ({
-				program: await this.compileProgram(decl.program, decl.writes.map(formatOf)),
-				decl,
-			})),
+		const programs = await Promise.all(
+			planPasses(plan.passes).map((decl) =>
+				this.compileProgram(decl.program, decl.writes.map(formatOf)),
+			),
 		);
-		return new CompiledPlan(this.device, plan, passes, this.media, this.mips);
+		return new CompiledPlan(this.device, plan, programs, this.media, this.mips);
 	}
 
 	/** Compile `program`, drawing into textures of `formats`. */
@@ -685,9 +485,26 @@ export class Renderer {
 		const visibility = GPUShaderStage.FRAGMENT;
 		return this.device.createBindGroupLayout({
 			entries: [
-				{ binding: program.frame.binding, visibility, buffer: { type: "uniform" } },
+				// A draw reads its own slot of these, as a pass may be drawn many times a frame.
+				{
+					binding: program.frame.binding,
+					visibility,
+					buffer: {
+						type: "uniform",
+						hasDynamicOffset: true,
+						minBindingSize: program.frame.size,
+					},
+				},
 				{ binding: program.uniforms.binding, visibility, buffer: { type: "uniform" } },
-				{ binding: program.frameValues.binding, visibility, buffer: { type: "uniform" } },
+				{
+					binding: program.frameValues.binding,
+					visibility,
+					buffer: {
+						type: "uniform",
+						hasDynamicOffset: true,
+						minBindingSize: program.frameValues.size,
+					},
+				},
 				...program.textures.map((t) => ({
 					binding: t.binding,
 					visibility,
