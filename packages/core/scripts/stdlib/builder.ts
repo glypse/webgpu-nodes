@@ -22,6 +22,8 @@ import {
 	type NodeType,
 	registeredNodes,
 } from "../../src/nodes/registry";
+import { itemSizeHandles } from "../../src/passes/item-size";
+import type { TextureFormat } from "../../src/passes/textures";
 import {
 	type ColorDisplay,
 	type EnumVariant,
@@ -37,7 +39,14 @@ import {
 	type WgslType,
 	type ZoneItem,
 } from "../../src/types";
-import { ITERATION_HANDLE, ITERATIONS_HANDLE, REPEAT_INPUT, REPEAT_OUTPUT } from "../../src/zones";
+import {
+	ITERATION_HANDLE,
+	ITERATIONS_HANDLE,
+	PASS_REPEAT_INPUT,
+	PASS_REPEAT_OUTPUT,
+	REPEAT_INPUT,
+	REPEAT_OUTPUT,
+} from "../../src/zones";
 
 /**
  * An output socket of a node in the group being built. A group input's is
@@ -55,6 +64,15 @@ export type VariableType = { readonly variable: string };
 
 /** A zone item's type: a fixed one, or a type variable's. */
 export type ItemType = ZoneItem["type"];
+
+/** A zone item: its type, initial value and, in a Repeat Passes zone, how its texture is made. */
+export type PassItem = {
+	type: ItemType;
+	initial: Operand;
+	format?: TextureFormat;
+	/** A scale of the canvas, or of `like`'s texture; or a size in pixels. */
+	size?: { scale?: Operand; like?: Operand } | { pixels: Operand };
+};
 
 /** An enum input of the group being built. */
 export type EnumRef = Ref & { readonly variants: readonly EnumVariant[] };
@@ -639,21 +657,62 @@ class Builder<I extends string, O extends string> {
 		items: Record<K, readonly [ItemType, Operand]>,
 		body: (iteration: Ref, state: Record<K, Ref>) => Record<K, Operand>,
 	): Record<K, Ref> {
+		const entries = Object.entries<readonly [ItemType, Operand]>(items).map(
+			([key, [type, initial]]) => [key, { type, initial }] as const,
+		);
+		return this.zone(
+			REPEAT_INPUT,
+			REPEAT_OUTPUT,
+			iterations,
+			Object.fromEntries(entries) as Record<K, PassItem>,
+			body,
+		);
+	}
+
+	/**
+	 * A Repeat Passes zone: its passes run `iterations` times (a frame value),
+	 * each item kept in a texture between iterations. An item's `size` inputs
+	 * are read on every iteration; with none, it has the canvas' size.
+	 */
+	repeatPasses<K extends string>(
+		iterations: Operand,
+		items: Record<K, PassItem>,
+		body: (iteration: Ref, state: Record<K, Ref>) => Record<K, Operand>,
+	): Record<K, Ref> {
+		return this.zone(PASS_REPEAT_INPUT, PASS_REPEAT_OUTPUT, iterations, items, body);
+	}
+
+	private zone<K extends string>(
+		input: NodeType,
+		output: NodeType,
+		iterations: Operand,
+		items: Record<K, PassItem>,
+		body: (iteration: Ref, state: Record<K, Ref>) => Record<K, Operand>,
+	): Record<K, Ref> {
 		const zone = this.count;
-		const outputId = this.addNode(REPEAT_OUTPUT, {});
-		const inputId = this.addNode(REPEAT_INPUT, { pairedOutput: outputId });
+		const outputId = this.addNode(output, {});
+		const inputId = this.addNode(input, { pairedOutput: outputId });
 		this.feed(inputId, ITERATIONS_HANDLE, iterations);
 		const keys = Object.keys(items) as K[];
 		const handles = new Map<K, ZoneItem>();
 		for (const key of keys) {
-			const [type, initial] = items[key];
+			const { type, initial, format, size } = items[key];
 			const handle: ZoneItem = {
 				id: stableId(`${this.id}/zone/${String(zone)}/${key}`),
 				label: key,
 				type,
+				...(format ? { format } : {}),
+				...(size ? { size: "pixels" in size ? "pixels" : "scale" } : {}),
 			};
 			handles.set(key, handle);
 			this.feed(inputId, handle.id, initial);
+			if (!size) continue;
+			const sizeHandles = itemSizeHandles(handle.id);
+			if ("pixels" in size) this.feed(outputId, sizeHandles.pixels, size.pixels);
+			else {
+				this.feed(outputId, sizeHandles.scale, size.scale ?? 1);
+				if (size.like) this.feed(outputId, sizeHandles.like, size.like);
+			}
 		}
 		this.setData(outputId, (data) => ({ ...data, items: [...handles.values()] }));
 		const state = Object.fromEntries(

@@ -52,8 +52,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-aspect-uv/1b256db7053e2f.json").then((m) => m.default),
 	"std-fractal-noise-octaves@1189381e8ffea3": () =>
 		import("./std-fractal-noise-octaves/1189381e8ffea3.json").then((m) => m.default),
-	"std-box-blur@17f7bc4f1f38ff": () =>
-		import("./std-box-blur/17f7bc4f1f38ff.json").then((m) => m.default),
+	"std-box-blur@17aecb91434fbb": () =>
+		import("./std-box-blur/17aecb91434fbb.json").then((m) => m.default),
 	"std-opensimplex-orientation@12616c2a725719": () =>
 		import("./std-opensimplex-orientation/12616c2a725719.json").then((m) => m.default),
 	"std-fit-uv@1e95b92be32730": () =>

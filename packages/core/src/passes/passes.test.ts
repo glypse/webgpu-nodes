@@ -218,6 +218,18 @@ const IMPULSE: Asset = {
 
 /** The image blurred by the standard-library group `id` at `radius` pixels, its alpha by pixel. */
 function blurred(id: string, radius: number, values: Record<string, number> = {}): number[][] {
+	const alphaAt = blurAlpha(id, radius, values);
+	return Array.from({ length: SIZE }, (_, y) =>
+		Array.from({ length: SIZE }, (_, x) => alphaAt(x, y)),
+	);
+}
+
+/** Like `blurred`, one pixel at a time: each is evaluated afresh, so a few are cheap. */
+function blurAlpha(
+	id: string,
+	radius: number,
+	values: Record<string, number> = {},
+): (x: number, y: number) => number {
 	const entry = libraryEntry(id);
 	const asset = IMPULSE;
 	const project = rootProject(
@@ -251,18 +263,16 @@ function blurred(id: string, radius: number, values: Record<string, number> = {}
 	const graph = new GraphModel({ ...project, assets: [asset] });
 	expectValid(graph);
 	const images = new Map([[asset.id, impulse(SIZE)]]);
-	return Array.from({ length: SIZE }, (_, y) =>
-		Array.from({ length: SIZE }, (_, x) => {
-			const uv = [(x + 0.5) / SIZE, 1 - (y + 0.5) / SIZE] as const;
-			const [r = 0, , , a = 0] = evaluate(graph, "read", "result", "srgb", [SIZE, SIZE], {
-				uv,
-				images,
-			});
-			// Premultiplied while blurred: white stays white wherever it shows.
-			if (a > 0.001) expect(r).toBeCloseTo(1, 4);
-			return a;
-		}),
-	);
+	return (x, y) => {
+		const uv = [(x + 0.5) / SIZE, 1 - (y + 0.5) / SIZE] as const;
+		const [r = 0, , , a = 0] = evaluate(graph, "read", "result", "srgb", [SIZE, SIZE], {
+			uv,
+			images,
+		});
+		// Premultiplied while blurred: white stays white wherever it shows.
+		if (a > 0.001) expect(r).toBeCloseTo(1, 4);
+		return a;
+	};
 }
 
 /** `weight`'s separable kernel around the centre, normalised. */
@@ -328,18 +338,48 @@ describe("blurs", () => {
 	});
 
 	it(
-		"Box Blur's iterations convolve the box with itself",
+		"Box Blur's iterations repeat the blur, as often as they're asked",
 		() => {
-			const twice = blurred("std-box-blur", 1, { Iterations: 2 });
 			const centre = (SIZE - 1) / 2;
-			const taps = [1 / 9, 2 / 9, 3 / 9, 2 / 9, 1 / 9];
-			const w = (d: number) => taps[d + 2] ?? 0;
-			expectClose(
-				twice,
-				Array.from({ length: SIZE }, (_, y) =>
-					Array.from({ length: SIZE }, (_, x) => w(x - centre) * w(y - centre)),
-				),
-			);
+			// A radius of one pixel is three equal taps along each axis, an edge's
+			// clamped to its pixel.
+			const after = (iterations: number) => {
+				let line: number[] = Array.from({ length: SIZE }, (_, i) => (i === centre ? 1 : 0));
+				for (let n = 0; n < iterations; n++) {
+					const was = line;
+					line = was.map(
+						(v, i) =>
+							(v +
+								(was[Math.max(0, i - 1)] ?? 0) +
+								(was[Math.min(SIZE - 1, i + 1)] ?? 0)) /
+							3,
+					);
+				}
+				return line;
+			};
+			for (const iterations of [1, 2, 3]) {
+				const line = after(iterations);
+				expectClose(
+					blurred("std-box-blur", 1, { Iterations: iterations }),
+					Array.from({ length: SIZE }, (_, y) =>
+						Array.from({ length: SIZE }, (_, x) => (line[x] ?? 0) * (line[y] ?? 0)),
+					),
+				);
+			}
+			// Each pixel is evaluated afresh, so only a few of twenty iterations'.
+			const line = after(20);
+			const alphaAt = blurAlpha("std-box-blur", 1, { Iterations: 20 });
+			for (const [x, y] of [
+				[centre, centre],
+				[1, centre],
+				[0, 0],
+				[SIZE - 1, 3],
+			] as const) {
+				expect(alphaAt(x, y), `pixel ${String(x)}, ${String(y)}`).toBeCloseTo(
+					(line[x] ?? 0) * (line[y] ?? 0),
+					4,
+				);
+			}
 		},
 		SLOW,
 	);
@@ -387,7 +427,9 @@ describe("blurs", () => {
 		// The last pass samples the blur's result.
 		expect(passes("std-gaussian-blur", {})).toBe(3);
 		expect(passes("std-gaussian-blur", { Direction: 1 })).toBe(2);
-		expect(passes("std-box-blur", { Iterations: 3 })).toBe(7);
+		// The iterations are a loop's, not passes of their own.
+		expect(passes("std-box-blur", { Iterations: 3 })).toBe(5);
+		expect(passes("std-box-blur", { Iterations: 20 })).toBe(5);
 		expect(passes("std-box-blur", { Iterations: 3, Direction: 1 })).toBe(4);
 		expect(passes("std-gaussian-blur", { Separable: 0 })).toBe(2);
 	});

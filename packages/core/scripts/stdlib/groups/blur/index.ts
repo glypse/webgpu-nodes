@@ -2,15 +2,13 @@
 // texture, then runs it vertically on that, and renders the result. With a
 // direction, the kernel runs once, along an angle; unseparated, a
 // two-dimensional kernel does all of it in one go.
-import { group, type GroupBuilder, type GroupSpec, helpers, type Ref } from "../../builder";
+import { group, type GroupBuilder, type GroupSpec, helpers } from "../../builder";
 import { boxBlur1d, boxBlur2d, EDGES, gaussianBlur1d, gaussianBlur2d } from "./kernel";
 
 type Kernels = { along: typeof gaussianBlur1d; around: typeof gaussianBlur2d };
 
 const BLUR_INPUTS = ["texture", "radius", "edges", "separable", "direction", "angle"] as const;
 type BlurInput = (typeof BLUR_INPUTS)[number];
-
-const MAX_ITERATIONS = 8;
 
 function blurInputs<I extends string>(g: GroupBuilder<I | BlurInput, "texture">) {
 	const texture = g.input("texture", "texture", { label: "Texture" });
@@ -125,19 +123,16 @@ export const boxBlur = group({
 			label: "Iterations",
 			default: 1,
 			min: 1,
-			max: MAX_ITERATIONS,
-			compiled: true,
 		});
-		// Rendered passes can't loop: each iteration is a blur of its own, and
-		// only those the count reaches are rendered.
-		const stages: Ref[] = [texture];
-		for (let i = 0; i < MAX_ITERATIONS; i++) {
-			const previous = stages.at(-1) ?? texture;
-			stages.push(g.call(boxBlurOnce, { texture: previous, ...settings }).texture);
-		}
-		g.output("texture", g.indexSwitch(iterations, stages, "texture"), "texture", {
-			label: "Texture",
-		});
+		// A count of zero is the texture as it is.
+		const { texture: blurred } = g.repeatPasses(
+			iterations,
+			{ texture: { type: "texture", initial: texture } },
+			(_, state) => ({
+				texture: g.call(boxBlurOnce, { texture: state.texture, ...settings }).texture,
+			}),
+		);
+		g.output("texture", blurred, "texture", { label: "Texture" });
 	},
 });
 
