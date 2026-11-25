@@ -1,8 +1,11 @@
 // Pyramidal Lucas-Kanade optical flow. Flow textures are rgba32float: the
 // vector in rg (UV units, y up), the confidence in b.
+import { DEFAULT_MAX_ITERATIONS } from "../../../../src/zones/descriptors";
 import { group, helpers, type Ref } from "../../builder";
-import { boxBlur1d } from "../blur/kernel";
 import { CLAMP, luma } from "./luma";
+
+/** The most taps on either side of a window's centre that a repeat zone's iterations can run. */
+const MAX_REACH = Math.floor((DEFAULT_MAX_ITERATIONS - 1) / 2);
 
 /**
  * A window whose determinant is under this fraction of its trace squared has
@@ -86,6 +89,19 @@ const lucasKanadeStep = group({
 			uv: g.uv(),
 			texel: g.div(1, g.resolution()),
 		});
+		// The pass is the size of every flow texture it reads, so those are read at the
+		// pixel's own texel, rows down, rather than filtered 4 loads at a time.
+		const pixel = (): Ref => {
+			const { x: u, y: v } = g.separateVector(g.uv());
+			const { x: width, y: height } = g.separateVector(g.resolution());
+			return g.vec(
+				"vec2i",
+				g.toInt(g.floor(g.mul(u, width))),
+				g.toInt(g.floor(g.mul(g.sub(1, v), height))),
+			);
+		};
+		const texelAt = (texture: Ref, base: Ref, offset: Ref): Ref =>
+			g.node("load-texel", { texture, texel: g.add(base, offset), level: 0 });
 
 		const products = g.frame(
 			"Products",
@@ -95,29 +111,54 @@ const lucasKanadeStep = group({
 			() => {
 				const { uv, texel } = perPass();
 				const { x: stepX, y: stepY } = g.separateVector(texel);
+				const base = pixel();
 				const lumaAt = (texture: Ref, at: Ref): Ref =>
 					g.separateVector(g.sampleTexture(texture, at, 0, CLAMP, mip).color).x;
-				const flowAt = (at: Ref): Ref => {
-					const { x, y } = g.separateVector(g.sampleTexture(flow, at, 0, CLAMP, 0).color);
+				// The flow `across` texels right and `down` texels down of this pixel.
+				const flowAt = (across: number, down: number): Ref => {
+					const { x, y } = g.separateVector(
+						texelAt(flow, base, g.constant("vec2i", { x: across, y: down })),
+					);
 					return g.vec("vec2f", x, y);
 				};
-				// The previous frame carried to `at` by the flow there.
-				const warped = (at: Ref): Ref => lumaAt(previous, g.sub(at, flowAt(at)));
-				const next = (at: Ref): Ref => lumaAt(current, at);
-				const nudge = (dx: Ref | number, dy: Ref | number, sign: 1 | -1): Ref =>
-					g.add(uv, g.vec("vec2f", g.mul(dx, sign), g.mul(dy, sign)));
-				const slope = (texture: (at: Ref) => Ref, dx: Ref | number, dy: Ref | number) =>
-					g.div(g.sub(texture(nudge(dx, dy, 1)), texture(nudge(dx, dy, -1))), 2);
-				const gradient = (dx: Ref | number, dy: Ref | number) =>
-					g.div(g.add(slope(warped, dx, dy), slope(next, dx, dy)), 2);
-				const gx = gradient(stepX, 0);
-				const gy = gradient(0, stepY);
+				const here = flowAt(0, 0);
+				// The point `sign` steps along (dx, dy), in UV, y up.
+				const along = (dx: number, dy: number, sign: 1 | -1): Ref =>
+					g.add(
+						uv,
+						g.vec(
+							"vec2f",
+							dx === 0 ? 0 : g.mul(stepX, sign * dx),
+							dy === 0 ? 0 : g.mul(stepY, sign * dy),
+						),
+					);
+				// The previous frame carried to that point by the flow there.
+				const warped = (dx: number, dy: number, sign: 1 | -1): Ref =>
+					lumaAt(
+						previous,
+						g.sub(
+							along(dx, dy, sign),
+							flowAt(dx === 0 ? 0 : sign * dx, dy === 0 ? 0 : -sign * dy),
+						),
+					);
+				const slope = (dx: number, dy: number) =>
+					g.div(
+						g.add(
+							g.sub(warped(dx, dy, 1), warped(dx, dy, -1)),
+							g.sub(
+								lumaAt(current, along(dx, dy, 1)),
+								lumaAt(current, along(dx, dy, -1)),
+							),
+						),
+						4,
+					);
+				const gx = slope(1, 0);
+				const gy = slope(0, 1);
 				// The one value the update is the residual of, read without the flattening of bilinear reads.
 				const centre = g.separateVector(
-					g.call(sampleCubic, { texture: previous, uv: g.sub(uv, flowAt(uv)), level })
-						.color,
+					g.call(sampleCubic, { texture: previous, uv: g.sub(uv, here), level }).color,
 				).x;
-				const dt = g.sub(next(uv), centre);
+				const dt = g.sub(lumaAt(current, uv), centre);
 				return g.renderTexture(
 					{
 						a: {
@@ -134,25 +175,50 @@ const lucasKanadeStep = group({
 			},
 		);
 
-		// The kernel divides by alpha, so every item keeps it at 1.
-		const mean = (sums: { a: Ref; b: Ref }, along: "x" | "y") => {
-			const { texel } = perPass();
-			const { x, y } = g.separateVector(texel);
-			const direction = along === "x" ? g.vec("vec2f", x, 0) : g.vec("vec2f", 0, y);
-			const blur = (texture: Ref) =>
-				g.call(boxBlur1d, { texture, direction, radius: window, edges: 0 }).color;
-			return g.renderTexture(
+		// A box of `window` pixels along one axis: taps a pixel apart, the outermost weighted
+		// by the radius' fraction, read at their own texels. A window past what a repeat
+		// zone can run is cut to it.
+		const windowMean = (sums: { a: Ref; b: Ref }, along: "x" | "y"): { a: Ref; b: Ref } => {
+			const base = pixel();
+			const radius = g.min(window, MAX_REACH);
+			const reach = g.ceil(radius);
+			const { a, b, total } = g.repeat(
+				g.add(g.mul(reach, 2), 1),
 				{
-					a: { value: blur(sums.a), format: "rgba32float" },
-					b: { value: blur(sums.b), format: "rgba32float" },
+					a: ["vec4f", g.constant("vec4f", 0)],
+					b: ["vec4f", g.constant("vec4f", 0)],
+					total: ["f32", 0],
 				},
-				{ like: flow },
+				(iteration, state) => {
+					const k = g.sub(g.toFloat(iteration), reach);
+					const step = g.toInt(k);
+					const offset =
+						along === "x" ? g.vec("vec2i", step, 0) : g.vec("vec2i", 0, step);
+					const weight = g.clamp(g.sub(g.add(radius, 1), g.abs(k)), 0, 1);
+					return {
+						a: g.add(state.a, g.mul(texelAt(sums.a, base, offset), weight)),
+						b: g.add(state.b, g.mul(texelAt(sums.b, base, offset), weight)),
+						total: g.add(state.total, weight),
+					};
+				},
 			);
+			return { a: g.div(a, total), b: g.div(b, total) };
 		};
 		const across = g.frame(
 			"Window means",
-			{ note: "A box of `window` pixels at the level: along x, then along y." },
-			() => mean(mean(products, "x"), "y"),
+			{
+				note: "A box of `window` pixels at the level: along x here, along y in the solve,\nwhich reads these rows itself rather than have a pass of its own write the result.",
+			},
+			() => {
+				const rows = windowMean(products, "x");
+				return g.renderTexture(
+					{
+						a: { value: rows.a, format: "rgba32float" },
+						b: { value: rows.b, format: "rgba32float" },
+					},
+					{ like: flow },
+				);
+			},
 		);
 
 		const solved = g.frame(
@@ -161,18 +227,13 @@ const lucasKanadeStep = group({
 				note: "(Σ∇∇ᵀ) d = -Σ∇·It for the step d in pixels, y up; a window without\nthe texture to solve keeps the flow. Confidence is the smaller eigenvalue.",
 			},
 			() => {
-				const { uv, texel } = perPass();
-				const {
-					x: sxx,
-					y: sxy,
-					z: syy,
-				} = g.separateVector(g.sampleTexture(across.a, uv, 0, CLAMP, 0).color);
-				const { x: sxt, y: syt } = g.separateVector(
-					g.sampleTexture(across.b, uv, 0, CLAMP, 0).color,
-				);
-				const { x: vx, y: vy } = g.separateVector(
-					g.sampleTexture(flow, uv, 0, CLAMP, 0).color,
-				);
+				const { texel } = perPass();
+				const base = pixel();
+				const none = g.constant("vec2i", { x: 0, y: 0 });
+				const window2d = windowMean(across, "y");
+				const { x: sxx, y: sxy, z: syy } = g.separateVector(window2d.a);
+				const { x: sxt, y: syt } = g.separateVector(window2d.b);
+				const { x: vx, y: vy } = g.separateVector(texelAt(flow, base, none));
 				const det = g.sub(g.mul(sxx, syy), g.mul(sxy, sxy));
 				const trace = g.add(sxx, syy);
 				const solvable = g.compare(det, g.mul(g.mul(trace, trace), MIN_CONDITION), {

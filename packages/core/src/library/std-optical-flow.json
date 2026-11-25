@@ -10,7 +10,7 @@
 	],
 	"category": "texture",
 	"section": ["Motion"],
-	"dependencies": ["std-luma@01c853ca51a3ec", "std-lucas-kanade-step@0efc81e984013b"],
+	"dependencies": ["std-luma@01c853ca51a3ec", "std-lucas-kanade-step@11f0d362558a64"],
 	"definition": {
 		"nodes": [
 			{
@@ -447,7 +447,7 @@
 					"y": 511
 				},
 				"group": {
-					"definitionRef": "std-lucas-kanade-step@0efc81e984013b",
+					"definitionRef": "std-lucas-kanade-step@11f0d362558a64",
 					"locked": true
 				}
 			},

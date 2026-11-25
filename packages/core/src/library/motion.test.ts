@@ -440,7 +440,7 @@ describe("Motion Arrows", () => {
 	) =>
 		evalGroup(
 			"std-motion-arrows",
-			{ Colour: colour, Flow: constantFlow("flow", vector) },
+			{ Color: colour, Flow: constantFlow("flow", vector) },
 			"Color",
 			{
 				values: { Cell: 0.5, Scale: scale, Thickness: 0.02 },
@@ -473,6 +473,13 @@ describe("Motion Arrows", () => {
 	it("draws arrows from neighbouring cells that reach into this one", () => {
 		// The arrow from (0.25, 0.25) is 0.4 long, so it crosses into the next cell at x=0.6.
 		expect(arrows([0.1, 0], [0.6, 0.25], { scale: 4 })).toEqual([1, 1, 1, 1]);
+	});
+
+	it("clamps an arrow longer than a cell to one cell", () => {
+		// 0.1 scaled by 8 is 0.8 long, clamped to the cell's 0.5, so the head's tip is
+		// (0.75, 0.25) and its upper barb's middle is (0.7149, 0.2692). Unclamped, the
+		// barb would be at x=1.0 and this point bare.
+		expect(arrows([0.1, 0], [0.7149, 0.2692], { scale: 8 })).toEqual([1, 1, 1, 1]);
 	});
 
 	it("draws nothing and no NaN for zero motion", () => {

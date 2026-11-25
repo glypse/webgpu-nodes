@@ -36,8 +36,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-xyz/06fd57ac200029.json").then((m) => m.default),
 	"std-max-component@0d14bdb467cde4": () =>
 		import("./std-max-component/0d14bdb467cde4.json").then((m) => m.default),
-	"std-lucas-kanade-step@0efc81e984013b": () =>
-		import("./std-lucas-kanade-step/0efc81e984013b.json").then((m) => m.default),
+	"std-lucas-kanade-step@11f0d362558a64": () =>
+		import("./std-lucas-kanade-step/11f0d362558a64.json").then((m) => m.default),
 	"std-warp@1032f0ed094047": () =>
 		import("./std-warp/1032f0ed094047.json").then((m) => m.default),
 	"std-opensimplex-4d@1bd38fd7c8187b": () =>
@@ -98,8 +98,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-component-sum/0e43caf9357ab7.json").then((m) => m.default),
 	"std-gaussian-blur-2d@07103c56e2d7a4": () =>
 		import("./std-gaussian-blur-2d/07103c56e2d7a4.json").then((m) => m.default),
-	"std-motion-arrows@008a996442030c": () =>
-		import("./std-motion-arrows/008a996442030c.json").then((m) => m.default),
+	"std-motion-arrows@1157a4c78b728d": () =>
+		import("./std-motion-arrows/1157a4c78b728d.json").then((m) => m.default),
 	"std-remap@18bb11b8c3230a": () =>
 		import("./std-remap/18bb11b8c3230a.json").then((m) => m.default),
 	"std-sample-cubic@03801cf48f29a3": () =>
@@ -122,8 +122,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-flow-legend/00ac4098658c7b.json").then((m) => m.default),
 	"std-opensimplex-2d@0cfc9edb3af544": () =>
 		import("./std-opensimplex-2d/0cfc9edb3af544.json").then((m) => m.default),
-	"std-optical-flow@1d019df81266c2": () =>
-		import("./std-optical-flow/1d019df81266c2.json").then((m) => m.default),
+	"std-optical-flow@1d5e83e16dc5fb": () =>
+		import("./std-optical-flow/1d5e83e16dc5fb.json").then((m) => m.default),
 	"std-fractal-voronoi@04284455a8ec10": () =>
 		import("./std-fractal-voronoi/04284455a8ec10.json").then((m) => m.default),
 	"std-gaussian-blur@1ce888602c6674": () =>

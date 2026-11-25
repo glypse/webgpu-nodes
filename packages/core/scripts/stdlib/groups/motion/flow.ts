@@ -1,4 +1,4 @@
-// Drawing flow textures: a colour wheel for directions, and arrows on a grid.
+// Drawing flow textures: a color wheel for directions, and arrows on a grid.
 import { group, type GroupBuilder, helpers } from "../../builder";
 import { color } from "../color";
 import { latticeNeighbor } from "../noise/lattice";
@@ -13,7 +13,7 @@ const BARB_LENGTH = 4;
 const MIN_ARROW = 1e-6;
 
 /**
- * Direction and size as a colour: hue from the angle (0 is rightwards, turning
+ * Direction and size as a color: hue from the angle (0 is rightwards, turning
  * counterclockwise), saturation from the length over `max`, white at rest.
  * `vector` is in fractions of the height.
  */
@@ -104,10 +104,10 @@ export const motionArrows = group({
 	aliases: ["Flow Arrows", "Vector Field", "Arrows"],
 	category: "texture",
 	section: ["Motion"],
-	inputs: ["colour", "flow", "cell", "scale", "thickness", "arrow"],
+	inputs: ["color", "flow", "cell", "scale", "thickness", "arrow"],
 	outputs: ["color"],
 	build: (g) => {
-		const colour = g.input("colour", "texture", { label: "Colour" });
+		const colorInput = g.input("color", "texture", { label: "Color" });
 		const flow = g.input("flow", "texture", { label: "Flow" });
 		const cell = g.input("cell", "f32", { label: "Cell", default: 0.05, min: 0.001 });
 		const scale = g.input("scale", "f32", { label: "Scale", default: 1, min: 0 });
@@ -117,7 +117,7 @@ export const motionArrows = group({
 			min: 0,
 		});
 		const arrow = g.input("arrow", "vec3f", {
-			label: "Arrow Colour",
+			label: "Arrow Color",
 			default: { x: 1, y: 1, z: 1 },
 		});
 
@@ -130,7 +130,7 @@ export const motionArrows = group({
 		const barbSin = Math.sin(BARB_ANGLE);
 
 		// Each pixel looks at the 3×3 cells around its own: an arrow starts at its
-		// cell's centre and is at most a cell long, so it can reach into these.
+		// cell's centre and is at most a cell long (the shaft is clamped), so it can reach into these.
 		const { Coverage: coverage } = g.repeat(9, { Coverage: ["f32", 0] }, (iteration, state) => {
 			const { offset } = g.call(latticeNeighbor, {
 				index: iteration,
@@ -140,7 +140,9 @@ export const motionArrows = group({
 			const centre = g.mul(g.add(g.add(cellOf, offset), halfCell), cell);
 			const { color: sampled } = g.sampleTexture(flow, g.div(centre, aspect), 0, CLAMP, 0);
 			const { x, y } = g.separateVector(sampled);
-			const shaft = g.mul(g.mul(g.vec("vec2f", x, y), aspect), scale);
+			const scaled = g.mul(g.mul(g.vec("vec2f", x, y), aspect), scale);
+			// The 3x3 search can't see further than a cell, so a longer arrow would be cut.
+			const shaft = g.mul(scaled, g.min(g.div(cell, g.max(g.length(scaled), 1e-12)), 1));
 			const length = g.length(shaft);
 			const direction = g.div(shaft, g.max(length, 1e-12));
 			const { x: ux, y: uy } = g.separateVector(direction);
@@ -181,7 +183,7 @@ export const motionArrows = group({
 			return { Coverage: g.max(state.Coverage, g.mul(drawn, visible)) };
 		});
 
-		const { color: below } = g.sampleTexture(colour, g.uv(), 0, CLAMP, 0);
+		const { color: below } = g.sampleTexture(colorInput, g.uv(), 0, CLAMP, 0);
 		const { x, y, z, w } = g.separateVector(below);
 		const rgb = g.mix(g.vec("vec3f", x, y, z), arrow, coverage);
 		const { x: r, y: green, z: blue } = g.separateVector(rgb);
