@@ -22,6 +22,13 @@ import {
 	type NodeType,
 	registeredNodes,
 } from "../../src/nodes/registry";
+import {
+	DEFAULT_RENDER_FORMAT,
+	RENDER_LIKE,
+	RENDER_PIXELS,
+	RENDER_SCALE,
+	RENDER_TEXTURE,
+} from "../../src/nodes/render-texture";
 import { itemSizeHandles } from "../../src/passes/item-size";
 import type { TextureFormat } from "../../src/passes/textures";
 import {
@@ -70,13 +77,24 @@ export type VariableType = { readonly variable: string };
 /** A zone item's type: a fixed one, or a type variable's. */
 export type ItemType = ZoneItem["type"];
 
+/** A scale of the canvas, or of `like`'s texture; or a size in pixels. */
+export type SizeSpec = { scale?: Operand; like?: Operand } | { pixels: Operand };
+
 /** A zone item: its type, initial value and, in a Repeat Passes zone, how its texture is made. */
 export type PassItem = {
 	type: ItemType;
 	initial: Operand;
 	format?: TextureFormat;
-	/** A scale of the canvas, or of `like`'s texture; or a size in pixels. */
-	size?: { scale?: Operand; like?: Operand } | { pixels: Operand };
+	/** Given the zone's iteration, when the size changes with it. */
+	size?: SizeSpec | ((iteration: Ref) => SizeSpec);
+};
+
+/** An item of a Render Texture: the value it draws, and how it's kept. */
+export type RenderItem = {
+	value: Operand;
+	/** The type of `value`; `vec4f` by default. */
+	type?: WgslType;
+	format?: TextureFormat;
 };
 
 /** An enum input of the group being built. */
@@ -205,6 +223,7 @@ const OWN_NODES = [
 	INDEX_SWITCH,
 	CUSTOM_WGSL,
 	WIDTH_SWITCH,
+	RENDER_TEXTURE,
 	"test-invalid-wgsl",
 	"test-runtime-error",
 ] as const satisfies Registered[];
@@ -696,6 +715,38 @@ class Builder<I extends string, O extends string> {
 	}
 
 	/**
+	 * A Render Texture drawing `items` into textures of one size: `pixels`, or
+	 * `scale` of `like`'s texture (of the canvas without one). Returns each
+	 * item's texture.
+	 */
+	renderTexture<K extends string>(
+		items: Record<K, RenderItem>,
+		options: { scale?: Operand; pixels?: Operand; like?: Operand; mips?: boolean } = {},
+	): Record<K, Ref> {
+		const keys = Object.keys(items) as K[];
+		const node = this.count;
+		const handles = keys.map((key): [K, ZoneItem, Operand] => {
+			const { type = "vec4f", format = DEFAULT_RENDER_FORMAT, value } = items[key];
+			const id = stableId(`${this.id}/render/${String(node)}/${key}`);
+			return [key, { id, label: key, type, format }, value];
+		});
+		const id = this.addNode(RENDER_TEXTURE, {
+			items: handles.map(([, item]) => item),
+			settings: {
+				mode: options.pixels === undefined ? "scale" : "pixels",
+				mips: options.mips ? "on" : "off",
+			},
+		});
+		for (const [, item, value] of handles) this.feed(id, item.id, value);
+		if (options.pixels !== undefined) this.feed(id, RENDER_PIXELS, options.pixels);
+		else if (options.scale !== undefined) this.feed(id, RENDER_SCALE, options.scale);
+		if (options.like !== undefined) this.feed(id, RENDER_LIKE, options.like);
+		return Object.fromEntries(
+			handles.map(([key, item]) => [key, { node: id, handle: item.id }]),
+		) as Record<K, Ref>;
+	}
+
+	/**
 	 * A simulation zone: its step runs once per frame, each item kept per pixel
 	 * from frame to frame. `body` gets the seconds since the previous step and
 	 * the items as the previous frame left them, and returns them now. The
@@ -729,8 +780,10 @@ class Builder<I extends string, O extends string> {
 		if (iterations !== undefined) this.feed(inputId, ITERATIONS_HANDLE, iterations);
 		const keys = Object.keys(items) as K[];
 		const handles = new Map<K, ZoneItem>();
+		const clockRef = { node: inputId, handle: clock };
 		for (const key of keys) {
-			const { type, initial, format, size } = items[key];
+			const { type, initial, format, size: sized } = items[key];
+			const size = typeof sized === "function" ? sized(clockRef) : sized;
 			const handle: ZoneItem = {
 				id: stableId(`${this.id}/zone/${String(zone)}/${key}`),
 				label: key,
@@ -753,7 +806,7 @@ class Builder<I extends string, O extends string> {
 		const state = Object.fromEntries(
 			keys.map((k) => [k, { node: inputId, handle: handles.get(k)?.id ?? "" }]),
 		) as Record<K, Ref>;
-		const next = body({ node: inputId, handle: clock }, state);
+		const next = body(clockRef, state);
 		for (const key of keys) this.feed(outputId, handles.get(key)?.id ?? "", next[key]);
 		return Object.fromEntries(
 			keys.map((k) => [k, { node: outputId, handle: handles.get(k)?.id ?? "" }]),

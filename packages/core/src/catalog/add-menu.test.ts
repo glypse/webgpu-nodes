@@ -349,7 +349,12 @@ describe("add menu sections", () => {
 		]);
 		const helpers = texture?.sections.find((s) => s.name === "Helpers");
 		expect(helpers?.entries.map((e) => e.label)).toContain("Hash");
-		expect(helpers?.sections.map((s) => s.name)).toEqual(["Voronoi", "OpenSimplex", "Blur"]);
+		expect(helpers?.sections.map((s) => s.name)).toEqual([
+			"Voronoi",
+			"OpenSimplex",
+			"Blur",
+			"Motion",
+		]);
 		const blurs = texture?.sections.find((s) => s.name === "Blur");
 		expect(blurs?.entries.map((e) => e.label)).toEqual(["Gaussian Blur", "Box Blur"]);
 		expect(helpers?.sections[0]?.entries.map((e) => e.label)).toContain("Voronoi Texture");

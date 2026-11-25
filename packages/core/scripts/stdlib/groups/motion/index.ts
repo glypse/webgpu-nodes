@@ -3,26 +3,10 @@
 import { EXTENSIONS } from "../../../../src/nodes/texture";
 import { group, type Ref } from "../../builder";
 import flow from "./flow";
+import { CLAMP, luma } from "./luma";
+import opticalFlow from "./optical-flow";
 
 const EDGES = EXTENSIONS.map((v) => [v.value, v.label] as const);
-/** Sample Texture's Clamp extension. */
-const CLAMP = 0;
-
-const luma = group({
-	id: "std-luma",
-	name: "Luma",
-	aliases: ["Luminance", "Greyscale", "Grayscale", "Brightness"],
-	category: "color",
-	section: ["Motion"],
-	inputs: ["rgb"],
-	outputs: ["luma"],
-	build: (g) => {
-		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
-		g.output("luma", g.dot(rgb, { x: 0.2126, y: 0.7152, z: 0.0722 }), "f32", {
-			label: "Luma",
-		});
-	},
-});
 
 const previousFrame = group({
 	id: "std-previous-frame",
@@ -156,4 +140,4 @@ const flowError = group({
 	},
 });
 
-export default [luma, previousFrame, imageGradient, warp, ...flow, flowError];
+export default [luma, previousFrame, imageGradient, warp, ...flow, flowError, ...opticalFlow];

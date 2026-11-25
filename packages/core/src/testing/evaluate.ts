@@ -1,7 +1,7 @@
 import { clipToGamut } from "../color/display";
 import { FrameValueAnalysis } from "../frame/analysis";
 import { evaluateFrame, FrameCompiler } from "../frame/program";
-import type { GraphNode, HydratedGraphDocument } from "../graph/document";
+import type { GraphDocumentEdge, GraphNode, HydratedGraphDocument } from "../graph/document";
 import type { GraphModel } from "../graph/model";
 import type { ColorSpace } from "../graph/settings";
 import { componentKeys, readComponent } from "../graph/values";
@@ -55,7 +55,36 @@ export type CpuTexture = {
 	texel(x: number, y: number): Value;
 };
 
+/** What evaluations of one model share: the textures drawn so far, kept for the next pixel. */
+export type EvaluationContext = { readonly env: Env };
+
+/**
+ * A context to pass to several `evaluate` calls of one model, canvas and
+ * images, so each texture is drawn once however many pixels read it.
+ */
+export function evaluationContext(
+	model: GraphModel,
+	images: ReadonlyMap<string, CpuTexture> = new Map(),
+): EvaluationContext {
+	const sources = new TextureSources(model);
+	const frame = new FrameCompiler(model, new FrameValueAnalysis(model, sources), sources);
+	return {
+		env: {
+			sources,
+			images,
+			renders: new Map(),
+			frame,
+			sizing: new Set(),
+			sizes: new Map(),
+			loops: new Map(),
+			finals: new Map(),
+		},
+	};
+}
+
 export type EvaluateOptions = {
+	/** Textures drawn by earlier evaluations, if given: the model, canvas and images must be the same. */
+	context?: EvaluationContext;
 	/** The pixel's coordinates (origin bottom-left, as the UV node gives them). */
 	uv?: readonly [number, number];
 	/** The images of the project's assets, by asset id. */
@@ -73,6 +102,8 @@ type Env = {
 	renders: Map<string, CpuTexture>;
 	/** The frame values the sizes of textures read. */
 	frame: FrameCompiler;
+	/** The textures whose size is being worked out: it can't depend on itself. */
+	sizing: Set<string>;
 	/** The size of every texture resolved so far, by texture id, and its mip levels. */
 	sizes: Map<string, Size & { levels?: number }>;
 	/**
@@ -133,19 +164,9 @@ export function evaluate(
 	handleId: string,
 	colorSpace: ColorSpace = "srgb",
 	resolution: readonly [number, number] = [1, 1],
-	{ uv = [0.5, 0.5], images = new Map() }: EvaluateOptions = {},
+	{ uv = [0.5, 0.5], images = new Map(), context }: EvaluateOptions = {},
 ): Value {
-	const sources = new TextureSources(model);
-	const frame = new FrameCompiler(model, new FrameValueAnalysis(model, sources), sources);
-	const env: Env = {
-		sources,
-		images,
-		renders: new Map(),
-		frame,
-		sizes: new Map(),
-		loops: new Map(),
-		finals: new Map(),
-	};
+	const { env } = context ?? evaluationContext(model, images);
 	return output(model, rootFrame(model, env, uv, colorSpace, resolution), nodeId, handleId);
 }
 
@@ -167,7 +188,7 @@ function rootFrame(
 		zones: new Map(),
 		finals: new Map(),
 		computed: new Map(),
-		bindings: {},
+		bindings: NO_BINDINGS,
 	};
 }
 
@@ -175,7 +196,7 @@ function rootFrame(
 function groupFrame(model: GraphModel, frame: Frame, node: GraphNode): Frame {
 	const doc = node.group && model.project.definitions.get(node.group.definitionRef);
 	if (!doc) throw new Error(`no definition for "${node.id}"`);
-	const descriptor = model.resolveDescriptor(node);
+	const descriptor = descriptorOf(model, node);
 	const resolved = typesIn(model, frame, node);
 	const groupInputs = new Map(
 		descriptor.inputs
@@ -190,7 +211,7 @@ function groupFrame(model: GraphModel, frame: Frame, node: GraphNode): Frame {
 		zones: new Map(),
 		finals: new Map(),
 		computed: new Map(),
-		bindings: resolved.bindings ?? {},
+		bindings: resolved.bindings ?? NO_BINDINGS,
 	};
 }
 
@@ -207,7 +228,9 @@ function sizeOf(
 	const canvas = { width: frame.resolution[0], height: frame.resolution[1] };
 	// What the size is made of is resolved before it's read.
 	const resolve = (texture: TextureSource) => {
-		if (texture.kind !== "empty") textureOf(model, frame, texture);
+		if (texture.kind !== "empty" && !env.sizing.has(texture.id)) {
+			textureOf(model, frame, texture);
+		}
 	};
 	if (like) resolve(like);
 	for (const texture of env.frame.sizedTextures()) resolve(texture);
@@ -269,7 +292,14 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 		});
 		return done;
 	}
-	const { width, height } = sizeOf(model, frame, source.size, source.draw?.like);
+	env.sizing.add(source.id);
+	const { width, height } = (() => {
+		try {
+			return sizeOf(model, frame, source.size, source.draw?.like);
+		} finally {
+			env.sizing.delete(source.id);
+		}
+	})();
 	const levels = source.mips ? mipLevelCount({ width, height }) : 1;
 	env.sizes.set(source.id, { width, height, levels });
 	const loops = env.loops;
@@ -559,10 +589,41 @@ function typesIn(model: GraphModel, frame: Frame, node: GraphNode): ResolvedNode
 	);
 }
 
+const NO_BINDINGS: TypeBindings = {};
+
+const descriptors = new WeakMap<GraphNode, ReturnType<GraphModel["resolveDescriptor"]>>();
+
+/** A node's descriptor, remembered: resolving a group's takes a walk through its definition. */
+function descriptorOf(model: GraphModel, node: GraphNode) {
+	let descriptor = descriptors.get(node);
+	if (!descriptor) {
+		descriptor = model.resolveDescriptor(node);
+		descriptors.set(node, descriptor);
+	}
+	return descriptor;
+}
+
+const textureEdges = new WeakMap<TypeBindings, WeakMap<object, boolean>>();
+
+/** Whether an edge carries a texture, remembered: every pixel asks again. */
+function carriesTexture(model: GraphModel, frame: Frame, edge: GraphDocumentEdge): boolean {
+	let known = textureEdges.get(frame.bindings);
+	if (!known) {
+		known = new WeakMap();
+		textureEdges.set(frame.bindings, known);
+	}
+	let answer = known.get(edge);
+	if (answer === undefined) {
+		answer = isTexture(model.typeResolver.inferHandleType(edge, frame.bindings));
+		known.set(edge, answer);
+	}
+	return answer;
+}
+
 function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value {
 	const type = valueType(typesIn(model, frame, node).inputTypes[inputId] ?? "f32");
 	const edge = frame.doc.edgesByTarget.get(node.id)?.find((e) => e.targetHandle === inputId);
-	if (edge && isTexture(model.typeResolver.inferHandleType(edge, frame.bindings))) {
+	if (edge && carriesTexture(model, frame, edge)) {
 		// Sampled at the pixel: a render exactly, other images stretched over the canvas.
 		const source = readSource(
 			frame.env.sources.output(frame.path, edge.source, edge.sourceHandle),
@@ -584,7 +645,7 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 	}
 	if (edge) return coerce(output(model, frame, edge.source, edge.sourceHandle), type);
 	const stored =
-		node.data.values?.[inputId] ?? model.resolveDescriptor(node).defaultData.values?.[inputId];
+		node.data.values?.[inputId] ?? descriptorOf(model, node).defaultData.values?.[inputId];
 	const keys = componentKeys(type);
 	return coerce(
 		keys.map((k) => readComponent(stored, k)),
@@ -689,7 +750,7 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		}
 	}
 
-	const cpu = model.resolveDescriptor(node).cpu;
+	const cpu = descriptorOf(model, node).cpu;
 	if (!cpu) throw new Error(`can't evaluate a "${type}" node`);
 	const resolved = typesIn(model, frame, node);
 	const ctx: CpuCtx = {

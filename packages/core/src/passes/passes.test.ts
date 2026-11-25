@@ -4,7 +4,7 @@ import type { Asset } from "../assets/assets";
 import { generateRenderPlan, PLAN_TARGET, planPasses } from "../codegen";
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
-import { type CpuTexture, evaluate } from "../testing/evaluate";
+import { type CpuTexture, evaluate, evaluationContext } from "../testing/evaluate";
 import { edge, libraryEntry, libraryHandle, rootProject } from "../testing/graph";
 import { nagaBin, validatePlan } from "../testing/wgsl";
 
@@ -224,7 +224,7 @@ function blurred(id: string, radius: number, values: Record<string, number> = {}
 	);
 }
 
-/** Like `blurred`, one pixel at a time: each is evaluated afresh, so a few are cheap. */
+/** Like `blurred`, one pixel at a time. */
 function blurAlpha(
 	id: string,
 	radius: number,
@@ -263,11 +263,12 @@ function blurAlpha(
 	const graph = new GraphModel({ ...project, assets: [asset] });
 	expectValid(graph);
 	const images = new Map([[asset.id, impulse(SIZE)]]);
+	const context = evaluationContext(graph, images);
 	return (x, y) => {
 		const uv = [(x + 0.5) / SIZE, 1 - (y + 0.5) / SIZE] as const;
 		const [r = 0, , , a = 0] = evaluate(graph, "read", "result", "srgb", [SIZE, SIZE], {
 			uv,
-			images,
+			context,
 		});
 		// Premultiplied while blurred: white stays white wherever it shows.
 		if (a > 0.001) expect(r).toBeCloseTo(1, 4);
@@ -294,7 +295,7 @@ function expectClose(actual: number[][], expected: number[][]) {
 	});
 }
 
-// The evaluator computes every tap of every pass on the CPU, for each pixel.
+// The evaluator computes every tap of every pass on the CPU.
 const SLOW = 30_000;
 
 describe("blurs", () => {
@@ -366,20 +367,13 @@ describe("blurs", () => {
 					),
 				);
 			}
-			// Each pixel is evaluated afresh, so only a few of twenty iterations'.
 			const line = after(20);
-			const alphaAt = blurAlpha("std-box-blur", 1, { Iterations: 20 });
-			for (const [x, y] of [
-				[centre, centre],
-				[1, centre],
-				[0, 0],
-				[SIZE - 1, 3],
-			] as const) {
-				expect(alphaAt(x, y), `pixel ${String(x)}, ${String(y)}`).toBeCloseTo(
-					(line[x] ?? 0) * (line[y] ?? 0),
-					4,
-				);
-			}
+			expectClose(
+				blurred("std-box-blur", 1, { Iterations: 20 }),
+				Array.from({ length: SIZE }, (_, y) =>
+					Array.from({ length: SIZE }, (_, x) => (line[x] ?? 0) * (line[y] ?? 0)),
+				),
+			);
 		},
 		SLOW,
 	);

@@ -31,6 +31,7 @@ import latticeNeighbor from "./std-lattice-neighbor.json";
 import linearRgbToOklab from "./std-linear-rgb-to-oklab.json";
 import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
+import lucasKanadeStep from "./std-lucas-kanade-step.json";
 import luma from "./std-luma.json";
 import maxComponent from "./std-max-component.json";
 import motionArrows from "./std-motion-arrows.json";
@@ -49,9 +50,11 @@ import opensimplex3d from "./std-opensimplex-3d.json";
 import opensimplex4d from "./std-opensimplex-4d.json";
 import opensimplexNoise from "./std-opensimplex-noise.json";
 import opensimplexOrientation from "./std-opensimplex-orientation.json";
+import opticalFlow from "./std-optical-flow.json";
 import padVector from "./std-pad-vector.json";
 import previousFrame from "./std-previous-frame.json";
 import remap from "./std-remap.json";
+import sampleCubic from "./std-sample-cubic.json";
 import simplexKernel from "./std-simplex-kernel.json";
 import voronoiBisector from "./std-voronoi-bisector.json";
 import voronoiDistance from "./std-voronoi-distance.json";
@@ -158,6 +161,9 @@ const files: unknown[] = [
 	flowLegend,
 	motionArrows,
 	flowError,
+	lucasKanadeStep,
+	opticalFlow,
+	sampleCubic,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {

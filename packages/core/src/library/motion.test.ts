@@ -4,7 +4,7 @@ import type { Asset } from "../assets/assets";
 import { generateRenderPlan, PLAN_TARGET, planPasses } from "../codegen";
 import { GraphModel } from "../graph/model";
 import { stateReadId } from "../passes/simulation";
-import { type CpuTexture, evaluate } from "../testing/evaluate";
+import { type CpuTexture, evaluate, evaluationContext } from "../testing/evaluate";
 import { libraryEntry, libraryHandle, rootProject, type TestNode } from "../testing/graph";
 import { nagaBin, validatePlan } from "../testing/wgsl";
 
@@ -527,5 +527,304 @@ describe("Flow Error", () => {
 		const moved = (x: number, y: number) => ramp(x + 3, y);
 		const still = constantFlow("flow", [0, 0]);
 		expect(errorAt(moved, still, [0.5, 0.5])).toBeCloseTo(0.03, 6);
+	});
+});
+
+/**
+ * The group `id` fed `textures` at the inputs labelled by their keys, its
+ * `output` read at any texel by a function: textures are drawn once for all
+ * of them.
+ */
+function groupAt(
+	id: string,
+	textures: Record<string, { asset: Asset; texture: CpuTexture }>,
+	output: string,
+	values: Record<string, number> = {},
+	[width, height]: readonly [number, number] = [1, 1],
+): (x: number, y: number) => number[] {
+	const entry = libraryEntry(id);
+	const handle = (label: string) => libraryHandle(entry, "group-input", label);
+	const fed = Object.entries(textures);
+	const nodes: TestNode[] = fed.map(([label, { asset }]) => ({
+		id: `img-${label}`,
+		type: "image",
+		data: { asset: asset.id },
+	}));
+	nodes.push({
+		id: "g",
+		type: "node-group",
+		group: { definitionRef: entry.ref, locked: true },
+		data: {
+			values: Object.fromEntries(Object.entries(values).map(([k, v]) => [handle(k), v])),
+		},
+	});
+	const model = new GraphModel({
+		...rootProject(
+			nodes,
+			fed.map(([label]) => [`img-${label}`, "texture", "g", handle(label)]),
+		),
+		assets: fed.map(([, { asset }]) => asset),
+	});
+	if (nagaBin) expect(validatePlan(generateRenderPlan(model))).toEqual([]);
+	const images = new Map(fed.map(([, { asset, texture }]) => [asset.id, texture]));
+	const context = evaluationContext(model, images);
+	const out = libraryHandle(entry, "group-output", output);
+	return (x, y) =>
+		evaluate(model, "g", out, "srgb", [width, height], {
+			uv: [(x + 0.5) / width, 1 - (y + 0.5) / height],
+			context,
+		});
+}
+
+describe("Optical Flow", () => {
+	// Every pass of every level is drawn texel by texel on the CPU.
+	const slowIt = (name: string, test: () => void) => {
+		it(name, test, 120_000);
+	};
+	/**
+	 * A sum of sines of pixel coordinates in grey: two short wavelengths (about
+	 * 10 and 12 pixels), so a shift of a few pixels is beyond what one level
+	 * can follow, and three long ones that the coarser levels still see.
+	 * [amplitude, x frequency, y frequency, phase]
+	 */
+	const SINES = [
+		[0.0277, 0.3666, 0.4173, 4.1183],
+		[0.0198, -0.2804, 0.5428, 3.1092],
+		[0.1202, -0.0489, 0.0491, 2.2882],
+		[0.2018, -0.0395, 0.0746, 2.7615],
+		[0.0952, 0.0402, 0.0915, 1.0387],
+	] as const;
+	const pattern = (px: number, py: number) => {
+		const v = SINES.reduce(
+			(sum, [amplitude, fx, fy, phase]) =>
+				sum + amplitude * Math.sin(fx * px + fy * py + phase),
+			0.5,
+		);
+		return [v, v, v, 1];
+	};
+
+	/**
+	 * The two frames after content moved by `shift` pixels (x right, y up): the
+	 * current texel at `p` is what the pattern had at `p - shift`.
+	 */
+	const frames = (width: number, height: number, [sx, sy]: readonly [number, number]) => ({
+		Previous: image(width, height, (x, y) => pattern(x + 0.5, y + 0.5), "previous"),
+		Current: image(width, height, (x, y) => pattern(x + 0.5 - sx, y + 0.5 + sy), "current"),
+	});
+
+	/** The flow of a shift in pixels, in UV. */
+	const uvOf = (
+		[sx, sy]: readonly [number, number],
+		[width, height]: readonly [number, number],
+	) => [sx / width, sy / height] as const;
+
+	/**
+	 * The errors, in pixels, of the flow at the texels `margin` clear of the
+	 * edge (every third, for speed). Content that entered the frame has nothing
+	 * to match, and each coarser level's window reaches twice as far.
+	 */
+	function error(
+		at: (x: number, y: number) => number[],
+		shift: readonly [number, number],
+		size: readonly [number, number],
+		margin: number,
+	) {
+		const [fx, fy] = uvOf(shift, size);
+		let worst = 0;
+		let sum = 0;
+		let count = 0;
+		for (let y = margin; y < size[1] - margin; y += 3) {
+			for (let x = margin; x < size[0] - margin; x += 3) {
+				const [vx = NaN, vy = NaN] = at(x, y);
+				const e = Math.hypot((vx - fx) * size[0], (vy - fy) * size[1]);
+				worst = Math.max(worst, e);
+				sum += e;
+				count++;
+			}
+		}
+		return { worst, mean: sum / count };
+	}
+
+	const estimate = (
+		shift: readonly [number, number],
+		values: Record<string, number>,
+		size: readonly [number, number] = [64, 64],
+		extra: Record<string, { asset: Asset; texture: CpuTexture }> = {},
+	) =>
+		groupAt(
+			"std-optical-flow",
+			{ ...frames(size[0], size[1], shift), ...extra },
+			"Flow",
+			values,
+			size,
+		);
+
+	// The interior is 8 texels clear of the edge where the window is one level
+	// wide, and 24 where it's four.
+	slowIt(
+		"finds a sub-pixel shift with unequal signs in x and y to 0.05 px with one level",
+		() => {
+			const shift = [0.6, -0.3] as const;
+			const at = estimate(shift, { Levels: 1, Iterations: 3 });
+			expect(error(at, shift, [64, 64], 8).worst).toBeLessThan(0.05);
+		},
+	);
+
+	slowIt("finds the shift with the signs the other way round", () => {
+		const shift = [-0.45, 0.55] as const;
+		const at = estimate(shift, { Levels: 1, Iterations: 3 });
+		expect(error(at, shift, [64, 64], 8).worst).toBeLessThan(0.05);
+	});
+
+	slowIt("measures in UV, so a frame wider than high gives the same shift in pixels", () => {
+		const shift = [0.6, -0.3] as const;
+		const at = estimate(shift, { Levels: 1, Iterations: 3 }, [64, 48]);
+		expect(error(at, shift, [64, 48], 8).worst).toBeLessThan(0.05);
+		const [vx = NaN, vy = NaN] = at(32, 24);
+		expect(vx).toBeCloseTo(0.6 / 64, 3);
+		expect(vy).toBeCloseTo(-0.3 / 48, 3);
+	});
+
+	slowIt("loses a 5 px shift with one level, and finds it to 0.1 px with four", () => {
+		const shift = [5, -3] as const;
+		const one = estimate(shift, { Levels: 1, Iterations: 3 });
+		expect(error(one, shift, [64, 64], 24).mean).toBeGreaterThan(1);
+		const four = estimate(shift, { Levels: 4, Iterations: 3 });
+		expect(error(four, shift, [64, 64], 24).worst).toBeLessThan(0.1);
+	});
+
+	slowIt("is zero for no shift", () => {
+		const at = estimate([0, 0], { Levels: 4, Iterations: 2 });
+		expect(error(at, [0, 0], [64, 64], 8).worst).toBeLessThan(1e-4);
+	});
+
+	slowIt("reports a confidence above zero where there's texture", () => {
+		const at = estimate([0.6, -0.3], { Levels: 1, Iterations: 3 });
+		const [, , confidence = NaN, alpha = NaN] = at(32, 32);
+		expect(confidence).toBeGreaterThan(0);
+		expect(alpha).toBe(1);
+	});
+
+	slowIt("takes more levels than there are mips as the mips there are", () => {
+		const shift = [5, -3] as const;
+		const seven = estimate(shift, { Levels: 7, Iterations: 1 });
+		const many = estimate(shift, { Levels: 50, Iterations: 1 });
+		for (const [x, y] of [
+			[20, 30],
+			[40, 25],
+		] as const) {
+			expect(many(x, y)).toEqual(seven(x, y));
+		}
+	});
+
+	slowIt("starts from a guess, which a single level then only has to correct", () => {
+		const shift = [5, -3] as const;
+		const [gx, gy] = uvOf([4, -2.5], [64, 64]);
+		const guess = image(64, 64, () => [gx, gy, 0, 1], "guess");
+		const at = estimate(shift, { Levels: 1, Iterations: 3 }, [64, 64], { Guess: guess });
+		expect(error(at, shift, [64, 64], 12).worst).toBeLessThan(0.05);
+	});
+
+	slowIt(
+		"gives each pixel the motion at the current frame's pixel, where motion varies across the image",
+		() => {
+			// Content moving right by 3 px at the centre, 0.1 px more per pixel to the right,
+			// so what is at p now was at p - v(p) before. A flow read halfway between the frames
+			// would be off by about 0.1 * |v| / 2 = 0.15 px.
+			const vx = (x: number) => 3 + 0.1 * (x + 0.5 - 32);
+			const previous = image(64, 64, (x, y) => pattern(x + 0.5, y + 0.5), "previous");
+			const current = image(64, 64, (x, y) => pattern(x + 0.5 - vx(x), y + 0.5), "current");
+			const guess = image(64, 64, (x) => [vx(x) / 64, 0, 0, 1], "guess");
+			const at = groupAt(
+				"std-optical-flow",
+				{ Previous: previous, Current: current, Guess: guess },
+				"Flow",
+				{ Levels: 1, Iterations: 2 },
+				[64, 64],
+			);
+			let worst = 0;
+			for (let y = 12; y < 52; y += 4) {
+				for (let x = 12; x < 52; x += 4) {
+					const [fx = NaN, fy = NaN] = at(x, y);
+					worst = Math.max(worst, Math.hypot(fx * 64 - vx(x), fy * 64));
+				}
+			}
+			expect(worst).toBeLessThan(0.03);
+		},
+	);
+
+	slowIt("keeps the flow where there's no texture to solve, without NaN", () => {
+		const flat = image(64, 64, () => [0.4, 0.4, 0.4, 1], "flat");
+		const [gx, gy] = [0.03, -0.02];
+		const guess = image(64, 64, () => [gx, gy, 0, 1], "guess");
+		const at = groupAt(
+			"std-optical-flow",
+			{
+				Current: flat,
+				Previous: { ...flat, asset: imageAsset("flat-before", 64, 64) },
+				Guess: guess,
+			},
+			"Flow",
+			{ Levels: 3, Iterations: 2 },
+			[64, 64],
+		);
+		for (const [x, y] of [
+			[10, 10],
+			[32, 32],
+			[50, 20],
+		] as const) {
+			const [vx = NaN, vy = NaN, confidence = NaN] = at(x, y);
+			expect(vx).toBeCloseTo(gx, 5);
+			expect(vy).toBeCloseTo(gy, 5);
+			expect(confidence).toBe(0);
+		}
+	});
+
+	slowIt("clamps at the edges when the guess warps from outside the frame", () => {
+		const guess = image(64, 64, () => [2, -2, 0, 1], "guess");
+		const at = estimate([0, 0], { Levels: 2, Iterations: 2 }, [64, 64], { Guess: guess });
+		for (const [x, y] of [
+			[0, 0],
+			[63, 63],
+			[32, 32],
+		] as const) {
+			expect(at(x, y).every(Number.isFinite)).toBe(true);
+		}
+	});
+});
+
+describe("Lucas-Kanade Step", () => {
+	const pattern = (px: number, py: number) => {
+		const v =
+			0.5 +
+			0.12 * Math.sin(0.19 * px + 0.11 * py + 0.3) +
+			0.1 * Math.sin(-0.07 * px + 0.17 * py + 1.1);
+		return [v, v, v, 1];
+	};
+	const SIZE = 32;
+	const frames = ([sx, sy]: readonly [number, number]) => ({
+		"Previous Luma": image(SIZE, SIZE, (x, y) => pattern(x + 0.5, y + 0.5), "previous"),
+		"Current Luma": image(SIZE, SIZE, (x, y) => pattern(x + 0.5 - sx, y + 0.5 + sy), "current"),
+	});
+	const step = (shift: readonly [number, number], flow: readonly [number, number]) =>
+		groupAt(
+			"std-lucas-kanade-step",
+			{ ...frames(shift), Flow: image(SIZE, SIZE, () => [flow[0], flow[1], 0, 1], "flow") },
+			"Flow",
+			{ Window: 2 },
+			[SIZE, SIZE],
+		);
+
+	it("takes a zero flow most of the way to a small shift in one step, in UV", () => {
+		const [vx = NaN, vy = NaN, confidence = NaN] = step([0.6, -0.3], [0, 0])(16, 16);
+		expect(vx * SIZE).toBeCloseTo(0.6, 1);
+		expect(vy * SIZE).toBeCloseTo(-0.3, 1);
+		expect(confidence).toBeGreaterThan(0);
+	});
+
+	it("leaves a flow that already matches", () => {
+		const [vx = NaN, vy = NaN] = step([0.6, -0.3], [0.6 / SIZE, -0.3 / SIZE])(16, 16);
+		expect(vx * SIZE).toBeCloseTo(0.6, 2);
+		expect(vy * SIZE).toBeCloseTo(-0.3, 2);
 	});
 });
