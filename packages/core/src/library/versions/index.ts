@@ -10,10 +10,14 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-opensimplex-3d-half/026aed7d83f9a0.json").then((m) => m.default),
 	"std-oklch-gamut-map@1acc14cbea7282": () =>
 		import("./std-oklch-gamut-map/1acc14cbea7282.json").then((m) => m.default),
+	"std-flow-error@1640e9327c90bd": () =>
+		import("./std-flow-error/1640e9327c90bd.json").then((m) => m.default),
 	"std-voronoi-point@0bfee95a7f94f4": () =>
 		import("./std-voronoi-point/0bfee95a7f94f4.json").then((m) => m.default),
 	"std-linear-rgb-to-oklch@106b2f48a50ee0": () =>
 		import("./std-linear-rgb-to-oklch/106b2f48a50ee0.json").then((m) => m.default),
+	"std-flow-to-color@0ffda25f768bb2": () =>
+		import("./std-flow-to-color/0ffda25f768bb2.json").then((m) => m.default),
 	"std-noise-distortion@0a8c7bdc61f0eb": () =>
 		import("./std-noise-distortion/0a8c7bdc61f0eb.json").then((m) => m.default),
 	"std-in-display-gamut@0421a880f36e29": () =>
@@ -58,6 +62,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-box-blur/17aecb91434fbb.json").then((m) => m.default),
 	"std-opensimplex-orientation@12616c2a725719": () =>
 		import("./std-opensimplex-orientation/12616c2a725719.json").then((m) => m.default),
+	"std-flow-wheel@1b40293cc28090": () =>
+		import("./std-flow-wheel/1b40293cc28090.json").then((m) => m.default),
 	"std-fit-uv@1e95b92be32730": () =>
 		import("./std-fit-uv/1e95b92be32730.json").then((m) => m.default),
 	"std-image-gradient@1953d0eb237e1e": () =>
@@ -90,6 +96,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-component-sum/0e43caf9357ab7.json").then((m) => m.default),
 	"std-gaussian-blur-2d@07103c56e2d7a4": () =>
 		import("./std-gaussian-blur-2d/07103c56e2d7a4.json").then((m) => m.default),
+	"std-motion-arrows@008a996442030c": () =>
+		import("./std-motion-arrows/008a996442030c.json").then((m) => m.default),
 	"std-remap@18bb11b8c3230a": () =>
 		import("./std-remap/18bb11b8c3230a.json").then((m) => m.default),
 	"std-luma@01c853ca51a3ec": () =>
@@ -106,6 +114,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-linear-rgb/0deeb5e1a34c78.json").then((m) => m.default),
 	"std-box-blur-once@15398ff92cf5e1": () =>
 		import("./std-box-blur-once/15398ff92cf5e1.json").then((m) => m.default),
+	"std-flow-legend@00ac4098658c7b": () =>
+		import("./std-flow-legend/00ac4098658c7b.json").then((m) => m.default),
 	"std-opensimplex-2d@0cfc9edb3af544": () =>
 		import("./std-opensimplex-2d/0cfc9edb3af544.json").then((m) => m.default),
 	"std-fractal-voronoi@04284455a8ec10": () =>

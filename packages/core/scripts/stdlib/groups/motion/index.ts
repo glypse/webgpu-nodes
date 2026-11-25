@@ -2,6 +2,7 @@
 // in rg, in UV units with y up: what is at uv now was at uv - v before.
 import { EXTENSIONS } from "../../../../src/nodes/texture";
 import { group, type Ref } from "../../builder";
+import flow from "./flow";
 
 const EDGES = EXTENSIONS.map((v) => [v.value, v.label] as const);
 /** Sample Texture's Clamp extension. */
@@ -133,4 +134,26 @@ const warp = group({
 	},
 });
 
-export default [luma, previousFrame, imageGradient, warp];
+const flowError = group({
+	id: "std-flow-error",
+	name: "Flow Error",
+	aliases: ["Motion Error", "Warp Error", "Temporal Error", "Compensation Error"],
+	category: "texture",
+	section: ["Motion"],
+	inputs: ["previous", "current", "flow"],
+	outputs: ["error"],
+	build: (g) => {
+		const previous = g.input("previous", "texture", { label: "Previous" });
+		const current = g.input("current", "texture", { label: "Current" });
+		const flowTexture = g.input("flow", "texture", { label: "Flow" });
+		const lumaOf = (color: Ref): Ref => {
+			const { x, y, z } = g.separateVector(color);
+			return g.call(luma, { rgb: g.vec("vec3f", x, y, z) }).luma;
+		};
+		const { color: now } = g.sampleTexture(current, g.uv(), 0, CLAMP, 0);
+		const { color: warped } = g.call(warp, { texture: previous, flow: flowTexture });
+		g.output("error", g.abs(g.sub(lumaOf(now), lumaOf(warped))), "f32", { label: "Error" });
+	},
+});
+
+export default [luma, previousFrame, imageGradient, warp, ...flow, flowError];

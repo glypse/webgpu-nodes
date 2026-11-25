@@ -1,0 +1,318 @@
+{
+	"id": "std-flow-to-color",
+	"name": "Flow to Color",
+	"aliases": ["Flow Colour", "Motion Colour", "Direction Colour", "Flow Hue"],
+	"category": "color",
+	"section": ["Motion"],
+	"dependencies": ["std-flow-wheel@1b40293cc28090"],
+	"definition": {
+		"nodes": [
+			{
+				"id": "9c4470e9-667b-4154-beb5-6acfbfc5f4e2",
+				"type": "resolution",
+				"data": {},
+				"position": {
+					"x": 0,
+					"y": 120
+				}
+			},
+			{
+				"id": "afab5fcf-c366-49d2-b816-0a422872d477",
+				"type": "separate-vector",
+				"data": {},
+				"position": {
+					"x": 260,
+					"y": 28
+				}
+			},
+			{
+				"id": "ae91c66a-a1b2-444f-b3b1-36683a648134",
+				"type": "div",
+				"data": {},
+				"position": {
+					"x": 792,
+					"y": 0
+				}
+			},
+			{
+				"id": "b3401380-7ee3-4a1f-90f3-bb29cf63a007",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec2f"
+					},
+					"values": {
+						"y": 1
+					}
+				},
+				"position": {
+					"x": 1057,
+					"y": 69
+				}
+			},
+			{
+				"id": "e9ade018-a31e-4c3d-a6e3-6c699d8ad4c3",
+				"type": "div",
+				"data": {
+					"values": {
+						"a": 1
+					}
+				},
+				"position": {
+					"x": 792,
+					"y": 217
+				}
+			},
+			{
+				"id": "2edb0e56-3d24-4165-9d56-530e6f0064e9",
+				"type": "uv",
+				"data": {},
+				"position": {
+					"x": 520,
+					"y": 544
+				}
+			},
+			{
+				"id": "dab77b54-82cd-438e-b9f1-fdb72b27a078",
+				"type": "sample-texture",
+				"data": {
+					"values": {
+						"interpolation": 0,
+						"extension": 0,
+						"level": 0
+					}
+				},
+				"position": {
+					"x": 792,
+					"y": 460
+				}
+			},
+			{
+				"id": "c93ab866-45c1-473b-a83e-2cd4e134c417",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 520,
+					"y": 712
+				}
+			},
+			{
+				"id": "a7af33fe-f5d0-434a-a7ba-35fadcd71fb6",
+				"type": "separate-vector",
+				"data": {},
+				"position": {
+					"x": 1057,
+					"y": 312
+				}
+			},
+			{
+				"id": "5e6ed22d-267b-4273-a109-8de6d9ed49a4",
+				"type": "layout-frame",
+				"data": {
+					"label": "Motion",
+					"note": "The vector in fractions of the height, as the other sizes are."
+				},
+				"position": {
+					"x": 1327,
+					"y": 182
+				}
+			},
+			{
+				"id": "8e57896a-9817-4fd7-b341-009c53d77182",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec2f"
+					}
+				},
+				"position": {
+					"x": 1351,
+					"y": 284
+				},
+				"frame": "5e6ed22d-267b-4273-a109-8de6d9ed49a4"
+			},
+			{
+				"id": "b058d092-7f32-4257-abbc-9bc942cb1478",
+				"type": "mul",
+				"data": {},
+				"position": {
+					"x": 1551,
+					"y": 256
+				},
+				"frame": "5e6ed22d-267b-4273-a109-8de6d9ed49a4"
+			},
+			{
+				"id": "911ebb7e-cd43-4281-b556-15af695548cc",
+				"type": "node-group",
+				"data": {},
+				"position": {
+					"x": 1861,
+					"y": 648
+				},
+				"group": {
+					"definitionRef": "std-flow-wheel@1b40293cc28090",
+					"locked": true
+				}
+			},
+			{
+				"id": "27da2f02-70c7-4d2a-8b54-c643df05abed",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 2121,
+					"y": 680
+				}
+			},
+			{
+				"id": "a3f93474-99ca-42a7-96b6-42c7de065afc",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 601,
+					"y": 152
+				}
+			}
+		],
+		"edges": [
+			{
+				"id": "42d261ef-02a7-4e98-960e-91794c104668",
+				"source": "9c4470e9-667b-4154-beb5-6acfbfc5f4e2",
+				"sourceHandle": "resolution",
+				"target": "afab5fcf-c366-49d2-b816-0a422872d477",
+				"targetHandle": "v"
+			},
+			{
+				"id": "a2a9d1cf-7741-4aec-b9fa-e06645aed2e6",
+				"source": "afab5fcf-c366-49d2-b816-0a422872d477",
+				"sourceHandle": "x",
+				"target": "ae91c66a-a1b2-444f-b3b1-36683a648134",
+				"targetHandle": "a"
+			},
+			{
+				"id": "4e6e3fba-37d8-4fbb-83a5-b9d48da8e25a",
+				"source": "a3f93474-99ca-42a7-96b6-42c7de065afc",
+				"sourceHandle": "out",
+				"target": "ae91c66a-a1b2-444f-b3b1-36683a648134",
+				"targetHandle": "b"
+			},
+			{
+				"id": "800dfdaa-3917-49c9-9b37-3c3491a13240",
+				"source": "ae91c66a-a1b2-444f-b3b1-36683a648134",
+				"sourceHandle": "result",
+				"target": "b3401380-7ee3-4a1f-90f3-bb29cf63a007",
+				"targetHandle": "x"
+			},
+			{
+				"id": "4a771a84-f5e8-4f9a-833a-7dba1dd4504f",
+				"source": "a3f93474-99ca-42a7-96b6-42c7de065afc",
+				"sourceHandle": "out",
+				"target": "e9ade018-a31e-4c3d-a6e3-6c699d8ad4c3",
+				"targetHandle": "b"
+			},
+			{
+				"id": "3e0f1642-b791-46e4-b248-0a7b6ce61e05",
+				"source": "c93ab866-45c1-473b-a83e-2cd4e134c417",
+				"sourceHandle": "cf582adf-d45a-4d91-85e9-bd8b376609a9",
+				"target": "dab77b54-82cd-438e-b9f1-fdb72b27a078",
+				"targetHandle": "texture"
+			},
+			{
+				"id": "b2d25e06-0960-418a-9b4b-8096dc5dc830",
+				"source": "2edb0e56-3d24-4165-9d56-530e6f0064e9",
+				"sourceHandle": "uv",
+				"target": "dab77b54-82cd-438e-b9f1-fdb72b27a078",
+				"targetHandle": "uv"
+			},
+			{
+				"id": "51572fd6-2c6e-40a0-8bd0-b94612de9b04",
+				"source": "dab77b54-82cd-438e-b9f1-fdb72b27a078",
+				"sourceHandle": "color",
+				"target": "a7af33fe-f5d0-434a-a7ba-35fadcd71fb6",
+				"targetHandle": "v"
+			},
+			{
+				"id": "0635e513-9664-41a1-a11a-17e6ddd8542d",
+				"source": "a7af33fe-f5d0-434a-a7ba-35fadcd71fb6",
+				"sourceHandle": "x",
+				"target": "8e57896a-9817-4fd7-b341-009c53d77182",
+				"targetHandle": "x"
+			},
+			{
+				"id": "95c1ea65-86a1-4ae2-9f8d-752d24be8dd2",
+				"source": "a7af33fe-f5d0-434a-a7ba-35fadcd71fb6",
+				"sourceHandle": "y",
+				"target": "8e57896a-9817-4fd7-b341-009c53d77182",
+				"targetHandle": "y"
+			},
+			{
+				"id": "20848952-b6b9-4c8d-9afa-f0af82d71410",
+				"source": "8e57896a-9817-4fd7-b341-009c53d77182",
+				"sourceHandle": "value",
+				"target": "b058d092-7f32-4257-abbc-9bc942cb1478",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "35365fe2-7d60-480d-8542-0a7831ea9780",
+				"source": "b3401380-7ee3-4a1f-90f3-bb29cf63a007",
+				"sourceHandle": "value",
+				"target": "b058d092-7f32-4257-abbc-9bc942cb1478",
+				"targetHandle": "operands"
+			},
+			{
+				"id": "33459f0c-098e-4f21-89d6-a3f38487fb65",
+				"source": "b058d092-7f32-4257-abbc-9bc942cb1478",
+				"sourceHandle": "result",
+				"target": "911ebb7e-cd43-4281-b556-15af695548cc",
+				"targetHandle": "9048061a-785f-45d7-b244-377dc736d71d"
+			},
+			{
+				"id": "a5187252-726f-47cd-9873-535e0f1998e7",
+				"source": "c93ab866-45c1-473b-a83e-2cd4e134c417",
+				"sourceHandle": "d884afe8-1142-4e22-ac8e-306774000997",
+				"target": "911ebb7e-cd43-4281-b556-15af695548cc",
+				"targetHandle": "71c10096-efc2-4d0e-9e5a-73e1851db8b5"
+			},
+			{
+				"id": "ed697f77-0d7d-4b72-be3c-7cc87d4b4e34",
+				"source": "911ebb7e-cd43-4281-b556-15af695548cc",
+				"sourceHandle": "816f15ad-4721-45a0-a8a8-962b428c3b1e",
+				"target": "27da2f02-70c7-4d2a-8b54-c643df05abed",
+				"targetHandle": "4581020a-edb4-4583-82c1-354c4d28dcf2"
+			},
+			{
+				"id": "61d03d25-8f23-4a7a-8b77-d7f289a83120",
+				"source": "afab5fcf-c366-49d2-b816-0a422872d477",
+				"sourceHandle": "y",
+				"target": "a3f93474-99ca-42a7-96b6-42c7de065afc",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "cf582adf-d45a-4d91-85e9-bd8b376609a9",
+				"label": "Flow",
+				"type": "texture"
+			},
+			{
+				"id": "d884afe8-1142-4e22-ac8e-306774000997",
+				"label": "Max",
+				"type": "f32",
+				"min": 0
+			}
+		],
+		"outputs": [
+			{
+				"id": "4581020a-edb4-4583-82c1-354c4d28dcf2",
+				"label": "Color",
+				"type": "vec3f"
+			}
+		],
+		"defaults": {
+			"d884afe8-1142-4e22-ac8e-306774000997": 0.1
+		}
+	}
+}

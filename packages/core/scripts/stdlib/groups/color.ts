@@ -369,7 +369,7 @@ const MODES = [
 	[2, "OKLch"],
 ] as const;
 
-const color = group({
+export const color = group({
 	id: "std-color",
 	inputs: [
 		"mode",

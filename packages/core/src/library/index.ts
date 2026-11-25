@@ -11,6 +11,10 @@ import boxBlur from "./std-box-blur.json";
 import color from "./std-color.json";
 import componentSum from "./std-component-sum.json";
 import fitUv from "./std-fit-uv.json";
+import flowError from "./std-flow-error.json";
+import flowLegend from "./std-flow-legend.json";
+import flowToColor from "./std-flow-to-color.json";
+import flowWheel from "./std-flow-wheel.json";
 import fractalNoiseOctaves from "./std-fractal-noise-octaves.json";
 import fractalNoise from "./std-fractal-noise.json";
 import fractalOctave from "./std-fractal-octave.json";
@@ -29,6 +33,7 @@ import linearRgbToOklch from "./std-linear-rgb-to-oklch.json";
 import linearRgbToXyz from "./std-linear-rgb-to-xyz.json";
 import luma from "./std-luma.json";
 import maxComponent from "./std-max-component.json";
+import motionArrows from "./std-motion-arrows.json";
 import noiseCoordinates from "./std-noise-coordinates.json";
 import noiseDistortion from "./std-noise-distortion.json";
 import octaveShift from "./std-octave-shift.json";
@@ -148,6 +153,11 @@ const files: unknown[] = [
 	previousFrame,
 	imageGradient,
 	warp,
+	flowWheel,
+	flowToColor,
+	flowLegend,
+	motionArrows,
+	flowError,
 ];
 
 function toEntry(json: unknown): StandardLibraryEntry {
