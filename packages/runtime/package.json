@@ -16,6 +16,12 @@
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
+		},
+		"./gpu-tests": {
+			"development": "./src/gpu-tests/index.ts",
+			"types": "./dist/gpu-tests/index.d.ts",
+			"import": "./dist/gpu-tests/index.js",
+			"default": "./dist/gpu-tests/index.js"
 		}
 	},
 	"dependencies": {

@@ -136,9 +136,24 @@ export class FrameValueAnalysis {
 			?.filter((e) => e.targetHandle === inputId);
 		for (const edge of edges ?? []) {
 			const result = this.output(path, edge.source, edge.sourceHandle);
-			if (!result.frame) return result;
+			// A refused link gives nothing: the input has its stored value.
+			if (!result.frame) return this.needsFrameValue(path, nodeId, inputId) ? YES : result;
 		}
 		return YES;
+	}
+
+	private needsFrameValue(path: readonly string[], nodeId: string, inputId: string): boolean {
+		const node = this.sources.instance(path)?.doc.nodesById.get(nodeId);
+		const inputs = node ? this.graph.resolveDescriptor(node).inputs : [];
+		return inputs.find((i) => i.id === inputId)?.frame === true;
+	}
+
+	/**
+	 * Whether a link of the document computed at `path` gives a value computed
+	 * per pixel to an input that needs a frame value: it's treated as missing.
+	 */
+	isRefused(path: readonly string[], edge: GraphEdge): boolean {
+		return this.link(path, edge)?.kind === "invalid";
 	}
 
 	private output(path: readonly string[], nodeId: string, handleId: string): FrameResult {
@@ -146,7 +161,7 @@ export class FrameValueAnalysis {
 		const cache = this.assuming.size > 0 ? this.scratch : this.memo;
 		const known = this.memo.get(key) ?? cache.get(key);
 		if (known) return known;
-		if (this.visiting.has(key)) return no("It depends on itself.");
+		if (this.visiting.has(key)) return no("It depends on its own result.");
 		this.visiting.add(key);
 		const result = this.compute(path, nodeId, handleId);
 		this.visiting.delete(key);
@@ -157,7 +172,7 @@ export class FrameValueAnalysis {
 	private compute(path: readonly string[], nodeId: string, handleId: string): FrameResult {
 		const instance = this.sources.instance(path);
 		const node = instance?.doc.nodesById.get(nodeId);
-		if (!instance || !node?.type) return no("There's nothing to read.");
+		if (!instance || !node?.type) return no("Nothing gives this value.");
 		const types = this.graph.typeResolver.resolveNodeTypes(
 			node,
 			instance.doc.edgesByTarget.get(nodeId) ?? [],
@@ -194,7 +209,7 @@ export class FrameValueAnalysis {
 		// Every pixel of an iteration shares its counter.
 		if (type === PASS_REPEAT_INPUT && handleId === ITERATION_HANDLE) return YES;
 		const kind = zoneKindOf(type);
-		if (kind === "simulation") return no(`${label} keeps its state for each pixel.`);
+		if (kind === "simulation") return no(`${label} keeps a value for each pixel.`);
 		if (kind === "repeat") return this.zoneValue(path, nodeId);
 
 		const cpu = this.graph.resolveDescriptor(node).cpu;
@@ -231,7 +246,13 @@ export class FrameValueAnalysis {
 		if (!instance || !zone || !output) return no("The zone isn't paired.");
 		const handles = [ITERATIONS_HANDLE, ...zoneItems(output).map((item) => item.id)];
 		const assumed = `${path.join("/")}|${zoneId}`;
+		// Its own final value read from inside it can never be known first.
+		if (this.assuming.has(assumed)) return no("It depends on its own result.");
 		this.assuming.add(assumed);
+		// A node asked for from inside the zone is read again when the zone's next
+		// values are, which isn't a cycle: the zone's item is assumed there.
+		const outer = this.visiting;
+		this.visiting = new Set();
 		let result: FrameResult = YES;
 		for (const id of handles) {
 			const read = this.input(path, zone.inputId, id);
@@ -244,6 +265,7 @@ export class FrameValueAnalysis {
 			}
 		}
 		this.assuming.delete(assumed);
+		this.visiting = outer;
 		if (this.assuming.size === 0) {
 			this.scratch.clear();
 			this.memo.set(key, result);

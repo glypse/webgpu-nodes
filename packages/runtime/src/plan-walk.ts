@@ -58,6 +58,9 @@ type ItemRun = { item: LoopItem; current?: GPUTexture; next?: GPUTexture };
 
 type Sized = { size: Size; dependent: boolean };
 
+/** Frame values, and whether what they read can have changed since. */
+type Evaluated = { values: FrameValues; epoch: number; stale: { read: boolean } };
+
 /**
  * Walks a plan's tree for one encode, recording the draws in order: a loop
  * draws its start, then for each iteration its body and next passes, and
@@ -89,24 +92,47 @@ export class PlanWalk {
 	private borrowed: GPUTexture[][] = [[]];
 	/** Values of passes that don't depend on an iteration, by pass and size. */
 	private passValues = new Map<string, FrameValues>();
+	// Rust: sort the size graph once and re-evaluate only the nodes that read an iteration or a loop's textures.
+	/** Values evaluated for a pass size at the iterations being run, while nothing they read changed. */
+	private evaluated = new Map<string, Evaluated>();
+	/** Counts the changes of the textures keeping loop items, which sizes read. */
+	private epoch = 0;
 
 	constructor(private input: WalkInput) {
 		this.canvas = { width: input.target.width, height: input.target.height };
 	}
 
-	/** Values from the frame program as the walk is. */
+	/**
+	 * Values from the frame program as the walk is. They're kept for what asks
+	 * again at the same iterations, unless a loop's textures changed since or
+	 * they read a size that only stood in for another.
+	 */
 	evaluate(passSize: Size): FrameValues {
+		const iterations = [...this.iteration].map(([loop, i]) => `${loop}=${String(i)}`).join(",");
+		const key = `${String(passSize.width)}x${String(passSize.height)}|${iterations}`;
+		const known = this.evaluated.get(key);
+		if (known?.epoch === this.epoch && !known.stale.read) return known.values;
 		const { frame } = this.input;
-		return evaluateFrame(this.input.frameProgram, {
+		const stale = { read: false };
+		const values = evaluateFrame(this.input.frameProgram, {
 			time: frame.time,
 			delta: frame.delta,
 			frame: frame.frame,
 			canvas: this.canvas,
 			passSize,
 			iteration: (id) => this.iteration.get(id),
-			textureSize: (id) => this.textureSize(id),
+			textureSize: (id) => {
+				const outer = this.unresolved;
+				this.unresolved = false;
+				const size = this.textureSize(id);
+				stale.read ||= this.unresolved;
+				this.unresolved = stale.read || outer;
+				return size;
+			},
 			uniforms: this.input.uniforms,
 		} satisfies FrameEnv);
+		this.evaluated.set(key, { values, epoch: this.epoch, stale });
+		return values;
 	}
 
 	/** Record the draws of the plan. */
@@ -176,6 +202,7 @@ export class PlanWalk {
 					this.itemTexture(this.sizeAt(entry.item.size), entry.item.format),
 				);
 			}
+			this.epoch++;
 			this.runNodes(decl.start);
 			for (let iteration = 0; iteration < count; iteration++) {
 				this.iterate(decl, items, iteration);
@@ -187,6 +214,7 @@ export class PlanWalk {
 				this.finals.set(texture, entry.current);
 				this.borrowed.at(-1)?.push(entry.current);
 			}
+			this.epoch++;
 			done = true;
 		} finally {
 			this.active.delete(decl.id);
@@ -218,6 +246,7 @@ export class PlanWalk {
 				}
 				if (next) this.input.pool.release(next);
 				entry.next = this.itemTexture(size, item.format);
+				this.epoch++;
 			}
 			this.runNodes(decl.body);
 			this.runNodes(decl.next);
@@ -225,6 +254,7 @@ export class PlanWalk {
 			for (const entry of items.values()) {
 				[entry.current, entry.next] = [entry.next, entry.current];
 			}
+			this.epoch++;
 		} finally {
 			this.sizes.pop();
 			this.scoped.pop();
@@ -308,8 +338,12 @@ export class PlanWalk {
 			return this.loopSize(resource);
 		}
 		if (resource?.kind !== "transient" && resource?.kind !== "state") return undefined;
-		// A size that depends on itself has nothing to start from.
-		if (this.resolving.has(id)) return this.canvas;
+		// A size that depends on itself has nothing to start from, and what is made of the canvas
+		// standing in for it is no one's to keep.
+		if (this.resolving.has(id)) {
+			this.unresolved = true;
+			return this.canvas;
+		}
 		this.resolving.add(id);
 		const outer = { dependent: this.dependent, unresolved: this.unresolved };
 		this.dependent = false;
@@ -340,11 +374,12 @@ export class PlanWalk {
 	}
 
 	private textureSize(id: string) {
-		// Reading a size for a frame value says nothing of what the one reading depends on.
-		const outer = { dependent: this.dependent, unresolved: this.unresolved };
+		// Reading a size for a frame value says nothing of what the one reading depends on
+		// (`dependsOnIteration` follows that), but a value made of a size that stood in for
+		// another isn't resolved either.
+		const outer = this.dependent;
 		const size = this.sizeOf(id);
-		this.dependent = outer.dependent;
-		this.unresolved = outer.unresolved;
+		this.dependent = outer;
 		if (!size) return undefined;
 		const resource = this.input.resources.get(id);
 		return {

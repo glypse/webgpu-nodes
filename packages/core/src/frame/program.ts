@@ -1,8 +1,15 @@
 import { frameInterval } from "../assets/assets";
-import { identSuffix, uniformName, type UniformValue, uniformValue } from "../codegen/literals";
+import {
+	identSuffix,
+	scalarNumber,
+	type UniformInput,
+	uniformName,
+	type UniformValue,
+	uniformValue,
+} from "../codegen/literals";
 import { ROOT_ID } from "../graph/document";
 import { componentKeys, readComponent } from "../graph/values";
-import { coerce } from "../nodes/cpu";
+import { coerce, convert } from "../nodes/cpu";
 import { nodeRegistry } from "../nodes/registry";
 import {
 	TEXTURE_SIZE,
@@ -23,8 +30,11 @@ import {
 	inputControl,
 	isTexture,
 	isUniformControl,
+	makeType,
 	type NodeData,
 	type NodeInputDef,
+	typeComponents,
+	typeKind,
 	type Value,
 	valueType,
 	type WgslType,
@@ -58,12 +68,18 @@ export type FrameSource =
 /** An output of a step of a frame program, or one component of it. */
 export type FrameRef = { step: number; output: string; component?: number };
 
-/** What a step reads: a literal, an earlier step's output, a source, or a repeat zone's state. */
+/**
+ * What a step reads: a literal, a step's output, a source, or a repeat
+ * zone's state. `type` is the type of the value read, which the step
+ * converts to the one it wants as WGSL does (a float saturates to an
+ * integer). A `texture-size:` source reads a size and its mip levels as
+ * three numbers, and is not converted.
+ */
 export type FrameInput =
-	| { literal: Value }
-	| { ref: FrameRef }
-	| { source: FrameSource }
-	| { loop: string; item: string };
+	| { literal: Value; type: WgslType }
+	| { ref: FrameRef; type: WgslType }
+	| { source: FrameSource; type: WgslType }
+	| { loop: string; item: string; type: WgslType };
 
 type StepBase = {
 	/** The repeat step whose body it's in, which runs it instead of the program. */
@@ -97,15 +113,15 @@ export type RepeatStep = StepBase & {
 export type FrameStep =
 	| NodeStep
 	| RepeatStep
-	/** A source or loop value given as an output, `value`. */
-	| (StepBase & { kind: "read"; input: FrameInput })
+	/** A source or loop value given as an output, `value`, converted to `type` if given. */
+	| (StepBase & { kind: "read"; input: FrameInput; type?: WgslType })
 	/**
 	 * A texture's size at a mip level (`size`), the step from one texel to the
 	 * next (`texel`) and how many levels it has (`levels`).
 	 */
 	| (StepBase & { kind: "texel"; size: FrameInput; level?: FrameInput });
 
-/** The frame values a plan needs, as steps in order each reading only earlier ones. */
+/** The frame values a plan needs, as steps each reading others, never itself. */
 export type FrameProgram = { steps: FrameStep[] };
 
 export const EMPTY_FRAME_PROGRAM: FrameProgram = { steps: [] };
@@ -174,23 +190,6 @@ export function frameDependencies(
 	return found;
 }
 
-/** The outputs of the steps of a frame program, as evaluated. */
-export class FrameValues {
-	constructor(readonly outputs: readonly (Readonly<Record<string, Value>> | undefined)[]) {}
-
-	/** The value of a step's output. */
-	ref({ step, output, component }: FrameRef): Value {
-		const value = this.outputs[step]?.[output] ?? [0];
-		return component === undefined ? value : [value[component] ?? 0];
-	}
-
-	/** A number of the program: a literal, or one component of a step's output. */
-	arg(arg: FrameArg): number {
-		// A reference to a component is that component alone.
-		return typeof arg === "number" ? arg : (this.ref(arg.frame)[0] ?? 0);
-	}
-}
-
 function sourceValue(source: FrameSource, env: FrameEnv): Value {
 	switch (source) {
 		case "time":
@@ -215,33 +214,149 @@ function sourceValue(source: FrameSource, env: FrameEnv): Value {
 	return uniform === undefined ? [0] : typeof uniform === "number" ? [uniform] : [...uniform];
 }
 
+/**
+ * The steps each loop runs, those of loops nested in it included, by loop id.
+ * Worked out once per program so an iteration doesn't scan every step.
+ * Rust: a dense Vec of step ranges per loop, built when the program is.
+ */
+const BODIES = new WeakMap<FrameProgram, ReadonlyMap<string, readonly number[]>>();
+
+function loopBodies(program: FrameProgram): ReadonlyMap<string, readonly number[]> {
+	const known = BODIES.get(program);
+	if (known) return known;
+	const direct = new Map<string, number[]>();
+	program.steps.forEach((step, index) => {
+		if (step.loop !== undefined)
+			direct.set(step.loop, [...(direct.get(step.loop) ?? []), index]);
+	});
+	const bodies = new Map<string, readonly number[]>();
+	const collect = (loop: string, visiting: ReadonlySet<string>): readonly number[] => {
+		const done = bodies.get(loop);
+		if (done) return done;
+		const own = direct.get(loop) ?? [];
+		const nested = own.flatMap((index) => {
+			const step = program.steps[index];
+			return step?.kind === "repeat" && !visiting.has(step.id)
+				? collect(step.id, new Set([...visiting, loop]))
+				: [];
+		});
+		const all = [...own, ...nested];
+		bodies.set(loop, all);
+		return all;
+	};
+	for (const loop of direct.keys()) collect(loop, new Set());
+	BODIES.set(program, bodies);
+	return bodies;
+}
+
 type Loop = { iteration: number; state: ReadonlyMap<string, Value> };
 
-/** Run a frame program: each step by its node's `cpu`, so the CPU and the GPU agree. */
-export function evaluateFrame(program: FrameProgram, env: FrameEnv): FrameValues {
-	const outputs: (Record<string, Value> | undefined)[] = [];
-	const loops = new Map<string, Loop>();
+const NO_OUTPUTS: Readonly<Record<string, Value>> = {};
 
-	const read = (input: FrameInput): Value => {
+/**
+ * The values of a frame program, each computed by its node's `cpu` when
+ * first asked for and kept: what isn't asked for isn't computed, nor is
+ * what only it reads (a texture's size, say, which the runtime may not
+ * know yet). The env's sources are read when a value needs them, so it has
+ * to be as it was until the values wanted are read.
+ *
+ * A repeat step computes its body's steps again for each iteration.
+ * Rust: evaluate on demand with a dense Vec of steps and a generation
+ * counter instead of clearing memos.
+ */
+export class FrameValues {
+	private memo: (Readonly<Record<string, Value>> | undefined)[] = [];
+	private computing = new Set<number>();
+	private loops = new Map<string, Loop>();
+	private bodies: ReadonlyMap<string, readonly number[]>;
+
+	constructor(
+		private program: FrameProgram,
+		private env: FrameEnv,
+	) {
+		this.bodies = loopBodies(program);
+	}
+
+	/** The outputs of a step, by id. */
+	stepOutputs(step: number): Readonly<Record<string, Value>> {
+		const known = this.memo[step];
+		if (known) return known;
+		const decl = this.program.steps[step];
+		// A step asked for while it is being computed reads itself.
+		if (!decl || this.computing.has(step)) return NO_OUTPUTS;
+		this.computing.add(step);
+		const outputs = this.compute(decl);
+		this.computing.delete(step);
+		// Outside its loop's run a body step has no iteration to belong to.
+		if (decl.loop === undefined || this.loops.has(decl.loop)) this.memo[step] = outputs;
+		return outputs;
+	}
+
+	/** The value of a step's output. */
+	ref({ step, output, component }: FrameRef): Value {
+		const value = this.stepOutputs(step)[output] ?? [0];
+		return component === undefined ? value : [value[component] ?? 0];
+	}
+
+	/** A number of the program: a literal, or one component of a step's output. */
+	arg(arg: FrameArg): number {
+		// A reference to a component is that component alone.
+		return typeof arg === "number" ? arg : (this.ref(arg.frame)[0] ?? 0);
+	}
+
+	private read(input: FrameInput): Value {
 		if ("literal" in input) return input.literal;
-		if ("ref" in input) return new FrameValues(outputs).ref(input.ref);
-		if ("source" in input) return sourceValue(input.source, env);
-		const loop = loops.get(input.loop);
+		if ("ref" in input) return this.ref(input.ref);
+		if ("source" in input) return sourceValue(input.source, this.env);
+		const loop = this.loops.get(input.loop);
 		if (input.item === ITERATION_HANDLE) return [loop?.iteration ?? 0];
 		return loop?.state.get(input.item) ?? [0];
-	};
+	}
 
-	const runNode = (step: NodeStep): Record<string, Value> => {
+	private readAs(input: FrameInput, type: WgslType): Value {
+		return convert(this.read(input), input.type, type);
+	}
+
+	private forget(loop: string) {
+		for (const index of this.bodies.get(loop) ?? []) this.memo[index] = undefined;
+	}
+
+	private compute(step: FrameStep): Readonly<Record<string, Value>> {
+		switch (step.kind) {
+			case "node":
+				return this.runNode(step);
+			case "read":
+				return {
+					value: step.type ? this.readAs(step.input, step.type) : this.read(step.input),
+				};
+			case "texel": {
+				const [base = 1, tall = 1, levels = 1] = this.read(step.size);
+				const wanted = step.level ? (this.readAs(step.level, "i32")[0] ?? 0) : 0;
+				const level = Math.min(Math.max(wanted, 0), levels - 1);
+				const width = Math.max(1, Math.floor(base / 2 ** level));
+				const height = Math.max(1, Math.floor(tall / 2 ** level));
+				return {
+					size: [width, height],
+					texel: [Math.fround(1 / width), Math.fround(1 / height)],
+					levels: [levels],
+				};
+			}
+			case "repeat":
+				return this.runRepeat(step);
+		}
+	}
+
+	private runNode(step: NodeStep): Record<string, Value> {
 		const cpu = nodeRegistry[step.type]?.cpu;
 		if (!cpu) throw new Error(`no CPU implementation for a "${step.type}" node`);
 		const present = new Set(step.present);
 		return cpu({
 			input: (id) => {
 				const input = step.inputs[id];
-				return input ? coerce(read(input), step.inputTypes[id] ?? "f32") : [0];
+				return input ? this.readAs(input, step.inputTypes[id] ?? "f32") : [0];
 			},
 			operands: (id) =>
-				(step.operands[id] ?? []).map((i) => coerce(read(i), step.inputTypes[id] ?? "f32")),
+				(step.operands[id] ?? []).map((i) => this.readAs(i, step.inputTypes[id] ?? "f32")),
 			isPresent: (id) => present.has(id),
 			inputTypes: step.inputTypes,
 			outputTypes: step.outputTypes,
@@ -249,59 +364,27 @@ export function evaluateFrame(program: FrameProgram, env: FrameEnv): FrameValues
 			resolvedInputs: step.resolvedInputs,
 			data: step.data,
 		});
-	};
+	}
 
-	const run = (index: number) => {
-		const step = program.steps[index];
-		if (!step) return;
-		switch (step.kind) {
-			case "node":
-				outputs[index] = runNode(step);
-				break;
-			case "read":
-				outputs[index] = { value: read(step.input) };
-				break;
-			case "texel": {
-				const [base = 1, tall = 1, levels = 1] = read(step.size);
-				const wanted = step.level ? Math.trunc(read(step.level)[0] ?? 0) : 0;
-				const level = Math.min(Math.max(wanted, 0), levels - 1);
-				const width = Math.max(1, Math.floor(base / 2 ** level));
-				const height = Math.max(1, Math.floor(tall / 2 ** level));
-				outputs[index] = {
-					size: [width, height],
-					texel: [Math.fround(1 / width), Math.fround(1 / height)],
-					levels: [levels],
-				};
-				break;
-			}
-			case "repeat": {
-				const count = Math.min(
-					Math.max(0, Math.trunc(read(step.iterations)[0] ?? 0)),
-					step.max,
-				);
-				let state: ReadonlyMap<string, Value> = new Map(
-					step.items.map((i) => [i.id, coerce(read(i.initial), i.type)]),
-				);
-				for (let iteration = 0; iteration < count; iteration++) {
-					loops.set(step.id, { iteration, state });
-					runBody(step.id);
-					state = new Map(step.items.map((i) => [i.id, coerce(read(i.next), i.type)]));
-				}
-				loops.delete(step.id);
-				outputs[index] = Object.fromEntries(state);
-				break;
-			}
+	private runRepeat(step: RepeatStep): Record<string, Value> {
+		const count = Math.min(Math.max(0, this.readAs(step.iterations, "i32")[0] ?? 0), step.max);
+		let state: ReadonlyMap<string, Value> = new Map(
+			step.items.map((i) => [i.id, this.readAs(i.initial, i.type)]),
+		);
+		for (let iteration = 0; iteration < count; iteration++) {
+			this.loops.set(step.id, { iteration, state });
+			this.forget(step.id);
+			state = new Map(step.items.map((i) => [i.id, this.readAs(i.next, i.type)]));
 		}
-	};
+		this.loops.delete(step.id);
+		this.forget(step.id);
+		return Object.fromEntries(state);
+	}
+}
 
-	const runBody = (loop: string | undefined) => {
-		program.steps.forEach((step, index) => {
-			if (step.loop === loop) run(index);
-		});
-	};
-
-	runBody(undefined);
-	return new FrameValues(outputs);
+/** The values of a frame program: each step by its node's `cpu`, so the CPU and the GPU agree. */
+export function evaluateFrame(program: FrameProgram, env: FrameEnv): FrameValues {
+	return new FrameValues(program, env);
 }
 
 /** What compiling a value gives: where to read it, and whether it varies with anything at runtime. */
@@ -314,10 +397,17 @@ export type FrameCompilerOptions = {
 	textureSize?: boolean;
 };
 
-const literal = (value: Value): CompiledFrameValue => ({
-	input: { literal: value },
+const literal = (value: Value, type: WgslType): CompiledFrameValue => ({
+	input: { literal: value, type },
 	dynamic: false,
 });
+
+/** The loop a read step runs in: the one whose state it reads, or its source step's. */
+function readLoop(steps: readonly FrameStep[], input: FrameInput): { loop?: string } {
+	const loop =
+		"loop" in input ? input.loop : "ref" in input ? steps[input.ref.step]?.loop : undefined;
+	return loop === undefined ? {} : { loop };
+}
 
 /**
  * Compiles the frame values of a graph into one `FrameProgram`, which
@@ -327,6 +417,8 @@ const literal = (value: Value): CompiledFrameValue => ({
 export class FrameCompiler {
 	/** The values of the uniforms its program reads. */
 	readonly uniforms: Record<string, UniformValue> = {};
+	/** The inputs they hold, by name. */
+	readonly uniformInputs = new Map<string, UniformInput>();
 	private steps: FrameStep[] = [];
 	private dynamics: boolean[] = [];
 	private memo = new Map<string, CompiledFrameValue | undefined>();
@@ -381,9 +473,17 @@ export class FrameCompiler {
 	hoist(path: readonly string[], nodeId: string, handleId: string): FrameRef | undefined {
 		const value = this.compile(path, nodeId, handleId);
 		if (!value?.dynamic) return undefined;
-		return "ref" in value.input
-			? value.input.ref
-			: this.push({ kind: "read", input: value.input }, true, "value");
+		return "ref" in value.input ? value.input.ref : this.read(value.input);
+	}
+
+	private read(input: FrameInput, type?: WgslType): FrameRef {
+		const step: FrameStep = {
+			kind: "read",
+			input,
+			...(type === undefined ? {} : { type }),
+			...readLoop(this.steps, input),
+		};
+		return this.push(step, true, "value");
 	}
 
 	/** The same, as a number a plan can carry: a component of the value. */
@@ -410,7 +510,7 @@ export class FrameCompiler {
 
 	private asArg({ input }: CompiledFrameValue, component: number): FrameArg {
 		if ("literal" in input) return input.literal[component] ?? 0;
-		const ref = "ref" in input ? input.ref : this.push({ kind: "read", input }, true, "value");
+		const ref = "ref" in input ? input.ref : this.read(input);
 		return { frame: { ...ref, component } };
 	}
 
@@ -426,8 +526,30 @@ export class FrameCompiler {
 		return true;
 	}
 
-	private ref(ref: FrameRef): CompiledFrameValue {
-		return { input: { ref }, dynamic: this.dynamics[ref.step] ?? true };
+	private ref(ref: FrameRef, type: WgslType): CompiledFrameValue {
+		return { input: { ref, type }, dynamic: this.dynamics[ref.step] ?? true };
+	}
+
+	/** `value` as `type`, through a step when it's not known now. */
+	private cast(value: CompiledFrameValue | undefined, type: WgslType | undefined) {
+		if (!value || type === undefined || value.input.type === type) return value;
+		const { input } = value;
+		if ("literal" in input) return literal(convert(input.literal, input.type, type), type);
+		return this.ref(this.read(input, type), type);
+	}
+
+	private outputType(
+		path: readonly string[],
+		nodeId: string,
+		handleId: string,
+	): WgslType | undefined {
+		const instance = this.sources.instance(path);
+		const node = instance?.doc.nodesById.get(nodeId);
+		if (!instance || !node) return undefined;
+		const type = this.graph.typeResolver
+			.resolveNodeTypes(node, instance.doc.edgesByTarget.get(nodeId) ?? [], instance.bindings)
+			.resolvedOutputs.find((o) => o.id === handleId)?.type;
+		return type === undefined || isTexture(type) ? undefined : valueType(type);
 	}
 
 	private iterations = new Map<string, FrameRef>();
@@ -437,7 +559,10 @@ export class FrameCompiler {
 		let ref = this.iterations.get(loop);
 		if (!ref) {
 			ref = this.push(
-				{ kind: "read", input: { source: iterationSource(loop) } },
+				{
+					kind: "read",
+					input: { source: iterationSource(loop), type: "i32" },
+				},
 				true,
 				"value",
 			);
@@ -446,13 +571,29 @@ export class FrameCompiler {
 		return ref;
 	}
 
+	/**
+	 * The innermost repeat zone around `zone` of the document at `path`, else
+	 * the one around the group node that document is the instance of, and so on up.
+	 */
+	private enclosingLoop(path: readonly string[], zone: string | null | undefined) {
+		let at = path;
+		let current = zone;
+		for (;;) {
+			const zones = this.sources.instance(at)?.zones;
+			for (; current; current = zones?.zones.get(current)?.parent) {
+				if (zones?.zones.get(current)?.kind === "repeat")
+					return `${at.join("/")}|${current}`;
+			}
+			const group = at.at(-1);
+			if (group === undefined) return undefined;
+			at = at.slice(0, -1);
+			current = this.sources.instance(at)?.zones.nodeZone.get(group);
+		}
+	}
+
 	/** The loop a node of the document at `path` runs in, if it's in a repeat zone. */
 	private loopOf(path: readonly string[], nodeId: string): string | undefined {
-		const zones = this.sources.instance(path)?.zones;
-		const zone = zones?.nodeZone.get(nodeId);
-		return zone && zones?.zones.get(zone)?.kind === "repeat"
-			? `${path.join("/")}|${zone}`
-			: undefined;
+		return this.enclosingLoop(path, this.sources.instance(path)?.zones.nodeZone.get(nodeId));
 	}
 
 	private compileOutput(
@@ -463,23 +604,24 @@ export class FrameCompiler {
 		const instance = this.sources.instance(path);
 		const node = instance?.doc.nodesById.get(nodeId);
 		if (!instance || !node?.type) return undefined;
-		const source = (s: FrameSource): CompiledFrameValue => ({
-			input: { source: s },
+		const source = (s: FrameSource, type: WgslType): CompiledFrameValue => ({
+			input: { source: s, type },
 			dynamic: true,
 		});
+		const own = this.outputType(path, nodeId, handleId);
 		switch (node.type) {
 			case "time":
-				return source(handleId === "frame" ? "frame" : "time");
+				return handleId === "frame" ? source("frame", "i32") : source("time", "f32");
 			case "delta":
-				return source("delta");
+				return source("delta", "f32");
 			case "resolution":
-				return source("pass-size");
+				return source("pass-size", "vec2f");
 			case TEXTURE_SIZE: {
 				if (!this.textureSize) return undefined;
 				const texture = this.sources.input(path, nodeId, "texture");
 				const read = readSource(texture);
 				if (read.kind !== "empty") this.sized.set(read.id, read);
-				const size = { source: `texture-size:${texture.id}` } as const;
+				const size = { source: `texture-size:${texture.id}`, type: "vec3f" } as const;
 				const level = this.input(path, nodeId, TEXTURE_SIZE_LEVEL);
 				if (!level) return undefined;
 				const ref = this.push(
@@ -487,19 +629,19 @@ export class FrameCompiler {
 					true,
 					handleId,
 				);
-				return this.ref(ref);
+				return this.ref(ref, own ?? "vec2f");
 			}
 			case VIDEO: {
 				if (!VIDEO_METADATA.has(handleId)) return undefined;
 				const asset = this.graph.assets.find((a) => a.id === node.data.asset);
-				if (handleId === VIDEO_INTERVAL) return literal([frameInterval(asset)]);
-				return literal([Math.fround(asset?.kind === "video" ? asset.duration : 0)]);
+				if (handleId === VIDEO_INTERVAL) return literal([frameInterval(asset)], "f32");
+				return literal([Math.fround(asset?.kind === "video" ? asset.duration : 0)], "f32");
 			}
 			case "group-input": {
 				const parent = path.at(-1);
 				return parent === undefined
 					? undefined
-					: this.input(path.slice(0, -1), parent, handleId);
+					: this.cast(this.input(path.slice(0, -1), parent, handleId), own);
 			}
 			case "node-group": {
 				const definition =
@@ -511,14 +653,18 @@ export class FrameCompiler {
 							.get(n.id)
 							?.some((e) => e.targetHandle === handleId),
 					) ?? outputs[0];
-				return out ? this.input([...path, nodeId], out.id, handleId) : undefined;
+				return out
+					? this.cast(this.input([...path, nodeId], out.id, handleId), own)
+					: undefined;
 			}
 			case "reroute":
-				return this.input(path, nodeId, "in");
+				return this.cast(this.input(path, nodeId, "in"), own);
 		}
 		if (node.type === PASS_REPEAT_INPUT && handleId === ITERATION_HANDLE) {
 			const zone = instance.zones.zoneOfBoundary.get(nodeId);
-			return zone === undefined ? undefined : source(iterationSource(loopId({ path, zone })));
+			return zone === undefined
+				? undefined
+				: source(iterationSource(loopId({ path, zone })), "i32");
 		}
 		const kind = zoneKindOf(node.type);
 		if (kind === "repeat") return this.compileZoneValue(path, nodeId, handleId);
@@ -536,7 +682,9 @@ export class FrameCompiler {
 		const node = instance?.doc.nodesById.get(nodeId);
 		if (!instance || !node) return undefined;
 		const edge = instance.edgesByTarget.get(nodeId)?.find((e) => e.targetHandle === inputId);
-		if (edge) return this.compile(path, edge.source, edge.sourceHandle);
+		if (edge && !this.analysis.isRefused(path, edge)) {
+			return this.compile(path, edge.source, edge.sourceHandle);
+		}
 		return this.unlinked(path, nodeId, inputId);
 	}
 
@@ -564,14 +712,26 @@ export class FrameCompiler {
 			if (!def || isUniformControl(inputControl(def, valueType(type)))) {
 				const name = uniformName(nodeId, inputId);
 				this.uniforms[name] = uniformValue(valueType(type), stored);
-				return { input: { source: `uniform:${name}` }, dynamic: true };
+				this.uniformInputs.set(name, {
+					node: nodeId,
+					input: inputId,
+					type: valueType(type),
+					fallback: descriptor.defaultData.values?.[inputId],
+				});
+				// Uniforms are floats, converted to the input's type.
+				const floats = makeType("f32", typeComponents(valueType(type)));
+				return { input: { source: `uniform:${name}`, type: floats }, dynamic: true };
 			}
 		}
+		const kind = typeKind(valueType(type));
 		return literal(
 			coerce(
-				componentKeys(valueType(type)).map((k) => readComponent(stored, k)),
+				componentKeys(valueType(type)).map((k) =>
+					scalarNumber(kind, readComponent(stored, k)),
+				),
 				valueType(type),
 			),
+			valueType(type),
 		);
 	}
 
@@ -627,20 +787,21 @@ export class FrameCompiler {
 			operands,
 			present: incoming.map((e) => e.targetHandle),
 		};
-		const loop = this.loopOf(path, nodeId);
 		const dynamic = [...Object.values(inputs), ...Object.values(operands).flat()].some((i) =>
 			this.isDynamic({ input: i }),
 		);
-		if (!dynamic && loop === undefined) {
-			// Only literals: nothing the runtime knows is read, so it's known now.
-			const folded = evaluateFrame({ steps: [step] }, EMPTY_ENV).outputs[0] ?? {};
+		const typeOf = (id: string) => step.outputTypes[id] ?? "f32";
+		if (!dynamic) {
+			// Only literals: nothing the runtime or a loop knows is read, so it's known now.
+			const folded = evaluateFrame({ steps: [step] }, EMPTY_ENV).stepOutputs(0);
 			for (const [id, value] of Object.entries(folded)) {
-				this.memo.set(`${path.join("/")}|${nodeId}|${id}`, literal(value));
+				this.memo.set(`${path.join("/")}|${nodeId}|${id}`, literal(value, typeOf(id)));
 			}
-			return literal(folded[handleId] ?? [0]);
+			return literal(folded[handleId] ?? [0], typeOf(handleId));
 		}
+		const loop = this.loopOf(path, nodeId);
 		const ref = this.push(loop === undefined ? step : { ...step, loop }, dynamic, handleId);
-		return this.ref(ref);
+		return this.ref(ref, typeOf(handleId));
 	}
 
 	/** An output of a repeat zone's boundary: an item's current value, or its final one. */
@@ -655,35 +816,37 @@ export class FrameCompiler {
 		const start = instance?.doc.nodesById.get(zone?.inputId ?? "");
 		if (!instance || !zone || !start) return undefined;
 		const loop = `${path.join("/")}|${zone.id}`;
+		const output = instance.doc.nodesById.get(zone.outputId);
+		const outputs = output
+			? this.graph.typeResolver.resolveNodeTypes(
+					output,
+					instance.doc.edgesByTarget.get(output.id) ?? [],
+					instance.bindings,
+				).resolvedOutputs
+			: [];
+		const itemType = (id: string) => {
+			const type = outputs.find((o) => o.id === id)?.type;
+			return type === undefined || isTexture(type) ? undefined : valueType(type);
+		};
 		if (instance.doc.nodesById.get(nodeId)?.type === REPEAT_INPUT) {
-			return { input: { loop, item: handleId }, dynamic: true };
+			const type = handleId === ITERATION_HANDLE ? "i32" : itemType(handleId);
+			return type === undefined
+				? undefined
+				: { input: { loop, item: handleId, type }, dynamic: true };
 		}
 		let index = this.zones.get(loop);
 		if (index === undefined) {
-			const output = instance.doc.nodesById.get(zone.outputId);
-			const outputs = output
-				? this.graph.typeResolver.resolveNodeTypes(
-						output,
-						instance.doc.edgesByTarget.get(output.id) ?? [],
-						instance.bindings,
-					).resolvedOutputs
-				: [];
 			const iterations = this.input(path, zone.inputId, ITERATIONS_HANDLE);
 			const items: RepeatStep["items"] = [];
 			for (const item of zoneItems(output)) {
 				const initial = this.input(path, zone.inputId, item.id);
 				const next = this.input(path, zone.outputId, item.id);
-				const type = outputs.find((o) => o.id === item.id)?.type;
-				if (!initial || !next || type === undefined || isTexture(type)) return undefined;
-				items.push({
-					id: item.id,
-					type: valueType(type),
-					initial: initial.input,
-					next: next.input,
-				});
+				const type = itemType(item.id);
+				if (!initial || !next || type === undefined) return undefined;
+				items.push({ id: item.id, type, initial: initial.input, next: next.input });
 			}
 			if (!iterations) return undefined;
-			const parent = zone.parent === null ? undefined : `${path.join("/")}|${zone.parent}`;
+			const parent = this.enclosingLoop(path, zone.parent);
 			index = this.push(
 				{
 					kind: "repeat",
@@ -698,7 +861,8 @@ export class FrameCompiler {
 			).step;
 			this.zones.set(loop, index);
 		}
-		return this.ref({ step: index, output: handleId });
+		const type = itemType(handleId);
+		return type === undefined ? undefined : this.ref({ step: index, output: handleId }, type);
 	}
 }
 

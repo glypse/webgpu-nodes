@@ -201,6 +201,96 @@ describe("frame values", () => {
 		expect(frame.isFrameValue([], zone, "iteration")).toBe(false);
 	});
 
+	it("give a zone's values whichever of them is asked for first", () => {
+		const build = () => {
+			const graph = new GraphModel(rootProject([{ id: "time", type: "time" }], []));
+			const zone = graph.createRepeatZone(at) ?? "";
+			const output = graph.root.nodesById.get(zone)?.data.pairedOutput ?? "";
+			const item = graph.getZoneItems(zone)[0]?.id ?? "";
+			const next = graph.addNode("mul", at) ?? "";
+			const link = (a: string, b: string, c: string, d: string) => {
+				graph.connect({ source: a, sourceHandle: b, target: c, targetHandle: d });
+			};
+			link(zone, item, next, "operands");
+			link(zone, "iteration", next, "operands");
+			link(next, "result", output, item);
+			link("time", "seconds", zone, item);
+			return { frame: graph.frameValueAnalysis(), output, item, next };
+		};
+		const first = build();
+		expect(first.frame.isFrameValue([], first.next, "result")).toBe(true);
+		expect(first.frame.isFrameValue([], first.output, first.item)).toBe(true);
+		const second = build();
+		expect(second.frame.isFrameValue([], second.output, second.item)).toBe(true);
+		expect(second.frame.isFrameValue([], second.next, "result")).toBe(true);
+	});
+
+	it("exclude what's in a nested zone that isn't a frame zone, whatever is asked first", () => {
+		const nodes: TestNode[] = [
+			{ id: "time", type: "time" },
+			{ id: "uv", type: "uv" },
+			{ id: "x", type: "separate-vector" },
+			{
+				id: "a_in",
+				type: "repeat-input",
+				data: { pairedOutput: "a_out", values: { iterations: 2 } },
+			},
+			{
+				id: "a_out",
+				type: "repeat-output",
+				data: { items: [{ id: "acc", label: "Acc", type: "f32" }] },
+			},
+			{
+				id: "b_in",
+				type: "repeat-input",
+				data: { pairedOutput: "b_out", values: { iterations: 2 } },
+			},
+			{
+				id: "b_out",
+				type: "repeat-output",
+				data: {
+					items: [
+						{ id: "p", label: "P", type: "f32" },
+						{ id: "q", label: "Q", type: "f32" },
+					],
+				},
+			},
+			{ id: "inc", type: "add" },
+			{ id: "per_pixel", type: "add" },
+			{ id: "one", type: "declare", data: { values: { x: 1 } } },
+		];
+		const edges: TestEdge[] = [
+			["uv", "uv", "x", "v"],
+			["time", "seconds", "a_in", "acc"],
+			["a_in", "acc", "b_in", "p"],
+			["time", "seconds", "b_in", "q"],
+			// p goes up by one, a frame value if the zone were; q reads the pixel.
+			["b_in", "p", "inc", "operands"],
+			["one", "value", "inc", "operands"],
+			["inc", "result", "b_out", "p"],
+			["b_in", "q", "per_pixel", "operands"],
+			["x", "x", "per_pixel", "operands"],
+			["per_pixel", "result", "b_out", "q"],
+			["b_out", "p", "a_out", "acc"],
+		];
+		const asks: [string, string][][] = [
+			[
+				["inc", "result"],
+				["a_out", "acc"],
+			],
+			[
+				["a_out", "acc"],
+				["inc", "result"],
+			],
+		];
+		for (const order of asks) {
+			const frame = model(nodes, edges).frameValueAnalysis();
+			for (const [node, handle] of order) {
+				expect(frame.isFrameValue([], node, handle)).toBe(false);
+			}
+		}
+	});
+
 	it("are memoised until the graph changes", () => {
 		const graph = model([{ id: "time", type: "time" }], []);
 		const first = graph.frameValueAnalysis();

@@ -51,7 +51,7 @@ const item = (id: string, read: "current" | "next" | "final"): ResourceDecl => (
 });
 
 /** Walks a plan, giving the size each pass drew into, by pass id. */
-function walk(plan: RenderPlan): Map<string, [number, number][]> {
+function walk(plan: RenderPlan, canvas = 16): Map<string, [number, number][]> {
 	const drawn = new Map<string, [number, number][]>();
 	const pool = new TexturePool<GPUTexture>(({ width, height }) => texture(width, height));
 	const programs = new Map(
@@ -60,7 +60,18 @@ function walk(plan: RenderPlan): Map<string, [number, number][]> {
 			.map((decl) => [
 				decl.id,
 				{
-					record: (targets: GPUTexture[]) => {
+					record: (
+						targets: GPUTexture[],
+						_frame: unknown,
+						_colorSpace: unknown,
+						_textureOf: unknown,
+						options?: {
+							frameValuesOf: (size: { width: number; height: number }) => unknown;
+						},
+					) => {
+						const [first] = targets;
+						if (first)
+							options?.frameValuesOf({ width: first.width, height: first.height });
 						const sizes = drawn.get(decl.id) ?? [];
 						sizes.push([targets[0]?.width ?? 0, targets[0]?.height ?? 0]);
 						drawn.set(decl.id, sizes);
@@ -69,7 +80,7 @@ function walk(plan: RenderPlan): Map<string, [number, number][]> {
 				} as unknown as CompiledProgram,
 			]),
 	);
-	const target = texture(16, 16);
+	const target = texture(canvas, canvas);
 	const frameProgram = plan.frame;
 	new PlanWalk({
 		plan,
@@ -128,6 +139,7 @@ describe("PlanWalk", () => {
 			pass("target", ["T"], [PLAN_TARGET]),
 		],
 		uniforms: {},
+		uniformInputs: new Map(),
 		frame: { steps: [] },
 	};
 
@@ -143,5 +155,55 @@ describe("PlanWalk", () => {
 	it("sizes a texture like a loop's final value by what the loop ended as, not the canvas", () => {
 		// The size is asked for before the loop runs, with no final value to read.
 		expect(walk(plan).get("after")).toEqual([[2, 2]]);
+	});
+});
+
+describe("PlanWalk sizes read through frame values", () => {
+	const value = { frame: { step: 0, output: "value" } };
+	const frameProgram: RenderPlan["frame"] = {
+		steps: [
+			{ kind: "read", input: { literal: [0.1], type: "f32" } },
+			{ kind: "read", input: { source: "texture-size:B", type: "vec3f" } },
+		],
+	};
+	const reader = (id: string, reads: string[], writes: string[]): PassDecl => ({
+		...pass(id, reads, writes),
+		program: {
+			frameValues: {
+				binding: 2,
+				size: 16,
+				fields: { size: { ref: { step: 1, output: "value" } } },
+			},
+		} as unknown as ShaderProgram,
+	});
+
+	it("keeps a size that depends on another being resolved from being drawn at the canvas'", () => {
+		const plan: RenderPlan = {
+			resources: [
+				{
+					id: "A",
+					kind: "transient",
+					size: { kind: "scale", scale: value, of: "canvas" },
+					format: FORMAT,
+				},
+				{
+					id: "B",
+					kind: "transient",
+					size: { kind: "scale", scale: 0.5, of: { resource: "A" } },
+					format: FORMAT,
+				},
+			],
+			passes: [
+				pass("a", [], ["A"]),
+				pass("b", ["A"], ["B"]),
+				reader("frame", ["B"], [PLAN_TARGET]),
+			],
+			uniforms: {},
+			uniformInputs: new Map(),
+			frame: frameProgram,
+		};
+		const drawn = walk(plan, 1000);
+		expect(drawn.get("a")).toEqual([[100, 100]]);
+		expect(drawn.get("b")).toEqual([[50, 50]]);
 	});
 });

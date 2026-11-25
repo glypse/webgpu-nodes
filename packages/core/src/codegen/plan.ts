@@ -1,11 +1,7 @@
 import type { VideoPlayback } from "../assets/assets";
 import { FrameValueAnalysis } from "../frame/analysis";
-import {
-	FrameCompiler,
-	frameDependencies,
-	type FrameProgram,
-	type FrameRef,
-} from "../frame/program";
+import { FrameCompiler, type FrameProgram, type FrameRef } from "../frame/program";
+import type { GraphNode } from "../graph/document";
 import { loopId, type LoopRead, loopReadId, type LoopRef } from "../passes/loop";
 import {
 	attachmentGroups,
@@ -23,6 +19,7 @@ import {
 	type TextureSize,
 } from "../passes/textures";
 import { DEFAULT_ITERATIONS, ITERATIONS_HANDLE, zoneMaxIterations } from "../zones";
+import { frameValueDependencies } from "./dependencies";
 import {
 	type CodegenGraph,
 	generateShader,
@@ -30,7 +27,7 @@ import {
 	type ShaderTarget,
 	type SimulationStage,
 } from "./generate";
-import type { UniformValue } from "./literals";
+import { type UniformInput, uniformInputKey, type UniformValue, uniformValue } from "./literals";
 import { buildProgram, type ShaderProgram } from "./program";
 
 /** What the last pass of a plan writes: the frame drawn. */
@@ -164,9 +161,20 @@ export type RenderPlan = {
 	passes: PlanNode[];
 	/** The uniform values of every pass: each program's block holds those it reads. */
 	uniforms: Record<string, UniformValue>;
+	/**
+	 * The unlinked inputs its uniforms hold, by name: changing their values
+	 * changes nothing else of the plan (see `planUniforms`).
+	 */
+	uniformInputs: ReadonlyMap<string, UniformInput>;
 	/** The frame values the passes' programs read, computed on the CPU for each pass. */
 	frame: FrameProgram;
 };
+
+function storedIterations(input: GraphNode): number {
+	const stored = input.data.values?.[ITERATIONS_HANDLE];
+	const value = typeof stored === "object" ? stored.x : stored;
+	return typeof value === "number" ? value : DEFAULT_ITERATIONS;
+}
 
 function resourceOf(source: TextureSource): ResourceDecl {
 	switch (source.kind) {
@@ -235,6 +243,7 @@ export function generateRenderPlan(
 	const top: PlanNode[] = [];
 	const resources = new Map<string, ResourceDecl>();
 	const uniforms: Record<string, UniformValue> = {};
+	const uniformInputs = new Map<string, UniformInput>();
 	/** The loops the passes drawing each pass key are inside of. */
 	const visited = new Map<string, ReadonlySet<string>>();
 	/** The loops each texture made by a pass is inside of, by resource id. */
@@ -264,14 +273,15 @@ export function generateRenderPlan(
 		refLoops([arg.frame], into);
 	};
 	const refLoops = (refs: readonly FrameRef[], into: Set<string>) => {
-		const needs = frameDependencies(frame.program(), refs);
-		for (const id of needs.loops) into.add(id);
-		const sized = frame.sizedTextures();
-		for (const id of needs.textures) {
-			const source = sized.find((t) => t.id === id);
-			if (!source) continue;
-			include(source);
-			for (const loop of insideOfSource(source)) into.add(loop);
+		for (const ref of refs) {
+			const needs = frameValueDependencies(frame, ref);
+			for (const id of needs.loops) into.add(id);
+			for (const id of needs.textures) {
+				const source = sources.byId(id);
+				if (!source) continue;
+				include(source);
+				for (const loop of insideOfSource(source)) into.add(loop);
+			}
 		}
 	};
 	const sizeLoops = (size: TextureSize, into: Set<string>) => {
@@ -396,6 +406,7 @@ export function generateRenderPlan(
 		visited.set(key, inside);
 		for (const id of writes) insideOfResource.set(id, inside);
 		Object.assign(uniforms, generated.uniforms);
+		for (const [name, input] of generated.uniformInputs) uniformInputs.set(name, input);
 		const inline = generated.simulation;
 		(place ?? containerOf(inside)).push({
 			id: `pass:${key}`,
@@ -448,7 +459,9 @@ export function generateRenderPlan(
 		const decl: LoopDecl = {
 			id,
 			kind: "loop",
-			iterations: frame.inputArg(ref.path, ref.zone, ITERATIONS_HANDLE) ?? DEFAULT_ITERATIONS,
+			// A link that isn't a frame value is invalid: the stored count stands in for it.
+			iterations:
+				frame.inputArg(ref.path, ref.zone, ITERATIONS_HANDLE) ?? storedIterations(input),
 			max: zoneMaxIterations(input),
 			items: state.items.map((i) => ({
 				id: i.item.id,
@@ -501,5 +514,32 @@ export function generateRenderPlan(
 		if (!resources.has(source.id)) resources.set(source.id, resourceOf(source));
 	}
 	Object.assign(uniforms, frame.uniforms);
-	return { resources: [...resources.values()], passes: top, uniforms, frame: frame.program() };
+	for (const [name, input] of frame.uniformInputs) uniformInputs.set(name, input);
+	return {
+		resources: [...resources.values()],
+		passes: top,
+		uniforms,
+		uniformInputs,
+		frame: frame.program(),
+	};
+}
+
+/** The uniforms of `plan` with the values its inputs have in `graph` now. */
+export function planUniforms(
+	plan: RenderPlan,
+	graph: Pick<CodegenGraph, "resolveNode">,
+): Record<string, UniformValue> {
+	const uniforms = { ...plan.uniforms };
+	for (const [name, { node, input, type, fallback }] of plan.uniformInputs) {
+		const stored = graph.resolveNode(node)?.data.values?.[input] ?? fallback;
+		uniforms[name] = uniformValue(type, stored);
+	}
+	return uniforms;
+}
+
+/** The inputs whose values can change without the plan, by `uniformInputKey`. */
+export function planUniformInputs(plan: RenderPlan): Set<string> {
+	return new Set(
+		[...plan.uniformInputs.values()].map(({ node, input }) => uniformInputKey(node, input)),
+	);
 }

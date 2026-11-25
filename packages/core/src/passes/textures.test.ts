@@ -283,6 +283,47 @@ describe("textures of any size and format", () => {
 		expect(program.textures.map((t) => t.sampleType)).toEqual(["unfilterable-float"]);
 	});
 
+	describe("read at a level", () => {
+		function atLevel(format: TextureFormat, data: TestNode["data"], leveled = true) {
+			const nodes: TestNode[] = [
+				{ id: "img", type: "image", data: { asset: "a" } },
+				{ id: "s", type: "sample-texture", ...(data ? { data } : {}) },
+				{ id: "t", type: "time" },
+			];
+			const edges: TestEdge[] = [
+				["img", "texture", "s", "texture"],
+				["s", "color", "out", "color"],
+				...(leveled ? [["t", "seconds", "s", "level"] as TestEdge] : []),
+			];
+			const graph = new GraphModel(project(nodes, edges));
+			const generated = generateShader(graph, {
+				sources: new Rendered(graph, CANVAS_SIZE, format),
+			});
+			expectValid(generated);
+			return generated.shader;
+		}
+
+		it("blend the two nearest levels of a 32-bit float texture filtered linearly", () => {
+			const shader = atLevel("rgba32float", { settings: { interpolation: "linear" } });
+			expect(shader).toContain("fn texture_trilinear(");
+			expect(shader).toContain("fn texture_bilinear(");
+			expect(shader).toContain("texture_trilinear(runtime_texture_0,");
+			expect(shader).not.toContain("round(");
+		});
+
+		it("read the base level once, by a single bilinear read", () => {
+			const shader = atLevel("rgba32float", {}, false);
+			expect(shader).not.toContain("texture_trilinear");
+			expect(shader).toContain("texture_bilinear(runtime_texture_0,");
+		});
+
+		it("round to a level when the filter is nearest", () => {
+			const shader = atLevel("rgba32float", { values: { interpolation: 1 } });
+			expect(shader).not.toContain("texture_trilinear");
+			expect(shader).toContain("round(");
+		});
+	});
+
 	it("are read at the nearest texel when integers", () => {
 		const { generated, program } = read(half, "r32uint", false);
 		expect(generated.shader).toContain("vec4f(textureLoad(runtime_texture_0, vec2i(clamp(");

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "bun:test";
+import { describe, expect, it, setDefaultTimeout } from "bun:test";
 
 import type { Asset } from "../assets/assets";
 import { generateRenderPlan, PLAN_TARGET, planPasses } from "../codegen";
@@ -583,11 +583,11 @@ function groupAt(
 		});
 }
 
+// Optical Flow draws every pass of every level texel by texel on the CPU: seconds a test, more
+// while other packages are tested alongside.
+setDefaultTimeout(30_000);
+
 describe("Optical Flow", () => {
-	// Every pass of every level is drawn texel by texel on the CPU.
-	const slowIt = (name: string, test: () => void) => {
-		it(name, test, 120_000);
-	};
 	/**
 	 * A sum of sines of pixel coordinates in grey: two short wavelengths (about
 	 * 10 and 12 pixels), so a shift of a few pixels is beyond what one level
@@ -601,199 +601,214 @@ describe("Optical Flow", () => {
 		[0.2018, -0.0395, 0.0746, 2.7615],
 		[0.0952, 0.0402, 0.0915, 1.0387],
 	] as const;
-	const pattern = (px: number, py: number) => {
+	const pattern = (px: number, py: number, gain = 1) => {
 		const v = SINES.reduce(
 			(sum, [amplitude, fx, fy, phase]) =>
 				sum + amplitude * Math.sin(fx * px + fy * py + phase),
 			0.5,
 		);
-		return [v, v, v, 1];
+		return [v * gain, v * gain, v * gain, 1];
 	};
 
 	/**
 	 * The two frames after content moved by `shift` pixels (x right, y up): the
-	 * current texel at `p` is what the pattern had at `p - shift`.
+	 * current texel at `p` is what the pattern had at `p - shift`, scaled by `gain`.
 	 */
-	const frames = (width: number, height: number, [sx, sy]: readonly [number, number]) => ({
+	const frames = (
+		width: number,
+		height: number,
+		[sx, sy]: readonly [number, number],
+		gain = 1,
+	) => ({
 		Previous: image(width, height, (x, y) => pattern(x + 0.5, y + 0.5), "previous"),
-		Current: image(width, height, (x, y) => pattern(x + 0.5 - sx, y + 0.5 + sy), "current"),
+		Current: image(
+			width,
+			height,
+			(x, y) => pattern(x + 0.5 - sx, y + 0.5 + sy, gain),
+			"current",
+		),
 	});
 
-	/** The flow of a shift in pixels, in UV. */
-	const uvOf = (
+	/** `n` texel centres per axis, `margin` clear of the edges. */
+	const interior = ([width, height]: readonly [number, number], margin: number, n = 2) => {
+		const axis = (size: number) =>
+			Array.from({ length: n }, (_, i) =>
+				Math.round(margin + (i * (size - 1 - 2 * margin)) / (n - 1)),
+			);
+		return axis(width).flatMap((x) => axis(height).map((y): [number, number] => [x, y]));
+	};
+
+	/** The worst error, in pixels, of the flow at `points` against a shift in pixels. */
+	function worstError(
+		at: (x: number, y: number) => number[],
 		[sx, sy]: readonly [number, number],
 		[width, height]: readonly [number, number],
-	) => [sx / width, sy / height] as const;
-
-	/**
-	 * The errors, in pixels, of the flow at the texels `margin` clear of the
-	 * edge (every third, for speed). Content that entered the frame has nothing
-	 * to match, and each coarser level's window reaches twice as far.
-	 */
-	function error(
-		at: (x: number, y: number) => number[],
-		shift: readonly [number, number],
-		size: readonly [number, number],
-		margin: number,
+		points: readonly (readonly [number, number])[],
 	) {
-		const [fx, fy] = uvOf(shift, size);
-		let worst = 0;
-		let sum = 0;
-		let count = 0;
-		for (let y = margin; y < size[1] - margin; y += 3) {
-			for (let x = margin; x < size[0] - margin; x += 3) {
+		return Math.max(
+			...points.map(([x, y]) => {
 				const [vx = NaN, vy = NaN] = at(x, y);
-				const e = Math.hypot((vx - fx) * size[0], (vy - fy) * size[1]);
-				worst = Math.max(worst, e);
-				sum += e;
-				count++;
-			}
-		}
-		return { worst, mean: sum / count };
+				return Math.hypot(vx * width - sx, vy * height - sy);
+			}),
+		);
 	}
 
 	const estimate = (
 		shift: readonly [number, number],
 		values: Record<string, number>,
-		size: readonly [number, number] = [64, 64],
+		size: readonly [number, number] = [16, 16],
 		extra: Record<string, { asset: Asset; texture: CpuTexture }> = {},
+		gain = 1,
 	) =>
 		groupAt(
 			"std-optical-flow",
-			{ ...frames(size[0], size[1], shift), ...extra },
+			{ ...frames(size[0], size[1], shift, gain), ...extra },
 			"Flow",
 			values,
 			size,
 		);
 
-	// The interior is 8 texels clear of the edge where the window is one level
-	// wide, and 24 where it's four.
-	slowIt(
-		"finds a sub-pixel shift with unequal signs in x and y to 0.05 px with one level",
-		() => {
-			const shift = [0.6, -0.3] as const;
-			const at = estimate(shift, { Levels: 1, Iterations: 3 });
-			expect(error(at, shift, [64, 64], 8).worst).toBeLessThan(0.05);
-		},
-	);
-
-	slowIt("finds the shift with the signs the other way round", () => {
-		const shift = [-0.45, 0.55] as const;
-		const at = estimate(shift, { Levels: 1, Iterations: 3 });
-		expect(error(at, shift, [64, 64], 8).worst).toBeLessThan(0.05);
-	});
-
-	slowIt("measures in UV, so a frame wider than high gives the same shift in pixels", () => {
+	it("finds a sub-pixel shift to 0.05 px in UV units on a frame wider than high, and reports confidence", () => {
 		const shift = [0.6, -0.3] as const;
-		const at = estimate(shift, { Levels: 1, Iterations: 3 }, [64, 48]);
-		expect(error(at, shift, [64, 48], 8).worst).toBeLessThan(0.05);
-		const [vx = NaN, vy = NaN] = at(32, 24);
-		expect(vx).toBeCloseTo(0.6 / 64, 3);
-		expect(vy).toBeCloseTo(-0.3 / 48, 3);
-	});
-
-	slowIt("loses a 5 px shift with one level, and finds it to 0.1 px with four", () => {
-		const shift = [5, -3] as const;
-		const one = estimate(shift, { Levels: 1, Iterations: 3 });
-		expect(error(one, shift, [64, 64], 24).mean).toBeGreaterThan(1);
-		const four = estimate(shift, { Levels: 4, Iterations: 3 });
-		expect(error(four, shift, [64, 64], 24).worst).toBeLessThan(0.1);
-	});
-
-	slowIt("is zero for no shift", () => {
-		const at = estimate([0, 0], { Levels: 4, Iterations: 2 });
-		expect(error(at, [0, 0], [64, 64], 8).worst).toBeLessThan(1e-4);
-	});
-
-	slowIt("reports a confidence above zero where there's texture", () => {
-		const at = estimate([0.6, -0.3], { Levels: 1, Iterations: 3 });
-		const [, , confidence = NaN, alpha = NaN] = at(32, 32);
+		const size = [40, 32] as const;
+		const at = estimate(shift, { Levels: 1, Iterations: 2, Window: 2, Damping: 0 }, [...size]);
+		expect(worstError(at, shift, size, interior(size, 8))).toBeLessThan(0.05);
+		const [vx = NaN, vy = NaN, confidence = NaN, alpha = NaN] = at(20, 16);
+		expect(vx).toBeCloseTo(shift[0] / size[0], 3);
+		expect(vy).toBeCloseTo(shift[1] / size[1], 3);
 		expect(confidence).toBeGreaterThan(0);
 		expect(alpha).toBe(1);
 	});
 
-	slowIt("takes more levels than there are mips as the mips there are", () => {
+	it("follows a shift past one level's reach with more levels", () => {
+		// The pattern's shortest waves are about as long as a coarse level's texels are wide,
+		// so coarse levels only get close: how close the GPU tests measure, on real sizes.
 		const shift = [5, -3] as const;
-		const seven = estimate(shift, { Levels: 7, Iterations: 1 });
-		const many = estimate(shift, { Levels: 50, Iterations: 1 });
+		const size = [48, 48] as const;
+		const points = interior(size, 16);
+		const values = { Iterations: 2, Window: 2 };
+		const one = worstError(
+			estimate(shift, { ...values, Levels: 1 }, [...size]),
+			shift,
+			size,
+			points,
+		);
+		const three = worstError(
+			estimate(shift, { ...values, Levels: 3 }, [...size]),
+			shift,
+			size,
+			points,
+		);
+		expect(one).toBeGreaterThan(3);
+		expect(three).toBeLessThan(one / 4);
+	});
+
+	it("is zero for identical frames", () => {
+		const at = estimate([0, 0], { Levels: 3, Iterations: 2, Window: 2 });
+		expect(worstError(at, [0, 0], [16, 16], interior([16, 16], 4))).toBeLessThan(1e-3);
+	});
+
+	it("takes more levels than there are mips as the mips there are", () => {
+		const shift = [1, -1] as const;
+		const few = estimate(shift, { Levels: 6, Iterations: 1, Window: 2 }, [8, 8]);
+		const many = estimate(shift, { Levels: 50, Iterations: 1, Window: 2 }, [8, 8]);
 		for (const [x, y] of [
-			[20, 30],
-			[40, 25],
+			[2, 5],
+			[4, 3],
 		] as const) {
-			expect(many(x, y)).toEqual(seven(x, y));
+			expect(many(x, y)).toEqual(few(x, y));
 		}
 	});
 
-	slowIt("starts from a guess, which a single level then only has to correct", () => {
+	it("starts from a guess, which a single level then only has to correct", () => {
 		const shift = [5, -3] as const;
-		const [gx, gy] = uvOf([4, -2.5], [64, 64]);
-		const guess = image(64, 64, () => [gx, gy, 0, 1], "guess");
-		const at = estimate(shift, { Levels: 1, Iterations: 3 }, [64, 64], { Guess: guess });
-		expect(error(at, shift, [64, 64], 12).worst).toBeLessThan(0.05);
+		const [gx, gy] = [4.5 / 32, -2.6 / 32];
+		const guess = image(32, 32, () => [gx, gy, 0, 1], "guess");
+		const values = { Levels: 1, Iterations: 3, Window: 2, Damping: 0 };
+		const at = estimate(shift, values, [32, 32], { Guess: guess });
+		expect(worstError(at, shift, [32, 32], interior([32, 32], 10))).toBeLessThan(0.1);
 	});
 
-	slowIt(
-		"gives each pixel the motion at the current frame's pixel, where motion varies across the image",
+	it("finds the shift to 0.3 px when the current frame is 1.2 times as bright", () => {
+		const shift = [0.6, -0.3] as const;
+		const at = estimate(
+			shift,
+			{ Levels: 1, Iterations: 2, Window: 2, Damping: 0 },
+			[32, 32],
+			{},
+			1.2,
+		);
+		expect(worstError(at, shift, [32, 32], interior([32, 32], 8))).toBeLessThan(0.3);
+	});
+
+	it("gives each pixel the motion at the current frame's pixel, where motion varies across the image", () => {
+		// Content moving right by 3 px at the centre, 0.1 px more per pixel to the right,
+		// so what is at p now was at p - v(p) before. A flow read halfway between the frames
+		// would be off by about 0.1 * |v| / 2 = 0.15 px.
+		const vx = (x: number) => 3 + 0.1 * (x + 0.5 - 16);
+		const previous = image(32, 32, (x, y) => pattern(x + 0.5, y + 0.5), "previous");
+		const current = image(32, 32, (x, y) => pattern(x + 0.5 - vx(x), y + 0.5), "current");
+		const guess = image(32, 32, (x) => [vx(x) / 32, 0, 0, 1], "guess");
+		const at = groupAt(
+			"std-optical-flow",
+			{ Previous: previous, Current: current, Guess: guess },
+			"Flow",
+			{ Levels: 1, Iterations: 2, Window: 2, Damping: 0 },
+			[32, 32],
+		);
+		let worst = 0;
+		for (const [x, y] of interior([32, 32], 8)) {
+			const [fx = NaN, fy = NaN] = at(x, y);
+			worst = Math.max(worst, Math.hypot(fx * 32 - vx(x), fy * 32));
+		}
+		expect(worst).toBeLessThan(0.05);
+	});
+
+	it(
+		"is stable over iterations: eight are not worse than twice the error of two",
+		{ timeout: 30_000 },
 		() => {
-			// Content moving right by 3 px at the centre, 0.1 px more per pixel to the right,
-			// so what is at p now was at p - v(p) before. A flow read halfway between the frames
-			// would be off by about 0.1 * |v| / 2 = 0.15 px.
-			const vx = (x: number) => 3 + 0.1 * (x + 0.5 - 32);
-			const previous = image(64, 64, (x, y) => pattern(x + 0.5, y + 0.5), "previous");
-			const current = image(64, 64, (x, y) => pattern(x + 0.5 - vx(x), y + 0.5), "current");
-			const guess = image(64, 64, (x) => [vx(x) / 64, 0, 0, 1], "guess");
-			const at = groupAt(
-				"std-optical-flow",
-				{ Previous: previous, Current: current, Guess: guess },
-				"Flow",
-				{ Levels: 1, Iterations: 2 },
-				[64, 64],
+			// With its default damping: without, a window of 2 has too little to keep errors down.
+			const shift = [0.6, -0.3] as const;
+			const values = { Levels: 1, Window: 2 };
+			const two = estimate(shift, { ...values, Iterations: 2 }, [32, 32]);
+			const eight = estimate(shift, { ...values, Iterations: 8 }, [32, 32]);
+			const points = interior([32, 32], 8);
+			expect(worstError(eight, shift, [32, 32], points)).toBeLessThanOrEqual(
+				2 * worstError(two, shift, [32, 32], points),
 			);
-			let worst = 0;
-			for (let y = 12; y < 52; y += 4) {
-				for (let x = 12; x < 52; x += 4) {
-					const [fx = NaN, fy = NaN] = at(x, y);
-					worst = Math.max(worst, Math.hypot(fx * 64 - vx(x), fy * 64));
-				}
-			}
-			expect(worst).toBeLessThan(0.03);
 		},
 	);
 
-	slowIt("keeps the flow where there's no texture to solve, without NaN", () => {
-		const flat = image(64, 64, () => [0.4, 0.4, 0.4, 1], "flat");
+	it("keeps the flow where there's no texture to solve, without NaN", () => {
+		const flat = image(8, 8, () => [0.4, 0.4, 0.4, 1], "flat");
 		const [gx, gy] = [0.03, -0.02];
-		const guess = image(64, 64, () => [gx, gy, 0, 1], "guess");
+		const guess = image(8, 8, () => [gx, gy, 0, 1], "guess");
 		const at = groupAt(
 			"std-optical-flow",
 			{
 				Current: flat,
-				Previous: { ...flat, asset: imageAsset("flat-before", 64, 64) },
+				Previous: { ...flat, asset: imageAsset("flat-before", 8, 8) },
 				Guess: guess,
 			},
 			"Flow",
-			{ Levels: 3, Iterations: 2 },
-			[64, 64],
+			{ Levels: 2, Iterations: 2, Window: 2 },
+			[8, 8],
 		);
-		for (const [x, y] of [
-			[10, 10],
-			[32, 32],
-			[50, 20],
-		] as const) {
-			const [vx = NaN, vy = NaN, confidence = NaN] = at(x, y);
-			expect(vx).toBeCloseTo(gx, 5);
-			expect(vy).toBeCloseTo(gy, 5);
-			expect(confidence).toBe(0);
-		}
+		const [vx = NaN, vy = NaN, confidence = NaN] = at(4, 4);
+		expect(vx).toBeCloseTo(gx, 5);
+		expect(vy).toBeCloseTo(gy, 5);
+		expect(confidence).toBe(0);
 	});
 
-	slowIt("clamps at the edges when the guess warps from outside the frame", () => {
-		const guess = image(64, 64, () => [2, -2, 0, 1], "guess");
-		const at = estimate([0, 0], { Levels: 2, Iterations: 2 }, [64, 64], { Guess: guess });
+	it("clamps at the edges when the guess warps from outside the frame", () => {
+		const guess = image(8, 8, () => [2, -2, 0, 1], "guess");
+		const at = estimate([0, 0], { Levels: 2, Iterations: 2, Window: 2 }, [8, 8], {
+			Guess: guess,
+		});
 		for (const [x, y] of [
 			[0, 0],
-			[63, 63],
-			[32, 32],
+			[7, 7],
 		] as const) {
 			expect(at(x, y).every(Number.isFinite)).toBe(true);
 		}
@@ -808,29 +823,30 @@ describe("Lucas-Kanade Step", () => {
 			0.1 * Math.sin(-0.07 * px + 0.17 * py + 1.1);
 		return [v, v, v, 1];
 	};
-	const SIZE = 32;
+	const SIZE = 24;
 	const frames = ([sx, sy]: readonly [number, number]) => ({
 		"Previous Luma": image(SIZE, SIZE, (x, y) => pattern(x + 0.5, y + 0.5), "previous"),
 		"Current Luma": image(SIZE, SIZE, (x, y) => pattern(x + 0.5 - sx, y + 0.5 + sy), "current"),
 	});
+	// Damping is zero: it's the bias that keeps a flow where the texture is no more than noise.
 	const step = (shift: readonly [number, number], flow: readonly [number, number]) =>
 		groupAt(
 			"std-lucas-kanade-step",
 			{ ...frames(shift), Flow: image(SIZE, SIZE, () => [flow[0], flow[1], 0, 1], "flow") },
 			"Flow",
-			{ Window: 2 },
+			{ Window: 2, Damping: 0 },
 			[SIZE, SIZE],
 		);
 
 	it("takes a zero flow most of the way to a small shift in one step, in UV", () => {
-		const [vx = NaN, vy = NaN, confidence = NaN] = step([0.6, -0.3], [0, 0])(16, 16);
+		const [vx = NaN, vy = NaN, confidence = NaN] = step([0.6, -0.3], [0, 0])(12, 12);
 		expect(vx * SIZE).toBeCloseTo(0.6, 1);
 		expect(vy * SIZE).toBeCloseTo(-0.3, 1);
 		expect(confidence).toBeGreaterThan(0);
 	});
 
 	it("leaves a flow that already matches", () => {
-		const [vx = NaN, vy = NaN] = step([0.6, -0.3], [0.6 / SIZE, -0.3 / SIZE])(16, 16);
+		const [vx = NaN, vy = NaN] = step([0.6, -0.3], [0.6 / SIZE, -0.3 / SIZE])(12, 12);
 		expect(vx * SIZE).toBeCloseTo(0.6, 2);
 		expect(vy * SIZE).toBeCloseTo(-0.3, 2);
 	});

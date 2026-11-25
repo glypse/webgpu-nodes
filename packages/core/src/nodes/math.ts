@@ -55,7 +55,8 @@ export const absNode = defineNode({
 });
 export const signNode = defineNode({
 	...unaryFn("sign", "Sign", "sign", SIGNED_TYPES),
-	cpu: unaryCpu(Math.sign),
+	// Math.sign keeps the sign of a zero, which WGSL's sign doesn't.
+	cpu: unaryCpu((n) => (n === 0 ? 0 : Math.sign(n))),
 	aliases: ["Signum", "sgn"],
 });
 export const negateNode = defineNode({

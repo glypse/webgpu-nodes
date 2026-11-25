@@ -38,8 +38,8 @@ export function zoneOptions(definitions: Definitions): ZoneAnalysisOptions {
 }
 
 const REPEAT_REASON =
-	"Passes can't be repeated inside a repeat zone, which is one pixel's computation.";
-const SIMULATION_REASON = "A simulation steps once a frame: it can't be inside a zone.";
+	"A repeat zone runs inside one pass, for each pixel: it can't repeat whole passes.";
+const SIMULATION_REASON = "A simulation steps once a frame, so it can't be inside a zone.";
 
 export type Zone = {
 	/** The zone's id: its input node's id. */
@@ -196,6 +196,36 @@ function topoOrder(ids: string[], edges: { source: string; target: string }[]): 
 	return [...order, ...ids.filter((id) => !placed.has(id))];
 }
 
+type MemoEntry = {
+	edges: readonly MinimalEdge[];
+	options: ZoneAnalysisOptions;
+	analysis: ZoneAnalysis;
+};
+
+const analyses = new WeakMap<readonly MinimalNode[], MemoEntry>();
+
+/**
+ * The zones of a document, derived from its nodes and edges and memoised on
+ * their arrays, which edits replace: codegen asks for them in every pass.
+ */
+export function analyzeZones(
+	nodes: readonly MinimalNode[],
+	edges: readonly MinimalEdge[],
+	options: ZoneAnalysisOptions = {},
+): ZoneAnalysis {
+	const known = analyses.get(nodes);
+	if (
+		known?.edges === edges &&
+		known.options.simulating === options.simulating &&
+		known.options.looping === options.looping
+	) {
+		return known.analysis;
+	}
+	const analysis = computeZones(nodes, edges, options);
+	analyses.set(nodes, { edges, options, analysis });
+	return analysis;
+}
+
 /**
  * Work out zone membership, nesting and invalid links for one document,
  * following Blender's rules (blenkernel/intern/node_tree_zones.cc):
@@ -211,7 +241,7 @@ function topoOrder(ids: string[], edges: { source: string; target: string }[]): 
  *   is re-run until it is stable.
  * - Remaining links may only stay in a zone or enter a nested one, never leave.
  */
-export function analyzeZones(
+function computeZones(
 	nodes: readonly MinimalNode[],
 	edges: readonly MinimalEdge[],
 	{ simulating, looping }: ZoneAnalysisOptions = {},

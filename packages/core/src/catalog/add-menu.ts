@@ -38,6 +38,8 @@ export type AddMenuEntry = {
 	label: string;
 	/** Other names search finds it by (see `NodeDescriptor.aliases`). */
 	aliases: readonly string[];
+	/** What the entry is for, shown beside its label where names alone are ambiguous. */
+	description?: string;
 	/** Heading the entry is listed under. */
 	heading: string;
 	/** Nested sections under the heading the entry is listed in, outermost first. */
@@ -216,6 +218,7 @@ export function addMenuEntries(
 			key: "zone:repeat",
 			label: "Repeat Zone",
 			aliases: ["Loop", "For Loop", "For Each", "Iterate", "While"],
+			description: "Runs per pixel, inside one pass",
 			heading: CATEGORY_LABELS.zone,
 			kind: "zone",
 			zone: "repeat",
@@ -227,6 +230,7 @@ export function addMenuEntries(
 			key: "zone:simulation",
 			label: "Simulation Zone",
 			aliases: ["Feedback", "Previous Frame", "Persistent", "State", "Ping Pong"],
+			description: "Keeps state between frames",
 			heading: CATEGORY_LABELS.zone,
 			kind: "zone",
 			zone: "simulation",
@@ -237,7 +241,8 @@ export function addMenuEntries(
 		{
 			key: "zone:passes",
 			label: "Repeat Passes",
-			aliases: ["Loop", "Iterate", "Multipass", "Feedback Loop", "Ping Pong", "For Loop"],
+			aliases: ["Loop", "Iterate", "Multipass", "For Loop"],
+			description: "Repeats whole passes, keeping textures between iterations",
 			heading: CATEGORY_LABELS.zone,
 			kind: "zone",
 			zone: "passes",

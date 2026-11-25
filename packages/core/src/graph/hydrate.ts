@@ -23,24 +23,37 @@ import {
 	type HydratedGraphDocument,
 	type HydratedGraphProject,
 } from "./document";
+import { frameHandleIds } from "./frame-handles";
 
 // ── Pure helpers ─────────────────────────────────────────────────────────────
 
 export function resolveDescriptor(
 	node: GraphNode,
 	definitions: Map<string, HydratedGraphDocument>,
+	/** The document holding a node: searched for without. */
+	documentOf: (nodeId: string) => HydratedGraphDocument | undefined = (id) =>
+		[...definitions.values()].find((d) => d.nodesById.has(id)),
 ): NodeDescriptor {
 	if (node.type === "group-input" || node.type === "group-output") {
-		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
+		const doc = documentOf(node.id);
 		return node.type === "group-input"
 			? buildGroupInputDescriptor(doc?.inputs ?? [], doc?.typeVariables ?? [])
 			: buildGroupOutputDescriptor(doc?.outputs ?? [], doc?.typeVariables ?? []);
 	}
 	if (node.type === "node-group") {
-		return buildGroupDescriptor(node, definitions);
+		const definition = definitions.get(node.group?.definitionRef ?? "");
+		return buildGroupDescriptor(
+			node,
+			definitions,
+			definition
+				? frameHandleIds(definition, definitions, (n) =>
+						resolveDescriptor(n, definitions, documentOf),
+					)
+				: new Set(),
+		);
 	}
 	if (isZoneNodeType(node.type)) {
-		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
+		const doc = documentOf(node.id);
 		return buildZoneDescriptor(node, definitions, doc?.typeVariables ?? []);
 	}
 	if (node.type === CUSTOM_WGSL) {
@@ -56,7 +69,7 @@ export function resolveDescriptor(
 		return buildColorRampDescriptor(node.data);
 	}
 	if (node.type === MATCH) {
-		const doc = [...definitions.values()].find((d) => d.nodesById.has(node.id));
+		const doc = documentOf(node.id);
 		return buildMatchDescriptor(doc && enumAt(doc, node.id, MATCH_SELECTOR));
 	}
 	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion -- fallback is safe

@@ -19,6 +19,23 @@ export const BILINEAR_SOURCE = `fn ${BILINEAR_FN}(t: texture_2d<f32>, coords: ve
 	return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }`;
 
+/** How a level that is a literal zero is written. */
+const BASE_LEVEL = /^(0\.0|f32\(0\))$/;
+
+export const TRILINEAR_FN = "texture_trilinear";
+
+/** Blends the two levels around a fractional one, as a filterable texture's sampler does. */
+export const TRILINEAR_SOURCE = `fn ${TRILINEAR_FN}(t: texture_2d<f32>, coords: vec2f, level: f32) -> vec4f {
+	let clamped = clamp(level, 0.0, f32(textureNumLevels(t) - 1u));
+	let lower = floor(clamped);
+	let f = clamped - lower;
+	let a = ${BILINEAR_FN}(t, coords, i32(lower));
+	if (f == 0.0) {
+		return a;
+	}
+	return mix(a, ${BILINEAR_FN}(t, coords, i32(lower) + 1), f);
+}`;
+
 /** A `textureLoad` of a texture of `format` as a `vec4f`. */
 export function texelAsColor(load: string, format: TextureFormat): string {
 	return scalarOf(format) === "f32" ? load : `vec4f(${load})`;
@@ -26,7 +43,7 @@ export function texelAsColor(load: string, format: TextureFormat): string {
 
 /**
  * A texture's value at `coords` (origin top-left, 0 to 1): sampled where
- * the format filters, else by hand: 32-bit floats bilinearly, integers
+ * the format filters, else by hand: 32-bit floats bilinearly (blending the two nearest levels at a fractional one), integers
  * (which can't be interpolated) at the nearest texel. Out of range
  * coordinates are clamped, so a wrapping address is the caller's to apply
  * to the coordinates when the format can't be sampled.
@@ -52,6 +69,16 @@ export function readTexture(
 ): string {
 	if (isFilterable(format)) {
 		return `textureSampleLevel(${texture}, ${sampler(filter, address)}, ${coords}, ${level ?? "0.0"})`;
+	}
+	// A level known to be the base one needs no second read.
+	if (
+		scalarOf(format) === "f32" &&
+		filter === "linear" &&
+		level !== undefined &&
+		!BASE_LEVEL.test(level)
+	) {
+		define(BILINEAR_FN, BILINEAR_SOURCE);
+		return `${define(TRILINEAR_FN, TRILINEAR_SOURCE)}(${texture}, ${coords}, ${level})`;
 	}
 	// Texel reads take whole levels, which have to exist.
 	const whole =

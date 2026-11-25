@@ -58,8 +58,12 @@ export class ProgramError extends Error {
 /** The format programs draw into: linear, and wide enough for colours outside sRGB. */
 const LINEAR_FORMAT: TextureFormat = "rgba16float";
 const READBACK_FORMAT: GPUTextureFormat = "rgba8unorm";
-/** Compiled pipelines kept for programs not in use, e.g. while switching between documents. */
-const PIPELINE_CACHE_SIZE = 8;
+/**
+ * Compiled pipelines kept, for an edit to recompile only the programs it changes and for
+ * switching between documents. A plan alone has dozens of programs, and fewer entries than
+ * that would miss on every one.
+ */
+const PIPELINE_CACHE_SIZE = 128;
 /**
  * Past this, the browser notices finished work on a slow timer (Firefox:
  * about 100 ms) unless frames keep being presented, so waiting for each frame
@@ -171,15 +175,11 @@ export class CompiledPlan {
 	 * a video's `time` says another. `values` runs the frame program, only
 	 * when one is needed.
 	 */
-	private mediaTime(
-		id: string,
-		frame: FrameInputs,
-		values: () => FrameValues | undefined,
-	): number {
+	private mediaTime(id: string, frame: FrameInputs, values: () => FrameValues): number {
 		const resource = this.resources.get(id);
 		const time = resource?.kind === "media" ? resource.time : undefined;
 		if (time === undefined) return frame.time;
-		return typeof time === "number" ? time : (values()?.arg(time) ?? frame.time);
+		return typeof time === "number" ? time : values().arg(time);
 	}
 
 	/** Decode the media the plan reads at `frame` (see `MediaLibrary.prepare`). */
@@ -253,20 +253,9 @@ export class CompiledPlan {
 		{ timing, media }: { timing?: FrameTiming; media?: TextureOf } = {},
 	) {
 		const canvas: Size = { width: target.width, height: target.height };
-		// A time that reads the size of media is what's being decided: it has
-		// nothing to start from, so the frame's time stands in.
-		let evaluatingTimes = false;
 		let timeValues: FrameValues | undefined;
 		const timeOf = (id: string) =>
-			this.mediaTime(id, frame, () => {
-				if (evaluatingTimes) return undefined;
-				evaluatingTimes = true;
-				try {
-					return (timeValues ??= walk.evaluate(canvas));
-				} finally {
-					evaluatingTimes = false;
-				}
-			});
+			this.mediaTime(id, frame, () => (timeValues ??= walk.evaluate(canvas)));
 		const mediaOf: TextureOf =
 			media ?? ((source) => this.media.texture(source, timeOf(source.id)));
 		const walk = new PlanWalk({
@@ -453,7 +442,9 @@ export class Renderer {
 		program: ShaderProgram,
 		formats: readonly GPUTextureFormat[],
 	): Promise<CompiledProgram> {
-		const key = `${program.vertexEntry}|${program.fragmentEntry}|${formats.join(",")}|${program.code}`;
+		// The same code may read textures of other formats, bound as other sample types.
+		const sampled = program.textures.map((t) => t.sampleType);
+		const key = `${program.vertexEntry}|${program.fragmentEntry}|${formats.join(",")}|${sampled.join(",")}|${program.code}`;
 		let pipeline = this.pipelines.get(key);
 		if (pipeline) {
 			// Most recently used last, so eviction drops the least recently used.

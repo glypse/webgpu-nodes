@@ -111,6 +111,8 @@ export function groupInputDef(
 export function buildGroupDescriptor(
 	node: GraphNode,
 	definitions: Map<string, HydratedGraphDocument>,
+	/** The inputs that need a frame value (see `frameHandleIds`). */
+	frames: ReadonlySet<string>,
 ): NodeDescriptor {
 	const definitionRef = node.group?.definitionRef;
 	const definition = definitionRef ? definitions.get(definitionRef) : undefined;
@@ -150,6 +152,7 @@ export function buildGroupDescriptor(
 		inputs: handles.inputs.map((h) => ({
 			...groupInputDef(h, definition.typeVariables),
 			...(fallbacks.has(h.id) ? { fallback: true } : {}),
+			...(frames.has(h.id) ? { frame: true } : {}),
 		})),
 		outputs: handles.outputs.map((h) => ({
 			id: h.id,

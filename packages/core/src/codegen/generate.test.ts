@@ -1,20 +1,18 @@
 import { describe, expect, it } from "bun:test";
 
-import { generateShader } from ".";
+import { generateRenderPlan } from ".";
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import { debugScene as debugProject, defaultScene as defaultProject } from "../scenes";
-import { nagaBin, validateFragment } from "../testing/wgsl";
+import { nagaBin, validatePlan } from "../testing/wgsl";
 
 describe.skipIf(!nagaBin)("generated WGSL validates with naga", () => {
 	it("default project", () => {
-		const { shader } = generateShader(new GraphModel(defaultProject));
-		expect(validateFragment(shader)).toBeNull();
+		expect(validatePlan(generateRenderPlan(new GraphModel(defaultProject)))).toEqual([]);
 	});
 
 	it("debug project", () => {
-		const { shader } = generateShader(new GraphModel(debugProject));
-		expect(validateFragment(shader)).toBeNull();
+		expect(validatePlan(generateRenderPlan(new GraphModel(debugProject)))).toEqual([]);
 	});
 });
 

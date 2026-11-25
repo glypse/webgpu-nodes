@@ -20,6 +20,7 @@
 		}
 	},
 	"scripts": {
+		"scene:build": "bun scripts/scene/build.ts",
 		"stdlib:archive": "bun scripts/archive-stdlib.ts",
 		"stdlib:build": "bun scripts/stdlib/build.ts"
 	},

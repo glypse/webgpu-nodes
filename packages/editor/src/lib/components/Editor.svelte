@@ -1,5 +1,12 @@
 <script lang="ts">
-	import { generateRenderPlan, planPasses, reachableShaderHash, type RenderPlan } from "$core";
+	import {
+		generateRenderPlan,
+		planPasses,
+		planUniformInputs,
+		planUniforms,
+		reachableShaderHash,
+		type RenderPlan,
+	} from "$core";
 	import { setDisplayGamut } from "$theme";
 	import { untrack } from "svelte";
 
@@ -49,6 +56,8 @@
 	// group definitions don't trigger unnecessary shader regeneration.
 	let prevHash = "";
 	let prevCode = "";
+	/** The plan shown, the inputs its uniforms hold, and the hash of the rest. */
+	let shown: { plan: RenderPlan; inputs: ReadonlySet<string>; hash: string } | undefined;
 
 	// The values of the documents graph areas show are uniforms: editing them
 	// only changes the uniforms, while the fragment (and its compiled
@@ -68,6 +77,15 @@
 		const hash = `${uniformScopes.join(",")}|${reachableShaderHash(graph.project, graph.assets)}`;
 		if (hash === prevHash) return;
 		prevHash = hash;
+		const hashWithout = (inputs: ReadonlySet<string>) =>
+			`${uniformScopes.join(",")}|${reachableShaderHash(graph.project, graph.assets, inputs)}`;
+		const known = shown;
+		const without = known ? hashWithout(known.inputs) : undefined;
+		const unchanged = known?.hash === without ? known : undefined;
+		if (unchanged) {
+			preview.setUniforms(planUniforms(unchanged.plan, graph));
+			return;
+		}
 		let generated: RenderPlan;
 		try {
 			generated = generateRenderPlan(graph, { uniformScopes });
@@ -76,6 +94,8 @@
 			console.error("[shader] generation failed", error);
 			return;
 		}
+		const inputs = planUniformInputs(generated);
+		shown = { plan: generated, inputs, hash: hashWithout(inputs) };
 		preview.setSource(generated);
 		const code = planPasses(generated.passes)
 			.map((p) => `// ${p.writes.join(", ")}\n${p.program.code}`)

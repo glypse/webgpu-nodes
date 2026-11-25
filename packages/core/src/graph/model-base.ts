@@ -361,44 +361,49 @@ export abstract class GraphModelBase {
 
 	// ── Lookups and navigation ──────────────────────────────────────────────────
 
-	/**
-	 * Look up any node by ID across all documents in the project.
-	 * Used as the `resolveNode` callback for the TypeResolver.
-	 */
-	resolveNode(nodeId: string): GraphNode | undefined {
-		for (const def of this.project.definitions.values()) {
-			const n = def.nodesById.get(nodeId);
-			if (n) return n;
-		}
-		return undefined;
-	}
+	/** The document each node was last found in, per set of definitions. */
+	private homes = new WeakMap<object, Map<string, HydratedGraphDocument>>();
 
-	/** The document holding a node, anywhere in the project. */
+	/**
+	 * The document holding a node, anywhere in the project. Type inference asks
+	 * for every link it follows, so it looks where the node was last found
+	 * before searching: a search reads every document, which a front end's
+	 * queries would then all depend on.
+	 */
+	// Rust: address nodes by (document, node) handles, and there's nothing to search.
 	protected documentOf(nodeId: string): HydratedGraphDocument | undefined {
-		for (const doc of this.project.definitions.values()) {
-			if (doc.nodesById.has(nodeId)) return doc;
+		const { definitions } = this.project;
+		let homes = this.homes.get(definitions);
+		if (!homes) {
+			homes = new Map<string, HydratedGraphDocument>();
+			this.homes.set(definitions, homes);
+		}
+		const home = homes.get(nodeId);
+		if (home?.nodesById.has(nodeId)) return home;
+		for (const doc of definitions.values()) {
+			if (!doc.nodesById.has(nodeId)) continue;
+			homes.set(nodeId, doc);
+			return doc;
 		}
 		return undefined;
 	}
 
-	/**
-	 * Find all edges targeting a node across the entire project.
-	 * Used by TypeResolver for recursive type inference.
-	 */
+	/** Look up any node by ID across all documents in the project. */
+	resolveNode(nodeId: string): GraphNode | undefined {
+		return this.documentOf(nodeId)?.nodesById.get(nodeId);
+	}
+
 	/** The key of the document a node is in, if any. */
 	definitionRefOf(nodeId: string): string | undefined {
-		for (const [ref, doc] of this.project.definitions) {
-			if (doc.nodesById.has(nodeId)) return ref;
-		}
+		const home = this.documentOf(nodeId);
+		if (!home) return undefined;
+		for (const [ref, doc] of this.project.definitions) if (doc === home) return ref;
 		return undefined;
 	}
 
+	/** The links into a node, in the document holding it. */
 	protected getIncomingEdges(nodeId: string): GraphEdge[] {
-		for (const def of this.project.definitions.values()) {
-			const edges = def.edgesByTarget.get(nodeId) ?? [];
-			if (edges.length > 0) return edges;
-		}
-		return [];
+		return this.documentOf(nodeId)?.edgesByTarget.get(nodeId) ?? [];
 	}
 
 	/**
@@ -455,47 +460,14 @@ export abstract class GraphModelBase {
 	}
 
 	resolveDescriptor(node: GraphNode): NodeDescriptor {
-		return resolveDescriptor(node, this.project.definitions);
+		return resolveDescriptor(node, this.project.definitions, (id) => this.documentOf(id));
 	}
 
 	// ── Zones ───────────────────────────────────────────────────────────────────
 
-	protected zoneCache = new WeakMap<
-		HydratedGraphDocument,
-		{
-			nodes: GraphNode[];
-			edges: GraphEdge[];
-			simulating: ReadonlySet<string> | undefined;
-			looping: ReadonlySet<string> | undefined;
-			analysis: ZoneAnalysis;
-		}
-	>();
-
-	/**
-	 * Zone membership / invalid links of a document. Derived from its nodes and
-	 * edges (the single source of truth), and from which groups simulate, and
-	 * memoised on their identity.
-	 */
+	/** Zone membership and invalid links of a document, and which groups simulate. */
 	zoneAnalysis(doc: HydratedGraphDocument): ZoneAnalysis {
-		const options = zoneOptions(this.project.definitions);
-		const cached = this.zoneCache.get(doc);
-		if (
-			cached?.nodes === doc.nodes &&
-			cached.edges === doc.edges &&
-			cached.simulating === options.simulating &&
-			cached.looping === options.looping
-		) {
-			return cached.analysis;
-		}
-		const analysis = analyzeZones(doc.nodes, doc.edges, options);
-		this.zoneCache.set(doc, {
-			nodes: doc.nodes,
-			edges: doc.edges,
-			simulating: options.simulating,
-			looping: options.looping,
-			analysis,
-		});
-		return analysis;
+		return analyzeZones(doc.nodes, doc.edges, zoneOptions(this.project.definitions));
 	}
 
 	/** Zone analysis of the currently-viewed document. */

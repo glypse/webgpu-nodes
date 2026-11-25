@@ -642,7 +642,7 @@ describe("passes zones", () => {
 			],
 		);
 		expect([...analysis.invalidEdges]).toEqual(["r_in.acc->p_in.acc"]);
-		expect(analysis.reasons.get("r_in.acc->p_in.acc")).toMatch(/inside a repeat zone/);
+		expect(analysis.reasons.get("r_in.acc->p_in.acc")).toMatch(/runs inside one pass/);
 	});
 
 	it("allows a repeat zone inside a passes zone", () => {
@@ -713,7 +713,7 @@ describe("passes zones", () => {
 		const looping = new Set(["loop"]);
 		const analysis = analyzeWith(nodes, edges, { looping });
 		expect([...analysis.invalidEdges]).toEqual(["r_in.acc->g.acc"]);
-		expect(analysis.reasons.get("r_in.acc->g.acc")).toMatch(/inside a repeat zone/);
+		expect(analysis.reasons.get("r_in.acc->g.acc")).toMatch(/runs inside one pass/);
 		expect(analyzeWith(nodes, edges, {}).invalidEdges.size).toBe(0);
 	});
 

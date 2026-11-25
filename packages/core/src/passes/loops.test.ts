@@ -620,6 +620,196 @@ describe("item sizes per iteration", () => {
 	});
 });
 
+describe("reads of items sized per iteration", () => {
+	const dec = (id: string, x: number): TestNode => ({
+		id,
+		type: "declare",
+		data: { values: { x } },
+	});
+	const exact = "vec2i(runtime_fragment.position)";
+
+	/** An item passed straight on by a loop, sized by `scale`'s nodes and links to `p_out`'s "scale:item". */
+	function passing(
+		item: ZoneItem,
+		scale: { nodes: TestNode[]; edges: TestEdge[] } | number,
+	): GraphModel {
+		const texture = item.type === "texture";
+		const sizedItem = { ...item, size: "scale" as const };
+		const nodes = typeof scale === "number" ? [] : scale.nodes;
+		const edges = typeof scale === "number" ? [] : scale.edges;
+		const seed: [TestNode[], TestEdge[]] = texture
+			? [
+					[{ id: "img", type: "image", data: { asset: "a" } }],
+					[["img", "texture", "p_in", item.id]],
+				]
+			: [[dec("seed", 1)], [["seed", "value", "p_in", item.id]]];
+		const view: [TestNode[], TestEdge[]] = texture
+			? [
+					[{ id: "view", type: "sample-texture" }],
+					[
+						["p_out", item.id, "view", "texture"],
+						["view", "color", "out", "color"],
+					],
+				]
+			: [[], [["p_out", item.id, "out", "color"]]];
+		return new GraphModel({
+			...rootProject(
+				[
+					...loop(
+						"p",
+						[sizedItem],
+						3,
+						{},
+						typeof scale === "number"
+							? { values: { [`scale:${item.id}`]: scale } }
+							: {},
+					),
+					...seed[0],
+					...view[0],
+					...nodes,
+				],
+				[...seed[1], ["p_in", item.id, "p_out", item.id], ...view[1], ...edges],
+			),
+			assets: [image],
+		});
+	}
+
+	const halves: { nodes: TestNode[]; edges: TestEdge[] } = {
+		nodes: [
+			dec("one", 1),
+			dec("half", 0.5),
+			{ id: "next", type: "add" },
+			{ id: "power", type: "pow" },
+		],
+		edges: [
+			["p_in", "iteration", "next", "operands"],
+			["one", "value", "next", "operands"],
+			["half", "value", "power", "e1"],
+			["next", "result", "power", "e2"],
+			["power", "result", "p_out", "scale:IT"],
+		],
+	};
+	const halving = (id: string) => ({
+		nodes: halves.nodes,
+		edges: halves.edges.map((e): TestEdge => [
+			e[0],
+			e[1],
+			e[2],
+			e[3] === "scale:IT" ? `scale:${id}` : e[3],
+		]),
+	});
+
+	const nextCode = (model: GraphModel) => {
+		const plan = valid(generateRenderPlan(model));
+		const pass = loopOf(plan, "p_in").next[0];
+		return pass?.kind === "render" ? pass.program.code : "";
+	};
+
+	it("sample a texture item whose size halves per iteration, rather than crop it", () => {
+		const code = nextCode(passing(IMG, halving("img")));
+		expect(code).not.toContain(exact);
+		expect(code).toContain("textureSampleLevel");
+	});
+
+	it("read an f32 item whose size halves per iteration at the nearest texel by uv", () => {
+		const code = nextCode(passing(ACC, halving("acc")));
+		expect(code).not.toContain(exact);
+		expect(code).toContain("textureDimensions");
+	});
+
+	it("do the same for an item sized like itself", () => {
+		const model = new GraphModel({
+			...rootProject(
+				[
+					...loop(
+						"p",
+						[{ ...IMG, size: "scale" }],
+						3,
+						{},
+						{ values: { "scale:img": 0.5 } },
+					),
+					{ id: "img", type: "image", data: { asset: "a" } },
+					{ id: "view", type: "sample-texture" },
+				],
+				[
+					["img", "texture", "p_in", "img"],
+					["p_in", "img", "p_out", "img"],
+					["p_in", "img", "p_out", "like:img"],
+					["p_out", "img", "view", "texture"],
+					["view", "color", "out", "color"],
+				],
+			),
+			assets: [image],
+		});
+		expect(nextCode(model)).not.toContain(exact);
+	});
+
+	it("keep the exact load for an item of a constant size", () => {
+		expect(nextCode(passing(IMG, 0.5))).toContain(exact);
+		expect(nextCode(passing(ACC, 0.5))).toContain(exact);
+	});
+
+	it("keep the exact load for an inner item sized by the outer iteration only", () => {
+		const model = new GraphModel({
+			...rootProject(
+				[
+					...loop("p", [IMG], 2),
+					...loop("q", [{ ...IMG, size: "scale" }], 2),
+					{ id: "img", type: "image", data: { asset: "a" } },
+					dec("one", 1),
+					dec("half", 0.5),
+					{ id: "next", type: "add" },
+					{ id: "power", type: "pow" },
+					{ id: "view", type: "sample-texture" },
+				],
+				[
+					["img", "texture", "p_in", "img"],
+					["p_in", "img", "q_in", "img"],
+					["p_in", "iteration", "next", "operands"],
+					["one", "value", "next", "operands"],
+					["half", "value", "power", "e1"],
+					["next", "result", "power", "e2"],
+					["power", "result", "q_out", "scale:img"],
+					["q_in", "img", "q_out", "img"],
+					["q_out", "img", "p_out", "img"],
+					["p_out", "img", "view", "texture"],
+					["view", "color", "out", "color"],
+				],
+			),
+			assets: [image],
+		});
+		const plan = valid(generateRenderPlan(model));
+		const next = loopOf(plan, "q_in").next[0];
+		expect(next?.kind === "render" && next.program.code).toContain(exact);
+	});
+});
+
+describe("iterations linked to a value that isn't a frame value", () => {
+	it("count the stored value", () => {
+		const model = new GraphModel({
+			...rootProject(
+				[
+					...loop("p", [IMG], 4),
+					{ id: "img", type: "image", data: { asset: "a" } },
+					{ id: "uv", type: "uv" },
+					{ id: "x", type: "separate-vector" },
+					{ id: "view", type: "sample-texture" },
+				],
+				[
+					["img", "texture", "p_in", "img"],
+					["uv", "uv", "x", "v"],
+					["x", "x", "p_in", "iterations"],
+					["p_in", "img", "p_out", "img"],
+					["p_out", "img", "view", "texture"],
+					["view", "color", "out", "color"],
+				],
+			),
+			assets: [image],
+		});
+		expect(loopOf(valid(generateRenderPlan(model)), "p_in").iterations).toBe(4);
+	});
+});
+
 describe("sizes of what loops end as", () => {
 	it("bring the loop into the plan before the passes using the size, though no pass reads it", () => {
 		const graph = new GraphModel({

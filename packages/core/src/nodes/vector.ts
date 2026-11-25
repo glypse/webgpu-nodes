@@ -94,6 +94,18 @@ export const reflectNode = defineNode({
 		labels: ["incident", "normal"],
 		category: "vector",
 	}),
+	cpu: (ctx) => {
+		const [incident, normal] = [ctx.input("e1"), ctx.input("e2")];
+		const dot = Math.fround(
+			zip([normal, incident], (a, b) => Math.fround(a * b)).reduce((a, b) => a + b, 0),
+		);
+		return {
+			result: coerce(
+				zip([incident, normal], (e1, e2) => e1 - 2 * dot * e2),
+				ctx.outputType,
+			),
+		};
+	},
 	aliases: ["Reflection", "Vector Math"],
 });
 

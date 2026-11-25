@@ -88,10 +88,13 @@ import {
 	zoneMaxIterations,
 	zoneOptions,
 } from "../zones";
+import { sizeStability } from "./dependencies";
 import { HelperRegistry } from "./helpers";
 import {
 	formatWgslLiteral,
 	identSuffix,
+	type UniformInput,
+	uniformInputKey,
 	uniformName,
 	type UniformValue,
 	uniformValue,
@@ -267,21 +270,51 @@ type HashedDocument = {
 	defaults?: Record<string, InputValue>;
 };
 
-function hashDoc(doc: HashedDocument) {
+const NOTHING_IGNORED: ReadonlySet<string> = new Set();
+
+type DocumentHash = Omit<HashedDocument, "nodes"> & { ignored: ReadonlySet<string>; hash: string };
+
+const documentHashes = new WeakMap<readonly GraphNode[], DocumentHash>();
+
+function hashedValues(node: GraphNode, ignored: ReadonlySet<string>): NodeData["values"] {
+	const { values } = node.data;
+	if (!values || ignored.size === 0) return values;
+	return Object.fromEntries(
+		Object.entries(values).filter(([key]) => !ignored.has(uniformInputKey(node.id, key))),
+	);
+}
+
+/** Memoised on the document's arrays, which edits replace. */
+function hashDoc(
+	{ nodes, edges, inputs, outputs, defaults }: HashedDocument,
+	ignored: ReadonlySet<string>,
+): string {
+	const known = documentHashes.get(nodes);
+	if (
+		known?.edges === edges &&
+		known.inputs === inputs &&
+		known.outputs === outputs &&
+		known.defaults === defaults &&
+		known.ignored === ignored
+	) {
+		return known.hash;
+	}
 	const handles = (list: readonly GroupHandleDef[] = []) =>
 		list.map(({ id, type, variants }) => ({ id, type, variants }));
-	return {
-		inputs: handles(doc.inputs),
-		outputs: handles(doc.outputs),
-		defaults: doc.defaults,
-		nodes: doc.nodes.map((n) => ({ id: n.id, type: n.type, data: stripLabels(n.data) })),
-		edges: doc.edges.map((e) => ({
-			source: e.source,
-			target: e.target,
-			sourceHandle: e.sourceHandle,
-			targetHandle: e.targetHandle,
+	const hash = JSON.stringify({
+		inputs: handles(inputs),
+		outputs: handles(outputs),
+		defaults,
+		nodes: nodes.map((n) => ({
+			id: n.id,
+			type: n.type,
+			data: { ...stripLabels(n.data), values: hashedValues(n, ignored) },
+			group: n.group?.definitionRef,
 		})),
-	};
+		edges: edges.map((e) => [e.source, e.sourceHandle, e.target, e.targetHandle]),
+	});
+	documentHashes.set(nodes, { edges, inputs, outputs, defaults, ignored, hash });
+	return hash;
 }
 
 /**
@@ -289,11 +322,13 @@ function hashDoc(doc: HashedDocument) {
  * output: nodes reachable from frag-output in the root document, the edges
  * between them, and any group definitions they reference (recursively).
  * Changes to disconnected nodes or unused group definitions won't change
- * this hash, avoiding unnecessary shader regeneration.
+ * this hash, avoiding unnecessary shader regeneration. Neither do the values
+ * of the inputs `ignored`, by `uniformInputKey`.
  */
 export function reachableShaderHash(
 	project: { definitions: Map<string, HashedDocument> },
 	assets: readonly Asset[] = [],
+	ignored: ReadonlySet<string> = NOTHING_IGNORED,
 ): string {
 	const root = project.definitions.get(ROOT_ID);
 	if (!root) return "";
@@ -320,23 +355,24 @@ export function reachableShaderHash(
 		for (const node of project.definitions.get(ref)?.nodes ?? []) visit(node);
 	}
 
-	const defs: Record<string, ReturnType<typeof hashDoc>> = {};
+	const parts = [
+		// Their metadata (e.g. a video's duration) may be compiled in.
+		JSON.stringify(assets),
+		hashDoc(
+			{
+				nodes: root.nodes.filter((n) => reachableRootIds.has(n.id)),
+				edges: root.edges.filter(
+					(e) => reachableRootIds.has(e.source) && reachableRootIds.has(e.target),
+				),
+			},
+			ignored,
+		),
+	];
 	for (const ref of visitedGroupDefs) {
 		const def = project.definitions.get(ref);
-		if (def) defs[ref] = hashDoc(def);
+		if (def) parts.push(ref, hashDoc(def, ignored));
 	}
-
-	return JSON.stringify({
-		// Their metadata (e.g. a video's duration) may be compiled in.
-		assets,
-		root: hashDoc({
-			nodes: root.nodes.filter((n) => reachableRootIds.has(n.id)),
-			edges: root.edges.filter(
-				(e) => reachableRootIds.has(e.source) && reachableRootIds.has(e.target),
-			),
-		}),
-		defs,
-	});
+	return parts.join("\n");
 }
 
 // ── Code generation ──────────────────────────────────────────────────────────
@@ -372,6 +408,8 @@ type ShaderState = {
 	/** The definitions whose input values are uniforms (see `ShaderOptions`). */
 	uniformScopes: ReadonlySet<string>;
 	uniforms: Map<string, UniformValue>;
+	/** The inputs some of them hold, by name: the others are nodes' own numbers. */
+	uniformInputs: Map<string, UniformInput>;
 	sources: TextureSources;
 	/** Compiles the frame values hoisted out of the shader, when the plan evaluates them. */
 	frame?: FrameCompiler;
@@ -727,13 +765,23 @@ class BodyEmitter {
 		const format = sourceFormat(source);
 		const size = sourceSize(source);
 		// Made for this pass' size, proved while compiling: its pixel is read exactly.
-		if (size && sameSize(size, this.state.targetSize)) {
+		if (size && sameSize(size, this.state.targetSize) && this.readsAtOwnSize(source, size)) {
 			return texelAsColor(
 				`textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`,
 				format,
 			);
 		}
 		return this.sampleAt(texture, format, `${FRAGMENT_VAR}.uv`);
+	}
+
+	/**
+	 * Whether a texture of `size`, equal to the target's, has it when read: a loop
+	 * item is read as the previous iteration drew it.
+	 */
+	private readsAtOwnSize(source: TextureSource, size: TextureSize): boolean {
+		if (source.kind !== "loop") return true;
+		const { sources, frame } = this.state;
+		return sizeStability(sources, frame).stable(loopId(source.loop), size);
 	}
 
 	/** A texture's colour at `uv`, read as its format allows. */
@@ -822,7 +870,14 @@ class BodyEmitter {
 				.resolveDescriptor(node)
 				.inputs.find((i) => i.id === inputId);
 			if (!input || isUniformControl(inputControl(input, target))) {
-				return this.uniformExpr(uniformName(node.id, inputId), target, value);
+				const name = uniformName(node.id, inputId);
+				this.state.uniformInputs.set(name, {
+					node: node.id,
+					input: inputId,
+					type: target,
+					fallback,
+				});
+				return this.uniformExpr(name, target, value);
 			}
 		}
 		return formatWgslLiteral(target, value);
@@ -1051,8 +1106,9 @@ function inputTypeIn(
  * from the frame block: the outputs of nodes outside zones that are frame
  * values depending on something the runtime knows (not only literals) and
  * that something computed per pixel reads. A node whose values are all read
- * only by other frame values stays inside the frame program. Groups' bodies
- * are shared by their instances, so their values aren't hoisted.
+ * only by other frame values stays inside the frame program. A group's body
+ * is shared by its instances, so only those `hoistsIn` found something to
+ * hoist are emitted for themselves (`enabled`), their fields named by path.
  */
 function hoistFrameValues(
 	state: ShaderState,
@@ -1061,11 +1117,15 @@ function hoistFrameValues(
 	zones: ZoneAnalysis,
 	edges: readonly GraphEdge[],
 	reachable: ReadonlySet<string>,
-	{ bindings, seeds }: { bindings: TypeBindings; seeds: ReadonlySet<string> },
+	{
+		bindings,
+		seeds,
+		enabled,
+	}: { bindings: TypeBindings; seeds: ReadonlySet<string>; enabled: boolean },
 ): Map<string, Map<string, HoistedValue>> {
 	const frame = state.frame;
 	const hoisted = new Map<string, Map<string, HoistedValue>>();
-	if (!frame || path.length > 0) return hoisted;
+	if (!frame || (path.length > 0 && !enabled)) return hoisted;
 	const read = new Map<string, Set<string>>();
 	for (const e of edges)
 		read.set(e.source, (read.get(e.source) ?? new Set()).add(e.sourceHandle));
@@ -1098,7 +1158,7 @@ function hoistFrameValues(
 			const kind = typeKind(type);
 			const scalar = kind === "bool" ? "u32" : kind;
 			const components = typeComponents(type);
-			const name = frameValueField(id, handle);
+			const name = frameValueField([...path, id].join("__"), handle);
 			values.set(handle, { field: name, storage: makeType(scalar, components), type });
 			uses.push({ name, ref, scalar, components });
 		}
@@ -1136,6 +1196,8 @@ function emitDocumentBody(
 	path: readonly string[] = [],
 	/** What to compute besides the seeds, and give its caller (see `Probe`). */
 	probe?: Probe,
+	/** Whether a group instance hoists its frame values (see `hoistsIn`). */
+	hoistFrame = false,
 ): BodyEmitter {
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
@@ -1235,7 +1297,9 @@ function emitDocumentBody(
 			!unavailable.has(e.id) &&
 			!intoTexture(e) &&
 			!intoRenderTexture(e) &&
-			intoSimulation(e),
+			intoSimulation(e) &&
+			// What else has inputs that need a frame value computes none of them per pixel.
+			!(nodeMap.get(e.target)?.group && state.frame?.analysis.isRefused(path, e)),
 	);
 	const edgesByTarget = new Map<string, GraphEdge[]>();
 	for (const e of validEdges)
@@ -1270,6 +1334,7 @@ function emitDocumentBody(
 	const hoisted = hoistFrameValues(state, path, nodeMap, zones, needed.edges, needed.reachable, {
 		bindings,
 		seeds,
+		enabled: hoistFrame,
 	});
 	// What only a hoisted value read is no longer needed.
 	if (hoisted.size > 0) {
@@ -1395,7 +1460,13 @@ function emitDocumentBody(
 		// A texel of an item kept at another size than the pass is the nearest to the pixel.
 		const load = (item: StateItem, read: "previous" | "current") => {
 			const texture = emitter.textureVar(sourceOf(item, read));
-			if (sameSize(item.size, state.targetSize)) {
+			const exact =
+				!looping ||
+				sizeStability(state.sources, state.frame).stable(
+					loopId({ path, zone: zone.id }),
+					item.size,
+				);
+			if (exact && sameSize(item.size, state.targetSize)) {
 				return `textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`;
 			}
 			const dimensions = `vec2f(textureDimensions(${texture}))`;
@@ -1508,8 +1579,31 @@ function readsTextures(state: ShaderState, definitionRef: string): boolean {
  * and those of the groups it nests): its variants reading other textures
  * are other functions. Empty for a group reading none.
  */
-function textureFingerprint(state: ShaderState, definitionRef: string, path: readonly string[]) {
+function textureFingerprint(
+	state: ShaderState,
+	definitionRef: string,
+	path: readonly string[],
+): string {
 	if (!readsTextures(state, definitionRef)) return "";
+	// What an instance reads is the same for every pass of a plan.
+	let known = fingerprints.get(state.sources);
+	if (!known) fingerprints.set(state.sources, (known = new Map<string, string>()));
+	const key = path.join("/");
+	let fingerprint = known.get(key);
+	if (fingerprint === undefined) {
+		fingerprint = computeFingerprint(state, definitionRef, path);
+		known.set(key, fingerprint);
+	}
+	return fingerprint;
+}
+
+const fingerprints = new WeakMap<TextureSources, Map<string, string>>();
+
+function computeFingerprint(
+	state: ShaderState,
+	definitionRef: string,
+	path: readonly string[],
+): string {
 	const def = state.graph.project.definitions.get(definitionRef);
 	const instance = state.sources.instance(path);
 	if (!def || !instance) return "";
@@ -1544,6 +1638,141 @@ function textureFingerprint(state: ShaderState, definitionRef: string, path: rea
 		}
 	}
 	return parts.join(",");
+}
+
+/** Whether a group node at `path` is in a zone, or inside a group node that is. */
+function enclosedByZone(state: ShaderState, path: readonly string[]): boolean {
+	return path.some((id, k) => {
+		const zones = state.sources.instance(path.slice(0, k))?.zones;
+		return !zones || zones.nodeZone.get(id) != null;
+	});
+}
+
+/** Nodes giving a frame value that varies, whatever their inputs. */
+const FRAME_SOURCE_TYPES: ReadonlySet<string> = new Set([
+	"time",
+	"delta",
+	"resolution",
+	TEXTURE_SIZE,
+	PASS_REPEAT_INPUT,
+]);
+
+/** What's known of the hoisting of group instances, for a plan's compiler. */
+type Hoisting = {
+	/** Whether a definition holds one of `FRAME_SOURCE_TYPES`, itself or nested. */
+	sources: Map<string, boolean>;
+	/** Whether instances hoist, by definition and what their inputs are. */
+	instances: Map<string, boolean>;
+	/** The same, by path. */
+	paths: Map<string, boolean>;
+};
+
+const hoistings = new WeakMap<FrameCompiler, Hoisting>();
+
+function hoistingOf(frame: FrameCompiler): Hoisting {
+	let known = hoistings.get(frame);
+	if (!known) {
+		known = { sources: new Map(), instances: new Map(), paths: new Map() };
+		hoistings.set(frame, known);
+	}
+	return known;
+}
+
+function holdsFrameSource(state: ShaderState, known: Hoisting, definitionRef: string): boolean {
+	let holds = known.sources.get(definitionRef);
+	if (holds === undefined) {
+		known.sources.set(definitionRef, false);
+		const nodes = state.graph.project.definitions.get(definitionRef)?.nodes ?? [];
+		holds = nodes.some(
+			(n) =>
+				FRAME_SOURCE_TYPES.has(n.type) ||
+				(!!n.group && holdsFrameSource(state, known, n.group.definitionRef)),
+		);
+		known.sources.set(definitionRef, holds);
+	}
+	return holds;
+}
+
+/**
+ * Whether the group instance at `path` (of `definitionRef`), or one it nests,
+ * has a frame value a per-pixel computation reads. Decided before its body is
+ * emitted, as it decides which function the instance shares: one that hoists
+ * names its fields after the path, so it is the instance's alone. Instances in
+ * zones hoist nothing, the value there varying with the zone. Conservative: it
+ * may say yes for a value nothing ends up reading from the block.
+ *
+ * It only depends on which inputs vary with the frame, so instances given the
+ * same kinds of inputs share the answer: groups nest too many to look into each.
+ *
+ * Rust: emit the body first and key the function by the fields it read.
+ */
+function hoistsIn(state: ShaderState, definitionRef: string, path: readonly string[]): boolean {
+	const frame = state.frame;
+	if (!frame) return false;
+	const hoisting = hoistingOf(frame);
+	const pathKey = path.join("/");
+	const known = hoisting.paths.get(pathKey);
+	if (known !== undefined) return known;
+	hoisting.paths.set(pathKey, false);
+	const definition = state.graph.project.definitions.get(definitionRef);
+	const caller = path.slice(0, -1);
+	const node = path.at(-1) ?? "";
+	const decide = (): boolean => {
+		if (!definition || enclosedByZone(state, path)) return false;
+		const varying = definition.inputs.filter(
+			(h) => typeof frame.inputArg(caller, node, h.id) === "object",
+		);
+		if (varying.length === 0 && !holdsFrameSource(state, hoisting, definitionRef)) return false;
+		const instance = state.sources.instance(path);
+		if (!instance) return false;
+		const key = JSON.stringify([
+			definitionRef,
+			varying.map((h) => h.id),
+			[...instance.constants],
+			instance.bindings,
+		]);
+		let found = hoisting.instances.get(key);
+		if (found === undefined) {
+			found = hoistsOwn(state, frame, definition, instance.zones, path);
+			hoisting.instances.set(key, found);
+		}
+		return found;
+	};
+	const found = decide();
+	hoisting.paths.set(pathKey, found);
+	return found;
+}
+
+function hoistsOwn(
+	state: ShaderState,
+	frame: FrameCompiler,
+	definition: HydratedGraphDocument,
+	zones: ZoneAnalysis,
+	path: readonly string[],
+): boolean {
+	/** Whether what a node's output feeds is computed per pixel: sizes and textures aren't. */
+	const readPerPixel = (id: string, handle: string) =>
+		(definition.edgesBySource.get(id) ?? []).some((e) => {
+			if (e.sourceHandle !== handle) return false;
+			const target = definition.nodesById.get(e.target);
+			if (!target || target.type === RENDER_TEXTURE) return false;
+			const input = state.graph
+				.resolveDescriptor(target)
+				.inputs.find((i) => i.id === e.targetHandle);
+			return !input?.frame && !input?.types.every(isTexture);
+		});
+	return definition.nodes.some((node) => {
+		if (zones.nodeZone.get(node.id) != null) return false;
+		if (node.group) return hoistsIn(state, node.group.definitionRef, [...path, node.id]);
+		if (!state.graph.resolveDescriptor(node).cpu) return false;
+		const edges = definition.edgesBySource.get(node.id) ?? [];
+		return [...new Set(edges.map((e) => e.sourceHandle))].some(
+			(handle) =>
+				readPerPixel(node.id, handle) &&
+				frame.analysis.isFrameValue(path, node.id, handle) &&
+				frame.compile(path, node.id, handle)?.dynamic === true,
+		);
+	});
 }
 
 /** Generate one group's `struct` + `fn` (recursively for nested groups). */
@@ -1586,6 +1815,7 @@ function emitGroupFunction(
 		readOutputs && !readOutputs.has(h.id) ? [i] : [],
 	);
 	const textures = textureFingerprint(state, definitionRef, path);
+	const hoists = !probe && hoistsIn(state, definitionRef, path);
 	const key = [
 		definitionRef,
 		...absentIndices,
@@ -1597,6 +1827,8 @@ function emitGroupFunction(
 		...unreadIndices,
 		"x",
 		textures,
+		"h",
+		hoists ? path.join("/") : "",
 		"v",
 		probe ? probeKey(probe) : "",
 	].join("|");
@@ -1604,9 +1836,9 @@ function emitGroupFunction(
 	if (existing) return existing;
 
 	const ident = sanitizeIdent(definitionRef);
-	// Variants reading other textures are numbered, their reads being too long for a name.
+	// Variants reading other textures or hoisting values are numbered, their paths being too long for a name.
 	const textureVariant =
-		textures === "" ? undefined : (state.textureVariants.get(definitionRef) ?? 0);
+		textures === "" && !hoists ? undefined : (state.textureVariants.get(definitionRef) ?? 0);
 	if (textureVariant !== undefined) state.textureVariants.set(definitionRef, textureVariant + 1);
 	const suffix = [
 		...(absentIndices.length > 0 ? [`d${absentIndices.join("_")}`] : []),
@@ -1638,6 +1870,7 @@ function emitGroupFunction(
 		readHandles,
 		path,
 		probe,
+		hoists,
 	);
 
 	// Struct fields follow the handle types; whatever feeds them is converted
@@ -1723,6 +1956,7 @@ export function generateShader(
 	shader: string;
 	lineMap: LineMap;
 	uniforms: Record<string, UniformValue>;
+	uniformInputs: ReadonlyMap<string, UniformInput>;
 	textures: TextureBinding[];
 	samplers: SamplerBinding[];
 	targets?: readonly WgslType[];
@@ -1736,6 +1970,7 @@ export function generateShader(
 		groupStructs: new Set(),
 		uniformScopes: new Set(uniformScopes),
 		uniforms: new Map(),
+		uniformInputs: new Map(),
 		sources,
 		...(frame ? { frame } : {}),
 		frameValues: new Map(),
@@ -1802,6 +2037,7 @@ export function generateShader(
 		shader,
 		lineMap,
 		uniforms: Object.fromEntries(state.uniforms),
+		uniformInputs: state.uniformInputs,
 		textures: [...state.textures.values()],
 		samplers: [...state.samplers.values()],
 		frameValues: [...state.frameValues.values()],

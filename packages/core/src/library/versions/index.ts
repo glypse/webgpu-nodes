@@ -36,8 +36,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-oklab-to-xyz/06fd57ac200029.json").then((m) => m.default),
 	"std-max-component@0d14bdb467cde4": () =>
 		import("./std-max-component/0d14bdb467cde4.json").then((m) => m.default),
-	"std-lucas-kanade-step@11f0d362558a64": () =>
-		import("./std-lucas-kanade-step/11f0d362558a64.json").then((m) => m.default),
+	"std-lucas-kanade-step@0feb9cd4d0ced0": () =>
+		import("./std-lucas-kanade-step/0feb9cd4d0ced0.json").then((m) => m.default),
 	"std-warp@1032f0ed094047": () =>
 		import("./std-warp/1032f0ed094047.json").then((m) => m.default),
 	"std-opensimplex-4d@1bd38fd7c8187b": () =>
@@ -122,8 +122,8 @@ export const archivedVersions: Record<string, () => Promise<unknown>> = {
 		import("./std-flow-legend/00ac4098658c7b.json").then((m) => m.default),
 	"std-opensimplex-2d@0cfc9edb3af544": () =>
 		import("./std-opensimplex-2d/0cfc9edb3af544.json").then((m) => m.default),
-	"std-optical-flow@1d5e83e16dc5fb": () =>
-		import("./std-optical-flow/1d5e83e16dc5fb.json").then((m) => m.default),
+	"std-optical-flow@132b422775c0d6": () =>
+		import("./std-optical-flow/132b422775c0d6.json").then((m) => m.default),
 	"std-fractal-voronoi@04284455a8ec10": () =>
 		import("./std-fractal-voronoi/04284455a8ec10.json").then((m) => m.default),
 	"std-gaussian-blur@1ce888602c6674": () =>

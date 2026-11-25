@@ -201,6 +201,7 @@ type Instance = {
 export class TextureSources {
 	private instances = new Map<string, Instance | undefined>();
 	private resolved = new Map<string, TextureResolution>();
+	private known = new Map<string, TextureSource>();
 	private assets: ReadonlyMap<string, Asset>;
 	private visiting = new Set<string>();
 	/** Where the sizes of Render Textures' textures read their frame values. */
@@ -719,6 +720,11 @@ export class TextureSources {
 		return !!feed && this.readsZoneState(path, feed.source, feed.sourceHandle);
 	}
 
+	/** A texture any socket resolved to so far, by `TextureSource.id`. */
+	byId(id: string): TextureSource | undefined {
+		return this.known.get(id);
+	}
+
 	private memo(key: string, compute: () => TextureResolution): TextureResolution {
 		const done = this.resolved.get(key);
 		if (done) return done;
@@ -735,6 +741,7 @@ export class TextureSources {
 		const result = compute();
 		this.visiting.delete(key);
 		this.resolved.set(key, result);
+		if (result.kind !== "invalid" && result.kind !== "empty") this.known.set(result.id, result);
 		return result;
 	}
 }

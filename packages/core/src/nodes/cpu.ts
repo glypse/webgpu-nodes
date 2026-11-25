@@ -1,4 +1,11 @@
-import { type CpuCtx, typeComponents, typeKind, type Value, type WgslType } from "../types";
+import {
+	type CpuCtx,
+	type ScalarKind,
+	typeComponents,
+	typeKind,
+	type Value,
+	type WgslType,
+} from "../types";
 
 type Cpu = (ctx: CpuCtx) => Record<string, Value>;
 
@@ -30,8 +37,44 @@ export function asKind(type: WgslType): (n: number) => number {
 	}
 }
 
-/** A value as `type`: its width and kind. */
-export function coerce(value: Value, type: WgslType): Value {
+/** An f32 as WGSL converts it to an integer: truncated, saturating at the range, NaN as 0. */
+function saturate(n: number, min: number, max: number): number {
+	return Number.isNaN(n) ? 0 : Math.min(max, Math.max(min, Math.trunc(n)));
+}
+
+/** A number of kind `from` as one of kind `to`, as WGSL's conversion constructors do. */
+function convertNumber(n: number, from: ScalarKind, to: ScalarKind): number {
+	switch (to) {
+		case "f32":
+			return Math.fround(n);
+		case "bool":
+			return Number(n !== 0);
+		case "i32":
+			// Integers and bools hold whole numbers already: only f32s saturate.
+			return from === "f32" ? saturate(n, -2147483648, 2147483647) : n | 0;
+		case "u32":
+			return from === "f32" ? saturate(n, 0, 4294967295) : n >>> 0;
+	}
+}
+
+/**
+ * A value of type `from` as `to`: its width, and its kind the way WGSL
+ * converts it (an f32 saturates to an integer, one integer kind
+ * reinterprets the other's bits).
+ */
+export function convert(value: Value, from: WgslType, to: WgslType): Value {
+	const source = typeKind(from);
+	const kind = typeKind(to);
+	return fit(value, typeComponents(to)).map((n) => convertNumber(n, source, kind));
+}
+
+/**
+ * A value as `type`: its width and kind. Given the type it comes `from` it's
+ * converted as WGSL does; without, a number is cut to the kind the way an
+ * arithmetic result is (integers wrap).
+ */
+export function coerce(value: Value, type: WgslType, from?: WgslType): Value {
+	if (from !== undefined) return convert(value, from, type);
 	return fit(value, typeComponents(type)).map(asKind(type));
 }
 

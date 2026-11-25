@@ -8,7 +8,7 @@ import opticalFlow from "./optical-flow";
 
 const EDGES = EXTENSIONS.map((v) => [v.value, v.label] as const);
 
-const previousFrame = group({
+export const previousFrame = group({
 	id: "std-previous-frame",
 	name: "Previous Frame",
 	aliases: ["Last Frame", "Delay Frame", "Feedback", "History"],
@@ -90,7 +90,7 @@ const imageGradient = group({
 	},
 });
 
-const warp = group({
+export const warp = group({
 	id: "std-warp",
 	name: "Warp",
 	aliases: ["Displace", "Distort", "Advect", "Flow Warp"],
@@ -118,7 +118,7 @@ const warp = group({
 	},
 });
 
-const flowError = group({
+export const flowError = group({
 	id: "std-flow-error",
 	name: "Flow Error",
 	aliases: ["Motion Error", "Warp Error", "Temporal Error", "Compensation Error"],

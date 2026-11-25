@@ -323,6 +323,18 @@ describe("searchEntries", () => {
 		expect(labels("aspect ratio")).toContain("Aspect UV");
 	});
 
+	it("describes each loop zone, and finds Simulation Zone rather than Repeat Passes by feedback", () => {
+		const described = (key: string) => entries.find((e) => e.key === key)?.description;
+		expect(described("zone:repeat")).toBe("Runs per pixel, inside one pass");
+		expect(described("zone:passes")).toBe(
+			"Repeats whole passes, keeping textures between iterations",
+		);
+		expect(described("zone:simulation")).toBe("Keeps state between frames");
+		expect(labels("feedback loop")).not.toContain("Repeat Passes");
+		expect(labels("ping pong")).toContain("Simulation Zone");
+		expect(labels("ping pong")).not.toContain("Repeat Passes");
+	});
+
 	it("ranks label matches above alias matches, without reporting an alias", () => {
 		const results = searchEntries(entries, "dot");
 		expect(results[0]?.entry.label).toBe("Dot Product");

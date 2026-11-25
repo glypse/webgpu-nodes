@@ -1,4 +1,4 @@
-import { type ColorSpace, planPasses, type RenderPlan } from "$core";
+import { type ColorSpace, planKey, type RenderPlan } from "$core";
 import {
 	CanvasTarget,
 	type CompiledPlan,
@@ -201,10 +201,7 @@ export class Preview {
 	/** Show a newly generated plan; uniform-only changes skip recompiling. */
 	setSource(source: RenderPlan) {
 		this.source = source;
-		// The same code may read other textures, which its bindings are made for.
-		const key = planPasses(source.passes)
-			.map((p) => [...p.writes, p.program.code, ...p.reads].join("\n"))
-			.join("\n\n");
+		const key = planKey(source);
 		if (key === this.blockedCode) return;
 		if (this.blockedCode !== undefined) {
 			this.blockedCode = undefined;
@@ -235,6 +232,14 @@ export class Preview {
 					this.error = describeError(error);
 				},
 			);
+	}
+
+	/** Change the uniforms of the plan shown, which needs nothing else of it. */
+	setUniforms(uniforms: RenderPlan["uniforms"]) {
+		if (!this.source) return;
+		this.source = { ...this.source, uniforms };
+		this.program?.setUniforms(uniforms);
+		this.player.invalidate();
 	}
 
 	play() {

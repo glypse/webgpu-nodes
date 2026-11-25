@@ -4,7 +4,7 @@ import { GraphModel } from "../graph/model";
 import type { GroupsFile } from "../graph/schema";
 import { parseGroups } from "../graph/validate";
 import { managerFor } from "../testing/graph";
-import { type Asset, assetFile } from "./assets";
+import { type Asset, assetFile, DEFAULT_PLAYBACK, VIDEO_TIME_TOLERANCE, videoTime } from "./assets";
 import { packBundle, unpackBundle } from "./bundle";
 
 const image: Asset = {
@@ -112,5 +112,57 @@ describe("assets", () => {
 		model.undo();
 		expect(model.assets).toEqual([]);
 		expect(model.hasUnsavedChanges()).toBe(false);
+	});
+});
+
+describe("videoTime", () => {
+	const frameShown = (fps: number, t: number | undefined) =>
+		t === undefined ? undefined : Math.floor(t * fps);
+	const duration = 1000;
+
+	it("shows frame k at the rounded time of its start, and the one before at a frame earlier", () => {
+		for (const fps of [24, 25, 30, 29.97, 60]) {
+			for (let k = 1; k <= 3000; k++) {
+				const time = Math.fround(k / fps);
+				expect(frameShown(fps, videoTime(DEFAULT_PLAYBACK, time, duration))).toBe(k);
+				const before = Math.fround(time - Math.fround(1 / fps));
+				expect(frameShown(fps, videoTime(DEFAULT_PLAYBACK, before, duration))).toBe(k - 1);
+			}
+		}
+	});
+
+	it("shows frame k at exactly k / fps, for exports and unlinked times", () => {
+		for (const fps of [24, 30, 29.97, 60]) {
+			for (let k = 0; k <= 3000; k++) {
+				const t = videoTime(DEFAULT_PLAYBACK, k / fps, duration);
+				expect(frameShown(fps, t)).toBe(k);
+			}
+		}
+	});
+
+	it("isn't before the start for a time a hair under it, and is for one beyond the tolerance", () => {
+		const playback = { ...DEFAULT_PLAYBACK, start: 2.1 };
+		expect(frameShown(30, videoTime(playback, 2.0999999, duration))).toBe(0);
+		expect(videoTime(playback, 2.1 - 2 * VIDEO_TIME_TOLERANCE, duration)).toBeUndefined();
+	});
+
+	it("wraps to the start when a loop's end is a hair away, and not for the frame before it", () => {
+		const playback = { ...DEFAULT_PLAYBACK, end: "loop" } as const;
+		expect(videoTime(playback, 10 - 1e-6, 10)).toBeLessThan(0.01);
+		expect(videoTime(playback, 10 - 1 / 30, 10)).toBeGreaterThan(9.9);
+	});
+
+	it("moves forward by the tolerance whatever the speed", () => {
+		const backwards = { ...DEFAULT_PLAYBACK, start: 0, speed: -1, end: "loop" } as const;
+		const t = videoTime(backwards, 1, 10) ?? NaN;
+		// Video time -1, which is 9 into the loop; a hair later, not earlier.
+		expect(t).toBeCloseTo(9 + VIDEO_TIME_TOLERANCE, 9);
+		const fast = { ...DEFAULT_PLAYBACK, speed: 2 };
+		expect(videoTime(fast, 1, 10)).toBeCloseTo(2 + VIDEO_TIME_TOLERANCE, 9);
+	});
+
+	it("holds and hides past the end", () => {
+		expect(videoTime({ ...DEFAULT_PLAYBACK, end: "hold" }, 50, 10)).toBe(10);
+		expect(videoTime({ ...DEFAULT_PLAYBACK, end: "transparent" }, 50, 10)).toBeUndefined();
 	});
 });

@@ -3,6 +3,7 @@
 		DEFAULT_MAX_ITERATIONS,
 		isInferredItem,
 		keepsTextures,
+		MAX_PASS_ITERATIONS,
 		SOCKET_TYPES,
 		type SocketType,
 		TEXTURE_FORMATS,
@@ -15,6 +16,7 @@
 	import ArrowUpIcon from "phosphor-svelte/lib/ArrowUpIcon";
 	import CheckIcon from "phosphor-svelte/lib/CheckIcon";
 	import TrashIcon from "phosphor-svelte/lib/TrashIcon";
+	import { SvelteMap } from "svelte/reactivity";
 
 	import { getGraphManager } from "../graph-manager.svelte";
 	import TypePicker from "./TypePicker.svelte";
@@ -46,28 +48,21 @@
 			: undefined;
 	}
 
-	// Local buffer for label inputs: commit on blur so typing doesn't
-	// regenerate the shader on every keystroke.
 	/** The picker's value for the format an item's type decides. */
 	const DEFAULT_FORMAT = "\0default";
 
-	const labelBuffer = $state<Record<string, string>>({});
-	$effect(() => {
-		for (const item of items) {
-			if (!(item.id in labelBuffer)) labelBuffer[item.id] = item.label;
-		}
-	});
+	// Label text being edited, by item. Committed on blur, so typing doesn't
+	// regenerate the shader on every keystroke; an entry is kept only until then.
+	const labelBuffer = new SvelteMap<string, string>();
 
 	function sizeKind(item: ZoneItem): "canvas" | "scale" | "pixels" {
 		return item.size ?? "canvas";
 	}
 
 	function commitLabel(itemId: string) {
-		const value = labelBuffer[itemId] ?? "";
-		if (!graph.renameZoneItem(zoneId, itemId, value)) {
-			const stored = items.find((i) => i.id === itemId)?.label;
-			if (stored !== undefined) labelBuffer[itemId] = stored;
-		}
+		const value = labelBuffer.get(itemId);
+		labelBuffer.delete(itemId);
+		if (value !== undefined) graph.renameZoneItem(zoneId, itemId, value);
 	}
 
 	function handleEnterBlur(e: KeyboardEvent) {
@@ -85,8 +80,8 @@
 			<span class="text-muted-foreground text-xs">
 				Repeats the passes that read an item or the iteration, as many times as the count
 				says, within a frame. Each item is kept in a texture between iterations, whose size
-				can change with every one. The count is clamped to a fixed limit. Passes that read
-				neither run once, before the loop.
+				can change with every one. The count is clamped to {MAX_PASS_ITERATIONS}. Passes
+				that read neither run once, before the loop.
 			</span>
 		</div>
 	{:else if kind === "simulation"}
@@ -134,10 +129,11 @@
 			{@const inferred = isInferredItem(item)}
 			<div class="flex items-center gap-1">
 				<Input
-					value={labelBuffer[item.id] ?? item.label}
+					aria-label="Item name"
+					value={labelBuffer.get(item.id) ?? item.label}
 					disabled={locked}
 					oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-						labelBuffer[item.id] = e.currentTarget.value;
+						labelBuffer.set(item.id, e.currentTarget.value);
 					}}
 					onblur={() => commitLabel(item.id)}
 					onkeydown={handleEnterBlur}
@@ -200,7 +196,11 @@
 							graph.setZoneItemFormat(zoneId, item.id, format);
 						}}
 					>
-						<Select.Trigger class="w-28 shrink-0" title="Format it's kept in">
+						<Select.Trigger
+							class="w-28 shrink-0"
+							title="Format it's kept in"
+							aria-label="Format"
+						>
 							{item.format ?? "Auto"}
 						</Select.Trigger>
 						<Select.Content>
@@ -244,6 +244,7 @@
 					variant="ghost"
 					size="icon-sm"
 					title="Move up"
+					aria-label="Move up"
 					disabled={locked || i === 0}
 					onclick={() => graph.moveZoneItem(zoneId, item.id, -1)}
 				>
@@ -253,6 +254,7 @@
 					variant="ghost"
 					size="icon-sm"
 					title="Move down"
+					aria-label="Move down"
 					disabled={locked || i === items.length - 1}
 					onclick={() => graph.moveZoneItem(zoneId, item.id, 1)}
 				>
@@ -262,6 +264,7 @@
 					variant="ghost"
 					size="icon-sm"
 					title="Remove item"
+					aria-label="Remove item"
 					disabled={locked}
 					onclick={() => graph.removeZoneItem(zoneId, item.id)}
 				>

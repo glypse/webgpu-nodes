@@ -261,16 +261,18 @@ function takePositions(
 	};
 }
 
+export const EDITOR_URL = "http://localhost:5173/editor";
+
 /**
- * Lay `groups` out in the editor, which measures nodes as drawn: serve them
- * as a project, open the editor on it (the dev server must be running) and
- * wait for it to post the laid-out project back.
+ * Lay `project` out in the editor, which measures nodes as drawn: serve it,
+ * open the editor on it (the dev server must be running) and wait for it to
+ * post the project back.
  */
-async function layoutInBrowser(
-	groups: readonly BuiltGroup[],
-	{ browser, editor }: { browser?: string; editor: string },
-) {
-	const project = JSON.stringify(projectOf(groups, { nodes: [], edges: [] }));
+export async function layoutInBrowser(
+	project: GraphProject,
+	{ browser, editor = EDITOR_URL }: { browser?: string; editor?: string },
+): Promise<GraphProject> {
+	const served = JSON.stringify(project);
 	const { promise, resolve: done } = Promise.withResolvers<GraphProject>();
 	const cors = { "Access-Control-Allow-Origin": "*" };
 	const server = Bun.serve({
@@ -278,7 +280,7 @@ async function layoutInBrowser(
 		fetch: async (request) => {
 			const path = new URL(request.url).pathname;
 			if (request.method === "OPTIONS") return new Response(null, { headers: cors });
-			if (path === "/project") return new Response(project, { headers: cors });
+			if (path === "/project") return new Response(served, { headers: cors });
 			if (path === "/result" && request.method === "POST") {
 				done((await request.json()) as GraphProject);
 				return new Response("ok", { headers: cors });
@@ -296,12 +298,11 @@ async function layoutInBrowser(
 		spawn(args[0] ?? browser, args.slice(1), { detached: true, stdio: "ignore" }).unref();
 		console.log(`Laying out in ${browser}…`);
 	} else {
-		console.log(`Open this address to lay the groups out:\n${url.href}`);
+		console.log(`Open this address to lay the graph out:\n${url.href}`);
 	}
 	const result = await promise;
 	await server.stop();
-	for (const group of groups)
-		takePositions(group, result.definitions[aliasOf(group)]?.nodes ?? []);
+	return result;
 }
 
 // ── Files ────────────────────────────────────────────────────────────────
@@ -403,7 +404,7 @@ if (import.meta.main) {
 		options: {
 			all: { type: "boolean", default: false },
 			browser: { type: "string" },
-			editor: { type: "string", default: "http://localhost:5173/editor" },
+			editor: { type: "string", default: EDITOR_URL },
 			dry: { type: "boolean", default: false },
 		},
 	});
@@ -434,7 +435,13 @@ if (import.meta.main) {
 
 	await layoutHeadless(groups);
 	if (!values.dry) {
-		await layoutInBrowser(groups, { browser: values.browser, editor: values.editor });
+		const laidOut = await layoutInBrowser(projectOf(groups, { nodes: [], edges: [] }), {
+			browser: values.browser,
+			editor: values.editor,
+		});
+		for (const group of groups) {
+			takePositions(group, laidOut.definitions[aliasOf(group)]?.nodes ?? []);
+		}
 		for (const group of groups) {
 			writeGroup(group);
 			register(group.spec.id);

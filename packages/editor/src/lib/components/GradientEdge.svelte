@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { hidesLinks } from "$core";
-	import { type EdgeProps, getBezierPath } from "@xyflow/svelte";
+	import { type EdgeProps, getBezierPath, ViewportPortal } from "@xyflow/svelte";
 
 	import { getDocumentView } from "../document-view";
 	import { bezierMidpointAngle } from "../geometry/edge-geometry";
@@ -232,9 +232,7 @@
 				stroke-width="1.5"
 				stroke-dasharray="6 4"
 				class="transition-opacity {selected ? 'opacity-100' : 'opacity-80'}"
-			>
-				<title>{invalidReason}</title>
-			</path>
+			/>
 		{:else}
 			<!-- Stroked with the gradient itself: a mask per link made zooming
 			     re-rasterize every link's whole bounding box. -->
@@ -286,10 +284,26 @@
 			stroke="transparent"
 			stroke-width="20"
 			class={view.locked ? undefined : "cursor-pointer"}
+			onpointerenter={() => (hovered = true)}
+			onpointerleave={() => (hovered = false)}
 		>
-			{#if frameValue && !invalid}
+			{#if invalid}
+				<title>{invalidReason}</title>
+			{:else if frameValue}
 				<title>The same for the whole frame</title>
 			{/if}
 		</path>
 	</g>
+{/if}
+
+<!-- Above the nodes, which links are drawn under: a reason hidden by a node can't be read. -->
+{#if invalid && (selected === true || hovered)}
+	<ViewportPortal target="front">
+		<div
+			class="bg-card text-destructive border-destructive pointer-events-none absolute top-0 left-0 w-max max-w-56 rounded-sm border px-1.5 py-0.5 text-[10px] leading-snug shadow-sm"
+			style:transform="translate(-50%, -50%) translate({midX}px, {midY}px)"
+		>
+			{invalidReason}
+		</div>
+	</ViewportPortal>
 {/if}

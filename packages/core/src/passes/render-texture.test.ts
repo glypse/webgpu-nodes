@@ -496,6 +496,31 @@ describe("mips", () => {
 		expect(evaluate(model, "size", "levels", "srgb", [4, 4], options)).toEqual([3]);
 	});
 
+	it("keep the mean of an image of odd size, taking its last row", () => {
+		const [nodes, edges] = drawn(
+			withMips(),
+			[["img", "texture", "rt", "color"]],
+			[{ id: "img", type: "image", data: { asset: "a" } }],
+		);
+		nodes[1] = {
+			id: "s",
+			type: "sample-texture",
+			data: { values: { interpolation: 1, level: 1 } },
+		};
+		const model = new GraphModel({
+			...rootProject(nodes, edges),
+			assets: [image("a", 3, 5)],
+		});
+		const ramp: CpuTexture = { width: 3, height: 5, texel: (_x, y) => [y, 0, 0, 1] };
+		const options = { images: new Map([["a", ramp]]) };
+		const at = (v: number) =>
+			evaluate(model, "s", "color", "srgb", [3, 5], { ...options, uv: [0.5, v] })[0] ?? NaN;
+		// Level 1 is 1x2: its rows take rows 0-2 by 2, 2, 1 fifths and rows 2-4 by 1, 2, 2.
+		expect(at(0.75)).toBeCloseTo(4 / 5, 5);
+		expect(at(0.25)).toBeCloseTo(16 / 5, 5);
+		expect((at(0.75) + at(0.25)) / 2).toBeCloseTo(2, 5);
+	});
+
 	it("count the levels of any size", () => {
 		const [nodes, edges] = drawn(
 			withMips(),

@@ -77,3 +77,16 @@ export function uniformValue(target: WgslType, value: InputValue | undefined): U
 export function uniformName(nodeId: string, key: string): string {
 	return `u_${identSuffix(nodeId)}_${identSuffix(key)}`;
 }
+
+/** The unlinked input a uniform holds: what it's read as, and its value when the node stores none. */
+export type UniformInput = {
+	node: string;
+	input: string;
+	type: WgslType;
+	fallback: InputValue | undefined;
+};
+
+/** What names the input among others', for `UniformInput`s to be told apart. */
+export function uniformInputKey(node: string, input: string): string {
+	return `${node}|${input}`;
+}

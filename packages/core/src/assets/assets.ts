@@ -123,17 +123,26 @@ export function frameInterval(asset: Asset | undefined): number {
 }
 
 /**
+ * How far before a frame's start a time still shows it, in seconds. A time
+ * from frame values is rounded to f32, and container timestamps to their
+ * timescale (milliseconds in WebM), so a time meant for a frame's start can
+ * land a hair before it. Less than a quarter of a frame up to 240 fps.
+ */
+export const VIDEO_TIME_TOLERANCE = 0.001;
+
+/**
  * The time in a video of `duration` seconds shown at project time `time`,
  * or undefined when nothing shows (before its start, or past its end when
- * `end` is "transparent").
+ * `end` is "transparent"). Frames are intervals, so moving the time forward
+ * by the tolerance is right at any speed, at the start and at a loop's wrap.
  */
 export function videoTime(
 	playback: VideoPlayback,
 	time: number,
 	duration: number,
 ): number | undefined {
-	if (time < playback.start) return undefined;
-	const t = (time - playback.start) * playback.speed;
+	if (time < playback.start - VIDEO_TIME_TOLERANCE) return undefined;
+	const t = (time - playback.start) * playback.speed + VIDEO_TIME_TOLERANCE;
 	if (duration <= 0) return 0;
 	if (t >= 0 && t < duration) return t;
 	switch (playback.end) {

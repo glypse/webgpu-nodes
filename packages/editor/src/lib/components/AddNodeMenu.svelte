@@ -110,6 +110,11 @@
 					>({@render highlighted(result.alias, result.aliasRanges)})</span
 				>{/if}
 		</span>
+		{#if entry.description}
+			<span class="text-muted-foreground min-w-0 flex-1 truncate pl-2 text-xs">
+				{entry.description}
+			</span>
+		{/if}
 		{#if withHeading}
 			<span class="text-muted-foreground ml-auto min-w-0 truncate pl-2 text-xs">
 				{[entry.heading, ...(entry.section ?? [])].join(" › ")}

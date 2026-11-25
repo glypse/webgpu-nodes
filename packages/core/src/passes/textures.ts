@@ -101,6 +101,19 @@ export function canMip(format: TextureFormat): boolean {
 }
 
 /** How many levels a full mip chain of a texture of this size has. */
+/**
+ * The texels of an axis of `size` texels that texel `i` of the next level
+ * takes, as a first texel and one weight for it and each after, which sum to
+ * one. Even sizes take pairs; an odd size, 2m + 1, takes three for each, the
+ * outer two partly. The runtime's mip shader averages with these same weights.
+ */
+export function mipWeights(size: number, i: number): { first: number; weights: number[] } {
+	if (size === 1) return { first: 0, weights: [1] };
+	if (size % 2 === 0) return { first: 2 * i, weights: [0.5, 0.5] };
+	const m = (size - 1) / 2;
+	return { first: 2 * i, weights: [(m - i) / size, m / size, (i + 1) / size] };
+}
+
 export function mipLevelCount({ width, height }: Size): number {
 	return Math.floor(Math.log2(Math.max(width, height, 1))) + 1;
 }

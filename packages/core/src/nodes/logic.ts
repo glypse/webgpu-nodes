@@ -223,16 +223,56 @@ type FallbackDocument = {
 	}[];
 };
 
+type FallbackEntry = {
+	edges: FallbackDocument["edges"];
+	/** The definitions it was found through, which it's out of date without. */
+	used: ReadonlyMap<string, FallbackDocument | undefined>;
+	ids: Set<string>;
+};
+
+const fallbackHandles = new WeakMap<FallbackDocument["nodes"], FallbackEntry>();
+
+function currentFallbacks(
+	{ nodes, edges }: FallbackDocument,
+	definitions: ReadonlyMap<string, FallbackDocument>,
+): Set<string> | undefined {
+	const known = fallbackHandles.get(nodes);
+	if (known?.edges !== edges) return undefined;
+	for (const [ref, doc] of known.used) {
+		if (definitions.get(ref) !== doc) return undefined;
+		if (doc && !currentFallbacks(doc, definitions)) return undefined;
+	}
+	return known.ids;
+}
+
 /**
  * Group-input handles of a definition whose value goes straight (through
  * reroutes at most) into a Fallback node, or into a fallback input of a
  * nested group: unlinked on a group node, they fall back to the group's own
- * default instead of showing an editor.
+ * default instead of showing an editor. Memoised on the documents' arrays,
+ * which edits replace.
  */
 export function fallbackHandleIds(
 	definition: FallbackDocument,
 	definitions: ReadonlyMap<string, FallbackDocument> = new Map(),
 	visiting: ReadonlySet<FallbackDocument> = new Set(),
+): Set<string> {
+	const known = currentFallbacks(definition, definitions);
+	if (known) return known;
+	const used = new Map<string, FallbackDocument | undefined>();
+	const ids = computeFallbackHandles(definition, definitions, visiting, used);
+	// What nests itself is found without the group being visited, which isn't to be kept.
+	if ([...used.values()].some((doc) => doc && (doc === definition || visiting.has(doc))))
+		return ids;
+	fallbackHandles.set(definition.nodes, { edges: definition.edges, used, ids });
+	return ids;
+}
+
+function computeFallbackHandles(
+	definition: FallbackDocument,
+	definitions: ReadonlyMap<string, FallbackDocument>,
+	visiting: ReadonlySet<FallbackDocument>,
+	used: Map<string, FallbackDocument | undefined>,
 ): Set<string> {
 	const inputIds = new Set(
 		definition.nodes.filter((n) => n.type === "group-input").map((n) => n.id),
@@ -250,6 +290,7 @@ export function fallbackHandleIds(
 		}
 		const ref = node?.type === "node-group" ? node.group?.definitionRef : undefined;
 		const inner = ref === undefined ? undefined : definitions.get(ref);
+		if (ref !== undefined) used.set(ref, inner);
 		if (!ref || !inner || visiting.has(inner)) return false;
 		let handles = nested.get(ref);
 		if (!handles) {

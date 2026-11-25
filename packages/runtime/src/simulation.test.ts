@@ -74,6 +74,7 @@ describe("SimulationState", () => {
 		resources: names.map(item),
 		passes: [],
 		uniforms: {},
+		uniformInputs: new Map(),
 		frame: { steps: [] },
 	});
 

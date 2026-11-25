@@ -195,6 +195,9 @@
 	function addHandle(type: SocketType) {
 		graph.addBoundaryHandle(id, type);
 	}
+
+	/** Dotted underline of the label of an input that needs a frame value. */
+	const frameLabel = "underline decoration-dotted decoration-muted-foreground underline-offset-2";
 </script>
 
 {#snippet addHandleButton(
@@ -459,7 +462,11 @@
 				{@const effectiveType = resolvedInputType(inputDef)}
 				{@const connected = connectedHandles.has(inputDef.id)}
 				{@const inputLabel = nodeLabels.inputs[inputDef.id] ?? inputDef.label}
-				<div class="node-shell__row">
+				{@const frameMark = inputDef.frame ? frameLabel : ""}
+				{@const frameTitle = inputDef.frame
+					? "Needs a value that's the same for the whole frame"
+					: undefined}
+				<div class="node-shell__row" title={frameTitle}>
 					<Handle
 						type="target"
 						position={Position.Left}
@@ -484,7 +491,7 @@
 						</span>
 					{:else if connected}
 						<span
-							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs"
+							class="text-muted-foreground pointer-events-none shrink-0 pr-1 text-xs {frameMark}"
 						>
 							{inputLabel}: {effectiveType}
 							{#if sharedTypes[inputDef.id]}
@@ -492,19 +499,19 @@
 							{/if}
 						</span>
 					{:else if inputDef.fallback}
-						<span class="node-shell__handle-label">
+						<span class="node-shell__handle-label {frameMark}">
 							{inputLabel}: {effectiveType}
 							<span class="opacity-60">(default)</span>
 						</span>
 					{:else if isTexture(effectiveType)}
-						<span class="node-shell__handle-label">
+						<span class="node-shell__handle-label {frameMark}">
 							{inputLabel}: {effectiveType}
 							<span class="opacity-60">(none)</span>
 						</span>
 					{:else}
 						{@const control = inputControl(inputDef, effectiveType)}
 						<div class="flex flex-1 flex-col gap-0.5">
-							<span class="node-shell__handle-label">
+							<span class="node-shell__handle-label {frameMark}">
 								{inputLabel}{control.kind === "enum" ? "" : `: ${effectiveType}`}
 							</span>
 							<InputEditor

@@ -19,6 +19,7 @@ import { readSource, type TextureSource, TextureSources } from "../passes/source
 import {
 	channelsOf,
 	mipLevelCount,
+	mipWeights,
 	resolveSize,
 	scalarOf,
 	type Size,
@@ -489,7 +490,7 @@ const levelsOf = (texture: CpuTexture) => texture.levels ?? 1;
 
 const mipChains = new WeakMap<CpuTexture, CpuTexture[]>();
 
-/** A texture's mip level: every texel the mean of the 2x2 block of the level before it. */
+/** A texture's mip level: each texel a box filter of the level before it (see `mipWeights`). */
 function mipLevel(texture: CpuTexture, level: number): CpuTexture {
 	if (level <= 0) return texture;
 	let chain = mipChains.get(texture);
@@ -508,14 +509,16 @@ function mipLevel(texture: CpuTexture, level: number): CpuTexture {
 				const key = y * width + x;
 				const done = known.get(key);
 				if (done) return done;
-				const taps = [0, 1].flatMap((dy) =>
-					[0, 1].map((dx) =>
-						texelAt(parent, Math.min(2 * x + dx, parent.width - 1), 2 * y + dy),
-					),
-				);
-				const mean = [0, 1, 2, 3].map(
-					(c) => taps.reduce((sum, t) => sum + (t[c] ?? 0), 0) / taps.length,
-				);
+				const mean = [0, 0, 0, 0];
+				const column = mipWeights(parent.height, y);
+				const row = mipWeights(parent.width, x);
+				column.weights.forEach((wy, dy) => {
+					row.weights.forEach((wx, dx) => {
+						const texel = texelAt(parent, row.first + dx, column.first + dy);
+						for (let c = 0; c < 4; c++)
+							mean[c] = (mean[c] ?? 0) + (texel[c] ?? 0) * wx * wy;
+					});
+				});
 				known.set(key, mean);
 				return mean;
 			},
@@ -643,7 +646,12 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 			: sampleTexture(texture, [...frame.uv], 0, 0);
 		return coerce(color, type);
 	}
-	if (edge) return coerce(output(model, frame, edge.source, edge.sourceHandle), type);
+	if (edge)
+		return coerce(
+			output(model, frame, edge.source, edge.sourceHandle),
+			type,
+			outputType(model, frame, edge.source, edge.sourceHandle),
+		);
 	const stored =
 		node.data.values?.[inputId] ?? descriptorOf(model, node).defaultData.values?.[inputId];
 	const keys = componentKeys(type);
@@ -656,7 +664,26 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 function operands(model: GraphModel, frame: Frame, node: GraphNode, inputId: string): Value[] {
 	const type = valueType(typesIn(model, frame, node).inputTypes[inputId] ?? "f32");
 	const edges = frame.doc.edgesByTarget.get(node.id)?.filter((e) => e.targetHandle === inputId);
-	return (edges ?? []).map((e) => coerce(output(model, frame, e.source, e.sourceHandle), type));
+	return (edges ?? []).map((e) =>
+		coerce(
+			output(model, frame, e.source, e.sourceHandle),
+			type,
+			outputType(model, frame, e.source, e.sourceHandle),
+		),
+	);
+}
+
+/** The value type an output carries, which conversions to an input's type start from. */
+function outputType(
+	model: GraphModel,
+	frame: Frame,
+	nodeId: string,
+	handleId: string,
+): WgslType | undefined {
+	const node = frame.doc.nodesById.get(nodeId);
+	if (!node) return undefined;
+	const type = typesIn(model, frame, node).resolvedOutputs.find((o) => o.id === handleId)?.type;
+	return type === undefined ? undefined : valueType(type);
 }
 
 function output(model: GraphModel, frame: Frame, nodeId: string, handleId: string): Value {
