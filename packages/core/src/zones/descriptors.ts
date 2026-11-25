@@ -312,7 +312,6 @@ export function buildPassRepeatInputDescriptor(
 		inputs: [
 			{ id: ITERATIONS_HANDLE, label: "Iterations", types: ["i32"], frame: true },
 			...items.map((item) => itemInput(item, variables)),
-			...items.flatMap((item) => sizeInputs(itemSizeHandles(item.id), item.size, item.label)),
 		],
 		outputs: [
 			{ id: ITERATION_HANDLE, label: "Iteration", type: "i32" },
@@ -329,9 +328,21 @@ export function buildPassRepeatOutputDescriptor(
 	return {
 		...zoneDescriptorBase(PASS_REPEAT_OUTPUT, "Repeat Passes Output"),
 		defaultData: { items: [] },
-		inputs: items.map((item) => itemInput(item, variables)),
+		inputs: [
+			...items.map((item) => itemInput(item, variables)),
+			// Here and not on the input, so an item can be sized by the iteration it's written in.
+			...items.flatMap((item) => sizeInputs(itemSizeHandles(item.id), item.size, item.label)),
+		],
 		outputs: items.map((item) => itemOutput(item, variables)),
 	};
+}
+
+/**
+ * The boundary node holding a zone's item size inputs: a passes zone's
+ * output, so sizes can read the zone's own iteration, else its input.
+ */
+export function sizeNodeOf<T>(kind: ZoneKind, input: T, output: T): T {
+	return kind === "passes" ? output : input;
 }
 
 /** The descriptor of a zone node, of any kind. */

@@ -75,6 +75,8 @@ export class PlanWalk {
 	private sizes = new ScopedMemo<Sized>();
 	/** Set while resolving something that depends on the iteration of a loop. */
 	private dependent = false;
+	/** Set while resolving something that read a loop item's size before it has one. */
+	private unresolved = false;
 	private resolving = new Set<string>();
 	/** The iteration each loop being run is at. */
 	private iteration = new Map<string, number>();
@@ -262,11 +264,10 @@ export class PlanWalk {
 	/** Whether the values of `refs` can differ from one iteration to the next. */
 	private dependsOnIteration(key: string, refs: () => Iterable<FrameRef>): boolean {
 		const found = this.input.dependencies.of(key, refs);
-		if (found.loops.size > 0) return true;
 		const outer = this.dependent;
 		this.dependent = false;
 		for (const id of found.textures) this.sizeOf(id);
-		const result = this.dependent;
+		const result = found.loops.size > 0 || this.dependent;
 		this.dependent = outer;
 		return result;
 	}
@@ -274,7 +275,7 @@ export class PlanWalk {
 	private sizeAt(size: TextureSize): Size {
 		return resolveSize(size, {
 			canvas: this.canvas,
-			resource: (id) => this.sizeOf(id),
+			resource: (id) => this.sizeOf(id) ?? this.beforeLoop(id),
 			maxDimension: this.input.maxDimension,
 			frame: (ref) => {
 				const key = `size:${String(ref.step)}:${ref.output}:${String(ref.component)}`;
@@ -284,7 +285,16 @@ export class PlanWalk {
 		});
 	}
 
-	/** The size of a resource now, which a size that depends on an iteration changes. */
+	/** The canvas stands in for the size of a loop item that has none yet. */
+	private beforeLoop(id: string): Size | undefined {
+		return this.input.resources.get(id)?.kind === "loop" ? this.canvas : undefined;
+	}
+
+	/**
+	 * The size of a resource now, which a size that depends on an iteration
+	 * changes. What was resolved from a loop item that has no size yet isn't
+	 * kept: it's resolved again once the item has one.
+	 */
 	private sizeOf(id: string): Size | undefined {
 		const known = this.sizes.get(id);
 		if (known) {
@@ -301,31 +311,40 @@ export class PlanWalk {
 		// A size that depends on itself has nothing to start from.
 		if (this.resolving.has(id)) return this.canvas;
 		this.resolving.add(id);
-		const outer = this.dependent;
+		const outer = { dependent: this.dependent, unresolved: this.unresolved };
 		this.dependent = false;
+		this.unresolved = false;
 		let size: Size;
 		try {
 			size = this.sizeAt(resource.size);
 		} finally {
 			this.resolving.delete(id);
 		}
-		const own = this.dependent;
-		this.dependent = outer || own;
-		this.sizes.set(id, { size, dependent: own }, own);
+		const own = { dependent: this.dependent, unresolved: this.unresolved };
+		this.dependent = outer.dependent || own.dependent;
+		this.unresolved = outer.unresolved || own.unresolved;
+		if (!own.unresolved) this.sizes.set(id, { size, dependent: own.dependent }, own.dependent);
 		return size;
 	}
 
-	/** A loop item's size as the textures keeping it are: what's read is what was drawn. */
+	/**
+	 * A loop item's size as the textures keeping it are: what's read is what
+	 * was drawn. An item's current and next values have none while it's first
+	 * made, so the canvas stands in; a final one isn't known before its loop ran.
+	 */
 	private loopSize(resource: ResourceDecl & { kind: "loop" }): Size | undefined {
 		const texture = this.loopTexture(resource);
-		return texture && { width: texture.width, height: texture.height };
+		if (texture) return { width: texture.width, height: texture.height };
+		this.unresolved = true;
+		return resource.read === "final" ? undefined : this.canvas;
 	}
 
 	private textureSize(id: string) {
 		// Reading a size for a frame value says nothing of what the one reading depends on.
-		const outer = this.dependent;
+		const outer = { dependent: this.dependent, unresolved: this.unresolved };
 		const size = this.sizeOf(id);
-		this.dependent = outer;
+		this.dependent = outer.dependent;
+		this.unresolved = outer.unresolved;
 		if (!size) return undefined;
 		const resource = this.input.resources.get(id);
 		return {

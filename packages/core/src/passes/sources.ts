@@ -35,6 +35,7 @@ import {
 	PASS_REPEAT_OUTPUT,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
+	sizeNodeOf,
 	type ZoneAnalysis,
 	zoneItems,
 	zoneOptions,
@@ -524,7 +525,8 @@ export class TextureSources {
 		let state: SimulationState | undefined;
 		if (instance && input && analysed?.kind === kind) {
 			const outputs = this.typesIn(instance.doc, input, instance.bindings).resolvedOutputs;
-			const zone = zoneItems(instance.doc.nodesById.get(analysed.outputId));
+			const outputNode = instance.doc.nodesById.get(analysed.outputId);
+			const zone = zoneItems(outputNode);
 			const items = zone.map((item): StateItem => {
 				const type = outputs.find((o) => o.id === item.id)?.type ?? "f32";
 				// Sizes read other textures, which may be this zone's own
@@ -536,7 +538,12 @@ export class TextureSources {
 					if (resolving) return { size: CANVAS_SIZE };
 					if (!sizing) {
 						resolving = true;
-						sizing = this.itemSizing(path, instance, input, item);
+						sizing = this.itemSizing(
+							path,
+							instance,
+							sizeNodeOf(kind, input, outputNode ?? input),
+							item,
+						);
 						resolving = false;
 					}
 					return sizing;

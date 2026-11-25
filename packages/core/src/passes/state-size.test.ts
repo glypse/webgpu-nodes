@@ -251,6 +251,19 @@ describe("sized simulation items", () => {
 		expect(model.getZoneItems(repeat)[0]).not.toHaveProperty("size");
 	});
 
+	it("are set on a passes zone's output, so its own iteration can reach them", () => {
+		const model = managerFor([], []);
+		const zone = model.createZone("passes", { x: 0, y: 0 }) ?? "";
+		const item = model.getZoneItems(zone)[0]?.id ?? "";
+		model.setZoneItemSize(zone, item, "scale");
+		const inputs = (id: string) =>
+			model.resolveDescriptor(model.resolveNode(id) ?? ({} as never)).inputs.map((i) => i.id);
+		const output = String(model.resolveNode(zone)?.data.pairedOutput);
+		expect(inputs(zone)).not.toContain(`scale:${item}`);
+		expect(inputs(output)).toEqual([item, `scale:${item}`, `like:${item}`]);
+		expect(model.resolveNode(output)?.data.values?.[`scale:${item}`]).toBe(1);
+	});
+
 	it("drop the links to inputs a mode no longer has", () => {
 		const model = simulation(
 			"scale",

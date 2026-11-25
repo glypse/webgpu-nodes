@@ -323,7 +323,13 @@ function loopTexture(
 		source.read === "final"
 			? runLoop(model, frame, source.loop).get(source.texture)
 			: env.loops.get(loopId(source.loop))?.items.get(source.texture);
-	if (!texture) return EMPTY_IMAGE;
+	if (!texture) {
+		// A size reading an item's current value has none to read when the item is
+		// first made: the canvas stands in.
+		const [width, height] = frame.resolution;
+		env.sizes.set(source.id, { width, height, levels: 1 });
+		return EMPTY_IMAGE;
+	}
 	env.sizes.set(source.id, { width: texture.width, height: texture.height, levels: 1 });
 	return texture;
 }

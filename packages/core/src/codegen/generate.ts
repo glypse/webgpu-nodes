@@ -1181,16 +1181,15 @@ function emitDocumentBody(
 		const zone = zones.zones.get(zones.zoneOfBoundary.get(e.target) ?? "");
 		const mode = zone && simulations.get(zone.id);
 		if (!zone || !mode) return true;
-		if (e.target === zone.inputId) {
-			// A loop's count and sizes are frame values, which no pixel computes.
-			if (
-				zone.kind === "passes" &&
-				(e.targetHandle === ITERATIONS_HANDLE || loopSizeInputs(zone).has(e.targetHandle))
-			) {
-				return false;
-			}
-			return mode === "start";
+		// A loop's count and sizes are frame values, which no pixel computes.
+		if (
+			zone.kind === "passes" &&
+			((e.target === zone.inputId && e.targetHandle === ITERATIONS_HANDLE) ||
+				(e.target === zone.outputId && loopSizeInputs(zone).has(e.targetHandle)))
+		) {
+			return false;
 		}
+		if (e.target === zone.inputId) return mode === "start";
 		return (
 			mode === "step" && (e.targetHandle === SKIP_HANDLE || probeItems.has(e.targetHandle))
 		);

@@ -15,6 +15,7 @@ import {
 	NEW_ITEM_HANDLE,
 	pairedOutputId,
 	REPEAT_INPUT,
+	sizeNodeOf,
 	SKIP_HANDLE,
 	ZONE_BOUNDARIES,
 	zoneItems,
@@ -179,7 +180,10 @@ export abstract class ZoneModel extends GraphModelBase {
 				boundary.has(e.target) &&
 				!fixed.has(e.targetHandle) &&
 				!ids.has(e.targetHandle) &&
-				!(e.target === zone.input.id && sizes.has(e.targetHandle))
+				!(
+					e.target === sizeNodeOf(zone.kind, zone.input, zone.output).id &&
+					sizes.has(e.targetHandle)
+				)
 			) {
 				return false;
 			}
@@ -271,13 +275,13 @@ export abstract class ZoneModel extends GraphModelBase {
 
 	/**
 	 * Set how a simulation's or passes zone's item is sized, or (`undefined`)
-	 * to the canvas' size. Its size inputs on the zone's input node follow the
+	 * to the canvas' size. Its size inputs follow the
 	 * mode, and links to those it no longer has are dropped.
 	 */
 	setZoneItemSize(zoneId: string, itemId: string, size: ZoneItem["size"]) {
 		const zone = this.zoneNodes(zoneId);
 		if (!zone || !keepsTextures(zone.kind) || this.isLocked) return;
-		const input = zone.input;
+		const input = sizeNodeOf(zone.kind, zone.input, zone.output);
 		const handle = size === undefined ? undefined : itemSizeHandles(itemId)[size];
 		const unset = handle === undefined ? false : input.data.values?.[handle] === undefined;
 		if (size !== undefined && unset) {
