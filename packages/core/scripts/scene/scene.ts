@@ -296,7 +296,7 @@ export const root = group({
 			},
 		);
 
-		const { flow, frames, flowTile } = g.frame(
+		const { seconds, flow, frames, flowTile } = g.frame(
 			"2 · Optical Flow",
 			{
 				note: "Previous Frame keeps the last frame in a simulation; Optical Flow estimates how far each pixel moved since, coarse to fine, in Repeat Passes zones (enter it). Hue is the direction, saturation the speed.",
@@ -307,7 +307,14 @@ export const root = group({
 					current: kept.current,
 					previous: kept.previous,
 				});
-				const { color } = g.call(flowToColor, { flow: estimated.flow, max: 0.01 });
+				// The flow covers the time since the frame drawn before, which varies
+				// when the preview falls behind the display: shown per second, the
+				// colours don't flicker with it.
+				const seconds = g.wireless("seconds", g.max(g.delta(), 0.001));
+				const { color } = g.call(flowToColor, {
+					flow: estimated.flow,
+					max: g.mul(0.6, seconds),
+				});
 				// The legend fills the frame it's drawn over: a small one is put in the corner.
 				const { legend } = g.renderTexture(
 					{ legend: { value: g.call(flowLegend).color } },
@@ -319,6 +326,7 @@ export const root = group({
 				const shown = g.mix(color, g.vec("vec3f", x, y, z), w);
 				const { x: red, y: green, z: blue } = g.separateVector(shown);
 				return {
+					seconds,
 					flow: g.wireless("flow", estimated.flow),
 					frames: { current: kept.current, previous: kept.previous },
 					flowTile: g.vec("vec4f", red, green, blue, 1),
@@ -328,8 +336,16 @@ export const root = group({
 
 		const arrows = g.frame(
 			"3 · Motion Arrows",
-			{ note: "The flow at the centre of each cell, longer than it is so it can be seen." },
-			() => g.call(motionArrows, { color: source, flow, cell: 0.06, scale: 8 }).color,
+			{
+				note: "The flow at the centre of each cell, per second like the colours, and longer than it is so it can be seen.",
+			},
+			() =>
+				g.call(motionArrows, {
+					color: source,
+					flow,
+					cell: 0.06,
+					scale: g.div(0.13, seconds),
+				}).color,
 		);
 
 		const error = g.frame(

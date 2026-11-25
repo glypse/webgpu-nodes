@@ -104,7 +104,10 @@
 
 	/** Textures are drawn thicker. */
 	const texture = $derived(sourceType === "texture" || textureLink?.kind === "render");
-	const passes = $derived(graph.passAnalysis().renders().size + 1);
+	// Walking every render of the frame is costly: only links that render need it.
+	const passes = $derived(
+		textureLink?.kind === "render" ? graph.passAnalysis().renders().size + 1 : 0,
+	);
 	const conversion = $derived(
 		textureLink?.kind === "sample"
 			? { label: "sample", title: "Sampled at the pixel: its colour there" }

@@ -19,6 +19,8 @@ export type TextureLink =
 export class PassAnalysis {
 	readonly sources: TextureSources;
 	private renderCache: ReadonlyMap<string, SocketRef> | undefined;
+	/** Every link is drawn, and redrawn whenever a node moves. */
+	private links = new Map<string, TextureLink | undefined>();
 
 	constructor(private graph: TextureGraph) {
 		this.sources = new TextureSources(graph);
@@ -26,6 +28,14 @@ export class PassAnalysis {
 
 	/** What `edge`, of the document computed at `path`, does with a texture, if anything. */
 	link(path: readonly string[], edge: GraphEdge): TextureLink | undefined {
+		const key = `${path.join("/")}|${edge.id}|${edge.source}|${edge.sourceHandle}|${edge.target}|${edge.targetHandle}`;
+		if (this.links.has(key)) return this.links.get(key);
+		const link = this.computeLink(path, edge);
+		this.links.set(key, link);
+		return link;
+	}
+
+	private computeLink(path: readonly string[], edge: GraphEdge): TextureLink | undefined {
 		const instance = this.sources.instance(path);
 		const target = instance?.doc.nodesById.get(edge.target);
 		if (!instance || !target) return undefined;

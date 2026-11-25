@@ -13,9 +13,14 @@ const MAX_REALTIME_DELTA = 0.1;
 const MAX_FIXED_CATCH_UP = 1;
 
 /**
- * Project time. At a fixed rate, time is always `frame / fps` and delta
- * `1 / fps`, so a frame looks the same however it's reached (playback, a
- * seek, an export). In real time, time follows the wall clock.
+ * Project time. At a fixed rate, time is always `frame / fps`, so a frame
+ * looks the same however it's reached (playback, a seek, an export). In
+ * real time, time follows the wall clock.
+ *
+ * Delta is the time since the frame drawn before, which is what anything
+ * moving by it covers between the two: `1 / fps` at a fixed rate unless
+ * frames were skipped, a display refresh in real time unless the preview
+ * falls behind the display.
  */
 export class Clock implements FrameInputs {
 	time = 0;
@@ -23,6 +28,8 @@ export class Clock implements FrameInputs {
 	frame = 0;
 	/** Wall-clock seconds since the current fixed-rate frame was due; negative when it was drawn early. */
 	private carry = 0;
+	/** The time of the frame last drawn, which playback's delta counts from. */
+	private drawnAt: number | undefined;
 
 	constructor(public timing: Timing) {}
 
@@ -33,8 +40,9 @@ export class Clock implements FrameInputs {
 	/** Advance by `elapsed` wall-clock seconds; returns whether a new frame is due. */
 	tick(elapsed: number): boolean {
 		if (this.timing.realtime) {
-			this.delta = Math.min(Math.max(elapsed, 0), MAX_REALTIME_DELTA);
-			this.time += this.delta;
+			const step = Math.min(Math.max(elapsed, 0), MAX_REALTIME_DELTA);
+			this.time += step;
+			this.delta = this.time - (this.drawnAt ?? this.time - step);
 			this.frame += 1;
 			return true;
 		}
@@ -50,12 +58,20 @@ export class Clock implements FrameInputs {
 		if (steps === 0) return false;
 		this.carry -= steps / this.timing.fps;
 		this.setFrame(this.frame + steps);
+		if (this.drawnAt !== undefined && this.time > this.drawnAt)
+			this.delta = this.time - this.drawnAt;
 		return true;
+	}
+
+	/** The current frame was drawn: the next delta counts from it. */
+	drawn() {
+		this.drawnAt = this.time;
 	}
 
 	/** Jump to `time` seconds; at a fixed rate, to the frame showing it. */
 	seek(time: number) {
 		this.carry = 0;
+		this.drawnAt = undefined;
 		const clamped = Math.max(0, time);
 		if (this.timing.realtime) {
 			this.time = clamped;
@@ -69,6 +85,7 @@ export class Clock implements FrameInputs {
 	/** Move by whole frames (of `fps`, in real time too). */
 	step(frames: number) {
 		this.carry = 0;
+		this.drawnAt = undefined;
 		if (this.timing.realtime) {
 			this.time = Math.max(0, this.time + frames * this.frameDuration);
 			this.frame = Math.max(0, this.frame + frames);

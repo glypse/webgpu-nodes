@@ -48,6 +48,7 @@ import { AssetModel, MEDIA_NODE_OF } from "./model-assets";
 import { emptyProject, withEntry } from "./model-base";
 import { ZONE_SPACING } from "./model-zones";
 import { GraphProjectSchema } from "./schema";
+import { nodesStructure } from "./structure";
 import { type LoadResult, parseJson, type ValidatedProject, validateProject } from "./validate";
 
 /** Rows a widget takes, for estimating node sizes. */
@@ -442,13 +443,14 @@ export class GraphModel extends AssetModel {
 
 	/**
 	 * The graph's textures as compiled (see `PassAnalysis`), memoised on the
-	 * documents' nodes and edges, the assets and the types.
+	 * documents' structure and edges, the assets and the types: moving nodes
+	 * keeps it.
 	 */
 	passAnalysis(): PassAnalysis {
 		const inputs = [
 			this.assets,
 			this.state.typeCaches,
-			...[...this.project.definitions.values()].flatMap((d) => [d.nodes, d.edges]),
+			...[...this.project.definitions.values()].flatMap((d) => [nodesStructure(d), d.edges]),
 		];
 		const cached = this.passCache;
 		if (

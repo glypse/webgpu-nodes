@@ -36,6 +36,29 @@ describe("Clock", () => {
 		expect(clock.delta).toBeCloseTo(0.1);
 	});
 
+	it("counts delta from the frame drawn before, across refreshes it wasn't drawn on", () => {
+		const live = new Clock({ fps: 60, realtime: true });
+		live.tick(0.016);
+		live.drawn();
+		live.tick(0.017);
+		live.tick(0.016);
+		expect(live.delta).toBeCloseTo(0.033);
+		live.drawn();
+		live.tick(0.016);
+		expect(live.delta).toBeCloseTo(0.016);
+
+		const fixed = new Clock({ fps: 30, realtime: false });
+		fixed.tick(1 / 30);
+		fixed.drawn();
+		fixed.tick(1 / 30);
+		fixed.tick(1 / 30);
+		expect(fixed.frame).toBe(3);
+		expect(fixed.delta).toBeCloseTo(2 / 30);
+		fixed.seek(0);
+		fixed.tick(1 / 30);
+		expect(fixed.delta).toBeCloseTo(1 / 30);
+	});
+
 	it("seeks to the frame showing a time", () => {
 		const clock = new Clock({ fps: 10, realtime: false });
 		clock.seek(1.27);

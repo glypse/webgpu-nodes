@@ -118,6 +118,7 @@ export class Player {
 		this.dirty = false;
 		const finished = this.onFrame(this.clock);
 		if (!finished) return;
+		this.clock.drawn();
 		this.framesInFlight += 1;
 		const release = () => {
 			this.framesInFlight -= 1;
