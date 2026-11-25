@@ -11,6 +11,8 @@ import {
 	TEXTURE_SIZE,
 	textureCoordinates,
 } from "../nodes/texture";
+import { itemSizeInputIds } from "../passes/item-size";
+import { loopId, type LoopRef, type LoopStage } from "../passes/loop";
 import {
 	packState,
 	simulationId,
@@ -20,6 +22,7 @@ import {
 	unpackState,
 } from "../passes/simulation";
 import {
+	loopSource,
 	readSource,
 	type RenderItemDraw,
 	type SocketRef,
@@ -70,7 +73,10 @@ import {
 	DELTA_TIME_HANDLE,
 	ITERATION_HANDLE,
 	ITERATIONS_HANDLE,
+	keepsTextures,
 	pairedOutputId,
+	PASS_REPEAT_INPUT,
+	PASS_REPEAT_OUTPUT,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
 	SIMULATION_INPUT,
@@ -431,10 +437,25 @@ export type RenderTextureTarget = {
 	renderTexture: { path: readonly string[]; node: string; items: readonly RenderItemDraw[] };
 };
 
-export type ShaderTarget = SocketRef | SimulationTarget | RenderTextureTarget;
+/**
+ * Some of a Repeat Passes zone's items, each drawn into the texture its stage
+ * writes: the initial values into the current ones, the next values into the
+ * next ones.
+ */
+export type LoopTarget = {
+	loop: LoopRef;
+	stage: LoopStage;
+	items: readonly StateItem[];
+};
+
+export type ShaderTarget = SocketRef | SimulationTarget | RenderTextureTarget | LoopTarget;
 
 function isSimulationTarget(target: ShaderTarget): target is SimulationTarget {
 	return "simulation" in target;
+}
+
+function isLoopTarget(target: ShaderTarget): target is LoopTarget {
+	return "loop" in target;
 }
 
 function isRenderTextureTarget(target: ShaderTarget): target is RenderTextureTarget {
@@ -451,13 +472,32 @@ function isRenderTextureTarget(target: ShaderTarget): target is RenderTextureTar
 type Probe = { path: readonly string[] } & (
 	| { kind: "socket"; node: string; handle: string }
 	| { kind: "simulation"; zone: string; stage: SimulationStage; items: readonly StateItem[] }
+	/** A loop's `next` stage is the step of its zone. */
+	| { kind: "loop"; zone: string; stage: SimulationStage; items: readonly StateItem[] }
 	| { kind: "textures"; node: string; items: readonly RenderItemDraw[] }
 );
+
+type StateProbe = Extract<Probe, { kind: "simulation" | "loop" }>;
+
+/** Whether a probe computes the state items of a zone keeping them in textures. */
+function isStateProbe(probe: Probe | undefined): probe is StateProbe {
+	return probe?.kind === "simulation" || probe?.kind === "loop";
+}
 
 function probeOf(target: ShaderTarget): Probe {
 	if (isRenderTextureTarget(target)) {
 		const { path, node, items } = target.renderTexture;
 		return { kind: "textures", path, node, items };
+	}
+	if (isLoopTarget(target)) {
+		const { loop, stage, items } = target;
+		return {
+			kind: "loop",
+			path: loop.path,
+			zone: loop.zone,
+			stage: stage === "start" ? "start" : "step",
+			items,
+		};
 	}
 	if (!isSimulationTarget(target)) return { kind: "socket", ...target };
 	const { simulation, stage, items } = target;
@@ -495,9 +535,12 @@ function stateValueType(item: StateItem): WgslType {
 }
 
 /**
- * How a document's shader computes a simulation zone in it: reading its
- * state (`opaque`), or computing its initial values (`start`), its next
- * state (`step`), or something in it from its previous state (`inline`).
+ * How a document's shader computes a zone keeping its items in textures
+ * (a simulation or Repeat Passes zone): reading its state (`opaque`), or
+ * computing its initial values (`start`), its next state (`step`), or
+ * something in it from its previous state (`inline`). A loop's previous
+ * state is its items' current values, and its state after it their final
+ * ones.
  */
 type SimulationMode = "opaque" | "start" | "step" | "inline";
 
@@ -570,6 +613,14 @@ class BodyEmitter {
 			this.readHandles.set(edge.source, read);
 		}
 		for (const zone of zones.zones.values()) {
+			if (zone.kind === "passes") {
+				const vars = simulationVarNames(zone, this.zoneItems(zone));
+				const inputVars = new Map(vars.previous);
+				inputVars.set(ITERATION_HANDLE, vars.iteration);
+				this.zoneVars.set(zone.inputId, inputVars);
+				this.zoneVars.set(zone.outputId, vars.current);
+				continue;
+			}
 			if (zone.kind === "simulation") {
 				const vars = simulationVarNames(zone, this.zoneItems(zone));
 				const inputVars = new Map(vars.previous);
@@ -586,8 +637,8 @@ class BodyEmitter {
 		}
 	}
 
-	/** The values a simulation target gives, once its zone is emitted (see `probeFields`). */
-	simulationFields: string[] = [];
+	/** The values a state target gives, once its zone is emitted (see `probeFields`). */
+	stateFields: string[] = [];
 
 	node(id: string): GraphNode | undefined {
 		return this.nodeMap.get(id);
@@ -709,7 +760,7 @@ class BodyEmitter {
 		if (!probe) return [];
 		const [inner] = probe.path;
 		if (inner) return probeTypes(probe).map((_, k) => `${getVarName(inner)}.${probeField(k)}`);
-		if (probe.kind === "simulation") return this.simulationFields;
+		if (isStateProbe(probe)) return this.stateFields;
 		if (probe.kind === "textures") {
 			const node = this.nodeMap.get(probe.node);
 			return node
@@ -824,7 +875,7 @@ class BodyEmitter {
 		const texture = (id: string) => isTexture(outputs.find((o) => o.id === id)?.type);
 		const probe = this.probe;
 		const seed =
-			probe && (probe.path[0] ?? (probe.kind === "simulation" ? "" : probe.node)) === node.id;
+			probe && (probe.path[0] ?? (isStateProbe(probe) ? "" : probe.node)) === node.id;
 		if (outputs.length > 0 && read.every(texture) && !seed) return;
 		if (node.type === "node-group") {
 			this.emitGroupCall(node, indent);
@@ -958,6 +1009,7 @@ class BodyEmitter {
 function simulationVarNames(zone: Zone, items: ZoneItem[]) {
 	const ident = identSuffix(zone.id);
 	return {
+		iteration: `z_${ident}_it`,
 		previous: new Map(items.map((item, k) => [item.id, `z_${ident}_p${String(k)}`])),
 		current: new Map(items.map((item, k) => [item.id, `z_${ident}_c${String(k)}`])),
 		next: items.map((_, k) => `z_${ident}_next${String(k)}`),
@@ -1093,20 +1145,20 @@ function emitDocumentBody(
 	// The node the probe is computed at, here: the group node it goes through,
 	// or the socket's node, or the boundary node whose inputs a simulation
 	// target computes.
-	const probeZone = probe?.kind === "simulation" ? zones.zones.get(probe.zone) : undefined;
+	const probeZone = isStateProbe(probe) ? zones.zones.get(probe.zone) : undefined;
 	const probeNode =
 		probe &&
 		(probe.path[0] ??
-			(probe.kind === "simulation"
+			(isStateProbe(probe)
 				? probe.stage === "start"
 					? probe.zone
 					: probeZone?.outputId
 				: probe.node));
 	const simulations = new Map<string, SimulationMode>();
 	for (const zone of zones.zones.values()) {
-		if (zone.kind !== "simulation") continue;
+		if (!keepsTextures(zone.kind)) continue;
 		let mode: SimulationMode = "opaque";
-		if (probe?.kind === "simulation" && probe.path.length === 0 && probe.zone === zone.id) {
+		if (isStateProbe(probe) && probe.path.length === 0 && probe.zone === zone.id) {
 			mode = probe.stage;
 		} else if (
 			probeNode !== undefined &&
@@ -1115,19 +1167,30 @@ function emitDocumentBody(
 			mode = "inline";
 		}
 		simulations.set(zone.id, mode);
-		if (mode !== "opaque") state.simulation = simulationId({ path, zone: zone.id });
+		if (mode !== "opaque" && zone.kind === "simulation") {
+			state.simulation = simulationId({ path, zone: zone.id });
+		}
 	}
 	const probeItems = new Set(
-		probe?.kind === "simulation" && probe.path.length === 0
-			? probe.items.map((i) => i.item.id)
-			: [],
+		isStateProbe(probe) && probe.path.length === 0 ? probe.items.map((i) => i.item.id) : [],
 	);
-	/** Whether a link into a simulation's boundary node is computed here. */
+	const loopSizeInputs = (zone: Zone): ReadonlySet<string> =>
+		itemSizeInputIds(zoneItems(nodeMap.get(zone.outputId)));
+	/** Whether a link into a state zone's boundary node is computed here. */
 	const intoSimulation = (e: GraphEdge): boolean => {
 		const zone = zones.zones.get(zones.zoneOfBoundary.get(e.target) ?? "");
 		const mode = zone && simulations.get(zone.id);
 		if (!zone || !mode) return true;
-		if (e.target === zone.inputId) return mode === "start";
+		if (e.target === zone.inputId) {
+			// A loop's count and sizes are frame values, which no pixel computes.
+			if (
+				zone.kind === "passes" &&
+				(e.targetHandle === ITERATIONS_HANDLE || loopSizeInputs(zone).has(e.targetHandle))
+			) {
+				return false;
+			}
+			return mode === "start";
+		}
 		return (
 			mode === "step" && (e.targetHandle === SKIP_HANDLE || probeItems.has(e.targetHandle))
 		);
@@ -1258,7 +1321,7 @@ function emitDocumentBody(
 		for (const unit of topologicalSort(units, unitEdges)) {
 			if (unit.startsWith("zone:")) {
 				const zone = zones.zones.get(unit.slice("zone:".length));
-				if (zone?.kind === "simulation") emitSimulation(zone, indent);
+				if (zone && keepsTextures(zone.kind)) emitStateZone(zone, indent);
 				else if (zone) emitZoneLoop(zone, indent);
 				continue;
 			}
@@ -1313,17 +1376,26 @@ function emitDocumentBody(
 		emitter.push(zone.outputId, update, indent);
 	};
 
-	const emitSimulation = (zone: Zone, indent: string) => {
+	const emitStateZone = (zone: Zone, indent: string) => {
 		const input = nodeMap.get(zone.inputId);
 		const output = nodeMap.get(zone.outputId);
-		const simulation = state.sources.simulation(path, zone.id);
-		if (!input || !output || !simulation) return;
+		const looping = zone.kind === "passes";
+		const zoneState = looping
+			? state.sources.loop(path, zone.id)
+			: state.sources.simulation(path, zone.id);
+		if (!input || !output || !zoneState) return;
 		const mode = simulations.get(zone.id) ?? "opaque";
 		const vars = simulationVarNames(zone, emitter.zoneItems(zone));
 		const index = new Map(emitter.zoneItems(zone).map((item, k) => [item.id, k]));
+		// What a zone's items are read as: a loop's previous state is what its items are
+		// during an iteration, and its current one what they end as.
+		const sourceOf = (item: StateItem, read: "previous" | "current") =>
+			looping
+				? loopSource(zoneState.ref, item, read === "previous" ? "current" : "final")
+				: stateSource(zoneState.ref, item, read);
 		// A texel of an item kept at another size than the pass is the nearest to the pixel.
 		const load = (item: StateItem, read: "previous" | "current") => {
-			const texture = emitter.textureVar(stateSource(simulation.ref, item, read));
+			const texture = emitter.textureVar(sourceOf(item, read));
 			if (sameSize(item.size, state.targetSize)) {
 				return `textureLoad(${texture}, vec2i(${FRAGMENT_VAR}.position), 0)`;
 			}
@@ -1332,8 +1404,8 @@ function emitDocumentBody(
 			return `textureLoad(${texture}, vec2i(clamp(${coordinates} * ${dimensions}, vec2f(0.0), ${dimensions} - 1.0)), 0)`;
 		};
 		// A texture item's values are read where they're used, as a texture.
-		const values = simulation.items.filter((i) => !isTexture(i.type));
-		const targeted = probe?.kind === "simulation" ? probe.items : [];
+		const values = zoneState.items.filter((i) => !isTexture(i.type));
+		const targeted = isStateProbe(probe) ? probe.items : [];
 
 		if (mode === "opaque") {
 			const read = emitter.readOutputs(zone.outputId);
@@ -1347,7 +1419,7 @@ function emitDocumentBody(
 			return;
 		}
 		if (mode === "start") {
-			emitter.simulationFields = targeted.map((i) => {
+			emitter.stateFields = targeted.map((i) => {
 				const type = stateValueType(i);
 				return packState(emitter.inputExpr(input, i.item.id, type), type, i.format);
 			});
@@ -1362,21 +1434,31 @@ function emitDocumentBody(
 				(i) =>
 					`let ${vars.previous.get(i.item.id) ?? ""} = ${unpackState(load(i, "previous"), stateValueType(i), i.format)};`,
 			);
+		if (looping && read.has(ITERATION_HANDLE)) {
+			// Every pass of an iteration reads the iteration from the frame values; without a plan
+			// to evaluate them, a loop is at its first iteration.
+			const ref = state.frame?.iteration(loopId({ path, zone: zone.id }));
+			const name = frameValueField(loopId({ path, zone: zone.id }), ITERATION_HANDLE);
+			if (ref) state.frameValues.set(name, { name, ref, scalar: "i32", components: 1 });
+			previous.push(`let ${vars.iteration} = ${ref ? `${FRAME_VALUES_VAR}.${name}` : "0"};`);
+		}
 		emitter.push(zone.inputId, previous, indent);
 
 		emitScope(zone.id, indent);
 
 		if (!step) return;
 		// Skipping keeps the previous frame's state: the nodes in the zone don't change it.
-		const update = [
-			`let ${vars.skip} = ${emitter.inputExpr(output, SKIP_HANDLE, "bool", false)};`,
-		];
-		emitter.simulationFields = targeted.map((i) => {
+		const update = looping
+			? []
+			: [`let ${vars.skip} = ${emitter.inputExpr(output, SKIP_HANDLE, "bool", false)};`];
+		emitter.stateFields = targeted.map((i) => {
 			const type = stateValueType(i);
 			const next = vars.next[index.get(i.item.id) ?? 0] ?? "";
-			const kept = isTexture(i.type) ? load(i, "previous") : vars.previous.get(i.item.id);
+			const value = emitter.inputExpr(output, i.item.id, type);
 			update.push(
-				`let ${next} = select(${emitter.inputExpr(output, i.item.id, type)}, ${kept ?? ""}, ${vars.skip});`,
+				looping
+					? `let ${next} = ${value};`
+					: `let ${next} = select(${value}, ${isTexture(i.type) ? load(i, "previous") : (vars.previous.get(i.item.id) ?? "")}, ${vars.skip});`,
 			);
 			return packState(next, type, i.format);
 		});
@@ -1394,6 +1476,8 @@ const TEXTURE_NODE_TYPES: ReadonlySet<string> = new Set([
 	TEXTURE_SIZE,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
+	PASS_REPEAT_INPUT,
+	PASS_REPEAT_OUTPUT,
 	RENDER_TEXTURE,
 ]);
 
@@ -1435,6 +1519,9 @@ function textureFingerprint(state: ShaderState, definitionRef: string, path: rea
 		// Each instance keeps a state of its own.
 		if (node.type === SIMULATION_INPUT) {
 			parts.push(`sim:${simulationId({ path, zone: node.id })}`);
+		}
+		if (node.type === PASS_REPEAT_INPUT) {
+			parts.push(`loop:${loopId({ path, zone: node.id })}`);
 		}
 		if (node.type === "node-group" && node.group) {
 			const nested = textureFingerprint(state, node.group.definitionRef, [...path, node.id]);

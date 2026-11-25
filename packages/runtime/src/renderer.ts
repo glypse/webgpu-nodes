@@ -8,6 +8,7 @@ import {
 	mipLevelCount,
 	type PassDecl,
 	PLAN_TARGET,
+	type PlanNode,
 	type RenderPlan,
 	resolveSize,
 	type ResourceDecl,
@@ -252,6 +253,14 @@ export class CompiledProgram {
 	}
 }
 
+/**
+ * The passes of a plan that are drawn: loops aren't run yet, so only the
+ * passes outside them are.
+ */
+function drawnPasses(plan: RenderPlan): PassDecl[] {
+	return plan.passes.filter((node: PlanNode): node is PassDecl => node.kind === "render");
+}
+
 /** A pass of a `CompiledPlan`: its compiled program and what it draws. */
 type CompiledPass = { program: CompiledProgram; decl: PassDecl };
 
@@ -295,7 +304,7 @@ export class CompiledPlan {
 	update(plan: RenderPlan) {
 		this.resources = new Map(plan.resources.map((r) => [r.id, r]));
 		this.frameProgram = plan.frame;
-		plan.passes.forEach((decl, i) => {
+		drawnPasses(plan).forEach((decl, i) => {
 			this.passes[i]?.program.setFrameValues(decl.program.frameValues);
 		});
 		this.setUniforms(plan.uniforms);
@@ -475,7 +484,9 @@ export class CompiledPlan {
 				? transient(source.id)
 				: source.kind === "state"
 					? stateTexture(source.texture, source.read)
-					: mediaOf(source);
+					: source.kind === "loop"
+						? this.media.emptyTexture
+						: mediaOf(source);
 		const written = (id: string): GPUTexture => {
 			if (id === PLAN_TARGET) return target;
 			const resource = this.resources.get(id);
@@ -629,7 +640,7 @@ export class Renderer {
 				: LINEAR_FORMAT;
 		};
 		const passes = await Promise.all(
-			plan.passes.map(async (decl) => ({
+			drawnPasses(plan).map(async (decl) => ({
 				program: await this.compileProgram(decl.program, decl.writes.map(formatOf)),
 				decl,
 			})),

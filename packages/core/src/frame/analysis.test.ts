@@ -32,6 +32,35 @@ function increment(): GraphProject["definitions"][string] {
 }
 
 describe("frame values", () => {
+	it("include a Repeat Passes zone's iteration, not its items", () => {
+		const graph = model(
+			[
+				{
+					id: "p_in",
+					type: "pass-repeat-input",
+					data: { pairedOutput: "p_out", values: { iterations: 2 } },
+				},
+				{
+					id: "p_out",
+					type: "pass-repeat-output",
+					data: { items: [{ id: "acc", label: "Acc", type: "f32" }] },
+				},
+				{ id: "one", type: "declare", data: { values: { x: 1 } } },
+				{ id: "next", type: "add" },
+			],
+			[
+				["one", "value", "p_in", "acc"],
+				["p_in", "iteration", "next", "operands"],
+				["p_in", "acc", "next", "operands"],
+				["next", "result", "p_out", "acc"],
+			],
+		);
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], "p_in", "iteration")).toBe(true);
+		expect(frame.isFrameValue([], "p_in", "acc")).toBe(false);
+		expect(frame.isFrameValue([], "next", "result")).toBe(false);
+	});
+
 	it("include maths on Time, unlinked values and canvas sizes", () => {
 		const graph = model(
 			[

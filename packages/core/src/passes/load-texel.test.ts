@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Asset } from "../assets/assets";
-import { generateRenderPlan } from "../codegen";
+import { generateRenderPlan, planPasses } from "../codegen";
 import { GraphModel } from "../graph/model";
 import { type CpuTexture, evaluate } from "../testing/evaluate";
 import { managerFor, rootProject, type TestEdge, type TestNode } from "../testing/graph";
@@ -118,7 +118,7 @@ describe("Load Texel", () => {
 					["lt", "value", "out", "color"],
 				];
 				const plan = generateRenderPlan(managerFor(nodes, edges));
-				const code = plan.passes.at(-1)?.program.code ?? "";
+				const code = planPasses(plan.passes).at(-1)?.program.code ?? "";
 				expect(code).toContain("textureLoad(");
 				expect(code).toContain("textureNumLevels(");
 				if (nagaBin) expect(validatePlan(plan)).toEqual([]);
@@ -150,8 +150,8 @@ describe("Load Texel", () => {
 		);
 		expect(evaluate(model, "lt", "value")[0]).toBe(big);
 		const plan = generateRenderPlan(model);
-		expect(plan.passes[0]?.program.targets).toEqual(["vec4u"]);
-		expect(plan.passes[0]?.program.code).toContain(`u32(${String(big)})`);
+		expect(planPasses(plan.passes)[0]?.program.targets).toEqual(["vec4u"]);
+		expect(planPasses(plan.passes)[0]?.program.code).toContain(`u32(${String(big)})`);
 		if (nagaBin) expect(validatePlan(plan)).toEqual([]);
 	});
 });

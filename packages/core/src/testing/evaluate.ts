@@ -13,6 +13,7 @@ import {
 	TEXTURE_SIZE,
 	TEXTURE_SIZE_LEVEL,
 } from "../nodes/texture";
+import { loopId, type LoopRef } from "../passes/loop";
 import { texelType } from "../passes/simulation";
 import { readSource, type TextureSource, TextureSources } from "../passes/sources";
 import {
@@ -22,6 +23,7 @@ import {
 	scalarOf,
 	type Size,
 	type TextureFormat,
+	type TextureSize,
 } from "../passes/textures";
 import {
 	type CpuCtx,
@@ -36,6 +38,8 @@ import {
 import {
 	ITERATION_HANDLE,
 	ITERATIONS_HANDLE,
+	PASS_REPEAT_INPUT,
+	PASS_REPEAT_OUTPUT,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
 	zoneItems,
@@ -58,6 +62,9 @@ export type EvaluateOptions = {
 	images?: ReadonlyMap<string, CpuTexture>;
 };
 
+/** Where a Repeat Passes loop being run is: its iteration, and its items as they are then. */
+type LoopScope = { iteration: number; items: ReadonlyMap<string, CpuTexture> };
+
 /** What every frame of one evaluation shares. */
 type Env = {
 	sources: TextureSources;
@@ -68,7 +75,30 @@ type Env = {
 	frame: FrameCompiler;
 	/** The size of every texture resolved so far, by texture id, and its mip levels. */
 	sizes: Map<string, Size & { levels?: number }>;
+	/**
+	 * The loops being run around what's evaluated, by id. A texture keeps the
+	 * ones it was made in, as it's computed texel by texel when read.
+	 */
+	loops: ReadonlyMap<string, LoopScope>;
+	/** The items the loops ended as, by loop and where it was run (see `scopeKey`). */
+	finals: Map<string, ReadonlyMap<string, CpuTexture>>;
 };
+
+/** Which run of its loops what's evaluated is in: textures made in other runs are other textures. */
+function scopeKey(env: Env): string {
+	return [...env.loops].map(([id, loop]) => `${id}=${String(loop.iteration)}`).join(",");
+}
+
+/** Runs `compute` as in `loops`, as a texture computing its texels late does. */
+function inLoops<T>(env: Env, loops: ReadonlyMap<string, LoopScope>, compute: () => T): T {
+	const outer = env.loops;
+	env.loops = loops;
+	try {
+		return compute();
+	} finally {
+		env.loops = outer;
+	}
+}
 
 type Frame = {
 	env: Env;
@@ -107,7 +137,15 @@ export function evaluate(
 ): Value {
 	const sources = new TextureSources(model);
 	const frame = new FrameCompiler(model, new FrameValueAnalysis(model, sources), sources);
-	const env: Env = { sources, images, renders: new Map(), frame, sizes: new Map() };
+	const env: Env = {
+		sources,
+		images,
+		renders: new Map(),
+		frame,
+		sizes: new Map(),
+		loops: new Map(),
+		finals: new Map(),
+	};
 	return output(model, rootFrame(model, env, uv, colorSpace, resolution), nodeId, handleId);
 }
 
@@ -158,15 +196,20 @@ function groupFrame(model: GraphModel, frame: Frame, node: GraphNode): Frame {
 
 const EMPTY_IMAGE: CpuTexture = { width: 1, height: 1, texel: () => [0, 0, 0, 0] };
 
-/** The size a render draws at, as the frame values of its plan are at the first moment. */
-function renderSize(model: GraphModel, frame: Frame, source: TextureSource & { kind: "render" }) {
+/** The size `size` is at the first moment, `like` being the texture it may be relative to. */
+function sizeOf(
+	model: GraphModel,
+	frame: Frame,
+	size: TextureSize,
+	like?: TextureSource,
+): { width: number; height: number } {
 	const { env } = frame;
 	const canvas = { width: frame.resolution[0], height: frame.resolution[1] };
 	// What the size is made of is resolved before it's read.
 	const resolve = (texture: TextureSource) => {
 		if (texture.kind !== "empty") textureOf(model, frame, texture);
 	};
-	if (source.draw?.like) resolve(source.draw.like);
+	if (like) resolve(like);
 	for (const texture of env.frame.sizedTextures()) resolve(texture);
 	const values = evaluateFrame(env.frame.program(), {
 		time: 0,
@@ -174,13 +217,31 @@ function renderSize(model: GraphModel, frame: Frame, source: TextureSource & { k
 		frame: 0,
 		canvas,
 		passSize: canvas,
+		iteration: (id) => env.loops.get(id)?.iteration,
 		textureSize: (id) => env.sizes.get(id),
 	});
-	return resolveSize(source.size, {
+	return resolveSize(size, {
 		canvas,
 		resource: (id) => env.sizes.get(id),
 		frame: (ref) => values.arg({ frame: ref }),
 	});
+}
+
+/** The frame computing the document at `path`, for the pixel at `uv` of a texture of `resolution`. */
+function frameAt(
+	model: GraphModel,
+	frame: Frame,
+	path: readonly string[],
+	uv: readonly [number, number],
+	resolution: readonly [number, number],
+): Frame {
+	let at = rootFrame(model, frame.env, uv, frame.colorSpace, resolution);
+	for (const id of path) {
+		const node = at.doc.nodesById.get(id);
+		if (!node) throw new Error(`no group node "${id}"`);
+		at = groupFrame(model, at, node);
+	}
+	return at;
 }
 
 /** The image a texture source reads, rendering a value over the canvas when it's a render. */
@@ -197,11 +258,21 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 	}
 	// Simulations aren't run here: their state reads nothing.
 	if (source.kind === "empty" || source.kind === "state") return EMPTY_IMAGE;
-	const done = env.renders.get(source.id);
-	if (done) return done;
-	const { width, height } = renderSize(model, frame, source);
+	if (source.kind === "loop") return loopTexture(model, frame, source);
+	const key = `${source.id}@${scopeKey(env)}`;
+	const done = env.renders.get(key);
+	if (done) {
+		env.sizes.set(source.id, {
+			width: done.width,
+			height: done.height,
+			levels: levelsOf(done),
+		});
+		return done;
+	}
+	const { width, height } = sizeOf(model, frame, source.size, source.draw?.like);
 	const levels = source.mips ? mipLevelCount({ width, height }) : 1;
 	env.sizes.set(source.id, { width, height, levels });
+	const loops = env.loops;
 	const texels = new Map<number, Value>();
 	const { target, draw } = source;
 	const texture: CpuTexture = {
@@ -215,35 +286,133 @@ function textureOf(model: GraphModel, frame: Frame, source: TextureSource): CpuT
 			const uv = [(x + 0.5) / width, 1 - (y + 0.5) / height] as const;
 			// The pass' size is what its Resolution node gives.
 			const resolution = draw ? ([width, height] as const) : frame.resolution;
-			let at = rootFrame(model, env, uv, frame.colorSpace, resolution);
-			for (const id of target.path) {
-				const node = at.doc.nodesById.get(id);
-				if (!node) throw new Error(`no group node "${id}"`);
-				at = groupFrame(model, at, node);
-			}
-			const node = at.doc.nodesById.get(target.node);
-			if (!node) throw new Error(`no node "${target.node}"`);
-			let value: Value;
-			if (draw) {
-				const item = draw.run.find((i) => i.item === target.handle);
-				value = packTexel(
-					input(model, at, node, target.handle),
-					item?.type ?? "vec4f",
-					source.format,
-				);
-			} else {
+			const value = inLoops(env, loops, () => {
+				const at = frameAt(model, frame, target.path, uv, resolution);
+				const node = at.doc.nodesById.get(target.node);
+				if (!node) throw new Error(`no node "${target.node}"`);
+				if (draw) {
+					const item = draw.run.find((i) => i.item === target.handle);
+					return packTexel(
+						input(model, at, node, target.handle),
+						item?.type ?? "vec4f",
+						source.format,
+					);
+				}
 				const type = valueType(
 					typesIn(model, at, node).resolvedOutputs.find((o) => o.id === target.handle)
 						?.type ?? "f32",
 				);
-				value = fieldColor(output(model, at, target.node, target.handle), type);
-			}
+				return fieldColor(output(model, at, target.node, target.handle), type);
+			});
 			texels.set(key, value);
 			return value;
 		},
 	};
-	env.renders.set(source.id, texture);
+	env.renders.set(key, texture);
 	return texture;
+}
+
+/** The texture of a loop's item: as it is in the iteration being run, or as the loop ends. */
+function loopTexture(
+	model: GraphModel,
+	frame: Frame,
+	source: TextureSource & { kind: "loop" },
+): CpuTexture {
+	const { env } = frame;
+	const texture =
+		source.read === "final"
+			? runLoop(model, frame, source.loop).get(source.texture)
+			: env.loops.get(loopId(source.loop))?.items.get(source.texture);
+	if (!texture) return EMPTY_IMAGE;
+	env.sizes.set(source.id, { width: texture.width, height: texture.height, levels: 1 });
+	return texture;
+}
+
+/** A texel of an item as `format` keeps it. */
+function storeTexel(value: Value, type: WgslType, format: TextureFormat): Value {
+	const texel = coerce(coerce(value, type), texelType(format));
+	const channels = channelsOf(format);
+	return texel.map((c, i) => {
+		if (i >= channels) return i === 3 ? 1 : 0;
+		return format === "rgba8unorm" ? Math.round(Math.min(Math.max(c, 0), 1) * 255) / 255 : c;
+	});
+}
+
+/** A texel of a texture as the pixel `frame` computes, the nearest of its texels. */
+function texelAtPixel(texture: CpuTexture, frame: Frame): Value {
+	return texelAt(
+		texture,
+		Math.floor(frame.uv[0] * texture.width),
+		Math.floor((1 - frame.uv[1]) * texture.height),
+	);
+}
+
+/**
+ * Runs a Repeat Passes loop, its items' textures made lazily as they are
+ * read: the initial ones from the Input's items, each next one by the
+ * Output's from the current ones, as `start` and `next` passes draw them.
+ * Returns the items as the loop ends, by texture id.
+ */
+function runLoop(model: GraphModel, frame: Frame, ref: LoopRef): ReadonlyMap<string, CpuTexture> {
+	const { env } = frame;
+	const key = `${loopId(ref)}@${scopeKey(env)}`;
+	const done = env.finals.get(key);
+	if (done) return done;
+	const state = env.sources.loop(ref.path, ref.zone);
+	if (!state) throw new Error(`no Repeat Passes zone "${ref.zone}"`);
+	const id = loopId(ref);
+	const outer = env.loops;
+	const canvas = [frame.resolution[0], frame.resolution[1]] as const;
+	const zoneFrame = frameAt(model, frame, ref.path, [0.5, 0.5], canvas);
+	const start = zoneFrame.doc.nodesById.get(ref.zone);
+	if (!start) throw new Error(`no Repeat Passes Input "${ref.zone}"`);
+	const outputId = start.data.pairedOutput;
+	const iterations = input(model, zoneFrame, start, ITERATIONS_HANDLE)[0] ?? 0;
+	const count = Math.min(Math.max(0, Math.trunc(iterations)), zoneMaxIterations(start));
+
+	/** The items' textures, each texel computed by the node `from` at the iteration `scope` is at. */
+	const make = (
+		scope: ReadonlyMap<string, LoopScope>,
+		from: "start" | "next",
+	): Map<string, CpuTexture> => {
+		const textures = new Map<string, CpuTexture>();
+		for (const item of state.items) {
+			const { width, height } = inLoops(env, scope, () =>
+				sizeOf(model, frame, item.size, item.like),
+			);
+			const type = isTexture(item.type) ? "vec4f" : valueType(item.type);
+			const texels = new Map<number, Value>();
+			textures.set(item.texture, {
+				width,
+				height,
+				texel: (x, y) => {
+					const index = y * width + x;
+					const known = texels.get(index);
+					if (known) return known;
+					const uv = [(x + 0.5) / width, 1 - (y + 0.5) / height] as const;
+					const value = inLoops(env, from === "start" ? outer : scope, () => {
+						const at = frameAt(model, frame, ref.path, uv, [width, height]);
+						const node = at.doc.nodesById.get(
+							from === "start" ? ref.zone : (outputId ?? ""),
+						);
+						if (!node) throw new Error("a Repeat Passes boundary is missing");
+						return storeTexel(input(model, at, node, item.item.id), type, item.format);
+					});
+					texels.set(index, value);
+					return value;
+				},
+			});
+		}
+		return textures;
+	};
+
+	let current = make(new Map([...outer, [id, { iteration: 0, items: new Map() }]]), "start");
+	for (let iteration = 0; iteration < count; iteration++) {
+		const scope = new Map([...outer, [id, { iteration, items: current }]]);
+		current = make(scope, "next");
+	}
+	env.finals.set(key, current);
+	return current;
 }
 
 /** A value as the texel of `format` keeping it, read back as a colour. */
@@ -395,7 +564,7 @@ function input(model: GraphModel, frame: Frame, node: GraphNode, inputId: string
 		const texture = textureOf(model, frame, source);
 		// A render made for this size is read at the pixel, any other is stretched over it.
 		const exact =
-			source.kind === "render" &&
+			(source.kind === "render" || source.kind === "loop") &&
 			texture.width === frame.resolution[0] &&
 			texture.height === frame.resolution[1];
 		const color = exact
@@ -461,6 +630,9 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 		return zone.state.get(handleId) ?? [0];
 	}
 	if (type === REPEAT_OUTPUT) return runZone(model, frame, node).get(handleId) ?? [0];
+	if (type === PASS_REPEAT_INPUT || type === PASS_REPEAT_OUTPUT) {
+		return loopValue(model, frame, node, handleId);
+	}
 
 	switch (type) {
 		case "resolution":
@@ -532,6 +704,22 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 	const outputs = cpu(ctx);
 	for (const [id, value] of Object.entries(outputs)) frame.computed.set(`${nodeId}:${id}`, value);
 	return outputs[handleId] ?? [0];
+}
+
+/** An output of a Repeat Passes boundary: the iteration, or an item read at the pixel. */
+function loopValue(model: GraphModel, frame: Frame, node: GraphNode, handleId: string): Value {
+	const zone = frame.env.sources.instance(frame.path)?.zones.zoneOfBoundary.get(node.id);
+	if (zone === undefined) throw new Error(`"${node.id}" isn't in a paired zone`);
+	if (handleId === ITERATION_HANDLE) {
+		const scope = frame.env.loops.get(loopId({ path: frame.path, zone }));
+		if (!scope) throw new Error(`repeat passes input "${zone}" read outside its loop`);
+		return [scope.iteration];
+	}
+	const source = frame.env.sources.output(frame.path, node.id, handleId);
+	if (source.kind !== "loop") throw new Error(`"${handleId}" isn't an item of "${zone}"`);
+	const type = typesIn(model, frame, node).resolvedOutputs.find((o) => o.id === handleId)?.type;
+	if (type === undefined || isTexture(type)) throw new Error(`"${handleId}" is a texture`);
+	return coerce(texelAtPixel(textureOf(model, frame, source), frame), valueType(type));
 }
 
 /** Run a repeat zone to its end, as its loop does: every next value from the current ones. */

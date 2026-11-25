@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { generateRenderPlan, reachableShaderHash, type RenderPlan } from "$core";
+	import { generateRenderPlan, planPasses, reachableShaderHash, type RenderPlan } from "$core";
 	import { setDisplayGamut } from "$theme";
 	import { untrack } from "svelte";
 
@@ -77,7 +77,7 @@
 			return;
 		}
 		preview.setSource(generated);
-		const code = generated.passes
+		const code = planPasses(generated.passes)
 			.map((p) => `// ${p.writes.join(", ")}\n${p.program.code}`)
 			.join("\n");
 		if (devTools.enabled && code !== prevCode) {

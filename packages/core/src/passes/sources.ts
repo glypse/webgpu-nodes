@@ -30,6 +30,9 @@ import {
 } from "../types";
 import {
 	analyzeZones,
+	keepsTextures,
+	PASS_REPEAT_INPUT,
+	PASS_REPEAT_OUTPUT,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
 	type ZoneAnalysis,
@@ -38,6 +41,7 @@ import {
 } from "../zones";
 import { itemSizeHandles, NODE_SIZE_HANDLES, type SizeHandles, storedSize } from "./item-size";
 import type { ItemSizeMode } from "./item-size";
+import { type LoopRead, loopReadId, type LoopRef, type LoopState, loopTextureId } from "./loop";
 import {
 	attachmentGroups,
 	simulationId,
@@ -89,6 +93,17 @@ export type TextureSource =
 			format: TextureFormat;
 			size: TextureSize;
 			simulation: SimulationRef;
+	  }
+	/** An item of a Repeat Passes zone, kept in a texture between iterations. */
+	| {
+			id: string;
+			kind: "loop";
+			/** The texture pair keeping it (see `loopTextureId`), whichever is read. */
+			texture: string;
+			read: LoopRead;
+			format: TextureFormat;
+			size: TextureSize;
+			loop: LoopRef;
 	  }
 	| { kind: "empty"; id: typeof EMPTY_TEXTURE };
 
@@ -317,6 +332,10 @@ export class TextureSources {
 				return this.state(path, instance, nodeId, handleId, "previous");
 			case SIMULATION_OUTPUT:
 				return this.state(path, instance, nodeId, handleId, "current");
+			case PASS_REPEAT_INPUT:
+				return this.loopItem(path, instance, nodeId, handleId, "current");
+			case PASS_REPEAT_OUTPUT:
+				return this.loopItem(path, instance, nodeId, handleId, "final");
 			case "reroute":
 				return this.input(path, nodeId, "in");
 			case "group-input":
@@ -482,19 +501,33 @@ export class TextureSources {
 	 * computed at `path`, its items typed as they are there.
 	 */
 	simulation(path: readonly string[], zone: string): SimulationState | undefined {
+		return this.keptState(path, zone, "simulation", stateTextureId);
+	}
+
+	/** The items of the Repeat Passes zone `zone` of the document computed at `path`. */
+	loop(path: readonly string[], zone: string): LoopState | undefined {
+		return this.keptState(path, zone, "passes", loopTextureId);
+	}
+
+	private keptState(
+		path: readonly string[],
+		zone: string,
+		kind: "simulation" | "passes",
+		textureId: (ref: SimulationRef, item: string) => string,
+	): SimulationState | undefined {
 		const ref = { path, zone };
-		const id = simulationId(ref);
+		const id = `${kind}|${simulationId(ref)}`;
 		if (this.simulations.has(id)) return this.simulations.get(id);
 		const instance = this.instance(path);
 		const analysed = instance?.zones.zones.get(zone);
 		const input = instance?.doc.nodesById.get(zone);
 		let state: SimulationState | undefined;
-		if (instance && input && analysed?.kind === "simulation") {
+		if (instance && input && analysed?.kind === kind) {
 			const outputs = this.typesIn(instance.doc, input, instance.bindings).resolvedOutputs;
 			const zone = zoneItems(instance.doc.nodesById.get(analysed.outputId));
 			const items = zone.map((item): StateItem => {
 				const type = outputs.find((o) => o.id === item.id)?.type ?? "f32";
-				// Sizes read other textures, which may be this simulation's own
+				// Sizes read other textures, which may be this zone's own
 				// state: they're found when first asked for, once it exists.
 				let sizing: { size: TextureSize; like?: TextureSource } | undefined;
 				let resolving = false;
@@ -518,10 +551,10 @@ export class TextureSources {
 					get like() {
 						return sized().like;
 					},
-					texture: stateTextureId(ref, item.id),
+					texture: textureId(ref, item.id),
 				};
 			});
-			state = { ref, id, items };
+			state = { ref, id: simulationId(ref), items };
 		}
 		this.simulations.set(id, state);
 		return state;
@@ -559,6 +592,21 @@ export class TextureSources {
 		const item = state?.items.find((i) => i.item.id === handleId);
 		if (!state || !item) return EMPTY;
 		return stateSource(state.ref, item, read);
+	}
+
+	/** An item of the Repeat Passes zone computed at `path` that a boundary node gives. */
+	private loopItem(
+		path: readonly string[],
+		instance: Instance,
+		nodeId: string,
+		handleId: string,
+		read: LoopRead,
+	): TextureSource {
+		const zone = instance.zones.zoneOfBoundary.get(nodeId);
+		const state = zone === undefined ? undefined : this.loop(path, zone);
+		const item = state?.items.find((i) => i.item.id === handleId);
+		if (!state || !item) return EMPTY;
+		return loopSource(state.ref, item, read);
 	}
 
 	private media(path: readonly string[], node: GraphNode): TextureSource {
@@ -606,7 +654,8 @@ export class TextureSources {
 	 * Whether a node's outputs at `path` depend on the state or iteration of
 	 * a repeat zone they're computed in (or that the group node they're
 	 * computed through is fed from). A zone's final values don't, nor does a
-	 * simulation's state, the same over a frame.
+	 * simulation's state, the same over a frame, nor a Repeat Passes zone's
+	 * items, which the passes of an iteration read whole.
 	 */
 	readsZoneState(path: readonly string[], nodeId: string, handle: string): boolean {
 		const instance = this.instance(path);
@@ -620,8 +669,9 @@ export class TextureSources {
 					? own.parent
 					: own.id
 				: (zones.nodeZone.get(id) ?? null);
-			// A simulation is never in a repeat zone: a node in one is in none.
-			if (zone !== null && zones.zones.get(zone)?.kind === "simulation") zone = null;
+			// A zone keeping its items in textures is never in a repeat zone: what's in
+			// one is computed by passes, and is in none.
+			if (zone !== null && keepsTextures(zones.zones.get(zone)?.kind)) zone = null;
 			return zone;
 		};
 		const done = new Map<string, boolean>();
@@ -707,6 +757,15 @@ export function stateSource(
 	};
 }
 
+/** The texture pair keeping a loop item, as read in `read`'s moment. */
+export function loopSource(
+	loop: LoopRef,
+	{ texture, format, size }: Pick<StateItem, "texture" | "format" | "size">,
+	read: LoopRead,
+): Extract<TextureSource, { kind: "loop" }> {
+	return { kind: "loop", id: loopReadId(texture, read), texture, read, format, size, loop };
+}
+
 /** The image a resolution reads: nothing for an invalid one. */
 export function readSource(resolution: TextureResolution): TextureSource {
 	return resolution.kind === "invalid" ? EMPTY : resolution;
@@ -714,7 +773,9 @@ export function readSource(resolution: TextureResolution): TextureSource {
 
 /** The format a source's texels are in; media is half float. */
 export function sourceFormat(source: TextureSource): TextureFormat {
-	return source.kind === "render" || source.kind === "state" ? source.format : "rgba16float";
+	return source.kind === "render" || source.kind === "state" || source.kind === "loop"
+		? source.format
+		: "rgba16float";
 }
 
 /** The size of a source made by a pass, if it's known while compiling: media has its own. */
@@ -722,6 +783,7 @@ export function sourceSize(source: TextureSource): TextureSize | undefined {
 	switch (source.kind) {
 		case "render":
 		case "state":
+		case "loop":
 			return source.size;
 		default:
 			return undefined;

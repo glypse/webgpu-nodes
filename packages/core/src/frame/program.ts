@@ -11,6 +11,7 @@ import {
 	VIDEO_INTERVAL,
 	VIDEO_METADATA,
 } from "../nodes/texture";
+import { iterationSource, loopId } from "../passes/loop";
 import {
 	readSource,
 	type TextureGraph,
@@ -31,6 +32,7 @@ import {
 import {
 	ITERATION_HANDLE,
 	ITERATIONS_HANDLE,
+	PASS_REPEAT_INPUT,
 	REPEAT_INPUT,
 	zoneItems,
 	zoneKindOf,
@@ -123,6 +125,54 @@ export type FrameEnv = {
 	/** The values of uniform inputs, by name. */
 	uniforms?: Readonly<Record<string, number | readonly number[]>>;
 };
+
+/** The inputs a step reads. */
+function inputsOf(step: FrameStep): FrameInput[] {
+	switch (step.kind) {
+		case "node":
+			return [...Object.values(step.inputs), ...Object.values(step.operands).flat()];
+		case "read":
+			return [step.input];
+		case "texel":
+			return step.level ? [step.size, step.level] : [step.size];
+		case "repeat":
+			return [step.iterations, ...step.items.flatMap((i) => [i.initial, i.next])];
+	}
+}
+
+/** What values of a frame program read that changes while a frame is drawn, or that passes make. */
+export type FrameDependencies = {
+	/** The loops whose iteration they read. */
+	loops: Set<string>;
+	/** The resources whose size they read. */
+	textures: Set<string>;
+};
+
+/** What the values `refs` of `program` depend on, through the steps they read. */
+export function frameDependencies(
+	program: FrameProgram,
+	refs: Iterable<FrameRef>,
+): FrameDependencies {
+	const found: FrameDependencies = { loops: new Set(), textures: new Set() };
+	const seen = new Set<number>();
+	const visit = (step: number) => {
+		if (seen.has(step)) return;
+		seen.add(step);
+		const decl = program.steps[step];
+		if (!decl) return;
+		for (const input of inputsOf(decl)) {
+			if ("ref" in input) {
+				visit(input.ref.step);
+			} else if ("source" in input) {
+				const [kind, ...rest] = input.source.split(":");
+				if (kind === "iteration") found.loops.add(rest.join(":"));
+				if (kind === "texture-size") found.textures.add(rest.join(":"));
+			}
+		}
+	};
+	for (const ref of refs) visit(ref.step);
+	return found;
+}
 
 /** The outputs of the steps of a frame program, as evaluated. */
 export class FrameValues {
@@ -380,6 +430,22 @@ export class FrameCompiler {
 		return { input: { ref }, dynamic: this.dynamics[ref.step] ?? true };
 	}
 
+	private iterations = new Map<string, FrameRef>();
+
+	/** The value of the iteration a Repeat Passes loop is at, for a shader to read. */
+	iteration(loop: string): FrameRef {
+		let ref = this.iterations.get(loop);
+		if (!ref) {
+			ref = this.push(
+				{ kind: "read", input: { source: iterationSource(loop) } },
+				true,
+				"value",
+			);
+			this.iterations.set(loop, ref);
+		}
+		return ref;
+	}
+
 	/** The loop a node of the document at `path` runs in, if it's in a repeat zone. */
 	private loopOf(path: readonly string[], nodeId: string): string | undefined {
 		const zones = this.sources.instance(path)?.zones;
@@ -449,6 +515,10 @@ export class FrameCompiler {
 			}
 			case "reroute":
 				return this.input(path, nodeId, "in");
+		}
+		if (node.type === PASS_REPEAT_INPUT && handleId === ITERATION_HANDLE) {
+			const zone = instance.zones.zoneOfBoundary.get(nodeId);
+			return zone === undefined ? undefined : source(iterationSource(loopId({ path, zone })));
 		}
 		const kind = zoneKindOf(node.type);
 		if (kind === "repeat") return this.compileZoneValue(path, nodeId, handleId);

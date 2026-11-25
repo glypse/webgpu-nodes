@@ -1,4 +1,4 @@
-import type { ColorSpace, RenderPlan } from "$core";
+import { type ColorSpace, planPasses, type RenderPlan } from "$core";
 import {
 	CanvasTarget,
 	type CompiledPlan,
@@ -202,7 +202,7 @@ export class Preview {
 	setSource(source: RenderPlan) {
 		this.source = source;
 		// The same code may read other textures, which its bindings are made for.
-		const key = source.passes
+		const key = planPasses(source.passes)
 			.map((p) => [...p.writes, p.program.code, ...p.reads].join("\n"))
 			.join("\n\n");
 		if (key === this.blockedCode) return;

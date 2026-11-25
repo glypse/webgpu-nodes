@@ -1,6 +1,6 @@
 import { describe, expect, it } from "bun:test";
 
-import { generateRenderPlan } from ".";
+import { generateRenderPlan, planPasses } from ".";
 import { evaluateFrame, type FrameEnv } from "../frame/program";
 import { ROOT_ID } from "../graph/document";
 import { managerFor, type TestEdge, type TestNode } from "../testing/graph";
@@ -31,7 +31,7 @@ const pulseEdges: TestEdge[] = [
 describe("hoisted frame values", () => {
 	it("are read from the frame block instead of computed per pixel", () => {
 		const plan = generateRenderPlan(managerFor(pulse, pulseEdges));
-		const [pass] = plan.passes;
+		const [pass] = planPasses(plan.passes);
 		expect(pass?.program.code).not.toContain("sin(");
 		expect(pass?.program.code).not.toContain("runtime_frame.time");
 		expect(pass?.program.code).toContain("runtime_frame_values.f_wave_result");
@@ -41,7 +41,7 @@ describe("hoisted frame values", () => {
 
 	it("are what the CPU computes for the formula, at any time", () => {
 		const plan = generateRenderPlan(managerFor(pulse, pulseEdges));
-		const field = plan.passes[0]?.program.frameValues.fields.f_wave_result;
+		const field = planPasses(plan.passes)[0]?.program.frameValues.fields.f_wave_result;
 		for (const time of [0, 0.4, 1.7, 9]) {
 			const values = evaluateFrame(plan.frame, { ...ENV, time });
 			const [value] = field ? values.ref(field.ref) : [];
@@ -54,10 +54,12 @@ describe("hoisted frame values", () => {
 		const before = generateRenderPlan(graph, { uniformScopes: [ROOT_ID] });
 		graph.setInputValue("k", "x", 5);
 		const after = generateRenderPlan(graph, { uniformScopes: [ROOT_ID] });
-		expect(after.passes[0]?.program.code).toBe(before.passes[0]?.program.code);
+		expect(planPasses(after.passes)[0]?.program.code).toBe(
+			planPasses(before.passes)[0]?.program.code,
+		);
 		expect(before.uniforms).toMatchObject({ u_k_x: 3 });
 		expect(after.uniforms).toMatchObject({ u_k_x: 5 });
-		const field = after.passes[0]?.program.frameValues.fields.f_wave_result;
+		const field = planPasses(after.passes)[0]?.program.frameValues.fields.f_wave_result;
 		const values = evaluateFrame(after.frame, { ...ENV, time: 2, uniforms: after.uniforms });
 		expect(field && values.ref(field.ref)[0]).toBeCloseTo(Math.sin(10), 5);
 		if (nagaBin) expect(validatePlan(after)).toEqual([]);
@@ -79,7 +81,7 @@ describe("hoisted frame values", () => {
 				["sum", "result", "out", "color"],
 			]),
 		);
-		const code = plan.passes[0]?.program.code ?? "";
+		const code = planPasses(plan.passes)[0]?.program.code ?? "";
 		expect(code).toContain("runtime_frame_values.f_wave_result");
 		expect(code).toContain("runtime_fragment.uv");
 		expect(code).not.toContain("sin(");
@@ -93,8 +95,8 @@ describe("hoisted frame values", () => {
 				[["wave", "result", "out", "color"]],
 			),
 		);
-		expect(plan.passes[0]?.program.code).toContain("sin(");
-		expect(plan.passes[0]?.program.frameValues.fields).toEqual({});
+		expect(planPasses(plan.passes)[0]?.program.code).toContain("sin(");
+		expect(planPasses(plan.passes)[0]?.program.frameValues.fields).toEqual({});
 		expect(plan.frame.steps).toHaveLength(0);
 	});
 
@@ -120,7 +122,7 @@ describe("hoisted frame values", () => {
 				["scaled", "result", "out", "color"],
 			]),
 		);
-		const [pass] = plan.passes;
+		const [pass] = planPasses(plan.passes);
 		const field = (name: string) => pass?.program.frameValues.fields[name];
 		expect(field("f_n_result")?.scalar).toBe("i32");
 		expect(field("f_big_result")?.scalar).toBe("u32");

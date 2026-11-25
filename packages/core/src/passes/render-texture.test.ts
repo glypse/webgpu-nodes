@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Asset } from "../assets/assets";
-import { generateRenderPlan, PLAN_TARGET } from "../codegen";
+import { generateRenderPlan, PLAN_TARGET, planPasses } from "../codegen";
 import { evaluateFrame } from "../frame/program";
 import { ROOT_ID } from "../graph/document";
 import { GraphModel } from "../graph/model";
@@ -57,8 +57,11 @@ describe("Render Texture", () => {
 		);
 		const model = managerFor(nodes, edges);
 		const plan = generateRenderPlan(model);
-		expect(plan.passes.map((p) => p.writes)).toEqual([["render:rt:color"], [PLAN_TARGET]]);
-		expect(plan.passes[1]?.reads).toEqual(["render:rt:color"]);
+		expect(planPasses(plan.passes).map((p) => p.writes)).toEqual([
+			["render:rt:color"],
+			[PLAN_TARGET],
+		]);
+		expect(planPasses(plan.passes)[1]?.reads).toEqual(["render:rt:color"]);
 		expect(plan.resources).toContainEqual({
 			id: "render:rt:color",
 			kind: "transient",
@@ -132,8 +135,8 @@ describe("Render Texture", () => {
 		const before = generateRenderPlan(model, { uniformScopes: [ROOT_ID] });
 		model.setInputValue("rt", "scale", 0.25);
 		const after = generateRenderPlan(model, { uniformScopes: [ROOT_ID] });
-		expect(after.passes.map((p) => p.program.code)).toEqual(
-			before.passes.map((p) => p.program.code),
+		expect(planPasses(after.passes).map((p) => p.program.code)).toEqual(
+			planPasses(before.passes).map((p) => p.program.code),
 		);
 		expect(after.uniforms.u_rt_scale).toBe(0.25);
 		const resource = after.resources.find((r) => r.id === "render:rt:color");
@@ -169,11 +172,11 @@ describe("Render Texture", () => {
 		);
 		const model = managerFor(nodes, edges);
 		const plan = generateRenderPlan(model);
-		expect(plan.passes.map((p) => p.writes)).toEqual([
+		expect(planPasses(plan.passes).map((p) => p.writes)).toEqual([
 			["render:rt:color", "render:rt:second"],
 			[PLAN_TARGET],
 		]);
-		expect(plan.passes[0]?.program.targets).toEqual(["vec4f", "vec4f"]);
+		expect(planPasses(plan.passes)[0]?.program.targets).toEqual(["vec4f", "vec4f"]);
 		expectValid(model);
 	});
 
@@ -200,8 +203,8 @@ describe("Render Texture", () => {
 		edges.push(["sum", "result", "out", "color"]);
 		const model = managerFor(nodes, edges);
 		const plan = generateRenderPlan(model);
-		expect(plan.passes.map((p) => p.writes.length)).toEqual([2, 2, 2, 2, 2, 1]);
-		expect(plan.passes[0]?.program.targets).toEqual(["vec4f", "vec4f"]);
+		expect(planPasses(plan.passes).map((p) => p.writes.length)).toEqual([2, 2, 2, 2, 2, 1]);
+		expect(planPasses(plan.passes)[0]?.program.targets).toEqual(["vec4f", "vec4f"]);
 		expectValid(model);
 	});
 
@@ -278,7 +281,7 @@ describe("every format", () => {
 			);
 			const model = managerFor(nodes, edges);
 			const plan = generateRenderPlan(model);
-			expect(plan.passes[0]?.program.targets).toEqual([texelType(format)]);
+			expect(planPasses(plan.passes)[0]?.program.targets).toEqual([texelType(format)]);
 			const resource = plan.resources.find((r) => r.id === "render:rt:color");
 			expect(resource?.kind === "transient" && resource.format).toBe(format);
 			if (nagaBin) expect(validatePlan(plan)).toEqual([]);
@@ -378,7 +381,7 @@ describe("mips", () => {
 			);
 			const model = managerFor(nodes, edges);
 			const plan = generateRenderPlan(model);
-			const code = plan.passes.at(-1)?.program.code ?? "";
+			const code = planPasses(plan.passes).at(-1)?.program.code ?? "";
 			expect(code).toContain(
 				format === "rgba32float" ? "texture_bilinear(" : "textureSampleLevel(",
 			);

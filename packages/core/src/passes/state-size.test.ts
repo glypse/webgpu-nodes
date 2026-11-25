@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Asset } from "../assets/assets";
-import { generateRenderPlan, PLAN_TARGET } from "../codegen";
+import { generateRenderPlan, PLAN_TARGET, planPasses } from "../codegen";
 import { evaluateFrame } from "../frame/program";
 import { GraphModel } from "../graph/model";
 import { managerFor, rootProject, type TestEdge, type TestNode } from "../testing/graph";
@@ -96,7 +96,7 @@ describe("sized simulation items", () => {
 			width: 1024,
 			height: 1,
 		});
-		const steps = plan.passes.filter((p) => p.simulation?.stage === "step");
+		const steps = planPasses(plan.passes).filter((p) => p.simulation?.stage === "step");
 		expect(steps.map((p) => p.writes)).toEqual([[stateId("acc")], [stateId("total")]]);
 		if (nagaBin) expect(validatePlan(plan)).toEqual([]);
 	});
@@ -106,7 +106,7 @@ describe("sized simulation items", () => {
 			values: { "pixels:acc": { x: 1024, y: 1 } },
 		});
 		const plan = generateRenderPlan(model);
-		const total = plan.passes.find((p) => p.writes.includes(stateId("total")));
+		const total = planPasses(plan.passes).find((p) => p.writes.includes(stateId("total")));
 		expect(total?.program.code).toContain("textureDimensions");
 		expect(total?.program.code).toContain("vec2i(runtime_fragment.position)");
 	});
@@ -178,8 +178,8 @@ describe("sized simulation items", () => {
 		const size = stateOf(plan, stateId("acc"))?.size;
 		expect(size).toEqual({ kind: "scale", scale: 0.25, of: { resource: "media:a" } });
 		expect(plan.resources.some((r) => r.id === "media:a")).toBe(true);
-		const step = plan.passes.find((p) => p.writes.includes(stateId("acc")));
-		expect(plan.passes.findIndex((p) => p === step)).toBeGreaterThanOrEqual(0);
+		const step = planPasses(plan.passes).find((p) => p.writes.includes(stateId("acc")));
+		expect(planPasses(plan.passes).findIndex((p) => p === step)).toBeGreaterThanOrEqual(0);
 		if (nagaBin) expect(validatePlan(plan)).toEqual([]);
 	});
 
@@ -224,7 +224,7 @@ describe("sized simulation items", () => {
 			scale: 0.5,
 			of: "canvas",
 		});
-		const frame = plan.passes.find((p) => p.writes.includes(PLAN_TARGET));
+		const frame = planPasses(plan.passes).find((p) => p.writes.includes(PLAN_TARGET));
 		expect(frame?.program.code).toContain("textureSampleLevel");
 		if (nagaBin) expect(validatePlan(plan)).toEqual([]);
 	});
@@ -293,7 +293,7 @@ describe("simulation state read as the previous frame's", () => {
 			],
 		);
 		const plan = generateRenderPlan(model);
-		const writes = plan.passes
+		const writes = planPasses(plan.passes)
 			.filter((p) => p.simulation?.stage === "step")
 			.flatMap((p) => p.writes);
 		expect(writes).toContain(stateId("acc"));
@@ -321,7 +321,7 @@ describe("simulation state read as the previous frame's", () => {
 			],
 		);
 		const plan = generateRenderPlan(model);
-		const writes = plan.passes
+		const writes = planPasses(plan.passes)
 			.filter((p) => p.simulation?.stage === "step")
 			.flatMap((p) => p.writes);
 		expect(writes).toContain(stateId("img"));

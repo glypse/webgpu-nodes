@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import type { Asset } from "../assets/assets";
-import { generateRenderPlan, PLAN_TARGET } from "../codegen";
+import { generateRenderPlan, PLAN_TARGET, planPasses } from "../codegen";
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
 import { type CpuTexture, evaluate } from "../testing/evaluate";
@@ -58,8 +58,11 @@ describe("implicit renders", () => {
 			),
 		);
 		const plan = generateRenderPlan(graph);
-		expect(plan.passes.map((p) => p.writes)).toEqual([["render:uv:uv"], [PLAN_TARGET]]);
-		expect(plan.passes[1]?.reads).toEqual(["render:uv:uv"]);
+		expect(planPasses(plan.passes).map((p) => p.writes)).toEqual([
+			["render:uv:uv"],
+			[PLAN_TARGET],
+		]);
+		expect(planPasses(plan.passes)[1]?.reads).toEqual(["render:uv:uv"]);
 		expect(plan.resources).toContainEqual({
 			id: "render:uv:uv",
 			kind: "transient",
@@ -102,7 +105,7 @@ describe("implicit renders", () => {
 			"render:time:seconds",
 			"render:uv:uv",
 		]);
-		expect(generateRenderPlan(graph).passes).toHaveLength(3);
+		expect(planPasses(generateRenderPlan(graph).passes)).toHaveLength(3);
 		expectValid(graph);
 	});
 
@@ -128,7 +131,7 @@ describe("implicit renders", () => {
 		const into = graph.root.edges.find((e) => e.target === sample);
 		const link = into && graph.passAnalysis().link([], into);
 		expect(link?.kind).toBe("invalid");
-		expect(generateRenderPlan(graph).passes).toHaveLength(1);
+		expect(planPasses(generateRenderPlan(graph).passes)).toHaveLength(1);
 		expectValid(graph);
 	});
 
@@ -150,7 +153,7 @@ describe("implicit renders", () => {
 			target: "out",
 			targetHandle: "color",
 		});
-		expect(generateRenderPlan(graph).passes).toHaveLength(2);
+		expect(planPasses(generateRenderPlan(graph).passes)).toHaveLength(2);
 		expectValid(graph);
 	});
 
@@ -379,7 +382,7 @@ describe("blurs", () => {
 				],
 			);
 			const graph = new GraphModel({ ...project, assets: [IMPULSE] });
-			return generateRenderPlan(graph).passes.length;
+			return planPasses(generateRenderPlan(graph).passes).length;
 		};
 		// The last pass samples the blur's result.
 		expect(passes("std-gaussian-blur", {})).toBe(3);

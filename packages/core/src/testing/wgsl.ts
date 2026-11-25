@@ -5,6 +5,7 @@ import { join } from "node:path";
 
 import {
 	buildProgram,
+	planPasses,
 	type RenderPlan,
 	type SamplerBinding,
 	type ShaderProgram,
@@ -68,7 +69,7 @@ export function validateProgram(program: Pick<ShaderProgram, "code">): string | 
 
 /** Every pass of a plan validated (see `validateProgram`): the errors, by pass. */
 export function validatePlan(plan: RenderPlan): string[] {
-	return plan.passes.flatMap((pass) => {
+	return planPasses(plan.passes).flatMap((pass) => {
 		const error = validateProgram(pass.program);
 		return error ? [`${pass.id}:\n${error}\n\n${pass.program.code}`] : [];
 	});

@@ -4,6 +4,7 @@ import { analyzeZones, simulatingDefinitions } from ".";
 import {
 	generateRenderPlan,
 	PLAN_TARGET,
+	planPasses,
 	type RenderPlan,
 	SIMULATION_DELTA_FIELD,
 } from "../codegen";
@@ -209,12 +210,12 @@ describe("simulation zone codegen", () => {
 	it("starts, steps, then reads a simulation's state", () => {
 		const plan = planFor(managerFor(counter.nodes, counter.edges));
 		const texture = "state:s_in:acc";
-		expect(plan.passes.map((p) => [p.writes, p.simulation])).toEqual([
+		expect(planPasses(plan.passes).map((p) => [p.writes, p.simulation])).toEqual([
 			[[`${texture}:previous`], { id: "s_in", stage: "start" }],
 			[[`${texture}:current`], { id: "s_in", stage: "step" }],
 			[[PLAN_TARGET], undefined],
 		]);
-		const [start, step, main] = plan.passes.map((p) => p.program);
+		const [start, step, main] = planPasses(plan.passes).map((p) => p.program);
 		expect(start?.code).not.toContain("simulation_delta;");
 		expect(step?.code).toContain(`runtime_frame.${SIMULATION_DELTA_FIELD}`);
 		expect(step?.textures.map((t) => [t.source.id, t.sampleType])).toEqual([
@@ -236,7 +237,7 @@ describe("simulation zone codegen", () => {
 			[...counter.nodes, { id: "t", type: "time" }, { id: "late", type: "compare" }],
 			[...counter.edges, ["late", "result", "s_out", "skip"]],
 		);
-		const step = planFor(graph).passes.find((p) => p.simulation?.stage === "step");
+		const step = planPasses(planFor(graph).passes).find((p) => p.simulation?.stage === "step");
 		expect(step?.program.code).toMatch(/select\(.*, z_s_in_p0, z_s_in_skip\)/);
 	});
 
@@ -262,7 +263,7 @@ describe("simulation zone codegen", () => {
 			],
 		);
 		const plan = planFor(graph);
-		const steps = plan.passes.filter((p) => p.simulation?.stage === "step");
+		const steps = planPasses(plan.passes).filter((p) => p.simulation?.stage === "step");
 		// f32 4 + vec3f 16 + i32 4 + bool 4 + f32 4 | vec3f 16
 		expect(steps.map((p) => p.writes.length)).toEqual([5, 1]);
 		expect(steps[0]?.program.targets).toEqual(["vec4f", "vec4f", "vec4i", "vec4u", "vec4f"]);
@@ -302,12 +303,12 @@ describe("simulation zone codegen", () => {
 			],
 		);
 		const plan = planFor(graph);
-		const step = plan.passes.find((p) => p.simulation?.stage === "step");
+		const step = planPasses(plan.passes).find((p) => p.simulation?.stage === "step");
 		expect(step?.program.targets).toEqual(["vec4f"]);
 		expect(step?.program.textures.map((t) => [t.source.id, t.sampleType])).toEqual([
 			["state:s_in:img:previous", "float"],
 		]);
-		const main = plan.passes.at(-1);
+		const main = planPasses(plan.passes).at(-1);
 		expect(main?.program.textures.map((t) => t.source.id)).toEqual(["state:s_in:img:current"]);
 	});
 
@@ -346,14 +347,16 @@ describe("simulation zone codegen", () => {
 			],
 		};
 		const plan = planFor(new GraphModel(project));
-		const simulations = plan.passes.flatMap((p) => (p.simulation ? [p.simulation] : []));
+		const simulations = planPasses(plan.passes).flatMap((p) =>
+			p.simulation ? [p.simulation] : [],
+		);
 		expect(simulations).toEqual([
 			{ id: "a/gs_in", stage: "start" },
 			{ id: "a/gs_in", stage: "step" },
 			{ id: "b/gs_in", stage: "start" },
 			{ id: "b/gs_in", stage: "step" },
 		]);
-		const main = plan.passes.at(-1);
+		const main = planPasses(plan.passes).at(-1);
 		expect(main?.program.textures.map((t) => t.source.id)).toEqual([
 			"state:a/gs_in:acc:current",
 			"state:b/gs_in:acc:current",
@@ -375,7 +378,7 @@ describe("simulation zone codegen", () => {
 			],
 		);
 		const plan = planFor(graph);
-		expect(plan.passes.map((p) => [p.writes, p.simulation])).toEqual([
+		expect(planPasses(plan.passes).map((p) => [p.writes, p.simulation])).toEqual([
 			[["state:s_in:acc:previous"], { id: "s_in", stage: "start" }],
 			[["render:grey:result"], { id: "s_in" }],
 			[["state:s_in:acc:current"], { id: "s_in", stage: "step" }],
