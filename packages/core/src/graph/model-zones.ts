@@ -11,15 +11,16 @@ import {
 	inferredItemFamily,
 	isZoneInput,
 	ITERATIONS_HANDLE,
+	keepsTextures,
 	NEW_ITEM_HANDLE,
 	pairedOutputId,
 	REPEAT_INPUT,
-	simulatingDefinitions,
 	SKIP_HANDLE,
 	ZONE_BOUNDARIES,
 	zoneItems,
 	type ZoneKind,
 	zoneKindOf,
+	zoneOptions,
 } from "../zones";
 import { type GraphEdge, type GraphNode, type HydratedGraphDocument } from "./document";
 import { indexDocument } from "./hydrate";
@@ -33,6 +34,11 @@ export abstract class ZoneModel extends GraphModelBase {
 	/** Whether an edge of the active document breaks zone rules (drawn red, ignored by codegen). */
 	isEdgeInvalid(edgeId: string): boolean {
 		return this.activeZones.invalidEdges.has(edgeId);
+	}
+
+	/** Why a link breaks a nesting rule, if it does; other invalid links have no reason here. */
+	zoneLinkReason(edgeId: string): string | undefined {
+		return this.activeZones.reasons.get(edgeId);
 	}
 
 	/**
@@ -55,9 +61,11 @@ export abstract class ZoneModel extends GraphModelBase {
 				!(e.target === candidate.target && e.targetHandle === candidate.targetHandle),
 		);
 		const before = this.zoneAnalysis(doc).invalidEdges;
-		const after = analyzeZones(doc.nodes, [...kept, candidate], {
-			simulating: simulatingDefinitions(this.project.definitions),
-		}).invalidEdges;
+		const after = analyzeZones(
+			doc.nodes,
+			[...kept, candidate],
+			zoneOptions(this.project.definitions),
+		).invalidEdges;
 		for (const id of after) if (!before.has(id)) return false;
 		return true;
 	}
@@ -77,7 +85,7 @@ export abstract class ZoneModel extends GraphModelBase {
 			type: { inferred: true },
 		};
 		const { input, output } = ZONE_BOUNDARIES[kind];
-		const repeat = kind === "repeat";
+		const counted = kind !== "simulation";
 
 		const nodes: GraphNode[] = [
 			{
@@ -86,17 +94,20 @@ export abstract class ZoneModel extends GraphModelBase {
 				data: {
 					pairedOutput: outputId,
 					values: {
-						...(repeat ? { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS } : {}),
+						...(counted ? { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS } : {}),
 						[item.id]: 0,
 					},
-					...(repeat ? { maxIterations: DEFAULT_MAX_ITERATIONS } : {}),
+					...(kind === "repeat" ? { maxIterations: DEFAULT_MAX_ITERATIONS } : {}),
 				},
 				position,
 			},
 			{
 				id: outputId,
 				type: output,
-				data: { items: [item], ...(repeat ? {} : { values: { [SKIP_HANDLE]: false } }) },
+				data: {
+					items: [item],
+					...(kind === "simulation" ? { values: { [SKIP_HANDLE]: false } } : {}),
+				},
 				position: { x: position.x + ZONE_SPACING, y: position.y },
 			},
 		];
@@ -240,11 +251,12 @@ export abstract class ZoneModel extends GraphModelBase {
 	}
 
 	/**
-	 * Set the format a simulation's item is kept in, or (`undefined`) the one
-	 * its type has by default. A repeat zone's items aren't kept in textures.
+	 * Set the format a simulation's or passes zone's item is kept in, or
+	 * (`undefined`) the one its type has by default. A repeat zone's items
+	 * aren't kept in textures.
 	 */
 	setZoneItemFormat(zoneId: string, itemId: string, format: TextureFormat | undefined) {
-		if (this.zoneKind(zoneId) !== "simulation") return;
+		if (!keepsTextures(this.zoneKind(zoneId))) return;
 		this.setZoneItems(
 			zoneId,
 			this.getZoneItems(zoneId).map((item) => {
@@ -258,13 +270,13 @@ export abstract class ZoneModel extends GraphModelBase {
 	}
 
 	/**
-	 * Set how a simulation's item is sized, or (`undefined`) to the canvas'
-	 * size. Its size inputs on the zone's input node follow the mode, and
-	 * links to those it no longer has are dropped.
+	 * Set how a simulation's or passes zone's item is sized, or (`undefined`)
+	 * to the canvas' size. Its size inputs on the zone's input node follow the
+	 * mode, and links to those it no longer has are dropped.
 	 */
 	setZoneItemSize(zoneId: string, itemId: string, size: ZoneItem["size"]) {
 		const zone = this.zoneNodes(zoneId);
-		if (zone?.kind !== "simulation" || this.isLocked) return;
+		if (!zone || !keepsTextures(zone.kind) || this.isLocked) return;
 		const input = zone.input;
 		const handle = size === undefined ? undefined : itemSizeHandles(itemId)[size];
 		const unset = handle === undefined ? false : input.data.values?.[handle] === undefined;

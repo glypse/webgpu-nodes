@@ -234,6 +234,17 @@ export function addMenuEntries(
 			disabled: false,
 			deletable: false,
 		},
+		{
+			key: "zone:passes",
+			label: "Repeat Passes",
+			aliases: ["Loop", "Iterate", "Multipass", "Feedback Loop", "Ping Pong", "For Loop"],
+			heading: CATEGORY_LABELS.zone,
+			kind: "zone",
+			zone: "passes",
+			choices: [],
+			disabled: false,
+			deletable: false,
+		},
 	];
 	for (const [type, descriptor] of registeredNodes()) {
 		if (descriptor.hidden || (descriptor.dev && !devTools)) continue;

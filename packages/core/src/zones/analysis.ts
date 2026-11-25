@@ -4,6 +4,7 @@ import {
 	type MinimalEdge,
 	type MinimalNode,
 	pairedOutputId,
+	PASS_REPEAT_INPUT,
 	SIMULATION_INPUT,
 	type ZoneKind,
 	zoneKindOf,
@@ -21,7 +22,24 @@ export type ZoneAnalysisOptions = {
 	 * they nest (see `simulatingDefinitions`): they can't be in a zone either.
 	 */
 	simulating?: ReadonlySet<string>;
+	/**
+	 * Group nodes computing a passes zone (see `loopingDefinitions`): they
+	 * can't be in a repeat zone, which is one pixel's computation.
+	 */
+	looping?: ReadonlySet<string>;
 };
+
+/** What a project's zones need to know about the groups nesting them. */
+export function zoneOptions(definitions: Definitions): ZoneAnalysisOptions {
+	return {
+		simulating: simulatingDefinitions(definitions),
+		looping: loopingDefinitions(definitions),
+	};
+}
+
+const REPEAT_REASON =
+	"Passes can't be repeated inside a repeat zone, which is one pixel's computation.";
+const SIMULATION_REASON = "A simulation steps once a frame: it can't be inside a zone.";
 
 export type Zone = {
 	/** The zone's id: its input node's id. */
@@ -48,6 +66,8 @@ export type ZoneAnalysis = {
 	nodeZone: Map<string, string | null>;
 	/** Links breaking zone rules: drawn red, treated as disconnected by codegen. */
 	invalidEdges: Set<string>;
+	/** Why some of them do, by link, when it's a nesting rule. */
+	reasons: Map<string, string>;
 	/** Zone nodes missing their partner. */
 	unpaired: Set<string>;
 };
@@ -59,38 +79,56 @@ function implicitZoneEdges(zones: Iterable<Zone>): { source: string; target: str
 
 type Definitions = ReadonlyMap<string, { nodes: readonly MinimalNode[] }>;
 
-const simulatingCache = new WeakMap<
-	Definitions,
-	{ nodes: (readonly MinimalNode[])[]; result: ReadonlySet<string> }
->();
+type HoldingEntry = { nodes: (readonly MinimalNode[])[]; result: ReadonlySet<string> };
+
+const definitionCache = new WeakMap<Definitions, Map<string, HoldingEntry>>();
+
+/**
+ * The definitions holding a node `own` says, themselves or through the
+ * groups they nest, among `definitions`. Memoised on their node arrays.
+ */
+function definitionsHolding(
+	key: string,
+	definitions: Definitions,
+	own: (node: MinimalNode) => boolean,
+): ReadonlySet<string> {
+	const nodes = [...definitions.values()].map((d) => d.nodes);
+	const caches = definitionCache.get(definitions) ?? new Map<string, HoldingEntry>();
+	definitionCache.set(definitions, caches);
+	const cached = caches.get(key);
+	if (cached?.nodes.length === nodes.length && cached.nodes.every((n, i) => n === nodes[i])) {
+		return cached.result;
+	}
+	const holding = new Set<string>();
+	for (const [ref, doc] of definitions) {
+		if (doc.nodes.some(own)) holding.add(ref);
+	}
+	// Grows until no definition nesting a holding one is left out.
+	for (let grew = holding.size > 0; grew;) {
+		grew = false;
+		for (const [ref, doc] of definitions) {
+			if (holding.has(ref)) continue;
+			if (doc.nodes.some((n) => n.group && holding.has(n.group.definitionRef))) {
+				holding.add(ref);
+				grew = true;
+			}
+		}
+	}
+	caches.set(key, { nodes, result: holding });
+	return holding;
+}
 
 /**
  * The definitions computing a simulation zone, themselves or through the
  * groups they nest, among `definitions`. Memoised on their node arrays.
  */
 export function simulatingDefinitions(definitions: Definitions): ReadonlySet<string> {
-	const nodes = [...definitions.values()].map((d) => d.nodes);
-	const cached = simulatingCache.get(definitions);
-	if (cached?.nodes.length === nodes.length && cached.nodes.every((n, i) => n === nodes[i])) {
-		return cached.result;
-	}
-	const simulating = new Set<string>();
-	for (const [ref, doc] of definitions) {
-		if (doc.nodes.some((n) => n.type === SIMULATION_INPUT)) simulating.add(ref);
-	}
-	// Grows until no definition nesting a simulating one is left out.
-	for (let grew = simulating.size > 0; grew;) {
-		grew = false;
-		for (const [ref, doc] of definitions) {
-			if (simulating.has(ref)) continue;
-			if (doc.nodes.some((n) => n.group && simulating.has(n.group.definitionRef))) {
-				simulating.add(ref);
-				grew = true;
-			}
-		}
-	}
-	simulatingCache.set(definitions, { nodes, result: simulating });
-	return simulating;
+	return definitionsHolding("simulating", definitions, (n) => n.type === SIMULATION_INPUT);
+}
+
+/** The definitions computing a passes zone, as `simulatingDefinitions` does for simulations. */
+export function loopingDefinitions(definitions: Definitions): ReadonlySet<string> {
+	return definitionsHolding("looping", definitions, (n) => n.type === PASS_REPEAT_INPUT);
 }
 
 /**
@@ -176,15 +214,21 @@ function topoOrder(ids: string[], edges: { source: string; target: string }[]): 
 export function analyzeZones(
 	nodes: readonly MinimalNode[],
 	edges: readonly MinimalEdge[],
-	{ simulating }: ZoneAnalysisOptions = {},
+	{ simulating, looping }: ZoneAnalysisOptions = {},
 ): ZoneAnalysis {
 	const rootOnly = (node: MinimalNode | undefined): boolean =>
 		ROOT_ONLY_TYPES.has(node?.type ?? "") ||
 		(!!node?.group && !!simulating?.has(node.group.definitionRef));
+	/** Whether a node repeats passes, which a repeat zone's loop can't contain. */
+	const repeatsPasses = (node: MinimalNode | undefined): boolean =>
+		node?.type === PASS_REPEAT_INPUT ||
+		(!!node?.group && !!looping?.has(node.group.definitionRef));
 	const nodeById = new Map(nodes.map((n) => [n.id, n]));
 	const zones = new Map<string, Zone>();
 	const zoneOfBoundary = new Map<string, string>();
 	const unpaired = new Set<string>();
+	/** Why the nodes that can't be where their links put them can't be. */
+	const refused = new Map<string, string>();
 
 	// 1. Pair boundary nodes.
 	const claimedOutputs = new Set<string>();
@@ -271,7 +315,19 @@ export function analyzeZones(
 			}
 			const zoneId = zoneOfBoundary.get(id);
 			const zone = zoneId ? zones.get(zoneId) : undefined;
-			if (rootOnly(node)) ins.clear();
+			if (rootOnly(node)) {
+				if (ins.size > 0 && node?.type !== "frag-output" && node?.type !== "group-output") {
+					refused.set(id, SIMULATION_REASON);
+				}
+				ins.clear();
+			}
+			if (repeatsPasses(node)) {
+				for (const z of ins) {
+					if (zones.get(z)?.kind !== "repeat") continue;
+					ins.delete(z);
+					refused.set(id, REPEAT_REASON);
+				}
+			}
 			if (id === zone?.inputId) ins.add(zone.id);
 			if (id === zone?.outputId) {
 				for (const z of inside.get(zone.inputId) ?? []) ins.add(z);
@@ -362,5 +418,11 @@ export function analyzeZones(
 		if (from && !contains(from, targetZone(e.target))) invalidEdges.add(e.id);
 	}
 
-	return { zones, zoneOfBoundary, nodeZone, invalidEdges, unpaired };
+	const reasons = new Map<string, string>();
+	for (const id of invalidEdges) {
+		const edge = edges.find((e) => e.id === id);
+		const reason = edge && refused.get(edge.target);
+		if (reason) reasons.set(id, reason);
+	}
+	return { zones, zoneOfBoundary, nodeZone, invalidEdges, reasons, unpaired };
 }

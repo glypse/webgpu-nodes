@@ -4,7 +4,14 @@ import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL, VIDEO, VIDEO_METADATA } from "../node
 import { COMPONENT_COUNT } from "../nodes/vector";
 import { type TextureGraph, TextureSources } from "../passes/sources";
 import { isTexture } from "../types";
-import { ITERATIONS_HANDLE, REPEAT_INPUT, zoneItems, zoneKindOf } from "../zones";
+import {
+	ITERATION_HANDLE,
+	ITERATIONS_HANDLE,
+	PASS_REPEAT_INPUT,
+	REPEAT_INPUT,
+	zoneItems,
+	zoneKindOf,
+} from "../zones";
 
 /** Whether a value is the same for the whole frame, and if not, why. */
 export type FrameResult = { frame: true } | { frame: false; reason: string };
@@ -184,6 +191,8 @@ export class FrameValueAnalysis {
 				) ?? outputs[0];
 			return out ? this.input(inner, out.id, handleId) : YES;
 		}
+		// Every pixel of an iteration shares its counter.
+		if (type === PASS_REPEAT_INPUT && handleId === ITERATION_HANDLE) return YES;
 		const kind = zoneKindOf(type);
 		if (kind === "simulation") return no(`${label} keeps its state for each pixel.`);
 		if (kind === "repeat") return this.zoneValue(path, nodeId);

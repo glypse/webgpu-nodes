@@ -1,8 +1,18 @@
 import { describe, expect, it } from "bun:test";
 
-import { analyzeZones, inferredItemFamily, wouldCreateCycle } from ".";
+import {
+	analyzeZones,
+	inferredItemFamily,
+	loopingDefinitions,
+	type MinimalNode,
+	wouldCreateCycle,
+	type ZoneAnalysisOptions,
+	zoneItems,
+	zoneMaxIterations,
+} from ".";
 import { generateShader } from "../codegen";
 import { type GraphDocumentNode, type GraphProject, ROOT_ID } from "../graph/document";
+import { MAX_PASS_ITERATIONS } from "../graph/limits";
 import { GraphModel } from "../graph/model";
 import type { NodeType } from "../nodes/registry";
 import { evaluate } from "../testing/evaluate";
@@ -566,5 +576,238 @@ describe("inferred zone items", () => {
 		expect(shader).toMatch(/var z_\w+: vec3f = /);
 		expect(shader).toMatch(/var z_\w+: vec2f = /);
 		expectValid(shader);
+	});
+});
+
+/** A passes zone `<id>_in` / `<id>_out` with the given state items. */
+function passes(id: string, items: ZoneItem[], inputData: NodeData = {}): TestNode[] {
+	return [
+		{
+			id: `${id}_in`,
+			type: "pass-repeat-input",
+			data: { pairedOutput: `${id}_out`, values: { iterations: 3 }, ...inputData },
+		},
+		{ id: `${id}_out`, type: "pass-repeat-output", data: { items } },
+	];
+}
+
+/** A simulation zone `<id>_in` / `<id>_out` with the given state items. */
+function simulated(id: string, items: ZoneItem[]): TestNode[] {
+	return [
+		{ id: `${id}_in`, type: "simulation-input", data: { pairedOutput: `${id}_out` } },
+		{ id: `${id}_out`, type: "simulation-output", data: { items } },
+	];
+}
+
+function analyzeWith(nodes: TestNode[], edges: TestEdge[], options: ZoneAnalysisOptions) {
+	const doc = rootProject(nodes, edges).definitions[ROOT_ID];
+	if (!doc) throw new Error("missing root");
+	return analyzeZones(doc.nodes, doc.edges, options);
+}
+
+const IMAGE: ZoneItem = { id: "img", label: "Image", type: "texture" };
+
+describe("passes zones", () => {
+	it("pairs their boundaries into a passes zone", () => {
+		const analysis = analyze(passes("p", [ACC]), []);
+		expect(analysis.zones.get("p_in")?.kind).toBe("passes");
+		expect(analysis.zoneOfBoundary.get("p_out")).toBe("p_in");
+		expect(analysis.unpaired.size).toBe(0);
+	});
+
+	it("keeps the nodes it repeats inside, and those computed once outside", () => {
+		const analysis = analyze(
+			[
+				...passes("p", [ACC]),
+				{ id: "init", type: "declare", data: { values: { x: 1 } } },
+				{ id: "body", type: "add" },
+			],
+			[
+				["init", "value", "p_in", "acc"],
+				["p_in", "acc", "body", "operands"],
+				["body", "result", "p_out", "acc"],
+			],
+		);
+		expect(analysis.nodeZone.get("body")).toBe("p_in");
+		expect(analysis.nodeZone.get("init")).toBeNull();
+	});
+
+	it("invalidates a passes zone inside a repeat zone, with a reason", () => {
+		const analysis = analyze(
+			[...zone("r", [ACC]), ...passes("p", [ACC])],
+			[
+				["r_in", "acc", "p_in", "acc"],
+				["p_in", "acc", "p_out", "acc"],
+				["p_out", "acc", "r_out", "acc"],
+			],
+		);
+		expect([...analysis.invalidEdges]).toEqual(["r_in.acc->p_in.acc"]);
+		expect(analysis.reasons.get("r_in.acc->p_in.acc")).toMatch(/inside a repeat zone/);
+	});
+
+	it("allows a repeat zone inside a passes zone", () => {
+		const analysis = analyze(
+			[...passes("p", [ACC]), ...zone("r", [ACC])],
+			[
+				["p_in", "acc", "r_in", "acc"],
+				["r_in", "acc", "r_out", "acc"],
+				["r_out", "acc", "p_out", "acc"],
+			],
+		);
+		expect(analysis.invalidEdges.size).toBe(0);
+		expect(analysis.zones.get("r_in")?.parent).toBe("p_in");
+	});
+
+	it("allows a passes zone inside a simulation zone", () => {
+		const analysis = analyze(
+			[...simulated("s", [ACC]), ...passes("p", [ACC])],
+			[
+				["s_in", "acc", "p_in", "acc"],
+				["p_in", "acc", "p_out", "acc"],
+				["p_out", "acc", "s_out", "acc"],
+			],
+		);
+		expect(analysis.invalidEdges.size).toBe(0);
+	});
+
+	it("invalidates a simulation zone inside a passes zone, with a reason", () => {
+		const analysis = analyze(
+			[...passes("p", [ACC]), ...simulated("s", [ACC])],
+			[
+				["p_in", "acc", "s_in", "acc"],
+				["s_in", "acc", "s_out", "acc"],
+				["s_out", "acc", "p_out", "acc"],
+			],
+		);
+		expect([...analysis.invalidEdges]).toEqual(["p_in.acc->s_in.acc"]);
+		expect(analysis.reasons.get("p_in.acc->s_in.acc")).toMatch(/steps once a frame/);
+	});
+
+	it("allows passes zones nested in passes zones", () => {
+		const analysis = analyze(
+			[...passes("outer", [ACC]), ...passes("inner", [ACC])],
+			[
+				["outer_in", "acc", "inner_in", "acc"],
+				["inner_in", "acc", "inner_out", "acc"],
+				["inner_out", "acc", "outer_out", "acc"],
+			],
+		);
+		expect(analysis.invalidEdges.size).toBe(0);
+		expect(analysis.zones.get("inner_in")?.kind).toBe("passes");
+	});
+
+	it("applies the repeat rule to a group computing passes", () => {
+		const nodes: TestNode[] = [
+			...zone("r", [ACC]),
+			{
+				id: "g",
+				type: "node-group",
+				data: {},
+				group: { definitionRef: "loop", locked: false },
+			},
+		];
+		const edges: TestEdge[] = [
+			["r_in", "acc", "g", "acc"],
+			["g", "acc", "r_out", "acc"],
+		];
+		const looping = new Set(["loop"]);
+		const analysis = analyzeWith(nodes, edges, { looping });
+		expect([...analysis.invalidEdges]).toEqual(["r_in.acc->g.acc"]);
+		expect(analysis.reasons.get("r_in.acc->g.acc")).toMatch(/inside a repeat zone/);
+		expect(analyzeWith(nodes, edges, {}).invalidEdges.size).toBe(0);
+	});
+
+	it("applies the simulation rule to a group computing a simulation", () => {
+		const nodes: TestNode[] = [
+			...passes("p", [ACC]),
+			{
+				id: "g",
+				type: "node-group",
+				data: {},
+				group: { definitionRef: "sim", locked: false },
+			},
+		];
+		const edges: TestEdge[] = [
+			["p_in", "acc", "g", "acc"],
+			["g", "acc", "p_out", "acc"],
+		];
+		const analysis = analyzeWith(nodes, edges, { simulating: new Set(["sim"]) });
+		expect([...analysis.invalidEdges]).toEqual(["p_in.acc->g.acc"]);
+		expect(analysis.reasons.get("p_in.acc->g.acc")).toMatch(/steps once a frame/);
+	});
+
+	it("lists definitions computing passes zones, themselves or through the groups they nest", () => {
+		const loop: MinimalNode = { id: "l", type: "pass-repeat-input", data: {} };
+		const group = (ref: string): MinimalNode => ({
+			id: `g-${ref}`,
+			type: "node-group",
+			data: {},
+			group: { definitionRef: ref },
+		});
+		const definitions = new Map([
+			["a", { nodes: [loop] }],
+			["b", { nodes: [group("a")] }],
+			["c", { nodes: [] }],
+		]);
+		expect([...loopingDefinitions(definitions)].toSorted()).toEqual(["a", "b"]);
+	});
+
+	it("allows texture items, which repeat zones don't carry", () => {
+		expect(
+			zoneItems({ id: "p_out", type: "pass-repeat-output", data: { items: [IMAGE] } }),
+		).toEqual([IMAGE]);
+		expect(zoneItems({ id: "r_out", type: "repeat-output", data: { items: [IMAGE] } })).toEqual(
+			[],
+		);
+	});
+
+	it("caps passes iterations at MAX_PASS_ITERATIONS", () => {
+		expect(MAX_PASS_ITERATIONS).toBe(4096);
+		expect(
+			zoneMaxIterations({
+				id: "p_in",
+				type: "pass-repeat-input",
+				data: { maxIterations: 1e9 },
+			}),
+		).toBe(MAX_PASS_ITERATIONS);
+	});
+});
+
+describe("passes zone editing", () => {
+	it("creates a paired zone with an iterations input and an iteration output", () => {
+		const graph = managerFor([], []);
+		const id = graph.createZone("passes", { x: 0, y: 0 }) ?? "";
+		expect(graph.zoneKind(id)).toBe("passes");
+		expect(graph.resolveNodeInputs(id).map((i) => i.label)).toEqual(["Iterations", "Value"]);
+		expect(graph.resolveNodeOutputs(id).map((o) => o.label)).toEqual(["Iteration", "Value"]);
+		const output = graph.activeDocument.nodesById.get(
+			graph.activeDocument.nodesById.get(id)?.data.pairedOutput ?? "",
+		);
+		expect(output?.type).toBe("pass-repeat-output");
+	});
+
+	it("keeps texture items, with a format and a size", () => {
+		const graph = managerFor([], []);
+		const id = graph.createZone("passes", { x: 0, y: 0 }) ?? "";
+		const item = graph.addZoneItem(id, "texture", "Image");
+		expect(item?.type).toBe("texture");
+		graph.setZoneItemFormat(id, item?.id ?? "", "rgba16float");
+		graph.setZoneItemSize(id, item?.id ?? "", "pixels");
+		const stored = graph.getZoneItems(id).find((i) => i.id === item?.id);
+		expect(stored?.format).toBe("rgba16float");
+		expect(stored?.size).toBe("pixels");
+	});
+
+	it("reports why a nesting link is invalid", () => {
+		const graph = managerFor(
+			[...passes("p", [ACC]), ...simulated("s", [ACC])],
+			[
+				["p_in", "acc", "s_in", "acc"],
+				["s_in", "acc", "s_out", "acc"],
+				["s_out", "acc", "p_out", "acc"],
+			],
+		);
+		expect(graph.zoneLinkReason("p_in.acc->s_in.acc")).toMatch(/steps once a frame/);
+		expect(graph.zoneLinkReason("s_out.acc->p_out.acc")).toBeUndefined();
 	});
 });

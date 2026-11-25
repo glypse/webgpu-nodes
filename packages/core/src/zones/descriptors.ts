@@ -1,5 +1,5 @@
 import type { HydratedGraphDocument } from "../graph/document";
-import { MAX_ITERATIONS } from "../graph/limits";
+import { MAX_ITERATIONS, MAX_PASS_ITERATIONS } from "../graph/limits";
 import { itemSizeHandles, sizeInputs } from "../passes/item-size";
 import {
 	boundType,
@@ -33,6 +33,15 @@ import {
 //   Simulation Output ── inputs:  skip, this frame's value of every item
 //                     └─ outputs: this frame's value of every item
 //
+// A passes zone repeats passes, not a pixel's computation: it's stepped like
+// a simulation, as many times as it's told within one frame, its items kept
+// in textures between iterations:
+//
+//   Repeat Passes Input  ── inputs:  iterations, initial value of every item
+//                        └─ outputs: iteration, current value of every item
+//   Repeat Passes Output ── inputs:  next value of every item
+//                        └─ outputs: final value of every item
+//
 // Which nodes are *inside* a zone is derived from the links, never stored:
 // anything downstream of the zone's input is computed in it (once per
 // iteration, or by the frame's step); nodes only feeding the zone are
@@ -42,24 +51,29 @@ export const REPEAT_INPUT = "repeat-input";
 export const REPEAT_OUTPUT = "repeat-output";
 export const SIMULATION_INPUT = "simulation-input";
 export const SIMULATION_OUTPUT = "simulation-output";
+export const PASS_REPEAT_INPUT = "pass-repeat-input";
+export const PASS_REPEAT_OUTPUT = "pass-repeat-output";
 export const ZONE_NODE_TYPES = [
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
+	PASS_REPEAT_INPUT,
+	PASS_REPEAT_OUTPUT,
 ] as const;
 
-export type ZoneKind = "repeat" | "simulation";
+export type ZoneKind = "repeat" | "simulation" | "passes";
 
 /** The node types bounding each kind of zone. */
 export const ZONE_BOUNDARIES = {
 	repeat: { input: REPEAT_INPUT, output: REPEAT_OUTPUT },
 	simulation: { input: SIMULATION_INPUT, output: SIMULATION_OUTPUT },
+	passes: { input: PASS_REPEAT_INPUT, output: PASS_REPEAT_OUTPUT },
 } as const satisfies Record<ZoneKind, { input: string; output: string }>;
 
-/** Repeat Input's iteration count input. */
+/** Repeat Input's and Repeat Passes Input's iteration count input. */
 export const ITERATIONS_HANDLE = "iterations";
-/** Repeat Input's current-iteration-index output. */
+/** Repeat Input's and Repeat Passes Input's current-iteration-index output. */
 export const ITERATION_HANDLE = "iteration";
 /** Simulation Input's output: seconds since the previous frame's step, 0 when it starts. */
 export const DELTA_TIME_HANDLE = "delta-time";
@@ -94,15 +108,21 @@ export function isZoneNodeType(type: string | undefined): boolean {
 export function zoneKindOf(type: string | undefined): ZoneKind | undefined {
 	if (type === REPEAT_INPUT || type === REPEAT_OUTPUT) return "repeat";
 	if (type === SIMULATION_INPUT || type === SIMULATION_OUTPUT) return "simulation";
+	if (type === PASS_REPEAT_INPUT || type === PASS_REPEAT_OUTPUT) return "passes";
 	return undefined;
 }
 
 export function isZoneInput(type: string | undefined): boolean {
-	return type === REPEAT_INPUT || type === SIMULATION_INPUT;
+	return type === REPEAT_INPUT || type === SIMULATION_INPUT || type === PASS_REPEAT_INPUT;
 }
 
 export function isZoneOutput(type: string | undefined): boolean {
-	return type === REPEAT_OUTPUT || type === SIMULATION_OUTPUT;
+	return type === REPEAT_OUTPUT || type === SIMULATION_OUTPUT || type === PASS_REPEAT_OUTPUT;
+}
+
+/** Whether a zone keeps its items in textures: a repeat zone's live in one pixel's computation. */
+export function keepsTextures(kind: ZoneKind | undefined): boolean {
+	return kind === "simulation" || kind === "passes";
 }
 
 /** The id of the zone output a zone input is paired with. */
@@ -120,7 +140,7 @@ export function pairedInput<N extends MinimalNode>(
 
 /** Whether a zone of `kind` can carry an item of `item`'s type. */
 export function carriesItem(kind: ZoneKind | undefined, item: Pick<ZoneItem, "type">): boolean {
-	return kind === "simulation" || !isTexture(item.type);
+	return keepsTextures(kind) || !isTexture(item.type);
 }
 
 /**
@@ -137,6 +157,7 @@ export function zoneItems(outputNode: MinimalNode | undefined): ZoneItem[] {
 
 /** The safety cap applied to a zone's iteration count. */
 export function zoneMaxIterations(inputNode: MinimalNode): number {
+	if (inputNode.type === PASS_REPEAT_INPUT) return MAX_PASS_ITERATIONS;
 	return clampIterations(inputNode.data.maxIterations ?? DEFAULT_MAX_ITERATIONS);
 }
 
@@ -279,7 +300,41 @@ export function buildSimulationOutputDescriptor(
 	};
 }
 
-/** The descriptor of a zone node, of either kind. */
+export function buildPassRepeatInputDescriptor(
+	node: MinimalNode,
+	definitions: Map<string, HydratedGraphDocument>,
+	variables: readonly TypeVariable[] = [],
+): NodeDescriptor {
+	const items = zoneItems(findNode(pairedOutputId(node), definitions));
+	return {
+		...zoneDescriptorBase(PASS_REPEAT_INPUT, "Repeat Passes Input"),
+		defaultData: { values: { [ITERATIONS_HANDLE]: DEFAULT_ITERATIONS } },
+		inputs: [
+			{ id: ITERATIONS_HANDLE, label: "Iterations", types: ["i32"], frame: true },
+			...items.map((item) => itemInput(item, variables)),
+			...items.flatMap((item) => sizeInputs(itemSizeHandles(item.id), item.size, item.label)),
+		],
+		outputs: [
+			{ id: ITERATION_HANDLE, label: "Iteration", type: "i32" },
+			...items.map((item) => itemOutput(item, variables)),
+		],
+	};
+}
+
+export function buildPassRepeatOutputDescriptor(
+	node: MinimalNode,
+	variables: readonly TypeVariable[] = [],
+): NodeDescriptor {
+	const items = zoneItems(node);
+	return {
+		...zoneDescriptorBase(PASS_REPEAT_OUTPUT, "Repeat Passes Output"),
+		defaultData: { items: [] },
+		inputs: items.map((item) => itemInput(item, variables)),
+		outputs: items.map((item) => itemOutput(item, variables)),
+	};
+}
+
+/** The descriptor of a zone node, of any kind. */
 export function buildZoneDescriptor(
 	node: MinimalNode,
 	definitions: Map<string, HydratedGraphDocument>,
@@ -292,6 +347,10 @@ export function buildZoneDescriptor(
 			return buildSimulationInputDescriptor(node, definitions, variables);
 		case SIMULATION_OUTPUT:
 			return buildSimulationOutputDescriptor(node, variables);
+		case PASS_REPEAT_INPUT:
+			return buildPassRepeatInputDescriptor(node, definitions, variables);
+		case PASS_REPEAT_OUTPUT:
+			return buildPassRepeatOutputDescriptor(node, variables);
 		default:
 			return buildRepeatOutputDescriptor(node, variables);
 	}

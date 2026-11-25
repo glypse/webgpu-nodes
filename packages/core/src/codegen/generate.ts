@@ -73,7 +73,6 @@ import {
 	pairedOutputId,
 	REPEAT_INPUT,
 	REPEAT_OUTPUT,
-	simulatingDefinitions,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
 	SKIP_HANDLE,
@@ -81,6 +80,7 @@ import {
 	type ZoneAnalysis,
 	zoneItems,
 	zoneMaxIterations,
+	zoneOptions,
 } from "../zones";
 import { HelperRegistry } from "./helpers";
 import {
@@ -1088,9 +1088,7 @@ function emitDocumentBody(
 	const nodeMap = new Map<string, GraphNode>();
 	for (const node of doc.nodes) nodeMap.set(node.id, node);
 
-	const zones = analyzeZones(doc.nodes, doc.edges, {
-		simulating: simulatingDefinitions(state.graph.project.definitions),
-	});
+	const zones = analyzeZones(doc.nodes, doc.edges, zoneOptions(state.graph.project.definitions));
 
 	// The node the probe is computed at, here: the group node it goes through,
 	// or the socket's node, or the boundary node whose inputs a simulation

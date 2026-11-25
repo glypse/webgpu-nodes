@@ -30,11 +30,11 @@ import {
 } from "../types";
 import {
 	analyzeZones,
-	simulatingDefinitions,
 	SIMULATION_INPUT,
 	SIMULATION_OUTPUT,
 	type ZoneAnalysis,
 	zoneItems,
+	zoneOptions,
 } from "../zones";
 import { itemSizeHandles, NODE_SIZE_HANDLES, type SizeHandles, storedSize } from "./item-size";
 import type { ItemSizeMode } from "./item-size";
@@ -226,9 +226,11 @@ export class TextureSources {
 		bindings: TypeBindings,
 		constants: ReadonlyMap<string, number>,
 	): Instance {
-		const zones = analyzeZones(doc.nodes, doc.edges, {
-			simulating: simulatingDefinitions(this.graph.project.definitions),
-		});
+		const zones = analyzeZones(
+			doc.nodes,
+			doc.edges,
+			zoneOptions(this.graph.project.definitions),
+		);
 		const invalid = zones.invalidEdges;
 		const unavailable = unavailableEdges(doc.edges, (id) => {
 			const node = doc.nodesById.get(id);

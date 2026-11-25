@@ -47,8 +47,8 @@ import {
 	analyzeZones,
 	inferredItemFamily,
 	isZoneInput,
-	simulatingDefinitions,
 	type ZoneAnalysis,
+	zoneOptions,
 } from "../zones";
 import {
 	createPlainDocument,
@@ -465,7 +465,8 @@ export abstract class GraphModelBase {
 		{
 			nodes: GraphNode[];
 			edges: GraphEdge[];
-			simulating: ReadonlySet<string>;
+			simulating: ReadonlySet<string> | undefined;
+			looping: ReadonlySet<string> | undefined;
 			analysis: ZoneAnalysis;
 		}
 	>();
@@ -476,17 +477,24 @@ export abstract class GraphModelBase {
 	 * memoised on their identity.
 	 */
 	zoneAnalysis(doc: HydratedGraphDocument): ZoneAnalysis {
-		const simulating = simulatingDefinitions(this.project.definitions);
+		const options = zoneOptions(this.project.definitions);
 		const cached = this.zoneCache.get(doc);
 		if (
 			cached?.nodes === doc.nodes &&
 			cached.edges === doc.edges &&
-			cached.simulating === simulating
+			cached.simulating === options.simulating &&
+			cached.looping === options.looping
 		) {
 			return cached.analysis;
 		}
-		const analysis = analyzeZones(doc.nodes, doc.edges, { simulating });
-		this.zoneCache.set(doc, { nodes: doc.nodes, edges: doc.edges, simulating, analysis });
+		const analysis = analyzeZones(doc.nodes, doc.edges, options);
+		this.zoneCache.set(doc, {
+			nodes: doc.nodes,
+			edges: doc.edges,
+			simulating: options.simulating,
+			looping: options.looping,
+			analysis,
+		});
 		return analysis;
 	}
 

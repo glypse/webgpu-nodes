@@ -27,6 +27,7 @@ import {
 } from "../types";
 import {
 	isZoneNodeType,
+	keepsTextures,
 	NEW_ITEM_HANDLE,
 	pairedOutputId,
 	wouldCreateCycle,
@@ -202,10 +203,11 @@ export class GraphModel extends AssetModel {
 					? this.resolveOutputHandleType(sourceNode.id, sourceHandle)
 					: this.resolveInputType(targetNode.id, targetHandle),
 			) &&
-			zoneKindOf((targetHandle === NEW_ITEM_HANDLE ? targetNode : sourceNode).type) !==
-				"simulation"
+			!keepsTextures(
+				zoneKindOf((targetHandle === NEW_ITEM_HANDLE ? targetNode : sourceNode).type),
+			)
 		) {
-			// Only a simulation zone carries a texture.
+			// Only the zones that keep items in textures carry one.
 			return false;
 		}
 		// A Match node's cases come from its enum: nothing else can pick one.

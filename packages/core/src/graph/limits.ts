@@ -8,6 +8,8 @@ import * as v from "valibot";
 export const MAX_CASES = 1024;
 /** The most a loop counter can reach: WGSL's `i32`. */
 export const MAX_ITERATIONS = 2 ** 31 - 1;
+/** Each pass iteration is a render pass per texture item, so far fewer than a repeat's loop. */
+export const MAX_PASS_ITERATIONS = 4096;
 export const MAX_DEFINITIONS = 2000;
 export const MAX_NODES_PER_DOCUMENT = 20_000;
 export const MAX_EDGES_PER_DOCUMENT = 80_000;

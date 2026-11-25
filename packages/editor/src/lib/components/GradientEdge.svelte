@@ -95,7 +95,8 @@
 			? textureLink.reason
 			: frameLink?.kind === "invalid"
 				? frameLink.reason
-				: "Invalid link: it can't leave the zone it starts in",
+				: (graph.zoneLinkReason(id) ??
+					"Invalid link: it can't leave the zone it starts in"),
 	);
 
 	/** Frame values are drawn dotted, apart from the solid links of other values and the dashed ones of hidden links. */
