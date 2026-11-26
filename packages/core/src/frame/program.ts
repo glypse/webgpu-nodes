@@ -7,7 +7,8 @@ import {
 	type UniformValue,
 	uniformValue,
 } from "../codegen/literals";
-import { ROOT_ID } from "../graph/document";
+import { type GraphEdge, ROOT_ID } from "../graph/document";
+import { visitUpstream } from "../graph/upstream";
 import { componentKeys, readComponent } from "../graph/values";
 import { coerce, convert } from "../nodes/cpu";
 import { nodeRegistry } from "../nodes/registry";
@@ -459,11 +460,36 @@ export class FrameCompiler {
 	): CompiledFrameValue | undefined {
 		const key = `${path.join("/")}|${nodeId}|${handleId}`;
 		if (this.memo.has(key)) return this.memo.get(key);
-		const result = this.analysis.isFrameValue(path, nodeId, handleId)
-			? this.compileOutput(path, nodeId, handleId)
-			: undefined;
+		const frame = this.analysis.isFrameValue(path, nodeId, handleId);
+		if (frame) this.compileSources(path, nodeId);
+		const result = frame ? this.compileOutput(path, nodeId, handleId) : undefined;
 		this.memo.set(key, result);
 		return result;
+	}
+
+	/**
+	 * The frame values a node reads, compiled in the order compiling it would
+	 * reach them, but without recursing down a long chain of links.
+	 */
+	private compileSources(path: readonly string[], nodeId: string): void {
+		const instance = this.sources.instance(path);
+		if (!instance) return;
+		const prefix = `${path.join("/")}|`;
+		const read = (id: string): GraphEdge[] => {
+			const inputs = this.analysis.inputsRead(path, id);
+			const edges = instance.edgesByTarget.get(id) ?? [];
+			return inputs.flatMap((input) => edges.filter((e) => e.targetHandle === input));
+		};
+		visitUpstream<string>(
+			nodeId,
+			function* (id) {
+				for (const e of read(id)) yield e.source;
+			},
+			(id) => read(id).every((e) => this.memo.has(`${prefix}${e.source}|${e.sourceHandle}`)),
+			(id) => {
+				for (const e of read(id)) this.compile(path, e.source, e.sourceHandle);
+			},
+		);
 	}
 
 	/**

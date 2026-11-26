@@ -211,8 +211,6 @@ function libraryInstance(d: DocBuilder, id: string) {
 
 function rootDocument(): GraphDocument {
 	const d = new DocBuilder("root");
-	// Codegen recurses along the longest path, so the long chain carries no groups:
-	// its groups' bodies would add to the depth a browser can recurse through.
 	let longChain = constant(d, [0.1, 0.2, 0.3, 0.4]);
 	let midpoint = longChain;
 	for (let s = 0; s < 10; s++) {

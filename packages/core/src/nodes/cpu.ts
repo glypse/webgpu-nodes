@@ -39,7 +39,8 @@ export function asKind(type: WgslType): (n: number) => number {
 
 /** An f32 as WGSL converts it to an integer: truncated, saturating at the range, NaN as 0. */
 function saturate(n: number, min: number, max: number): number {
-	return Number.isNaN(n) ? 0 : Math.min(max, Math.max(min, Math.trunc(n)));
+	// `+ 0` turns the -0 truncating (-1, 0) gives into the 0 an integer holds.
+	return Number.isNaN(n) ? 0 : Math.min(max, Math.max(min, Math.trunc(n))) + 0;
 }
 
 /** A number of kind `from` as one of kind `to`, as WGSL's conversion constructors do. */

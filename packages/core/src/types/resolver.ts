@@ -16,6 +16,7 @@ import type {
 	HydratedGraphDocument,
 	HydratedGraphProject,
 } from "../graph/document";
+import { visitUpstream } from "../graph/upstream";
 import {
 	inferredItemFamily,
 	isInferredItem,
@@ -469,11 +470,25 @@ export class TypeResolver {
 		const key = this.key(node.id, bindings);
 		const cached = this.cache.get(node.id)?.get(key);
 		if (cached) return cached;
+		// Sources first, so a long chain of links doesn't recurse down its length.
+		visitUpstream(
+			node,
+			(n) => this.sources(n === node ? incoming : this.env.getIncomingEdges(n.id)),
+			(n) => this.cache.get(n.id)?.has(this.key(n.id, bindings)) === true,
+			(n) => this.resolveNodeTypes(n, this.env.getIncomingEdges(n.id), bindings),
+		);
 		const result = this.resolveNodeTypesUncached(node, incoming, node.data, bindings);
 		const byBindings = this.cache.get(node.id) ?? new Map<string, ResolvedNodeTypes>();
 		byBindings.set(key, result);
 		this.cache.set(node.id, byBindings);
 		return result;
+	}
+
+	private *sources(incoming: readonly GraphDocumentEdge[]): Iterable<GraphNode> {
+		for (const e of incoming) {
+			const source = this.env.resolveNode(e.source);
+			if (source) yield source;
+		}
 	}
 
 	/**

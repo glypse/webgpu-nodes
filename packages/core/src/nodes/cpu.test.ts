@@ -58,6 +58,8 @@ describe("CPU implementations", () => {
 		expect(to("to-int", -3e9)).toEqual([-2147483648]);
 		expect(to("to-int", Number.NaN)).toEqual([0]);
 		expect(to("to-int", -1.5)).toEqual([-1]);
+		expect(Object.is(to("to-int", -0.5)[0], 0)).toBe(true);
+		expect(Object.is(to("to-uint", -0.5)[0], 0)).toBe(true);
 		expect(to("to-uint", -1.5)).toEqual([0]);
 		expect(to("to-uint", 5e9)).toEqual([4294967295]);
 	});

@@ -2,7 +2,15 @@ import { describe, expect, it } from "bun:test";
 
 import type { GraphProject } from "../graph/document";
 import { GraphModel } from "../graph/model";
-import { edge, rootProject, type TestEdge, type TestNode } from "../testing/graph";
+import {
+	edge,
+	libraryEntry,
+	libraryHandle,
+	managerFor,
+	rootProject,
+	type TestEdge,
+	type TestNode,
+} from "../testing/graph";
 import { FrameValueAnalysis } from "./analysis";
 
 const at = { x: 0, y: 0 };
@@ -32,6 +40,34 @@ function increment(): GraphProject["definitions"][string] {
 }
 
 describe("frame values", () => {
+	it("follow a Fallback to its default when its value is an input left unlinked", () => {
+		const aspectUv = libraryEntry("std-aspect-uv");
+		const out = libraryHandle(aspectUv, "group-output", "Coordinates");
+		const coordinates = libraryHandle(aspectUv, "group-input", "Coordinates");
+		const graph = managerFor(
+			[
+				{
+					id: "a",
+					type: "node-group",
+					group: { definitionRef: aspectUv.ref, locked: true },
+				},
+				{
+					id: "b",
+					type: "node-group",
+					group: { definitionRef: aspectUv.ref, locked: true },
+				},
+				{ id: "half", type: "declare", data: { types: { declare: "vec2f" } } },
+			],
+			[
+				["a", out, "out", "color"],
+				["half", "value", "b", coordinates],
+			],
+		);
+		const frame = graph.frameValueAnalysis();
+		expect(frame.isFrameValue([], "a", out)).toBe(false);
+		expect(frame.isFrameValue([], "b", out)).toBe(true);
+	});
+
 	it("include a Repeat Passes zone's iteration, not its items", () => {
 		const graph = model(
 			[

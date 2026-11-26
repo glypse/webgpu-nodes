@@ -2,6 +2,20 @@
 	"node": "to-int",
 	"cases": [
 		{
+			"note": "truncates (-1, 0) to 0, not -0",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[-0.5, "-0"]]
+			},
+			"output": "result",
+			"expect": [0, 0]
+		},
+		{
 			"note": "rounds trunc to -2,-1,1,2",
 			"settings": {
 				"rounding": "trunc"

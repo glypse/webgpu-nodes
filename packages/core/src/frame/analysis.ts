@@ -1,5 +1,6 @@
 import { MATCH, MATCH_SELECTOR, matchedCase, WIDTH_SWITCH, widthCase } from "../enums";
 import type { GraphEdge } from "../graph/document";
+import { visitUpstream } from "../graph/upstream";
 import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL, VIDEO, VIDEO_METADATA } from "../nodes/texture";
 import { COMPONENT_COUNT } from "../nodes/vector";
 import { type TextureGraph, TextureSources } from "../passes/sources";
@@ -119,15 +120,28 @@ export class FrameValueAnalysis {
 			}
 			case COMPONENT_COUNT:
 				return [];
-			case "fallback": {
-				const linked = instance.edgesByTarget
-					.get(nodeId)
-					?.some((e) => e.targetHandle === "value");
-				return [linked ? "value" : "default"];
-			}
+			case "fallback":
+				return [this.isPresent(path, nodeId, "value") ? "value" : "default"];
 			default:
 				return ids;
 		}
+	}
+
+	/**
+	 * Whether an input is given a value: a link from a group input unlinked
+	 * where the group is used gives none, through any reroutes.
+	 */
+	private isPresent(path: readonly string[], nodeId: string, inputId: string): boolean {
+		const instance = this.sources.instance(path);
+		let edge = instance?.edgesByTarget.get(nodeId)?.find((e) => e.targetHandle === inputId);
+		while (edge && instance?.doc.nodesById.get(edge.source)?.type === "reroute") {
+			const source = edge.source;
+			edge = instance.edgesByTarget.get(source)?.find((e) => e.targetHandle === "in");
+		}
+		if (!edge) return false;
+		if (instance?.doc.nodesById.get(edge.source)?.type !== "group-input") return true;
+		const parent = path.at(-1);
+		return parent !== undefined && this.isPresent(path.slice(0, -1), parent, edge.sourceHandle);
 	}
 
 	private input(path: readonly string[], nodeId: string, inputId: string): FrameResult {
@@ -163,11 +177,33 @@ export class FrameValueAnalysis {
 		const known = this.memo.get(key) ?? cache.get(key);
 		if (known) return known;
 		if (this.visiting.has(key)) return no("It depends on its own result.");
+		this.warmSources(path, nodeId);
 		this.visiting.add(key);
 		const result = this.compute(path, nodeId, handleId);
 		this.visiting.delete(key);
 		cache.set(key, result);
 		return result;
+	}
+
+	/** Outputs linked into a node, found first so a long chain of links isn't recursed down. */
+	private warmSources(path: readonly string[], nodeId: string): void {
+		const instance = this.sources.instance(path);
+		if (!instance) return;
+		const prefix = `${this.sources.pathKey(path)}|`;
+		const linked = (id: string): Iterable<GraphEdge> => instance.edgesByTarget.get(id) ?? [];
+		visitUpstream<string>(
+			nodeId,
+			function* (id) {
+				for (const e of linked(id)) yield e.source;
+			},
+			(id) =>
+				[...linked(id)].every((e) =>
+					this.memo.has(`${prefix}${e.source}|${e.sourceHandle}`),
+				),
+			(id) => {
+				for (const e of linked(id)) this.output(path, e.source, e.sourceHandle);
+			},
+		);
 	}
 
 	private compute(path: readonly string[], nodeId: string, handleId: string): FrameResult {
