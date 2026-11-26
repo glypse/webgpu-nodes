@@ -1,0 +1,67 @@
+{
+	"description": "Cutting a link with a reroute routes it through a new reroute node.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->out.color",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "rerouteEdges",
+			"args": [
+				[
+					{
+						"edgeId": "t.seconds->out.color",
+						"position": {
+							"x": 100,
+							"y": 0
+						}
+					}
+				]
+			]
+		}
+	],
+	"expect": {
+		"results": [["id1"]],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time",
+					"id1": "reroute"
+				},
+				"links": ["id1.out -> out.color", "t.seconds -> id1.in"]
+			}
+		}
+	}
+}

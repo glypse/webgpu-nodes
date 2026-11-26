@@ -1,0 +1,68 @@
+{
+	"description": "Sampling a 4 by 4 texture with closest interpolation and transparent extension, at UVs from -0.12 to 1.28: inside [0, 1] the texel centres give the UV's red, and outside the extension decides.",
+	"size": {
+		"width": 8,
+		"height": 2
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, 0, 0, 0]
+				},
+				{
+					"x": 1,
+					"y": 0,
+					"rgba": [0.125, null, null, null]
+				},
+				{
+					"x": 2,
+					"y": 0,
+					"rgba": [0.375, null, null, null]
+				},
+				{
+					"x": 3,
+					"y": 0,
+					"rgba": [0.375, null, null, null]
+				},
+				{
+					"x": 4,
+					"y": 0,
+					"rgba": [0.625, null, null, null]
+				},
+				{
+					"x": 5,
+					"y": 0,
+					"rgba": [0.875, null, null, null]
+				},
+				{
+					"x": 6,
+					"y": 0,
+					"rgba": [0, 0, 0, 0]
+				},
+				{
+					"x": 7,
+					"y": 0,
+					"rgba": [0, 0, 0, 0]
+				}
+			]
+		},
+		{
+			"kind": "cpu",
+			"stride": 1,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"maxOff": 0
+		}
+	]
+}

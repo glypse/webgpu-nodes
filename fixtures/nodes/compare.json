@@ -1,0 +1,287 @@
+{
+	"node": "compare",
+	"cases": [
+		{
+			"note": "applies < to each vec3f pair",
+			"settings": {
+				"op": "<"
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3]],
+				"b": [[2, 2, 2]]
+			},
+			"output": "result",
+			"expect": [1, 0, 0]
+		},
+		{
+			"note": "applies <= to each vec3f pair",
+			"settings": {
+				"op": "<="
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3]],
+				"b": [[2, 2, 2]]
+			},
+			"output": "result",
+			"expect": [1, 1, 0]
+		},
+		{
+			"note": "applies == to each vec3f pair",
+			"settings": {
+				"op": "=="
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3]],
+				"b": [[2, 2, 2]]
+			},
+			"output": "result",
+			"expect": [0, 1, 0]
+		},
+		{
+			"note": "applies != to each vec3f pair",
+			"settings": {
+				"op": "!="
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3]],
+				"b": [[2, 2, 2]]
+			},
+			"output": "result",
+			"expect": [1, 0, 1]
+		},
+		{
+			"note": "applies &gt;= to each vec3f pair",
+			"settings": {
+				"op": ">="
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3]],
+				"b": [[2, 2, 2]]
+			},
+			"output": "result",
+			"expect": [0, 1, 1]
+		},
+		{
+			"note": "applies > to each vec3f pair",
+			"settings": {
+				"op": ">"
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3]],
+				"b": [[2, 2, 2]]
+			},
+			"output": "result",
+			"expect": [0, 0, 1]
+		},
+		{
+			"note": "compares i32 extremes by value",
+			"settings": {
+				"op": "<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-2147483648]],
+				"b": [[2147483647]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "compares negative i32s",
+			"settings": {
+				"op": ">="
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "compares u32s past the sign bit",
+			"settings": {
+				"op": ">"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "compares equal u32s at the top",
+			"settings": {
+				"op": "=="
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[4294967295]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "compares u32s with !=",
+			"settings": {
+				"op": "!="
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[4294967295]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "compares each component of vec2i",
+			"settings": {
+				"op": "=="
+			},
+			"types": {
+				"a": "vec2i"
+			},
+			"inputs": {
+				"a": [[1, 2]],
+				"b": [[1, 3]]
+			},
+			"output": "result",
+			"expect": [1, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep under 0",
+			"settings": {
+				"op": "<"
+			},
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"b": {
+					"kind": "constant",
+					"value": [0]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep at most 0",
+			"settings": {
+				"op": "<="
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [0]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep not 4",
+			"settings": {
+				"op": "!="
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [4]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep above a half",
+			"settings": {
+				"op": ">"
+			},
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"b": {
+					"kind": "constant",
+					"value": [0.5, 0.5, 0.5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

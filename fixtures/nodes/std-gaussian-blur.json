@@ -1,0 +1,6 @@
+{
+	"node": "std-gaussian-blur",
+	"skip": "reads a texture: covered by fixtures/gpu",
+	"cases": [],
+	"sweeps": []
+}

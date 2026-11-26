@@ -1,0 +1,39 @@
+{
+	"description": "A passes zone of a counter and a texture, five iterations: the counter counts 5, and the texture gains 0.1 each time, so its red is the UV's plus 0.5.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [5, 0.625, null, null]
+				},
+				{
+					"x": 3,
+					"y": 0,
+					"rgba": [5, 1.375, null, null]
+				},
+				{
+					"x": 0,
+					"y": 3,
+					"rgba": [5, 0.625, null, null]
+				},
+				{
+					"x": 3,
+					"y": 3,
+					"rgba": [5, 1.375, null, null]
+				}
+			]
+		}
+	]
+}

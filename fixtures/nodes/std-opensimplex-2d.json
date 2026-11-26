@@ -1,0 +1,53 @@
+{
+	"node": "std-opensimplex-2d",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Value, Variant=Fast",
+			"values": {
+				"Variant": 0
+			},
+			"inputs": {
+				"Lattice Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, Variant=Smooth",
+			"values": {
+				"Variant": 1
+			},
+			"inputs": {
+				"Lattice Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

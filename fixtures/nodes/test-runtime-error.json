@@ -1,0 +1,6 @@
+{
+	"node": "test-runtime-error",
+	"skip": "a developer aid that fails on purpose",
+	"cases": [],
+	"sweeps": []
+}

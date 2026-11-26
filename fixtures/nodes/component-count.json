@@ -1,0 +1,255 @@
+{
+	"node": "component-count",
+	"cases": [
+		{
+			"note": "counts the components of a f32",
+			"types": {
+				"value": "f32"
+			},
+			"inputs": {
+				"value": [[0]]
+			},
+			"output": "count",
+			"expect": [1]
+		},
+		{
+			"note": "counts the components of a vec2f",
+			"types": {
+				"value": "vec2f"
+			},
+			"inputs": {
+				"value": [[0, 0]]
+			},
+			"output": "count",
+			"expect": [2]
+		},
+		{
+			"note": "counts the components of a vec3f",
+			"types": {
+				"value": "vec3f"
+			},
+			"inputs": {
+				"value": [[0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [3]
+		},
+		{
+			"note": "counts the components of a vec4f",
+			"types": {
+				"value": "vec4f"
+			},
+			"inputs": {
+				"value": [[0, 0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [4]
+		},
+		{
+			"note": "counts the components of a i32",
+			"types": {
+				"value": "i32"
+			},
+			"inputs": {
+				"value": [[0]]
+			},
+			"output": "count",
+			"expect": [1]
+		},
+		{
+			"note": "counts the components of a vec2i",
+			"types": {
+				"value": "vec2i"
+			},
+			"inputs": {
+				"value": [[0, 0]]
+			},
+			"output": "count",
+			"expect": [2]
+		},
+		{
+			"note": "counts the components of a vec3i",
+			"types": {
+				"value": "vec3i"
+			},
+			"inputs": {
+				"value": [[0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [3]
+		},
+		{
+			"note": "counts the components of a vec4i",
+			"types": {
+				"value": "vec4i"
+			},
+			"inputs": {
+				"value": [[0, 0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [4]
+		},
+		{
+			"note": "counts the components of a u32",
+			"types": {
+				"value": "u32"
+			},
+			"inputs": {
+				"value": [[0]]
+			},
+			"output": "count",
+			"expect": [1]
+		},
+		{
+			"note": "counts the components of a vec2u",
+			"types": {
+				"value": "vec2u"
+			},
+			"inputs": {
+				"value": [[0, 0]]
+			},
+			"output": "count",
+			"expect": [2]
+		},
+		{
+			"note": "counts the components of a vec3u",
+			"types": {
+				"value": "vec3u"
+			},
+			"inputs": {
+				"value": [[0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [3]
+		},
+		{
+			"note": "counts the components of a vec4u",
+			"types": {
+				"value": "vec4u"
+			},
+			"inputs": {
+				"value": [[0, 0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [4]
+		},
+		{
+			"note": "counts the components of a bool",
+			"types": {
+				"value": "bool"
+			},
+			"inputs": {
+				"value": [[0]]
+			},
+			"output": "count",
+			"expect": [1]
+		},
+		{
+			"note": "counts the components of a vec2b",
+			"types": {
+				"value": "vec2b"
+			},
+			"inputs": {
+				"value": [[0, 0]]
+			},
+			"output": "count",
+			"expect": [2]
+		},
+		{
+			"note": "counts the components of a vec3b",
+			"types": {
+				"value": "vec3b"
+			},
+			"inputs": {
+				"value": [[0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [3]
+		},
+		{
+			"note": "counts the components of a vec4b",
+			"types": {
+				"value": "vec4b"
+			},
+			"inputs": {
+				"value": [[0, 0, 0, 0]]
+			},
+			"output": "count",
+			"expect": [4]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"value": "f32"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "count",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"value": "vec3f"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "count",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec4i sweep",
+			"types": {
+				"value": "vec4i"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "count",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2b sweep",
+			"types": {
+				"value": "vec2b"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "count",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

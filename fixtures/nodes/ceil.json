@@ -1,0 +1,113 @@
+{
+	"node": "ceil",
+	"cases": [
+		{
+			"note": "rounds f32s up",
+			"inputs": {
+				"e": [[1.2]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "rounds a negative f32 up",
+			"inputs": {
+				"e": [[-1.7]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "keeps a whole f32",
+			"inputs": {
+				"e": [[2]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "rounds 0.5 to 1",
+			"inputs": {
+				"e": [[0.5]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "keeps the sign of -0.5 rounded to -0",
+			"inputs": {
+				"e": [[-0.5]]
+			},
+			"output": "result",
+			"expect": ["-0"]
+		},
+		{
+			"note": "leaves a large f32 unchanged",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [3.0000000054977558e38]
+		},
+		{
+			"note": "ceils vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[1.5, -1.5, 2]]
+			},
+			"output": "result",
+			"expect": [2, -1, 2]
+		},
+		{
+			"note": "keeps the sign of negative fractions rounded to zero",
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[0.1, 0.9, -0.1, -0.9]]
+			},
+			"output": "result",
+			"expect": [1, 1, "-0", "-0"]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

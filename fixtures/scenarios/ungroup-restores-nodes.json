@@ -1,0 +1,76 @@
+{
+	"description": "Ungrouping puts a group's nodes back in the document it was made from.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "s",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->s.operands",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "s",
+						"targetHandle": "operands"
+					},
+					{
+						"id": "s.result->out.color",
+						"source": "s",
+						"sourceHandle": "result",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "groupSelection",
+			"args": [["s"]]
+		},
+		{
+			"kind": "ungroupSelection",
+			"args": [["id6"]]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time",
+					"id11": "add"
+				},
+				"links": ["t.seconds -> id11.operands", "id11.result -> out.color"]
+			}
+		}
+	}
+}

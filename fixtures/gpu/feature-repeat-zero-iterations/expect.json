@@ -1,0 +1,24 @@
+{
+	"description": "A repeat zone with 0 iterations gives its initial value.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [5, null, null, null]
+				}
+			]
+		}
+	]
+}

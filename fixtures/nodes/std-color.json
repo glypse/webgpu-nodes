@@ -1,0 +1,267 @@
+{
+	"node": "std-color",
+	"cases": [
+		{
+			"note": "takes the RGB channels as they are",
+			"values": {
+				"Mode": 0,
+				"Red": 0.25,
+				"Green": 0.5,
+				"Blue": 0.75
+			},
+			"inputs": {},
+			"output": "Color",
+			"expect": [0.25, 0.5, 0.75]
+		},
+		{
+			"note": "takes HSV hue zero at full saturation and value as red",
+			"values": {
+				"Mode": 1,
+				"Hue": 0,
+				"Saturation": 1,
+				"Value": 1
+			},
+			"inputs": {},
+			"output": "Color",
+			"expect": [1, 0, 0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "Color, Mode=RGB",
+			"values": {
+				"Mode": 0
+			},
+			"inputs": {
+				"Red": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Green": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Blue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Hue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Saturation": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Lightness": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Chroma": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Alpha": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Color, Mode=HSV",
+			"values": {
+				"Mode": 1
+			},
+			"inputs": {
+				"Red": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Green": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Blue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Hue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Saturation": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Lightness": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Chroma": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Alpha": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "RGBA, Mode=RGB",
+			"values": {
+				"Mode": 0
+			},
+			"inputs": {
+				"Red": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Green": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Blue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Hue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Saturation": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Lightness": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Chroma": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Alpha": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "RGBA",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "RGBA, Mode=OKLch",
+			"values": {
+				"Mode": 2
+			},
+			"inputs": {
+				"Red": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Green": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Blue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Hue": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Saturation": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Lightness": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Chroma": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"Alpha": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "RGBA",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

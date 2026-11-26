@@ -1,0 +1,6 @@
+{
+	"node": "load-texel",
+	"skip": "reads a texture",
+	"cases": [],
+	"sweeps": []
+}

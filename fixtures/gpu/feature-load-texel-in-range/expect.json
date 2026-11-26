@@ -1,0 +1,29 @@
+{
+	"description": "Load Texel of a 4 by 4 texture at texel (2, 1) gives that texel's UV: the texel's centre.",
+	"size": {
+		"width": 2,
+		"height": 2
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.625, 0.625, null, null]
+				},
+				{
+					"x": 1,
+					"y": 1,
+					"rgba": [0.625, 0.625, null, null]
+				}
+			]
+		}
+	]
+}

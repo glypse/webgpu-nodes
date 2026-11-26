@@ -1,0 +1,29 @@
+{
+	"description": "A vec2f reaching the output fills red and green, with blue 0 and an opaque alpha.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.25, 0.75, 0, 1]
+				},
+				{
+					"x": 3,
+					"y": 3,
+					"rgba": [0.25, 0.75, 0, 1]
+				}
+			]
+		}
+	]
+}

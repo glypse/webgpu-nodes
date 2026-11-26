@@ -1,0 +1,72 @@
+{
+	"description": "A generic node's sockets take the type of what is linked into them.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "u",
+						"type": "uv",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "sum",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "sum.result->out.color",
+						"source": "sum",
+						"sourceHandle": "result",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "connect",
+			"args": [
+				{
+					"source": "u",
+					"sourceHandle": "uv",
+					"target": "sum",
+					"targetHandle": "operands"
+				}
+			]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"types": {
+					"sum": {
+						"in:operands": "vec2f",
+						"out:result": "vec2f"
+					}
+				}
+			}
+		}
+	}
+}

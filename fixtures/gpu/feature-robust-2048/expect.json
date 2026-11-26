@@ -1,0 +1,33 @@
+{
+	"description": "The offset loop on a 2048 by 2048 canvas: texel rows and columns keep their place, and the far corner is read.",
+	"size": {
+		"width": 2048,
+		"height": 2048
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 2047,
+					"y": 2047,
+					"rgba": [0.999755859375, 0.000244140625, null, null]
+				}
+			]
+		},
+		{
+			"kind": "cpu",
+			"stride": 524288,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"maxOff": 0
+		}
+	]
+}

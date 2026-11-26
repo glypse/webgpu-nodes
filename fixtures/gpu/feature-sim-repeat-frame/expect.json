@@ -1,0 +1,112 @@
+{
+	"description": "A simulation drawing a frame again computes it from the same previous state, so the repeat gives the same value and the next frame steps on from it.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.25,
+			"delta": 0.016666666666666666,
+			"frame": 1
+		},
+		{
+			"time": 0.5,
+			"delta": 0.016666666666666666,
+			"frame": 2
+		},
+		{
+			"time": 0.5,
+			"delta": 0.016666666666666666,
+			"frame": 2
+		},
+		{
+			"time": 0.75,
+			"delta": 0.016666666666666666,
+			"frame": 3
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.25, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.5, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.5, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 4,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.75, null, null, null]
+				}
+			]
+		}
+	]
+}

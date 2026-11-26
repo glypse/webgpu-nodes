@@ -1,0 +1,29 @@
+{
+	"description": "Load Texel at texel (-3, 9) of a 4 by 4 texture clamps into it: the corner texel (0, 3).",
+	"size": {
+		"width": 2,
+		"height": 2
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.125, 0.125, null, null]
+				},
+				{
+					"x": 1,
+					"y": 1,
+					"rgba": [0.125, 0.125, null, null]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,94 @@
+{
+	"node": "not",
+	"cases": [
+		{
+			"note": "inverts true",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "inverts false",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "inverts each component of vec3b",
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": [[1, 0, 1]]
+			},
+			"output": "result",
+			"expect": [0, 1, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "bool sweep",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3b sweep",
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2b sweep",
+			"types": {
+				"e": "vec2b"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

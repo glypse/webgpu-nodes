@@ -1,0 +1,6 @@
+{
+	"node": "video",
+	"skip": "its value is a video asset's frames",
+	"cases": [],
+	"sweeps": []
+}

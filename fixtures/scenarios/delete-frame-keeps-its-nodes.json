@@ -1,0 +1,57 @@
+{
+	"description": "Deleting a frame removes only the frame; the nodes it held stay.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"frame": "fr"
+					},
+					{
+						"id": "fr",
+						"type": "layout-frame",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "deleteNodes",
+			"args": [["fr"]]
+		}
+	],
+	"expect": {
+		"results": [true],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time"
+				}
+			}
+		}
+	}
+}

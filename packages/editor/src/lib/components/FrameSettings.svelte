@@ -14,11 +14,12 @@
 
 	function commitNote() {
 		const note = noteBuffer.trim() === "" ? undefined : noteBuffer.trimEnd();
-		if (note !== data.note) graph.updateNodeData(frameId, { note }, { retype: false });
+		if (note !== data.note)
+			graph.apply({ kind: "updateNodeData", args: [frameId, { note }, { retype: false }] });
 	}
 
 	function pickTint(tint: FrameTint | undefined) {
-		graph.updateNodeData(frameId, { tint }, { retype: false });
+		graph.apply({ kind: "updateNodeData", args: [frameId, { tint }, { retype: false }] });
 	}
 </script>
 

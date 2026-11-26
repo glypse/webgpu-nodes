@@ -1,0 +1,28 @@
+{
+	"node": "std-gradient-noise-1d",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Value",
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

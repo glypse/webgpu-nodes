@@ -1,0 +1,984 @@
+{
+	"node": "curve",
+	"cases": [
+		{
+			"note": "is the identity on the default curve",
+			"inputs": {
+				"value": [[0.3]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.3],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "holds the value flat below the curve's range",
+			"inputs": {
+				"value": [[-0.5]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "holds the value flat above the curve's range",
+			"inputs": {
+				"value": [[2]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "keeps the value at a factor of 0",
+			"inputs": {
+				"value": [[0.5]],
+				"factor": [[0]]
+			},
+			"output": "result",
+			"expect": [0.5],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "maps vec3f component-wise",
+			"types": {
+				"value": "vec3f"
+			},
+			"inputs": {
+				"value": [[0, 0.5, 1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0, 0.5, 1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease in starts at 0",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease in ends at 1",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease in at x = 0.25 holds its shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0.25]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.08288397277818246],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease out starts at 0",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease out ends at 1",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease out at x = 0.25 holds its shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0.25]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.31434294389946743],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease in and out starts at 0",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease in and out ends at 1",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Ease in and out at x = 0.25 holds its shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0.25]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.12916190056878774],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Round starts at 0",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": 0,
+							"y": -0.5523
+						},
+						"right": {
+							"x": 0,
+							"y": 0.5523
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.5523,
+							"y": 0
+						},
+						"right": {
+							"x": 0.5523,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Round ends at 1",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": 0,
+							"y": -0.5523
+						},
+						"right": {
+							"x": 0,
+							"y": 0.5523
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.5523,
+							"y": 0
+						},
+						"right": {
+							"x": 0.5523,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Round at x = 0.25 holds its shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": 0,
+							"y": -0.5523
+						},
+						"right": {
+							"x": 0,
+							"y": 0.5523
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.5523,
+							"y": 0
+						},
+						"right": {
+							"x": 0.5523,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0.25]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.661468154402448],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Bell starts at 0",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.25,
+							"y": 0
+						},
+						"right": {
+							"x": 0.25,
+							"y": 0
+						}
+					},
+					{
+						"x": 0.5,
+						"y": 1,
+						"kind": "mirrored",
+						"left": {
+							"x": -0.15,
+							"y": 0
+						},
+						"right": {
+							"x": 0.15,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.25,
+							"y": 0
+						},
+						"right": {
+							"x": 0.25,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Bell ends at 1",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.25,
+							"y": 0
+						},
+						"right": {
+							"x": 0.25,
+							"y": 0
+						}
+					},
+					{
+						"x": 0.5,
+						"y": 1,
+						"kind": "mirrored",
+						"left": {
+							"x": -0.15,
+							"y": 0
+						},
+						"right": {
+							"x": 0.15,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.25,
+							"y": 0
+						},
+						"right": {
+							"x": 0.25,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Bell at x = 0.25 holds its shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.25,
+							"y": 0
+						},
+						"right": {
+							"x": 0.25,
+							"y": 0
+						}
+					},
+					{
+						"x": 0.5,
+						"y": 1,
+						"kind": "mirrored",
+						"left": {
+							"x": -0.15,
+							"y": 0
+						},
+						"right": {
+							"x": 0.15,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.25,
+							"y": 0
+						},
+						"right": {
+							"x": 0.25,
+							"y": 0
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0.25]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.37968639647682706],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Invert starts at 0",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": 0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": -0.3333333333333333
+						}
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": 0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": -0.3333333333333333
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Invert ends at 1",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": 0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": -0.3333333333333333
+						}
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": 0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": -0.3333333333333333
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[1]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "Invert at x = 0.25 holds its shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": 0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": -0.3333333333333333
+						}
+					},
+					{
+						"x": 1,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": 0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": -0.3333333333333333
+						}
+					}
+				]
+			},
+			"inputs": {
+				"value": [[0.25]],
+				"factor": [[1]]
+			},
+			"output": "result",
+			"expect": [0.75],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over [0, 1]",
+			"types": {
+				"value": "f32"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"factor": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep over [0, 1]",
+			"types": {
+				"value": "vec3f"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"factor": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep over every preset's shape",
+			"data": {
+				"curve": [
+					{
+						"x": 0,
+						"y": 0,
+						"kind": "aligned",
+						"left": {
+							"x": -0.42,
+							"y": 0
+						},
+						"right": {
+							"x": 0.42,
+							"y": 0
+						}
+					},
+					{
+						"x": 1,
+						"y": 1,
+						"kind": "aligned",
+						"left": {
+							"x": -0.3333333333333333,
+							"y": -0.3333333333333333
+						},
+						"right": {
+							"x": 0.3333333333333333,
+							"y": 0.3333333333333333
+						}
+					}
+				]
+			},
+			"types": {
+				"value": "f32"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"factor": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		}
+	]
+}

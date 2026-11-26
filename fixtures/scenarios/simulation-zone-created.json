@@ -1,0 +1,44 @@
+{
+	"description": "A simulation zone is created as a paired input and output, like a repeat zone.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "createSimulationZone",
+			"args": [
+				{
+					"x": 0,
+					"y": 0
+				}
+			]
+		}
+	],
+	"expect": {
+		"results": ["id1"],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"id1": "simulation-input",
+					"id2": "simulation-output"
+				}
+			}
+		}
+	}
+}

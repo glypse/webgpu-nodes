@@ -1,0 +1,43 @@
+{
+	"node": "std-luma",
+	"cases": [
+		{
+			"note": "gives white a luma of 1",
+			"inputs": {
+				"Linear RGB": [[1, 1, 1]]
+			},
+			"output": "Luma",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives black a luma of 0",
+			"inputs": {
+				"Linear RGB": [[0, 0, 0]]
+			},
+			"output": "Luma",
+			"expect": [0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "Luma",
+			"values": {},
+			"inputs": {
+				"Linear RGB": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Luma",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

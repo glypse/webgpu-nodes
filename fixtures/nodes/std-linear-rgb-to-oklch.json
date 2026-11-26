@@ -1,0 +1,22 @@
+{
+	"node": "std-linear-rgb-to-oklch",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "OKLch",
+			"values": {},
+			"inputs": {
+				"Linear RGB": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "OKLch",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

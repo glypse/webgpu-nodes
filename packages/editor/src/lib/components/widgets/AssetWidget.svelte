@@ -41,12 +41,12 @@
 		const [file] = await pickFiles({ accept: `${media}/*` });
 		if (!file) return;
 		const [imported] = await graph.importFiles([file]);
-		if (imported) graph.setNodeAsset(id, imported.id);
+		if (imported) graph.apply({ kind: "setNodeAsset", args: [id, imported.id] });
 	}
 
 	function pick(value: string) {
 		if (value === IMPORT) void importFile();
-		else graph.setNodeAsset(id, value === NONE ? undefined : value);
+		else graph.apply({ kind: "setNodeAsset", args: [id, value === NONE ? undefined : value] });
 	}
 </script>
 
@@ -91,7 +91,10 @@
 			value={playback.start}
 			readonly={disabled}
 			oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-				graph.setVideoPlayback(id, { start: parseFloat(e.currentTarget.value) || 0 });
+				graph.apply({
+					kind: "setVideoPlayback",
+					args: [id, { start: parseFloat(e.currentTarget.value) || 0 }],
+				});
 			}}
 		/>
 		<Scrubbable
@@ -99,7 +102,10 @@
 			value={playback.speed}
 			readonly={disabled}
 			oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-				graph.setVideoPlayback(id, { speed: parseFloat(e.currentTarget.value) || 0 });
+				graph.apply({
+					kind: "setVideoPlayback",
+					args: [id, { speed: parseFloat(e.currentTarget.value) || 0 }],
+				});
 			}}
 		/>
 		<Select.Root
@@ -109,7 +115,7 @@
 			{disabled}
 			onValueChange={(value: string) => {
 				const end = VIDEO_ENDS.find((e) => e === value);
-				if (end) graph.setVideoPlayback(id, { end });
+				if (end) graph.apply({ kind: "setVideoPlayback", args: [id, { end }] });
 			}}
 		>
 			<Select.Trigger class="w-full" title="After its end">

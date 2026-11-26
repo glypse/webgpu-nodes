@@ -1,0 +1,1689 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"type": "object",
+	"properties": {
+		"definitions": {
+			"type": "object",
+			"propertyNames": {
+				"type": "string",
+				"maxLength": 256
+			},
+			"additionalProperties": {
+				"type": "object",
+				"properties": {
+					"nodes": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"type": {
+									"enum": [
+										"declare",
+										"uv",
+										"time",
+										"delta",
+										"resolution",
+										"add",
+										"sub",
+										"mul",
+										"div",
+										"mod",
+										"negate",
+										"mix",
+										"smoothstep",
+										"abs",
+										"min",
+										"max",
+										"step",
+										"clamp",
+										"pow",
+										"curve",
+										"sin",
+										"cos",
+										"tan",
+										"atan",
+										"atan2",
+										"floor",
+										"ceil",
+										"fract",
+										"round",
+										"sign",
+										"log",
+										"exp",
+										"sqrt",
+										"dot",
+										"distance",
+										"length",
+										"normalize",
+										"cross",
+										"reflect",
+										"separate-vector",
+										"component-count",
+										"compare",
+										"switch",
+										"boolean-math",
+										"not",
+										"reduce-boolean",
+										"fallback",
+										"match",
+										"index-switch",
+										"width-switch",
+										"bitwise",
+										"bitwise-not",
+										"bit-shift",
+										"to-float",
+										"to-int",
+										"to-uint",
+										"to-bool",
+										"color-ramp",
+										"display-gamut-clip",
+										"image",
+										"video",
+										"sample-texture",
+										"texture-size",
+										"load-texel",
+										"render-texture",
+										"reroute",
+										"custom-wgsl",
+										"layout-frame",
+										"frag-output",
+										"node-group",
+										"test-invalid-wgsl",
+										"test-runtime-error",
+										"group-input",
+										"group-output",
+										"repeat-input",
+										"repeat-output",
+										"simulation-input",
+										"simulation-output",
+										"pass-repeat-input",
+										"pass-repeat-output"
+									],
+									"type": "string"
+								},
+								"data": {
+									"type": "object",
+									"properties": {
+										"label": {
+											"type": "string",
+											"maxLength": 1024
+										},
+										"values": {
+											"type": "object",
+											"propertyNames": {
+												"type": "string",
+												"maxLength": 256
+											},
+											"additionalProperties": {
+												"anyOf": [
+													{
+														"anyOf": [
+															{
+																"type": "number"
+															},
+															{
+																"type": "boolean"
+															}
+														]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"x": {
+																"anyOf": [
+																	{
+																		"type": "number"
+																	},
+																	{
+																		"type": "boolean"
+																	}
+																]
+															},
+															"y": {
+																"anyOf": [
+																	{
+																		"type": "number"
+																	},
+																	{
+																		"type": "boolean"
+																	}
+																]
+															},
+															"z": {
+																"anyOf": [
+																	{
+																		"type": "number"
+																	},
+																	{
+																		"type": "boolean"
+																	}
+																]
+															},
+															"w": {
+																"anyOf": [
+																	{
+																		"type": "number"
+																	},
+																	{
+																		"type": "boolean"
+																	}
+																]
+															}
+														},
+														"required": [],
+														"additionalProperties": false
+													}
+												]
+											}
+										},
+										"settings": {
+											"type": "object",
+											"propertyNames": {
+												"type": "string",
+												"maxLength": 256
+											},
+											"additionalProperties": {
+												"type": "string",
+												"maxLength": 1024
+											}
+										},
+										"types": {
+											"type": "object",
+											"propertyNames": {
+												"type": "string",
+												"maxLength": 256
+											},
+											"additionalProperties": {
+												"enum": [
+													"f32",
+													"vec2f",
+													"vec3f",
+													"vec4f",
+													"i32",
+													"vec2i",
+													"vec3i",
+													"vec4i",
+													"u32",
+													"vec2u",
+													"vec3u",
+													"vec4u",
+													"bool",
+													"vec2b",
+													"vec3b",
+													"vec4b",
+													"texture"
+												],
+												"type": "string"
+											}
+										},
+										"items": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string",
+														"maxLength": 256
+													},
+													"label": {
+														"type": "string",
+														"maxLength": 1024
+													},
+													"variants": {
+														"type": "array",
+														"items": {
+															"type": "object",
+															"properties": {
+																"value": {
+																	"type": "number"
+																},
+																"label": {
+																	"type": "string",
+																	"maxLength": 1024
+																},
+																"types": {
+																	"type": "array",
+																	"items": {
+																		"enum": [
+																			"f32",
+																			"vec2f",
+																			"vec3f",
+																			"vec4f",
+																			"i32",
+																			"vec2i",
+																			"vec3i",
+																			"vec4i",
+																			"u32",
+																			"vec2u",
+																			"vec3u",
+																			"vec4u",
+																			"bool",
+																			"vec2b",
+																			"vec3b",
+																			"vec4b"
+																		],
+																		"type": "string"
+																	},
+																	"maxItems": 1024
+																}
+															},
+															"required": ["value", "label"]
+														},
+														"maxItems": 1024
+													},
+													"compiled": {
+														"type": "boolean"
+													},
+													"owner": {
+														"type": "object",
+														"properties": {
+															"enumId": {
+																"type": "string",
+																"maxLength": 256
+															},
+															"value": {
+																"type": "number"
+															}
+														},
+														"required": ["enumId", "value"]
+													},
+													"typeOwner": {
+														"type": "object",
+														"properties": {
+															"variable": {
+																"type": "string",
+																"maxLength": 256
+															},
+															"types": {
+																"type": "array",
+																"items": {
+																	"enum": [
+																		"f32",
+																		"vec2f",
+																		"vec3f",
+																		"vec4f",
+																		"i32",
+																		"vec2i",
+																		"vec3i",
+																		"vec4i",
+																		"u32",
+																		"vec2u",
+																		"vec3u",
+																		"vec4u",
+																		"bool",
+																		"vec2b",
+																		"vec3b",
+																		"vec4b"
+																	],
+																	"type": "string"
+																},
+																"maxItems": 1024
+															}
+														},
+														"required": ["variable", "types"]
+													},
+													"variantsBy": {
+														"type": "string",
+														"maxLength": 256
+													},
+													"min": {
+														"type": "number"
+													},
+													"max": {
+														"type": "number"
+													},
+													"display": {
+														"enum": ["swatch", "wheel"],
+														"type": "string"
+													},
+													"type": {
+														"anyOf": [
+															{
+																"enum": [
+																	"f32",
+																	"vec2f",
+																	"vec3f",
+																	"vec4f",
+																	"i32",
+																	"vec2i",
+																	"vec3i",
+																	"vec4i",
+																	"u32",
+																	"vec2u",
+																	"vec3u",
+																	"vec4u",
+																	"bool",
+																	"vec2b",
+																	"vec3b",
+																	"vec4b",
+																	"texture"
+																],
+																"type": "string"
+															},
+															{
+																"type": "object",
+																"properties": {
+																	"variable": {
+																		"type": "string",
+																		"maxLength": 256
+																	}
+																},
+																"required": ["variable"],
+																"additionalProperties": false
+															},
+															{
+																"type": "object",
+																"properties": {
+																	"inferred": {
+																		"const": true
+																	}
+																},
+																"required": ["inferred"],
+																"additionalProperties": false
+															}
+														]
+													},
+													"format": {
+														"enum": [
+															"rgba16float",
+															"rg16float",
+															"r16float",
+															"rgba32float",
+															"rg32float",
+															"r32float",
+															"rgba8unorm",
+															"rgba32uint",
+															"rg32uint",
+															"r32uint",
+															"rgba32sint",
+															"rg32sint",
+															"r32sint"
+														],
+														"type": "string"
+													},
+													"size": {
+														"enum": ["scale", "pixels"],
+														"type": "string"
+													}
+												},
+												"required": ["id", "label", "type"]
+											},
+											"maxItems": 1024
+										},
+										"pairedOutput": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"maxIterations": {
+											"type": "integer",
+											"minimum": 0,
+											"maximum": 2147483647
+										},
+										"cases": {
+											"type": "integer",
+											"minimum": 1,
+											"maximum": 1024
+										},
+										"curve": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"x": {
+														"type": "number"
+													},
+													"y": {
+														"type": "number"
+													},
+													"kind": {
+														"enum": [
+															"vector",
+															"free",
+															"aligned",
+															"mirrored"
+														],
+														"type": "string"
+													},
+													"left": {
+														"type": "object",
+														"properties": {
+															"x": {
+																"type": "number"
+															},
+															"y": {
+																"type": "number"
+															}
+														},
+														"required": ["x", "y"]
+													},
+													"right": {
+														"type": "object",
+														"properties": {
+															"x": {
+																"type": "number"
+															},
+															"y": {
+																"type": "number"
+															}
+														},
+														"required": ["x", "y"]
+													}
+												},
+												"required": ["x", "y", "kind", "left", "right"]
+											},
+											"maxItems": 1024
+										},
+										"ramp": {
+											"type": "array",
+											"items": {
+												"type": "object",
+												"properties": {
+													"id": {
+														"type": "string",
+														"maxLength": 256
+													},
+													"position": {
+														"type": "number"
+													}
+												},
+												"required": ["id", "position"]
+											},
+											"maxItems": 1024
+										},
+										"code": {
+											"type": "string",
+											"maxLength": 1048576
+										},
+										"sockets": {
+											"type": "object",
+											"properties": {
+												"inputs": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string",
+																"maxLength": 256
+															},
+															"label": {
+																"type": "string",
+																"maxLength": 1024
+															},
+															"variants": {
+																"type": "array",
+																"items": {
+																	"type": "object",
+																	"properties": {
+																		"value": {
+																			"type": "number"
+																		},
+																		"label": {
+																			"type": "string",
+																			"maxLength": 1024
+																		},
+																		"types": {
+																			"type": "array",
+																			"items": {
+																				"enum": [
+																					"f32",
+																					"vec2f",
+																					"vec3f",
+																					"vec4f",
+																					"i32",
+																					"vec2i",
+																					"vec3i",
+																					"vec4i",
+																					"u32",
+																					"vec2u",
+																					"vec3u",
+																					"vec4u",
+																					"bool",
+																					"vec2b",
+																					"vec3b",
+																					"vec4b"
+																				],
+																				"type": "string"
+																			},
+																			"maxItems": 1024
+																		}
+																	},
+																	"required": ["value", "label"]
+																},
+																"maxItems": 1024
+															},
+															"compiled": {
+																"type": "boolean"
+															},
+															"owner": {
+																"type": "object",
+																"properties": {
+																	"enumId": {
+																		"type": "string",
+																		"maxLength": 256
+																	},
+																	"value": {
+																		"type": "number"
+																	}
+																},
+																"required": ["enumId", "value"]
+															},
+															"typeOwner": {
+																"type": "object",
+																"properties": {
+																	"variable": {
+																		"type": "string",
+																		"maxLength": 256
+																	},
+																	"types": {
+																		"type": "array",
+																		"items": {
+																			"enum": [
+																				"f32",
+																				"vec2f",
+																				"vec3f",
+																				"vec4f",
+																				"i32",
+																				"vec2i",
+																				"vec3i",
+																				"vec4i",
+																				"u32",
+																				"vec2u",
+																				"vec3u",
+																				"vec4u",
+																				"bool",
+																				"vec2b",
+																				"vec3b",
+																				"vec4b"
+																			],
+																			"type": "string"
+																		},
+																		"maxItems": 1024
+																	}
+																},
+																"required": ["variable", "types"]
+															},
+															"variantsBy": {
+																"type": "string",
+																"maxLength": 256
+															},
+															"min": {
+																"type": "number"
+															},
+															"max": {
+																"type": "number"
+															},
+															"display": {
+																"enum": ["swatch", "wheel"],
+																"type": "string"
+															},
+															"type": {
+																"enum": [
+																	"f32",
+																	"vec2f",
+																	"vec3f",
+																	"vec4f",
+																	"i32",
+																	"vec2i",
+																	"vec3i",
+																	"vec4i",
+																	"u32",
+																	"vec2u",
+																	"vec3u",
+																	"vec4u",
+																	"bool",
+																	"vec2b",
+																	"vec3b",
+																	"vec4b"
+																],
+																"type": "string"
+															}
+														},
+														"required": ["id", "label", "type"]
+													},
+													"maxItems": 1024
+												},
+												"outputs": {
+													"type": "array",
+													"items": {
+														"type": "object",
+														"properties": {
+															"id": {
+																"type": "string",
+																"maxLength": 256
+															},
+															"label": {
+																"type": "string",
+																"maxLength": 1024
+															},
+															"variants": {
+																"type": "array",
+																"items": {
+																	"type": "object",
+																	"properties": {
+																		"value": {
+																			"type": "number"
+																		},
+																		"label": {
+																			"type": "string",
+																			"maxLength": 1024
+																		},
+																		"types": {
+																			"type": "array",
+																			"items": {
+																				"enum": [
+																					"f32",
+																					"vec2f",
+																					"vec3f",
+																					"vec4f",
+																					"i32",
+																					"vec2i",
+																					"vec3i",
+																					"vec4i",
+																					"u32",
+																					"vec2u",
+																					"vec3u",
+																					"vec4u",
+																					"bool",
+																					"vec2b",
+																					"vec3b",
+																					"vec4b"
+																				],
+																				"type": "string"
+																			},
+																			"maxItems": 1024
+																		}
+																	},
+																	"required": ["value", "label"]
+																},
+																"maxItems": 1024
+															},
+															"compiled": {
+																"type": "boolean"
+															},
+															"owner": {
+																"type": "object",
+																"properties": {
+																	"enumId": {
+																		"type": "string",
+																		"maxLength": 256
+																	},
+																	"value": {
+																		"type": "number"
+																	}
+																},
+																"required": ["enumId", "value"]
+															},
+															"typeOwner": {
+																"type": "object",
+																"properties": {
+																	"variable": {
+																		"type": "string",
+																		"maxLength": 256
+																	},
+																	"types": {
+																		"type": "array",
+																		"items": {
+																			"enum": [
+																				"f32",
+																				"vec2f",
+																				"vec3f",
+																				"vec4f",
+																				"i32",
+																				"vec2i",
+																				"vec3i",
+																				"vec4i",
+																				"u32",
+																				"vec2u",
+																				"vec3u",
+																				"vec4u",
+																				"bool",
+																				"vec2b",
+																				"vec3b",
+																				"vec4b"
+																			],
+																			"type": "string"
+																		},
+																		"maxItems": 1024
+																	}
+																},
+																"required": ["variable", "types"]
+															},
+															"variantsBy": {
+																"type": "string",
+																"maxLength": 256
+															},
+															"min": {
+																"type": "number"
+															},
+															"max": {
+																"type": "number"
+															},
+															"display": {
+																"enum": ["swatch", "wheel"],
+																"type": "string"
+															},
+															"type": {
+																"enum": [
+																	"f32",
+																	"vec2f",
+																	"vec3f",
+																	"vec4f",
+																	"i32",
+																	"vec2i",
+																	"vec3i",
+																	"vec4i",
+																	"u32",
+																	"vec2u",
+																	"vec3u",
+																	"vec4u",
+																	"bool",
+																	"vec2b",
+																	"vec3b",
+																	"vec4b"
+																],
+																"type": "string"
+															}
+														},
+														"required": ["id", "label", "type"]
+													},
+													"maxItems": 1024
+												}
+											},
+											"required": ["inputs", "outputs"],
+											"additionalProperties": false
+										},
+										"note": {
+											"type": "string",
+											"maxLength": 65536
+										},
+										"tint": {
+											"enum": [
+												"red",
+												"orange",
+												"yellow",
+												"green",
+												"teal",
+												"blue",
+												"purple",
+												"pink"
+											],
+											"type": "string"
+										},
+										"hideLinks": {
+											"type": "boolean"
+										},
+										"hideUnlinked": {
+											"type": "boolean"
+										},
+										"asset": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"playback": {
+											"type": "object",
+											"properties": {
+												"start": {
+													"type": "number"
+												},
+												"speed": {
+													"type": "number"
+												},
+												"end": {
+													"enum": ["loop", "hold", "transparent"],
+													"type": "string"
+												}
+											},
+											"required": ["start", "speed", "end"]
+										}
+									},
+									"required": [],
+									"additionalProperties": false
+								},
+								"position": {
+									"type": "object",
+									"properties": {
+										"x": {
+											"type": "number"
+										},
+										"y": {
+											"type": "number"
+										}
+									},
+									"required": ["x", "y"]
+								},
+								"group": {
+									"type": "object",
+									"properties": {
+										"definitionRef": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"locked": {
+											"type": "boolean"
+										}
+									},
+									"required": ["definitionRef", "locked"]
+								},
+								"frame": {
+									"type": "string",
+									"maxLength": 256
+								}
+							},
+							"required": ["id", "type", "data", "position"]
+						},
+						"maxItems": 20000
+					},
+					"edges": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"source": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"target": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"sourceHandle": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"targetHandle": {
+									"type": "string",
+									"maxLength": 256
+								}
+							},
+							"required": ["id", "source", "target", "sourceHandle", "targetHandle"]
+						},
+						"maxItems": 80000
+					},
+					"label": {
+						"type": "string",
+						"maxLength": 1024
+					},
+					"locked": {
+						"type": "boolean"
+					},
+					"viewport": {
+						"type": "object",
+						"properties": {
+							"x": {
+								"type": "number"
+							},
+							"y": {
+								"type": "number"
+							},
+							"zoom": {
+								"type": "number",
+								"exclusiveMinimum": 0
+							}
+						},
+						"required": ["x", "y", "zoom"]
+					},
+					"typeVariables": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"name": {
+									"type": "string",
+									"maxLength": 1024
+								},
+								"types": {
+									"type": "array",
+									"items": {
+										"enum": [
+											"f32",
+											"vec2f",
+											"vec3f",
+											"vec4f",
+											"i32",
+											"vec2i",
+											"vec3i",
+											"vec4i",
+											"u32",
+											"vec2u",
+											"vec3u",
+											"vec4u",
+											"bool",
+											"vec2b",
+											"vec3b",
+											"vec4b"
+										],
+										"type": "string"
+									},
+									"maxItems": 1024
+								}
+							},
+							"required": ["id", "name", "types"]
+						},
+						"maxItems": 1024
+					},
+					"inputs": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"label": {
+									"type": "string",
+									"maxLength": 1024
+								},
+								"variants": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"value": {
+												"type": "number"
+											},
+											"label": {
+												"type": "string",
+												"maxLength": 1024
+											},
+											"types": {
+												"type": "array",
+												"items": {
+													"enum": [
+														"f32",
+														"vec2f",
+														"vec3f",
+														"vec4f",
+														"i32",
+														"vec2i",
+														"vec3i",
+														"vec4i",
+														"u32",
+														"vec2u",
+														"vec3u",
+														"vec4u",
+														"bool",
+														"vec2b",
+														"vec3b",
+														"vec4b"
+													],
+													"type": "string"
+												},
+												"maxItems": 1024
+											}
+										},
+										"required": ["value", "label"]
+									},
+									"maxItems": 1024
+								},
+								"compiled": {
+									"type": "boolean"
+								},
+								"owner": {
+									"type": "object",
+									"properties": {
+										"enumId": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"value": {
+											"type": "number"
+										}
+									},
+									"required": ["enumId", "value"]
+								},
+								"typeOwner": {
+									"type": "object",
+									"properties": {
+										"variable": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"types": {
+											"type": "array",
+											"items": {
+												"enum": [
+													"f32",
+													"vec2f",
+													"vec3f",
+													"vec4f",
+													"i32",
+													"vec2i",
+													"vec3i",
+													"vec4i",
+													"u32",
+													"vec2u",
+													"vec3u",
+													"vec4u",
+													"bool",
+													"vec2b",
+													"vec3b",
+													"vec4b"
+												],
+												"type": "string"
+											},
+											"maxItems": 1024
+										}
+									},
+									"required": ["variable", "types"]
+								},
+								"variantsBy": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"min": {
+									"type": "number"
+								},
+								"max": {
+									"type": "number"
+								},
+								"display": {
+									"enum": ["swatch", "wheel"],
+									"type": "string"
+								},
+								"viewer": {
+									"const": true
+								},
+								"type": {
+									"anyOf": [
+										{
+											"enum": [
+												"f32",
+												"vec2f",
+												"vec3f",
+												"vec4f",
+												"i32",
+												"vec2i",
+												"vec3i",
+												"vec4i",
+												"u32",
+												"vec2u",
+												"vec3u",
+												"vec4u",
+												"bool",
+												"vec2b",
+												"vec3b",
+												"vec4b",
+												"texture"
+											],
+											"type": "string"
+										},
+										{
+											"type": "object",
+											"properties": {
+												"variable": {
+													"type": "string",
+													"maxLength": 256
+												}
+											},
+											"required": ["variable"],
+											"additionalProperties": false
+										},
+										{
+											"type": "object",
+											"properties": {
+												"inferred": {
+													"const": true
+												}
+											},
+											"required": ["inferred"],
+											"additionalProperties": false
+										}
+									]
+								}
+							},
+							"required": ["id", "label", "type"]
+						},
+						"maxItems": 1024
+					},
+					"outputs": {
+						"type": "array",
+						"items": {
+							"type": "object",
+							"properties": {
+								"id": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"label": {
+									"type": "string",
+									"maxLength": 1024
+								},
+								"variants": {
+									"type": "array",
+									"items": {
+										"type": "object",
+										"properties": {
+											"value": {
+												"type": "number"
+											},
+											"label": {
+												"type": "string",
+												"maxLength": 1024
+											},
+											"types": {
+												"type": "array",
+												"items": {
+													"enum": [
+														"f32",
+														"vec2f",
+														"vec3f",
+														"vec4f",
+														"i32",
+														"vec2i",
+														"vec3i",
+														"vec4i",
+														"u32",
+														"vec2u",
+														"vec3u",
+														"vec4u",
+														"bool",
+														"vec2b",
+														"vec3b",
+														"vec4b"
+													],
+													"type": "string"
+												},
+												"maxItems": 1024
+											}
+										},
+										"required": ["value", "label"]
+									},
+									"maxItems": 1024
+								},
+								"compiled": {
+									"type": "boolean"
+								},
+								"owner": {
+									"type": "object",
+									"properties": {
+										"enumId": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"value": {
+											"type": "number"
+										}
+									},
+									"required": ["enumId", "value"]
+								},
+								"typeOwner": {
+									"type": "object",
+									"properties": {
+										"variable": {
+											"type": "string",
+											"maxLength": 256
+										},
+										"types": {
+											"type": "array",
+											"items": {
+												"enum": [
+													"f32",
+													"vec2f",
+													"vec3f",
+													"vec4f",
+													"i32",
+													"vec2i",
+													"vec3i",
+													"vec4i",
+													"u32",
+													"vec2u",
+													"vec3u",
+													"vec4u",
+													"bool",
+													"vec2b",
+													"vec3b",
+													"vec4b"
+												],
+												"type": "string"
+											},
+											"maxItems": 1024
+										}
+									},
+									"required": ["variable", "types"]
+								},
+								"variantsBy": {
+									"type": "string",
+									"maxLength": 256
+								},
+								"min": {
+									"type": "number"
+								},
+								"max": {
+									"type": "number"
+								},
+								"display": {
+									"enum": ["swatch", "wheel"],
+									"type": "string"
+								},
+								"viewer": {
+									"const": true
+								},
+								"type": {
+									"anyOf": [
+										{
+											"enum": [
+												"f32",
+												"vec2f",
+												"vec3f",
+												"vec4f",
+												"i32",
+												"vec2i",
+												"vec3i",
+												"vec4i",
+												"u32",
+												"vec2u",
+												"vec3u",
+												"vec4u",
+												"bool",
+												"vec2b",
+												"vec3b",
+												"vec4b",
+												"texture"
+											],
+											"type": "string"
+										},
+										{
+											"type": "object",
+											"properties": {
+												"variable": {
+													"type": "string",
+													"maxLength": 256
+												}
+											},
+											"required": ["variable"],
+											"additionalProperties": false
+										},
+										{
+											"type": "object",
+											"properties": {
+												"inferred": {
+													"const": true
+												}
+											},
+											"required": ["inferred"],
+											"additionalProperties": false
+										}
+									]
+								}
+							},
+							"required": ["id", "label", "type"]
+						},
+						"maxItems": 1024
+					},
+					"defaults": {
+						"type": "object",
+						"propertyNames": {
+							"type": "string",
+							"maxLength": 256
+						},
+						"additionalProperties": {
+							"anyOf": [
+								{
+									"anyOf": [
+										{
+											"type": "number"
+										},
+										{
+											"type": "boolean"
+										}
+									]
+								},
+								{
+									"type": "object",
+									"properties": {
+										"x": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "boolean"
+												}
+											]
+										},
+										"y": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "boolean"
+												}
+											]
+										},
+										"z": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "boolean"
+												}
+											]
+										},
+										"w": {
+											"anyOf": [
+												{
+													"type": "number"
+												},
+												{
+													"type": "boolean"
+												}
+											]
+										}
+									},
+									"required": [],
+									"additionalProperties": false
+								}
+							]
+						}
+					}
+				},
+				"required": ["nodes", "edges"]
+			}
+		},
+		"settings": {
+			"type": "object",
+			"properties": {
+				"canvas": {
+					"type": "object",
+					"properties": {
+						"width": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 8192
+						},
+						"height": {
+							"type": "integer",
+							"minimum": 1,
+							"maximum": 8192
+						},
+						"followPreview": {
+							"type": "boolean"
+						}
+					},
+					"required": ["width", "height", "followPreview"]
+				},
+				"timing": {
+					"type": "object",
+					"properties": {
+						"fps": {
+							"type": "number",
+							"minimum": 1,
+							"maximum": 240
+						},
+						"realtime": {
+							"type": "boolean"
+						}
+					},
+					"required": ["fps", "realtime"]
+				},
+				"colorSpace": {
+					"enum": ["srgb", "display-p3"],
+					"type": "string"
+				}
+			},
+			"required": ["canvas", "timing", "colorSpace"],
+			"default": {
+				"canvas": {
+					"width": 1920,
+					"height": 1080,
+					"followPreview": false
+				},
+				"timing": {
+					"fps": 60,
+					"realtime": true
+				},
+				"colorSpace": "srgb"
+			}
+		},
+		"layout": {
+			"type": "object",
+			"properties": {
+				"areas": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string",
+								"maxLength": 256
+							},
+							"rect": {
+								"type": "object",
+								"properties": {
+									"left": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1
+									},
+									"top": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1
+									},
+									"right": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1
+									},
+									"bottom": {
+										"type": "number",
+										"minimum": 0,
+										"maximum": 1
+									}
+								},
+								"required": ["left", "top", "right", "bottom"]
+							},
+							"editor": {
+								"oneOf": [
+									{
+										"type": "object",
+										"properties": {
+											"type": {
+												"const": "graph"
+											},
+											"path": {
+												"type": "array",
+												"items": {
+													"type": "string",
+													"maxLength": 256
+												},
+												"maxItems": 64
+											},
+											"viewport": {
+												"type": "object",
+												"properties": {
+													"x": {
+														"type": "number"
+													},
+													"y": {
+														"type": "number"
+													},
+													"zoom": {
+														"type": "number",
+														"exclusiveMinimum": 0
+													}
+												},
+												"required": ["x", "y", "zoom"]
+											}
+										},
+										"required": ["type", "path"]
+									},
+									{
+										"type": "object",
+										"properties": {
+											"type": {
+												"const": "preview"
+											}
+										},
+										"required": ["type"]
+									},
+									{
+										"type": "object",
+										"properties": {
+											"type": {
+												"const": "timeline"
+											}
+										},
+										"required": ["type"]
+									},
+									{
+										"type": "object",
+										"properties": {
+											"type": {
+												"const": "assets"
+											}
+										},
+										"required": ["type"]
+									}
+								]
+							}
+						},
+						"required": ["id", "rect", "editor"]
+					},
+					"maxItems": 1024,
+					"minItems": 1
+				}
+			},
+			"required": ["areas"]
+		},
+		"assets": {
+			"type": "array",
+			"items": {
+				"oneOf": [
+					{
+						"type": "object",
+						"properties": {
+							"kind": {
+								"const": "image"
+							},
+							"id": {
+								"type": "string",
+								"maxLength": 256,
+								"pattern": "^[A-Za-z0-9_-]+$"
+							},
+							"name": {
+								"type": "string",
+								"maxLength": 1024
+							},
+							"file": {
+								"type": "string"
+							},
+							"mime": {
+								"type": "string"
+							},
+							"bytes": {
+								"type": "integer",
+								"minimum": 0
+							},
+							"hash": {
+								"type": "string",
+								"pattern": "^[0-9a-f]{64}$"
+							},
+							"width": {
+								"type": "integer",
+								"minimum": 1,
+								"maximum": 65536
+							},
+							"height": {
+								"type": "integer",
+								"minimum": 1,
+								"maximum": 65536
+							}
+						},
+						"required": [
+							"kind",
+							"id",
+							"name",
+							"file",
+							"mime",
+							"bytes",
+							"hash",
+							"width",
+							"height"
+						]
+					},
+					{
+						"type": "object",
+						"properties": {
+							"kind": {
+								"const": "video"
+							},
+							"id": {
+								"type": "string",
+								"maxLength": 256,
+								"pattern": "^[A-Za-z0-9_-]+$"
+							},
+							"name": {
+								"type": "string",
+								"maxLength": 1024
+							},
+							"file": {
+								"type": "string"
+							},
+							"mime": {
+								"type": "string"
+							},
+							"bytes": {
+								"type": "integer",
+								"minimum": 0
+							},
+							"hash": {
+								"type": "string",
+								"pattern": "^[0-9a-f]{64}$"
+							},
+							"width": {
+								"type": "integer",
+								"minimum": 1,
+								"maximum": 65536
+							},
+							"height": {
+								"type": "integer",
+								"minimum": 1,
+								"maximum": 65536
+							},
+							"duration": {
+								"type": "number",
+								"minimum": 0
+							},
+							"frameRate": {
+								"type": "number",
+								"minimum": 0
+							}
+						},
+						"required": [
+							"kind",
+							"id",
+							"name",
+							"file",
+							"mime",
+							"bytes",
+							"hash",
+							"width",
+							"height",
+							"duration",
+							"frameRate"
+						]
+					}
+				]
+			},
+			"maxItems": 4096
+		}
+	},
+	"required": ["definitions"]
+}

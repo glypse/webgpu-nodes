@@ -1,0 +1,174 @@
+{
+	"node": "separate-vector",
+	"cases": [
+		{
+			"note": "gives the x of vec2f",
+			"types": {
+				"v": "vec2f"
+			},
+			"inputs": {
+				"v": [[3, 4]]
+			},
+			"output": "x",
+			"expect": [3]
+		},
+		{
+			"note": "gives the y of vec2f",
+			"types": {
+				"v": "vec2f"
+			},
+			"inputs": {
+				"v": [[3, 4]]
+			},
+			"output": "y",
+			"expect": [4]
+		},
+		{
+			"note": "gives the z of vec3f",
+			"types": {
+				"v": "vec3f"
+			},
+			"inputs": {
+				"v": [[3, 4, 5]]
+			},
+			"output": "z",
+			"expect": [5]
+		},
+		{
+			"note": "gives the w of vec4f",
+			"types": {
+				"v": "vec4f"
+			},
+			"inputs": {
+				"v": [[1, 2, 3, 8]]
+			},
+			"output": "w",
+			"expect": [8]
+		},
+		{
+			"note": "gives the x of vec3i",
+			"types": {
+				"v": "vec3i"
+			},
+			"inputs": {
+				"v": [[-1, 2, -3]]
+			},
+			"output": "x",
+			"expect": [-1]
+		},
+		{
+			"note": "gives the y of vec4u",
+			"types": {
+				"v": "vec4u"
+			},
+			"inputs": {
+				"v": [[0, 4294967295, 2, 3]]
+			},
+			"output": "y",
+			"expect": [4294967295]
+		},
+		{
+			"note": "gives the y of vec2b",
+			"types": {
+				"v": "vec2b"
+			},
+			"inputs": {
+				"v": [[1, 0]]
+			},
+			"output": "y",
+			"expect": [0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "x of a vec2f sweep",
+			"types": {
+				"v": "vec2f"
+			},
+			"inputs": {
+				"v": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "x",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "z of a vec3f sweep",
+			"types": {
+				"v": "vec3f"
+			},
+			"inputs": {
+				"v": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "z",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "w of a vec4f sweep",
+			"types": {
+				"v": "vec4f"
+			},
+			"inputs": {
+				"v": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "w",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "y of a vec2i sweep",
+			"types": {
+				"v": "vec2i"
+			},
+			"inputs": {
+				"v": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "y",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "z of a vec4u sweep",
+			"types": {
+				"v": "vec4u"
+			},
+			"inputs": {
+				"v": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "z",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

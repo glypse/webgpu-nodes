@@ -1,0 +1,6 @@
+{
+	"node": "render-texture",
+	"skip": "renders a texture, which the CPU evaluator doesn't do",
+	"cases": [],
+	"sweeps": []
+}

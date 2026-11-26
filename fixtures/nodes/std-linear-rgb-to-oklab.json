@@ -1,0 +1,35 @@
+{
+	"node": "std-linear-rgb-to-oklab",
+	"cases": [
+		{
+			"note": "maps white to the neutral lightness 1",
+			"inputs": {
+				"Linear RGB": [[1, 1, 1]]
+			},
+			"output": "OKLab",
+			"expect": [1, 0, 0],
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "OKLab",
+			"values": {},
+			"inputs": {
+				"Linear RGB": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "OKLab",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

@@ -1,0 +1,6 @@
+{
+	"node": "custom-wgsl",
+	"skip": "runs WGSL the CPU evaluator doesn't interpret",
+	"cases": [],
+	"sweeps": []
+}

@@ -1,0 +1,175 @@
+{
+	"node": "to-uint",
+	"cases": [
+		{
+			"note": "rounds vec3f to the nearest integer",
+			"settings": {
+				"rounding": "round"
+			},
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[2.5, 3.5, 0.4]]
+			},
+			"output": "result",
+			"expect": [2, 4, 0]
+		},
+		{
+			"note": "reinterprets -1 as the top u32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-1]]
+			},
+			"output": "result",
+			"expect": [4294967295]
+		},
+		{
+			"note": "reinterprets the i32 MIN as 2^31",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-2147483648]]
+			},
+			"output": "result",
+			"expect": [2147483648]
+		},
+		{
+			"note": "reinterprets vec3i components",
+			"types": {
+				"e": "vec3i"
+			},
+			"inputs": {
+				"e": [[-1, 0, 7]]
+			},
+			"output": "result",
+			"expect": [4294967295, 0, 7]
+		},
+		{
+			"note": "gives true as 1",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives false as 0",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep, truncated",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep, rounded",
+			"settings": {
+				"rounding": "round"
+			},
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2f sweep, truncated",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep reinterpreted",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "bool sweep",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

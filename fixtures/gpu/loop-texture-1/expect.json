@@ -1,0 +1,24 @@
+{
+	"description": "A loop's texture item after 1 iterations, which halve it, keeps its content when its size changes every iteration: the right edge is 1. The nearest texel of a texture an eighth of the size is up to 4 pixels away.",
+	"size": {
+		"width": 64,
+		"height": 64
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.08,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 63,
+					"y": 32,
+					"rgba": [1, null, null, null]
+				}
+			]
+		}
+	]
+}

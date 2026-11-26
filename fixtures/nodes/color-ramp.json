@@ -1,0 +1,693 @@
+{
+	"node": "color-ramp",
+	"cases": [
+		{
+			"note": "takes the first stop at factor 0",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"inputs": {
+				"factor": [[0]],
+				"stop-1": [[0, 0, 0]],
+				"stop-2": [[1, 1, 1]],
+				"stop-3": [[1, 0, 0]]
+			},
+			"output": "color",
+			"expect": [0, 0, 0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "takes the middle stop at its position",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"inputs": {
+				"factor": [[0.5]],
+				"stop-1": [[0, 0, 0]],
+				"stop-2": [[1, 1, 1]],
+				"stop-3": [[1, 0, 0]]
+			},
+			"output": "color",
+			"expect": [1, 1, 1],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "takes the last stop at factor 1",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"inputs": {
+				"factor": [[1]],
+				"stop-1": [[0, 0, 0]],
+				"stop-2": [[1, 1, 1]],
+				"stop-3": [[1, 0, 0]]
+			},
+			"output": "color",
+			"expect": [1, 0, 0],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "mixes linearly between stops in RGB",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"inputs": {
+				"factor": [[0.25]],
+				"stop-1": [[0, 0, 0]],
+				"stop-2": [[1, 1, 1]],
+				"stop-3": [[1, 0, 0]]
+			},
+			"output": "color",
+			"expect": [0.5, 0.5, 0.5],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "mixes the last two stops",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"inputs": {
+				"factor": [[0.75]],
+				"stop-1": [[0, 0, 0]],
+				"stop-2": [[1, 1, 1]],
+				"stop-3": [[1, 0, 0]]
+			},
+			"output": "color",
+			"expect": [1, 0.5, 0.5],
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "factor sweep, linear",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 0,
+				"space": 0
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, ease",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 1,
+				"space": 0
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, smooth",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 2,
+				"space": 0
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, cardinal",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 3,
+				"space": 0
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, B-spline",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 4,
+				"space": 0
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, constant",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 5,
+				"space": 0
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, linear in HSV",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 0,
+				"space": 1
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, linear in OKLch",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 0,
+				"space": 2
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, HSV longer hue",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 0,
+				"space": 1,
+				"hue": 1
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, HSV increasing hue",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 0,
+				"space": 1,
+				"hue": 2
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "factor sweep, HSV decreasing hue",
+			"data": {
+				"ramp": [
+					{
+						"id": "stop-1",
+						"position": 0
+					},
+					{
+						"id": "stop-2",
+						"position": 0.5
+					},
+					{
+						"id": "stop-3",
+						"position": 1
+					}
+				]
+			},
+			"values": {
+				"factor": 0.5,
+				"interpolation": 0,
+				"space": 1,
+				"hue": 3
+			},
+			"inputs": {
+				"factor": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				},
+				"stop-1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"stop-2": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"stop-3": {
+					"kind": "constant",
+					"value": [1, 0, 0]
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		}
+	]
+}

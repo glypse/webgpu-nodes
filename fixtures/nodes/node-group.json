@@ -1,0 +1,6 @@
+{
+	"node": "node-group",
+	"skip": "a group runs its definition: standard-library tables test it",
+	"cases": [],
+	"sweeps": []
+}

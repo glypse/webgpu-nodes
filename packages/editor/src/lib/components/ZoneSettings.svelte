@@ -62,7 +62,8 @@
 	function commitLabel(itemId: string) {
 		const value = labelBuffer.get(itemId);
 		labelBuffer.delete(itemId);
-		if (value !== undefined) graph.renameZoneItem(zoneId, itemId, value);
+		if (value !== undefined)
+			graph.apply({ kind: "renameZoneItem", args: [zoneId, itemId, value] });
 	}
 
 	function handleEnterBlur(e: KeyboardEvent) {
@@ -112,7 +113,10 @@
 				readonly={locked}
 				value={maxIterations}
 				oninput={(e: Event & { currentTarget: HTMLInputElement }) => {
-					graph.setZoneMaxIterations(zoneId, Number(e.currentTarget.value));
+					graph.apply({
+						kind: "setZoneMaxIterations",
+						args: [zoneId, Number(e.currentTarget.value)],
+					});
 				}}
 			/>
 			<span class="text-muted-foreground text-xs">
@@ -150,13 +154,16 @@
 							? "Takes the type of its initial value"
 							: "Item type"}
 					onpick={(type: SocketType) => {
-						graph.setZoneItemType(zoneId, item.id, type);
+						graph.apply({ kind: "setZoneItemType", args: [zoneId, item.id, type] });
 					}}
 				>
 					{#snippet extra()}
 						<DropdownMenu.Item
 							onSelect={() => {
-								graph.setZoneItemType(zoneId, item.id, { inferred: true });
+								graph.apply({
+									kind: "setZoneItemType",
+									args: [zoneId, item.id, { inferred: true }],
+								});
 							}}
 						>
 							Inferred
@@ -169,8 +176,15 @@
 							{#each variables as variable (variable.id)}
 								<DropdownMenu.Item
 									onSelect={() => {
-										graph.setZoneItemType(zoneId, item.id, {
-											variable: variable.id,
+										graph.apply({
+											kind: "setZoneItemType",
+											args: [
+												zoneId,
+												item.id,
+												{
+													variable: variable.id,
+												},
+											],
 										});
 									}}
 								>
@@ -193,7 +207,10 @@
 						disabled={locked}
 						onValueChange={(value: string) => {
 							const format = TEXTURE_FORMATS.find((f) => f === value);
-							graph.setZoneItemFormat(zoneId, item.id, format);
+							graph.apply({
+								kind: "setZoneItemFormat",
+								args: [zoneId, item.id, format],
+							});
 						}}
 					>
 						<Select.Trigger
@@ -216,11 +233,14 @@
 						value={sizeKind(item)}
 						disabled={locked}
 						onValueChange={(value: string) => {
-							graph.setZoneItemSize(
-								zoneId,
-								item.id,
-								value === "scale" || value === "pixels" ? value : undefined,
-							);
+							graph.apply({
+								kind: "setZoneItemSize",
+								args: [
+									zoneId,
+									item.id,
+									value === "scale" || value === "pixels" ? value : undefined,
+								],
+							});
 						}}
 					>
 						<Select.Trigger
@@ -246,7 +266,8 @@
 					title="Move up"
 					aria-label="Move up"
 					disabled={locked || i === 0}
-					onclick={() => graph.moveZoneItem(zoneId, item.id, -1)}
+					onclick={() =>
+						graph.apply({ kind: "moveZoneItem", args: [zoneId, item.id, -1] })}
 				>
 					<ArrowUpIcon />
 				</Button>
@@ -256,7 +277,8 @@
 					title="Move down"
 					aria-label="Move down"
 					disabled={locked || i === items.length - 1}
-					onclick={() => graph.moveZoneItem(zoneId, item.id, 1)}
+					onclick={() =>
+						graph.apply({ kind: "moveZoneItem", args: [zoneId, item.id, 1] })}
 				>
 					<ArrowDownIcon />
 				</Button>
@@ -266,7 +288,7 @@
 					title="Remove item"
 					aria-label="Remove item"
 					disabled={locked}
-					onclick={() => graph.removeZoneItem(zoneId, item.id)}
+					onclick={() => graph.apply({ kind: "removeZoneItem", args: [zoneId, item.id] })}
 				>
 					<TrashIcon />
 				</Button>
@@ -277,13 +299,16 @@
 				types={itemTypes}
 				label="Add item"
 				onpick={(type: SocketType) => {
-					graph.addZoneItem(zoneId, type);
+					graph.apply({ kind: "addZoneItem", args: [zoneId, type] });
 				}}
 			>
 				{#snippet extra()}
 					<DropdownMenu.Item
 						onSelect={() => {
-							graph.addZoneItem(zoneId, { inferred: true });
+							graph.apply({
+								kind: "addZoneItem",
+								args: [zoneId, { inferred: true }],
+							});
 						}}
 					>
 						Inferred

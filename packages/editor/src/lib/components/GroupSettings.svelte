@@ -81,14 +81,18 @@
 	}
 
 	function setSocketType(side: GroupSide, handle: GroupHandleDef, type: HandleType) {
-		if (definitionRef) graph.setHandleType(definitionRef, side, handle.id, type);
+		if (definitionRef)
+			graph.apply({ kind: "setHandleType", args: [definitionRef, side, handle.id, type] });
 	}
 
 	/** Share a new variable from the socket, allowing the types of its kind. */
 	function shareNew(side: GroupSide, handle: GroupHandleDef) {
 		if (!definitionRef) return;
 		const kind = TYPE_SETS.slice(0, 4).find((set) => set.types.includes(typeOf(handle)));
-		const variable = graph.addTypeVariable(definitionRef, kind?.types ?? FLOAT_TYPES);
+		const variable = graph.apply({
+			kind: "addTypeVariable",
+			args: [definitionRef, kind?.types ?? FLOAT_TYPES],
+		});
 		if (variable) setSocketType(side, handle, { variable: variable.id });
 	}
 	const outputHandles = $derived(definition?.outputs ?? []);
@@ -113,9 +117,17 @@
 		variants?: readonly EnumVariant[],
 	) {
 		if (!definitionRef) return;
-		graph.addHandle(definitionRef, "input", type, {
-			...(owner ? { owner } : {}),
-			...(variants ? { variants: [...variants] } : {}),
+		graph.apply({
+			kind: "addHandle",
+			args: [
+				definitionRef,
+				"input",
+				type,
+				{
+					...(owner ? { owner } : {}),
+					...(variants ? { variants: [...variants] } : {}),
+				},
+			],
 		});
 	}
 
@@ -161,14 +173,16 @@
 
 	function commitGroupLabel() {
 		if (groupLabelBuffer.trim()) {
-			graph.setGroupLabel(groupId, groupLabelBuffer);
+			graph.apply({ kind: "setGroupLabel", args: [groupId, groupLabelBuffer] });
 		}
 	}
 
 	function commitHandleLabel(side: GroupSide, handleId: string) {
 		const value = handleLabelBuffer[handleId] ?? "";
 		if (!definitionRef || !value.trim()) return;
-		if (!graph.setHandleLabel(definitionRef, side, handleId, value)) {
+		if (
+			!graph.apply({ kind: "setHandleLabel", args: [definitionRef, side, handleId, value] })
+		) {
 			// Revert buffer to the stored label so the input reflects the actual value
 			const handles = side === "input" ? inputHandles : outputHandles;
 			const stored = handles.find((h) => h.id === handleId)?.label;
@@ -188,7 +202,8 @@
 	}
 
 	function setVariants(handle: GroupHandleDef, variants: EnumVariant[] | undefined) {
-		if (definitionRef) graph.setHandleVariants(definitionRef, handle.id, variants);
+		if (definitionRef)
+			graph.apply({ kind: "setHandleVariants", args: [definitionRef, handle.id, variants] });
 	}
 
 	function addVariant(handle: GroupHandleDef) {
@@ -291,7 +306,11 @@
 				title="Remove"
 				disabled={!removable}
 				onclick={() => {
-					if (definitionRef) graph.removeHandle(definitionRef, side, handle.id);
+					if (definitionRef)
+						graph.apply({
+							kind: "removeHandle",
+							args: [definitionRef, side, handle.id],
+						});
 				}}
 			>
 				<TrashIcon />
@@ -361,13 +380,16 @@
 									aria-label="{variant.label} for {type}"
 									onCheckedChange={(checked: boolean) => {
 										if (definitionRef) {
-											graph.setVariantOffered(
-												definitionRef,
-												handle.id,
-												variant.value,
-												type,
-												checked,
-											);
+											graph.apply({
+												kind: "setVariantOffered",
+												args: [
+													definitionRef,
+													handle.id,
+													variant.value,
+													type,
+													checked,
+												],
+											});
 										}
 									}}
 								/>
@@ -392,7 +414,10 @@
 				name="group-default-{handle.id}"
 				onchange={(value: InputValue) => {
 					if (definitionRef) {
-						graph.setHandleDefault(definitionRef, handle.id, value);
+						graph.apply({
+							kind: "setHandleDefault",
+							args: [definitionRef, handle.id, value],
+						});
 					}
 				}}
 			/>
@@ -411,14 +436,17 @@
 					(variable) => {
 						expanded[handle.id] = true;
 						if (definitionRef) {
-							graph.setHandleTypeOwner(
-								definitionRef,
-								handle.id,
-								variable && {
-									variable: variable.id,
-									types: variable.types.slice(0, 1),
-								},
-							);
+							graph.apply({
+								kind: "setHandleTypeOwner",
+								args: [
+									definitionRef,
+									handle.id,
+									variable && {
+										variable: variable.id,
+										types: variable.types.slice(0, 1),
+									},
+								],
+							});
 						}
 					},
 				)}
@@ -430,9 +458,16 @@
 						value={owner.types}
 						onValueChange={(types: string[]) => {
 							if (!definitionRef) return;
-							graph.setHandleTypeOwner(definitionRef, handle.id, {
-								variable: ownerVariable.id,
-								types: ownerVariable.types.filter((t) => types.includes(t)),
+							graph.apply({
+								kind: "setHandleTypeOwner",
+								args: [
+									definitionRef,
+									handle.id,
+									{
+										variable: ownerVariable.id,
+										types: ownerVariable.types.filter((t) => types.includes(t)),
+									},
+								],
 							});
 						}}
 					>
@@ -461,7 +496,10 @@
 					(variable) => {
 						expanded[handle.id] = true;
 						if (definitionRef) {
-							graph.setVariantsBy(definitionRef, handle.id, variable?.id);
+							graph.apply({
+								kind: "setVariantsBy",
+								args: [definitionRef, handle.id, variable?.id],
+							});
 						}
 					},
 				)}
@@ -479,7 +517,10 @@
 						disabled={locked}
 						onCheckedChange={(checked: boolean) => {
 							if (definitionRef) {
-								graph.setHandleCompiled(definitionRef, handle.id, checked);
+								graph.apply({
+									kind: "setHandleCompiled",
+									args: [definitionRef, handle.id, checked],
+								});
 							}
 						}}
 					/>
@@ -498,10 +539,17 @@
 					{@const current = handle[bound]}
 					{@const setBound = (value: number | undefined) => {
 						if (!definitionRef) return;
-						graph.setHandleRange(definitionRef, handle.id, {
-							min: handle.min,
-							max: handle.max,
-							[bound]: value,
+						graph.apply({
+							kind: "setHandleRange",
+							args: [
+								definitionRef,
+								handle.id,
+								{
+									min: handle.min,
+									max: handle.max,
+									[bound]: value,
+								},
+							],
 						});
 					}}
 					<div class="flex items-center gap-1">
@@ -559,11 +607,14 @@
 					disabled={locked}
 					onValueChange={(next: string) => {
 						if (definitionRef) {
-							graph.setHandleDisplay(
-								definitionRef,
-								handle.id,
-								COLOR_DISPLAYS.find((d) => d === next),
-							);
+							graph.apply({
+								kind: "setHandleDisplay",
+								args: [
+									definitionRef,
+									handle.id,
+									COLOR_DISPLAYS.find((d) => d === next),
+								],
+							});
 						}
 					}}
 				>
@@ -682,7 +733,10 @@
 
 {#if sheetGroupNode && definition}
 	<div class="flex flex-col gap-4">
-		<Button variant="outline" onclick={() => graph.deepClone(groupId)}>Clone & Edit</Button>
+		<Button
+			variant="outline"
+			onclick={() => graph.apply({ kind: "deepClone", args: [groupId] })}>Clone & Edit</Button
+		>
 
 		<div class="flex flex-col gap-1.5">
 			<span class="text-sm font-medium">Group name</span>
@@ -716,8 +770,15 @@
 							onchange={(e: Event) => {
 								const name = inputValue(e).trim();
 								if (name && definitionRef) {
-									graph.setTypeVariable(definitionRef, variable.id, {
-										name,
+									graph.apply({
+										kind: "setTypeVariable",
+										args: [
+											definitionRef,
+											variable.id,
+											{
+												name,
+											},
+										],
 									});
 								}
 							}}
@@ -729,7 +790,10 @@
 							class="min-w-0 flex-1"
 							onchange={(types: readonly WgslType[]) => {
 								if (definitionRef) {
-									graph.setTypeVariable(definitionRef, variable.id, { types });
+									graph.apply({
+										kind: "setTypeVariable",
+										args: [definitionRef, variable.id, { types }],
+									});
 								}
 							}}
 						/>
@@ -745,7 +809,10 @@
 								title="Remove: its sockets keep its first type"
 								onclick={() => {
 									if (definitionRef)
-										graph.removeTypeVariable(definitionRef, variable.id);
+										graph.apply({
+											kind: "removeTypeVariable",
+											args: [definitionRef, variable.id],
+										});
 								}}
 							>
 								<TrashIcon />
@@ -758,7 +825,11 @@
 						variant="outline"
 						size="sm"
 						onclick={() => {
-							if (definitionRef) graph.addTypeVariable(definitionRef, FLOAT_TYPES);
+							if (definitionRef)
+								graph.apply({
+									kind: "addTypeVariable",
+									args: [definitionRef, FLOAT_TYPES],
+								});
 						}}
 					>
 						Add shared type
@@ -787,11 +858,16 @@
 						types={SOCKET_TYPES}
 						label="Add output"
 						title="Add an output"
-						onpick={(type: SocketType) => graph.addHandle(ref, "output", type)}
+						onpick={(type: SocketType) =>
+							graph.apply({ kind: "addHandle", args: [ref, "output", type] })}
 					>
 						{#snippet extra()}
 							<DropdownMenu.Item
-								onSelect={() => graph.addHandle(ref, "output", { inferred: true })}
+								onSelect={() =>
+									graph.apply({
+										kind: "addHandle",
+										args: [ref, "output", { inferred: true }],
+									})}
 							>
 								Inferred
 								<span class="text-muted-foreground ml-auto text-xs">

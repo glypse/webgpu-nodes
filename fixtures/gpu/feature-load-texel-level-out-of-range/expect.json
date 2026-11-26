@@ -1,0 +1,29 @@
+{
+	"description": "Load Texel at mip level 9 of a texture with one level clamps to level 0: the same texel as level 0.",
+	"size": {
+		"width": 2,
+		"height": 2
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.625, 0.625, null, null]
+				},
+				{
+					"x": 1,
+					"y": 1,
+					"rgba": [0.625, 0.625, null, null]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,6 @@
+{
+	"description": "The demo scene, measured on the GPU: the perf baseline for a graph a person would draw.",
+	"size": { "width": 1920, "height": 1080 },
+	"timed": true,
+	"checks": []
+}

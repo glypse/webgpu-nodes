@@ -1,0 +1,22 @@
+{
+	"node": "std-oklab-to-xyz",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "XYZ",
+			"values": {},
+			"inputs": {
+				"OKLab": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "XYZ",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

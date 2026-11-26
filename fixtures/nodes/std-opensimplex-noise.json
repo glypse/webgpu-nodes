@@ -1,0 +1,277 @@
+{
+	"node": "std-opensimplex-noise",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Value, vec2f, Variant=Fast, Orientation=Standard",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Variant": 0,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec2f, Variant=Smooth, Orientation=Standard",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Variant": 1,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec3f, Variant=Fast, Orientation=XY Plane",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Variant": 0,
+				"Orientation": 2
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec3f, Variant=Fast, Orientation=Classic",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Variant": 0,
+				"Orientation": 6
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec3f, Variant=Smooth, Orientation=XZ Plane",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Variant": 1,
+				"Orientation": 3
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Variant=Fast, Orientation=XY Plane",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Variant": 0,
+				"Orientation": 2
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Variant=Fast, Orientation=XYZ Volume",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Variant": 0,
+				"Orientation": 4
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Variant=Fast, Orientation=Classic",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Variant": 0,
+				"Orientation": 6
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Variant=Smooth, Orientation=XZ Plane",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Variant": 1,
+				"Orientation": 3
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Variant=Smooth, Orientation=XY and ZW Planes",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Variant": 1,
+				"Orientation": 5
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

@@ -1,0 +1,92 @@
+{
+	"description": "A simulation over skipped frames steps by all the time since the last frame it ran: its accumulator is the time.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.1,
+			"delta": 0.016666666666666666,
+			"frame": 1
+		},
+		{
+			"time": 0.5,
+			"delta": 0.016666666666666666,
+			"frame": 4
+		},
+		{
+			"time": 0.6,
+			"delta": 0.016666666666666666,
+			"frame": 5
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.1, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.5, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.6, null, null, null]
+				}
+			]
+		}
+	]
+}

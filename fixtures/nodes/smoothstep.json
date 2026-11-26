@@ -1,0 +1,211 @@
+{
+	"node": "smoothstep",
+	"cases": [
+		{
+			"note": "eases between the edges",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[0.5]]
+			},
+			"output": "result",
+			"expect": [0.5]
+		},
+		{
+			"note": "eases a quarter of the way",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[0.25]]
+			},
+			"output": "result",
+			"expect": [0.15625]
+		},
+		{
+			"note": "eases three quarters of the way",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[0.75]]
+			},
+			"output": "result",
+			"expect": [0.84375]
+		},
+		{
+			"note": "eases across a negative span",
+			"inputs": {
+				"low": [[-1]],
+				"high": [[1]],
+				"x": [[0]]
+			},
+			"output": "result",
+			"expect": [0.5]
+		},
+		{
+			"note": "eases across an offset span",
+			"inputs": {
+				"low": [[2]],
+				"high": [[4]],
+				"x": [[3]]
+			},
+			"output": "result",
+			"expect": [0.5]
+		},
+		{
+			"note": "gives 0 at the low edge",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives 1 at the high edge",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives 0 below the low edge",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[-5]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives 1 above the high edge",
+			"inputs": {
+				"low": [[0]],
+				"high": [[1]],
+				"x": [[5]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "handles large edges without overflowing the span",
+			"inputs": {
+				"low": [[0]],
+				"high": [[3e38]],
+				"x": [[1.5e38]]
+			},
+			"output": "result",
+			"expect": [0.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "eases over a span of 3",
+			"inputs": {
+				"low": [[0]],
+				"high": [[3]],
+				"x": [[1]]
+			},
+			"output": "result",
+			"expect": [0.25925925925925924],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "eases vec2f component-wise",
+			"types": {
+				"low": "vec2f"
+			},
+			"inputs": {
+				"low": [[0, 0]],
+				"high": [[1, 1]],
+				"x": [[0.5, 2]]
+			},
+			"output": "result",
+			"expect": [0.5, 1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "eases vec3f with each component past its edges",
+			"types": {
+				"low": "vec3f"
+			},
+			"inputs": {
+				"low": [[0, 0, 0]],
+				"high": [[1, 1, 1]],
+				"x": [[0.25, 0.75, 2]]
+			},
+			"output": "result",
+			"expect": [0.15625, 0.84375, 1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep across the edges",
+			"types": {
+				"low": "f32"
+			},
+			"inputs": {
+				"low": {
+					"kind": "constant",
+					"value": [0]
+				},
+				"high": {
+					"kind": "constant",
+					"value": [1]
+				},
+				"x": {
+					"kind": "uv",
+					"from": -0.5,
+					"to": 1.5
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep across the edges",
+			"types": {
+				"low": "vec3f"
+			},
+			"inputs": {
+				"low": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"high": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"x": {
+					"kind": "uv",
+					"from": -0.5,
+					"to": 1.5
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	]
+}

@@ -31,7 +31,9 @@
 		const draft = drafts[socketId];
 		if (draft === undefined) return;
 		drafts = Object.fromEntries(Object.entries(drafts).filter(([key]) => key !== socketId));
-		rejected = graph.renameCustomSocket(id, side, socketId, draft) ? null : socketId;
+		rejected = graph.apply({ kind: "renameCustomSocket", args: [id, side, socketId, draft] })
+			? null
+			: socketId;
 	}
 
 	function blurOnEnter(e: KeyboardEvent) {
@@ -53,7 +55,8 @@
 					size="icon-sm"
 					title="Add {side === 'inputs' ? 'an input' : 'an output'}"
 					{disabled}
-					onclick={() => graph.addCustomSocket(id, side, "f32")}
+					onclick={() =>
+						graph.apply({ kind: "addCustomSocket", args: [id, side, "f32"] })}
 				>
 					<PlusIcon />
 				</Button>
@@ -78,14 +81,21 @@
 						class="w-24 shrink-0"
 						title="Socket type"
 						onpick={(type: WgslType) =>
-							graph.setCustomSocketType(id, side, socket.id, type)}
+							graph.apply({
+								kind: "setCustomSocketType",
+								args: [id, side, socket.id, type],
+							})}
 					/>
 					<Button
 						variant="ghost"
 						size="icon-sm"
 						title="Move up"
 						disabled={disabled || i === 0}
-						onclick={() => graph.moveCustomSocket(id, side, socket.id, -1)}
+						onclick={() =>
+							graph.apply({
+								kind: "moveCustomSocket",
+								args: [id, side, socket.id, -1],
+							})}
 					>
 						<ArrowUpIcon />
 					</Button>
@@ -94,7 +104,11 @@
 						size="icon-sm"
 						title="Move down"
 						disabled={disabled || i === list.length - 1}
-						onclick={() => graph.moveCustomSocket(id, side, socket.id, 1)}
+						onclick={() =>
+							graph.apply({
+								kind: "moveCustomSocket",
+								args: [id, side, socket.id, 1],
+							})}
 					>
 						<ArrowDownIcon />
 					</Button>
@@ -103,7 +117,11 @@
 						size="icon-sm"
 						title="Remove"
 						{disabled}
-						onclick={() => graph.removeCustomSocket(id, side, socket.id)}
+						onclick={() =>
+							graph.apply({
+								kind: "removeCustomSocket",
+								args: [id, side, socket.id],
+							})}
 					>
 						<TrashIcon />
 					</Button>

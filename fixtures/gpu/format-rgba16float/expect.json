@@ -1,0 +1,25 @@
+{
+	"description": "A rgba16float render texture read back by Load Texel: its top-left 4 by 4 texels match the CPU, within one 8-bit step.",
+	"size": {
+		"width": 16,
+		"height": 16
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "cpu",
+			"region": {
+				"x": 0,
+				"y": 0,
+				"width": 4,
+				"height": 4
+			},
+			"stride": 1,
+			"maxOff": 0,
+			"tolerance": {
+				"abs": 0.00392156862745098,
+				"rel": 0
+			}
+		}
+	]
+}

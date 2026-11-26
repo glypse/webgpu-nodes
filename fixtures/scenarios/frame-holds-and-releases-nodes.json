@@ -1,0 +1,62 @@
+{
+	"description": "Nodes framed together share a frame, and one can be taken out of it.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "d",
+						"type": "declare",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "frameNodes",
+			"args": [["t", "d"]]
+		},
+		{
+			"kind": "removeFromFrame",
+			"args": [["t"]]
+		}
+	],
+	"expect": {
+		"results": ["id1", true],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time",
+					"d": "declare",
+					"id1": "layout-frame"
+				}
+			}
+		}
+	}
+}

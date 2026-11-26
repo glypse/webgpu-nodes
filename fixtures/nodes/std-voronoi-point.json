@@ -1,0 +1,143 @@
+{
+	"node": "std-voronoi-point",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Point, vec2f",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Point, vec3f",
+			"types": {
+				"Cell": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Neighbor Cell, vec2f",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Neighbor Cell",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Neighbor Cell, vec4f",
+			"types": {
+				"Cell": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Neighbor Cell",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

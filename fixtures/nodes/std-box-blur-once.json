@@ -1,0 +1,6 @@
+{
+	"node": "std-box-blur-once",
+	"skip": "reads a texture: covered by fixtures/gpu",
+	"cases": [],
+	"sweeps": []
+}

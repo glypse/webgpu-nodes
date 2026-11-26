@@ -1,0 +1,349 @@
+{
+	"node": "declare",
+	"cases": [
+		{
+			"note": "gives an f32 as rounded to f32",
+			"types": {
+				"declare": "f32"
+			},
+			"values": {
+				"x": 16777217
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [16777216]
+		},
+		{
+			"note": "gives a scalar f32 as it is",
+			"types": {
+				"declare": "f32"
+			},
+			"values": {
+				"x": 0.1
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [0.10000000149011612]
+		},
+		{
+			"note": "gives i32 as it is",
+			"types": {
+				"declare": "i32"
+			},
+			"values": {
+				"x": -7
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [-7]
+		},
+		{
+			"note": "gives u32 at its top",
+			"types": {
+				"declare": "u32"
+			},
+			"values": {
+				"x": 4294967295
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [4294967295]
+		},
+		{
+			"note": "gives a true bool as 1",
+			"types": {
+				"declare": "bool"
+			},
+			"values": {
+				"x": 1
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1]
+		},
+		{
+			"note": "gives a false bool as 0",
+			"types": {
+				"declare": "bool"
+			},
+			"values": {
+				"x": 0
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [0]
+		},
+		{
+			"note": "gives vec2f components",
+			"types": {
+				"declare": "vec2f"
+			},
+			"values": {
+				"x": 1.5,
+				"y": -2
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1.5, -2]
+		},
+		{
+			"note": "gives vec3f components",
+			"types": {
+				"declare": "vec3f"
+			},
+			"values": {
+				"x": 1,
+				"y": 2,
+				"z": 3
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1, 2, 3]
+		},
+		{
+			"note": "gives vec4f components",
+			"types": {
+				"declare": "vec4f"
+			},
+			"values": {
+				"x": 1,
+				"y": 2,
+				"z": 3,
+				"w": 4
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1, 2, 3, 4]
+		},
+		{
+			"note": "gives vec2i components",
+			"types": {
+				"declare": "vec2i"
+			},
+			"values": {
+				"x": -1,
+				"y": 2
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [-1, 2]
+		},
+		{
+			"note": "gives vec3i components",
+			"types": {
+				"declare": "vec3i"
+			},
+			"values": {
+				"x": -1,
+				"y": 0,
+				"z": 7
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [-1, 0, 7]
+		},
+		{
+			"note": "gives vec4i components",
+			"types": {
+				"declare": "vec4i"
+			},
+			"values": {
+				"x": 1,
+				"y": -2,
+				"z": 3,
+				"w": -4
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1, -2, 3, -4]
+		},
+		{
+			"note": "gives vec2u components",
+			"types": {
+				"declare": "vec2u"
+			},
+			"values": {
+				"x": 4294967295,
+				"y": 5
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [4294967295, 5]
+		},
+		{
+			"note": "gives vec3u components",
+			"types": {
+				"declare": "vec3u"
+			},
+			"values": {
+				"x": 0,
+				"y": 1,
+				"z": 2
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [0, 1, 2]
+		},
+		{
+			"note": "gives vec4u components",
+			"types": {
+				"declare": "vec4u"
+			},
+			"values": {
+				"x": 1,
+				"y": 2,
+				"z": 3,
+				"w": 4
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1, 2, 3, 4]
+		},
+		{
+			"note": "gives vec2b components",
+			"types": {
+				"declare": "vec2b"
+			},
+			"values": {
+				"x": 1,
+				"y": 0
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1, 0]
+		},
+		{
+			"note": "gives vec3b components",
+			"types": {
+				"declare": "vec3b"
+			},
+			"values": {
+				"x": 0,
+				"y": 1,
+				"z": 1
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [0, 1, 1]
+		},
+		{
+			"note": "gives vec4b components",
+			"types": {
+				"declare": "vec4b"
+			},
+			"values": {
+				"x": 1,
+				"y": 1,
+				"z": 0,
+				"w": 0
+			},
+			"inputs": {},
+			"output": "value",
+			"expect": [1, 1, 0, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 fed from the sweep into x",
+			"types": {
+				"declare": "f32"
+			},
+			"inputs": {
+				"x": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "value",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f fed into x, with y and z constant",
+			"types": {
+				"declare": "vec3f"
+			},
+			"inputs": {
+				"x": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"y": {
+					"kind": "constant",
+					"value": [0.5]
+				},
+				"z": {
+					"kind": "constant",
+					"value": [-1]
+				}
+			},
+			"output": "value",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 fed through To Int",
+			"types": {
+				"declare": "i32"
+			},
+			"inputs": {
+				"x": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "value",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 fed through To Uint",
+			"types": {
+				"declare": "u32"
+			},
+			"inputs": {
+				"x": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "value",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2b fed through To Bool",
+			"types": {
+				"declare": "vec2b"
+			},
+			"inputs": {
+				"x": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				},
+				"y": {
+					"kind": "constant",
+					"value": [0]
+				}
+			},
+			"output": "value",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

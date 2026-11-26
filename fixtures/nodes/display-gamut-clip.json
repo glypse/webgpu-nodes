@@ -1,0 +1,94 @@
+{
+	"node": "display-gamut-clip",
+	"cases": [
+		{
+			"note": "clamps each sRGB channel to [0, 1]",
+			"types": {},
+			"inputs": {
+				"color": [[2, -1, 0.5]]
+			},
+			"output": "color",
+			"expect": [1, 0, 0.5]
+		},
+		{
+			"note": "keeps in-gamut colours",
+			"inputs": {
+				"color": [[0.25, 0.5, 0.75]]
+			},
+			"output": "color",
+			"expect": [0.25, 0.5, 0.75]
+		},
+		{
+			"note": "keeps display-p3 colours inside the gamut",
+			"colorSpace": "display-p3",
+			"inputs": {
+				"color": [[0.25, 0.5, 0.75]]
+			},
+			"output": "color",
+			"expect": [0.25, 0.5, 0.75],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "keeps the components display-p3 adds beyond sRGB",
+			"colorSpace": "display-p3",
+			"inputs": {
+				"color": [[2, -1, 0.5]]
+			},
+			"output": "color",
+			"expect": [1.224940176, -0.042056955, 0.4383730522811128],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			}
+		},
+		{
+			"note": "clamps the components no display-p3 gamut holds",
+			"colorSpace": "display-p3",
+			"inputs": {
+				"color": [[-0.5, 1.5, 0.25]]
+			},
+			"output": "color",
+			"expect": [-0.224940176, 1.042056955, 0.2812515499875092],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "colour sweep over out-of-range values",
+			"inputs": {
+				"color": {
+					"kind": "uv",
+					"from": -0.5,
+					"to": 1.5
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "display-p3 colour sweep over out-of-range values",
+			"colorSpace": "display-p3",
+			"inputs": {
+				"color": {
+					"kind": "uv",
+					"from": -0.5,
+					"to": 1.5
+				}
+			},
+			"output": "color",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			}
+		}
+	]
+}

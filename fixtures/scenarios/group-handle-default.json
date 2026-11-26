@@ -1,0 +1,127 @@
+{
+	"description": "A group input's default is what its node holds until the input is linked.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "g",
+						"type": "node-group",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": {
+							"definitionRef": "def",
+							"locked": false
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->g.a",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "g",
+						"targetHandle": "a"
+					},
+					{
+						"id": "g.r->out.color",
+						"source": "g",
+						"sourceHandle": "r",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			},
+			"def": {
+				"inputs": [
+					{
+						"id": "a",
+						"label": "A",
+						"type": "f32"
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "f32"
+					}
+				],
+				"nodes": [
+					{
+						"id": "gi",
+						"type": "group-input",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "o1",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "o2",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "gi.a->o1.r",
+						"source": "gi",
+						"sourceHandle": "a",
+						"target": "o1",
+						"targetHandle": "r"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "setHandleDefault",
+			"args": ["def", "a", 0.5]
+		}
+	],
+	"expect": {
+		"groups": {
+			"def": {
+				"defaults": {
+					"a": 0.5
+				}
+			}
+		}
+	}
+}

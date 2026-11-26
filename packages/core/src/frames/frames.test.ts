@@ -153,7 +153,7 @@ describe("GraphModel frames", () => {
 			],
 			[["a", "result", "b", "e"]],
 		);
-		graph.groupSelection(new Set(["f"]));
+		graph.groupSelection(["f"]);
 		const group = graph.root.nodes.find((n) => n.type === "node-group");
 		expect(group?.frame).toBe("outer");
 		const inner = graph.project.definitions.get(group?.group?.definitionRef ?? "");

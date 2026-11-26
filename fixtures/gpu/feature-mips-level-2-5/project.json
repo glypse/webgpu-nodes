@@ -1,0 +1,155 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "uv",
+					"type": "uv",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "source",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "pixels",
+							"mips": "on"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 100,
+								"y": 60
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "read",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 2.5
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "uv",
+					"target": "source",
+					"sourceHandle": "uv",
+					"targetHandle": "item"
+				},
+				{
+					"id": "1",
+					"source": "uv",
+					"target": "read",
+					"sourceHandle": "uv",
+					"targetHandle": "uv"
+				},
+				{
+					"id": "2",
+					"source": "source",
+					"target": "read",
+					"sourceHandle": "item",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "3",
+					"source": "read",
+					"target": "out",
+					"sourceHandle": "color",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

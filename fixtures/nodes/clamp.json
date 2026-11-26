@@ -1,0 +1,345 @@
+{
+	"node": "clamp",
+	"cases": [
+		{
+			"note": "keeps an f32 inside the bounds",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[0.5]],
+				"low": [[0]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [0.5]
+		},
+		{
+			"note": "limits an f32 below to the low bound",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[-1]],
+				"low": [[0]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "limits an f32 above to the high bound",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[2]],
+				"low": [[0]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "keeps the low bound",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[0]],
+				"low": [[0]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "keeps the high bound",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[1]],
+				"low": [[0]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives min(max(e, low), high) when low is above high",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[0.5]],
+				"low": [[1]],
+				"high": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives min(max(e, low), high) below an inverted range",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[-5]],
+				"low": [[1]],
+				"high": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives min(max(e, low), high) above an inverted range",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[2]],
+				"low": [[1]],
+				"high": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "clamps large f32s above",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[3e38]],
+				"low": [[-1]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "clamps large f32s below",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[-3e38]],
+				"low": [[-1]],
+				"high": [[1]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "clamps i32 above",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[5]],
+				"low": [[0]],
+				"high": [[3]]
+			},
+			"output": "result",
+			"expect": [3]
+		},
+		{
+			"note": "clamps i32 below",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-5]],
+				"low": [[0]],
+				"high": [[3]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "clamps the i32 MIN",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-2147483648]],
+				"low": [[-10]],
+				"high": [[10]]
+			},
+			"output": "result",
+			"expect": [-10]
+		},
+		{
+			"note": "clamps the i32 MAX",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[2147483647]],
+				"low": [[-10]],
+				"high": [[10]]
+			},
+			"output": "result",
+			"expect": [10]
+		},
+		{
+			"note": "clamps u32 below its low bound",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[5]],
+				"low": [[10]],
+				"high": [[20]]
+			},
+			"output": "result",
+			"expect": [10]
+		},
+		{
+			"note": "clamps the largest u32",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[4294967295]],
+				"low": [[0]],
+				"high": [[100]]
+			},
+			"output": "result",
+			"expect": [100]
+		},
+		{
+			"note": "clamps vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[-1, 0.5, 2]],
+				"low": [[0, 0, 0]],
+				"high": [[1, 1, 1]]
+			},
+			"output": "result",
+			"expect": [0, 0.5, 1]
+		},
+		{
+			"note": "clamps vec4f with per-component bounds",
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[-1, 0.25, 0.75, 2]],
+				"low": [[0, 0, 0, 0]],
+				"high": [[1, 1, 0.5, 1]]
+			},
+			"output": "result",
+			"expect": [0, 0.25, 0.5, 1]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"low": {
+					"kind": "constant",
+					"value": [-1]
+				},
+				"high": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"low": {
+					"kind": "constant",
+					"value": [-1, -1, -1]
+				},
+				"high": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"low": {
+					"kind": "constant",
+					"value": [-3]
+				},
+				"high": {
+					"kind": "constant",
+					"value": [3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"low": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"high": {
+					"kind": "constant",
+					"value": [5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

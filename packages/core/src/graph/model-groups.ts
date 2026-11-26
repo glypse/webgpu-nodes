@@ -334,7 +334,7 @@ export abstract class GroupModel extends ZoneModel {
 					continue;
 				}
 				// Ids are only unique within a project: this one may name another file.
-				const id = known.some((a) => a.id === asset.id) ? crypto.randomUUID() : asset.id;
+				const id = known.some((a) => a.id === asset.id) ? this.newId() : asset.id;
 				added.push({
 					asset: { ...asset, id, file: assetFile(asset.kind, id, asset.file) },
 					source: { bundle: index, path: asset.file },
@@ -372,7 +372,7 @@ export abstract class GroupModel extends ZoneModel {
 				if (ids.has(entry.id) || content === undefined) continue;
 				const nested = groupRefsOf(entry.definition).some((ref) => ids.has(ref));
 				if (content === contents.get(entry) && !nested) continue;
-				ids.set(entry.id, crypto.randomUUID());
+				ids.set(entry.id, this.newId());
 				changed = true;
 			}
 		}
@@ -400,7 +400,8 @@ export abstract class GroupModel extends ZoneModel {
 
 	// ── Grouping ────────────────────────────────────────────────────────────────
 
-	groupSelection(selectedNodeIds: Set<string>): void {
+	groupSelection(nodeIds: readonly string[]): void {
+		const selectedNodeIds = new Set(nodeIds);
 		const UNGROUPABLE_TYPES = new Set(["frag-output", "group-input", "group-output"]);
 
 		// A frame is grouped with what it holds, and a zone as a whole:
@@ -446,17 +447,29 @@ export abstract class GroupModel extends ZoneModel {
 
 		const OFFSET = 300;
 
-		const groupInputNode = buildBoundaryNode("input", dedupedIncoming, this.typeResolver, {
-			x: bounds.minX - OFFSET,
-			y: bounds.centerY,
-		});
-		const groupOutputNode = buildBoundaryNode("output", dedupedOutgoing, this.typeResolver, {
-			x: bounds.maxX + OFFSET,
-			y: bounds.centerY,
-		});
+		const groupInputNode = buildBoundaryNode(
+			"input",
+			dedupedIncoming,
+			this.typeResolver,
+			{
+				x: bounds.minX - OFFSET,
+				y: bounds.centerY,
+			},
+			this.newId,
+		);
+		const groupOutputNode = buildBoundaryNode(
+			"output",
+			dedupedOutgoing,
+			this.typeResolver,
+			{
+				x: bounds.maxX + OFFSET,
+				y: bounds.centerY,
+			},
+			this.newId,
+		);
 
-		const definitionRef = crypto.randomUUID();
-		const groupNodeId = crypto.randomUUID();
+		const definitionRef = this.newId();
+		const groupNodeId = this.newId();
 
 		const allOuterEdges: GraphDocumentEdge[] = [];
 		const allInnerEdges: GraphDocumentEdge[] = [];
@@ -470,6 +483,7 @@ export abstract class GroupModel extends ZoneModel {
 				handle,
 				groupInputNode.node.id,
 				groupNodeId,
+				this.newId,
 			);
 			allOuterEdges.push(outer);
 			allInnerEdges.push(...inner);
@@ -484,6 +498,7 @@ export abstract class GroupModel extends ZoneModel {
 				handle,
 				groupOutputNode.node.id,
 				groupNodeId,
+				this.newId,
 			);
 			allOuterEdges.push(...outer);
 			allInnerEdges.push(inner);
@@ -579,7 +594,8 @@ export abstract class GroupModel extends ZoneModel {
 	 * Works on both locked and unlocked groups (the source definition is never
 	 * mutated - inner nodes and edges are always cloned with fresh ids).
 	 */
-	ungroupSelection(selectedNodeIds: Set<string>): void {
+	ungroupSelection(nodeIds: readonly string[]): void {
+		const selectedNodeIds = new Set(nodeIds);
 		if (this.isLocked) return;
 
 		const groupNodes = this.activeDocument.nodes.filter(
@@ -618,7 +634,7 @@ export abstract class GroupModel extends ZoneModel {
 			y: groupNode.position.y + (groupNode.height ?? 0) / 2 - (inner?.centerY ?? 0),
 		};
 		// Edges between inner nodes come along; boundary edges are spliced below.
-		const clone = cloneSubgraph(innerNodes, def.edges, offset);
+		const clone = cloneSubgraph(innerNodes, def.edges, offset, this.newId);
 		const remap = (id: string): string => clone.idMap.get(id) ?? id;
 		// What was in no frame of the group goes in the group node's.
 		if (groupNode.frame !== undefined) {
@@ -637,7 +653,7 @@ export abstract class GroupModel extends ZoneModel {
 			const feed = incomingOuter.find((e) => e.targetHandle === innerEdge.sourceHandle);
 			if (!feed) continue; // handle not wired from outside - drop
 			boundaryEdges.push({
-				id: crypto.randomUUID(),
+				id: this.newId(),
 				source: feed.source,
 				sourceHandle: feed.sourceHandle,
 				target: remap(innerEdge.target),
@@ -653,7 +669,7 @@ export abstract class GroupModel extends ZoneModel {
 			);
 			for (const consumer of consumers) {
 				boundaryEdges.push({
-					id: crypto.randomUUID(),
+					id: this.newId(),
 					source: remap(innerEdge.source),
 					sourceHandle: innerEdge.sourceHandle,
 					target: consumer.target,
@@ -705,8 +721,8 @@ export abstract class GroupModel extends ZoneModel {
 			return undefined;
 		}
 
-		const newDefRef = crypto.randomUUID();
-		const clone = cloneSubgraph(sourceDef.nodes, sourceDef.edges);
+		const newDefRef = this.newId();
+		const clone = cloneSubgraph(sourceDef.nodes, sourceDef.edges, { x: 0, y: 0 }, this.newId);
 		this.setDefinitions([
 			[
 				newDefRef,
@@ -763,7 +779,7 @@ export abstract class GroupModel extends ZoneModel {
 
 		const isLocked = this.isStandardLibrary(definitionRef) || sourceDef.locked;
 
-		const groupNodeId = crypto.randomUUID();
+		const groupNodeId = this.newId();
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
 			type: "node-group",
@@ -788,17 +804,17 @@ export abstract class GroupModel extends ZoneModel {
 	createGroup(position: { x: number; y: number }): string | undefined {
 		if (this.isLocked) return undefined;
 
-		const definitionRef = crypto.randomUUID();
-		const inputNodeId = crypto.randomUUID();
-		const outputNodeId = crypto.randomUUID();
+		const definitionRef = this.newId();
+		const inputNodeId = this.newId();
+		const outputNodeId = this.newId();
 
 		const inputHandle: GroupHandleDef = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			label: "Input 1",
 			type: "f32",
 		};
 		const outputHandle: GroupHandleDef = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			label: "Output 1",
 			type: "f32",
 		};
@@ -820,7 +836,7 @@ export abstract class GroupModel extends ZoneModel {
 			],
 			edges: [
 				{
-					id: crypto.randomUUID(),
+					id: this.newId(),
 					source: inputNodeId,
 					sourceHandle: inputHandle.id,
 					target: outputNodeId,
@@ -834,7 +850,7 @@ export abstract class GroupModel extends ZoneModel {
 
 		this.setDefinitions([[definitionRef, this.hydrate(definition)]]);
 
-		const groupNodeId = crypto.randomUUID();
+		const groupNodeId = this.newId();
 		const groupNode: GraphDocumentNode = {
 			id: groupNodeId,
 			type: "node-group",
@@ -1068,7 +1084,7 @@ export abstract class GroupModel extends ZoneModel {
 		// Only an output's type can be whatever reaches it.
 		const inferred = typeof type === "object" && "inferred" in type;
 		const handle: GroupHandleDef = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			label: `${prefix} ${String(n)}`,
 			type: toggle ? "bool" : variants ? "u32" : isInput && inferred ? "f32" : type,
 			...(isInput && variants ? { variants } : {}),
@@ -1301,7 +1317,7 @@ export abstract class GroupModel extends ZoneModel {
 		const taken = new Set(def.typeVariables.map((v) => v.name));
 		const name =
 			VARIABLE_NAMES.find((l) => !taken.has(l)) ?? `T${String(def.typeVariables.length + 1)}`;
-		const variable: TypeVariable = { id: crypto.randomUUID(), name, types: [...types] };
+		const variable: TypeVariable = { id: this.newId(), name, types: [...types] };
 		def.typeVariables = [...def.typeVariables, variable];
 		this.rebuildTypeCache();
 		return variable;

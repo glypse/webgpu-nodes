@@ -1,0 +1,29 @@
+{
+	"description": "A vec3f reaching the output is opaque: its alpha is 1.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.1, 0.2, 0.3, 1]
+				},
+				{
+					"x": 3,
+					"y": 3,
+					"rgba": [0.1, 0.2, 0.3, 1]
+				}
+			]
+		}
+	]
+}

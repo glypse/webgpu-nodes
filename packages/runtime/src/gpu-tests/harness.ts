@@ -1,10 +1,12 @@
 import {
 	type Asset,
+	type ColorSpace,
 	type GraphDocumentNode,
 	GraphModel,
 	type GraphProject,
 	type NodeData,
 	type NodeType,
+	PLAN_TARGET,
 	type RenderPlan,
 	ROOT_ID,
 	standardLibrary,
@@ -89,7 +91,16 @@ export class Pixels {
 	}
 }
 
+/** What a draw can read back: `rgba32float` keeps what half floats round. */
+export type TargetFormat = "rgba16float" | "rgba32float";
+
 const FIRST_FRAME: FrameInputs = { time: 0, delta: 1 / 60, frame: 0 };
+
+export type DrawOptions = {
+	colorSpace?: ColorSpace;
+	/** Frames drawn in sequence share one; the caller destroys it. See `TestGpu.simulation`. */
+	state?: SimulationState;
+};
 
 /** A device to draw test graphs with, failing on anything WebGPU refuses. */
 export class TestGpu {
@@ -115,25 +126,60 @@ export class TestGpu {
 		if (first !== undefined) throw new Error(first);
 	}
 
-	compile(plan: RenderPlan): Promise<CompiledPlan> {
-		return this.renderer.compile(plan);
+	/**
+	 * The renderer builds the last pass's pipeline for half floats unless the
+	 * plan has a resource for its target, which is how another `format` is asked for.
+	 */
+	compile(plan: RenderPlan, format: TargetFormat = "rgba16float"): Promise<CompiledPlan> {
+		if (format === "rgba16float") return this.renderer.compile(plan);
+		return this.renderer.compile({
+			...plan,
+			resources: [
+				...plan.resources,
+				{
+					id: PLAN_TARGET,
+					kind: "transient",
+					size: { kind: "scale", scale: 1, of: "canvas" },
+					format,
+				},
+			],
+		});
 	}
 
-	async draw(plan: RenderPlan, size: Size, frame = FIRST_FRAME): Promise<Pixels> {
-		const compiled = await this.compile(plan);
+	/** `format` is the one of the target; it is the one the plan is compiled for. */
+	async draw(
+		plan: RenderPlan,
+		size: Size,
+		frame = FIRST_FRAME,
+		format: TargetFormat = "rgba16float",
+		options: DrawOptions = {},
+	): Promise<Pixels> {
+		const compiled = await this.compile(plan, format);
 		try {
-			return await this.drawCompiled(compiled, size, frame);
+			return await this.drawCompiled(compiled, size, frame, format, options);
 		} finally {
 			compiled.destroy();
 		}
 	}
 
-	async drawCompiled(compiled: CompiledPlan, size: Size, frame = FIRST_FRAME): Promise<Pixels> {
+	/**
+	 * `format` must be the one `compiled` was compiled for. Frames drawn in
+	 * sequence share one `options.state` (see `simulation`), as a run of the
+	 * project does; without one, the frame starts from no state.
+	 */
+	async drawCompiled(
+		compiled: CompiledPlan,
+		size: Size,
+		frame = FIRST_FRAME,
+		format: TargetFormat = "rgba16float",
+		{ colorSpace = "srgb", state: given }: DrawOptions = {},
+	): Promise<Pixels> {
 		const { device } = this.renderer;
 		const { width, height } = size;
-		const target = this.target(size, GPUTextureUsage.COPY_SRC);
-		const state = new SimulationState(device);
-		const bytesPerRow = Math.ceil((width * 8) / 256) * 256;
+		const target = this.target(size, GPUTextureUsage.COPY_SRC, format);
+		const state = given ?? new SimulationState(device);
+		const texelBytes = format === "rgba32float" ? 16 : 8;
+		const bytesPerRow = Math.ceil((width * texelBytes) / 256) * 256;
 		const buffer = device.createBuffer({
 			size: bytesPerRow * height,
 			usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
@@ -144,15 +190,26 @@ export class TestGpu {
 		try {
 			const media = await compiled.prepare(frame, size);
 			const encoder = device.createCommandEncoder();
-			compiled.encode(encoder, target, frame, "srgb", state, { media });
+			compiled.encode(encoder, target, frame, colorSpace, state, { media });
 			encoder.copyTextureToBuffer({ texture: target }, { buffer, bytesPerRow }, size);
 			device.queue.submit([encoder.finish()]);
 			await buffer.mapAsync(GPUMapMode.READ);
-			const halves = new Uint16Array(buffer.getMappedRange());
 			const data = new Float32Array(width * height * 4);
-			for (let y = 0; y < height; y++) {
-				for (let i = 0; i < width * 4; i++) {
-					data[y * width * 4 + i] = halfToNumber(halves[(y * bytesPerRow) / 2 + i] ?? 0);
+			if (format === "rgba32float") {
+				const floats = new Float32Array(buffer.getMappedRange());
+				for (let y = 0; y < height; y++) {
+					for (let i = 0; i < width * 4; i++) {
+						data[y * width * 4 + i] = floats[(y * bytesPerRow) / 4 + i] ?? 0;
+					}
+				}
+			} else {
+				const halves = new Uint16Array(buffer.getMappedRange());
+				for (let y = 0; y < height; y++) {
+					for (let i = 0; i < width * 4; i++) {
+						data[y * width * 4 + i] = halfToNumber(
+							halves[(y * bytesPerRow) / 2 + i] ?? 0,
+						);
+					}
 				}
 			}
 			pixels = new Pixels(size, data);
@@ -160,11 +217,16 @@ export class TestGpu {
 			refused = await device.popErrorScope();
 			buffer.destroy();
 			target.destroy();
-			state.destroy();
+			if (!given) state.destroy();
 		}
 		if (refused) throw new Error(refused.message);
 		this.check();
 		return pixels;
+	}
+
+	/** A state for `drawCompiled` to carry from frame to frame; destroy it when done. */
+	simulation(): SimulationState {
+		return new SimulationState(this.renderer.device);
 	}
 
 	/** Milliseconds a frame of `plan` takes with the GPU kept busy, the best of a few runs. */
@@ -201,10 +263,14 @@ export class TestGpu {
 		this.renderer.destroy();
 	}
 
-	private target(size: Size, usage: GPUTextureUsageFlags): GPUTexture {
+	private target(
+		size: Size,
+		usage: GPUTextureUsageFlags,
+		format: TargetFormat = "rgba16float",
+	): GPUTexture {
 		return this.renderer.device.createTexture({
 			size,
-			format: "rgba16float",
+			format,
 			usage: usage | GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
 		});
 	}

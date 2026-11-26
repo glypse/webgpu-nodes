@@ -1,0 +1,6 @@
+{
+	"node": "sample-texture",
+	"skip": "reads a texture",
+	"cases": [],
+	"sweeps": []
+}

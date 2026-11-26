@@ -1,0 +1,24 @@
+{
+	"description": "The Resolution of a 1 by 1 canvas and the UV at the corners' pixel centres, read back with what the canvas holds.",
+	"size": {
+		"width": 1,
+		"height": 1
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [1, 1, 0.5, 0.5]
+				}
+			]
+		}
+	]
+}

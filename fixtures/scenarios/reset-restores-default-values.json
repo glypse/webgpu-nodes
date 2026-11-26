@@ -1,0 +1,56 @@
+{
+	"description": "Resetting a node puts its input values back to their defaults.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "d",
+						"type": "declare",
+						"data": {
+							"values": {
+								"x": 5,
+								"y": 2,
+								"z": 0,
+								"w": 0
+							}
+						},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "resetNodes",
+			"args": [["d"]]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"data": {
+					"d": {
+						"values": {
+							"x": 0
+						}
+					}
+				}
+			}
+		}
+	}
+}

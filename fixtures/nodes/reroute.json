@@ -1,0 +1,134 @@
+{
+	"node": "reroute",
+	"cases": [
+		{
+			"note": "passes an f32 through",
+			"types": {
+				"in": "f32"
+			},
+			"inputs": {
+				"in": [[0.5]]
+			},
+			"output": "out",
+			"expect": [0.5]
+		},
+		{
+			"note": "passes an i32 through",
+			"types": {
+				"in": "i32"
+			},
+			"inputs": {
+				"in": [[-3]]
+			},
+			"output": "out",
+			"expect": [-3]
+		},
+		{
+			"note": "passes a vec3f through",
+			"types": {
+				"in": "vec3f"
+			},
+			"inputs": {
+				"in": [[1, 2, 3]]
+			},
+			"output": "out",
+			"expect": [1, 2, 3]
+		},
+		{
+			"note": "passes a vec2u through",
+			"types": {
+				"in": "vec2u"
+			},
+			"inputs": {
+				"in": [[4294967295, 1]]
+			},
+			"output": "out",
+			"expect": [4294967295, 1]
+		},
+		{
+			"note": "passes a bool through",
+			"types": {
+				"in": "bool"
+			},
+			"inputs": {
+				"in": [[1]]
+			},
+			"output": "out",
+			"expect": [1]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"in": "f32"
+			},
+			"inputs": {
+				"in": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "out",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"in": "vec3f"
+			},
+			"inputs": {
+				"in": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "out",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep",
+			"types": {
+				"in": "i32"
+			},
+			"inputs": {
+				"in": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "out",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "bool sweep",
+			"types": {
+				"in": "bool"
+			},
+			"inputs": {
+				"in": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "out",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

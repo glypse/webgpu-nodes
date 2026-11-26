@@ -1,0 +1,62 @@
+{
+	"description": "Reducing an Index Switch's cases drops the links into the cases it loses.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "d",
+						"type": "declare",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "x",
+						"type": "index-switch",
+						"data": {
+							"cases": 2
+						},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "d.value->x.case-1",
+						"source": "d",
+						"sourceHandle": "value",
+						"target": "x",
+						"targetHandle": "case-1"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "setIndexSwitchCases",
+			"args": ["x", 1]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"links": []
+			}
+		}
+	}
+}

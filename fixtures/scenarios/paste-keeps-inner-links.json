@@ -1,0 +1,81 @@
+{
+	"description": "Pasted nodes come with the links between them, under new ids.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "pasteNodes",
+			"args": [
+				{
+					"nodes": [
+						{
+							"id": "c1",
+							"type": "add",
+							"data": {},
+							"position": {
+								"x": 0,
+								"y": 0
+							}
+						},
+						{
+							"id": "c2",
+							"type": "time",
+							"data": {},
+							"position": {
+								"x": 0,
+								"y": 0
+							}
+						}
+					],
+					"edges": [
+						{
+							"id": "c2.seconds->c1.operands",
+							"source": "c2",
+							"sourceHandle": "seconds",
+							"target": "c1",
+							"targetHandle": "operands"
+						}
+					],
+					"from": ""
+				},
+				{
+					"x": 100,
+					"y": 100
+				}
+			]
+		}
+	],
+	"expect": {
+		"results": [["id1", "id2"]],
+		"documents": {
+			"": {
+				"links": ["id2.seconds -> id1.operands"]
+			}
+		}
+	}
+}

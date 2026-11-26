@@ -1,0 +1,200 @@
+{
+	"node": "abs",
+	"cases": [
+		{
+			"note": "takes the magnitude of a negative f32",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[-2.5]]
+			},
+			"output": "result",
+			"expect": [2.5]
+		},
+		{
+			"note": "keeps a positive f32",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[2.5]]
+			},
+			"output": "result",
+			"expect": [2.5]
+		},
+		{
+			"note": "takes the magnitude of a large negative f32",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[-3e38]]
+			},
+			"output": "result",
+			"expect": [3.0000000054977558e38]
+		},
+		{
+			"note": "takes the magnitude of a negative i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-5]]
+			},
+			"output": "result",
+			"expect": [5]
+		},
+		{
+			"note": "wraps i32 MIN to itself",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-2147483648]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "keeps the largest i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[2147483647]]
+			},
+			"output": "result",
+			"expect": [2147483647]
+		},
+		{
+			"note": "leaves a u32 unchanged",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[7]]
+			},
+			"output": "result",
+			"expect": [7]
+		},
+		{
+			"note": "leaves the largest u32 unchanged",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[4294967295]]
+			},
+			"output": "result",
+			"expect": [4294967295]
+		},
+		{
+			"note": "takes the magnitude of vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[-1, 2, -3]]
+			},
+			"output": "result",
+			"expect": [1, 2, 3]
+		},
+		{
+			"note": "takes the magnitude of vec2i component-wise",
+			"types": {
+				"e": "vec2i"
+			},
+			"inputs": {
+				"e": [[-4, 4]]
+			},
+			"output": "result",
+			"expect": [4, 4]
+		},
+		{
+			"note": "leaves vec4u unchanged",
+			"types": {
+				"e": "vec4u"
+			},
+			"inputs": {
+				"e": [[1, 2, 3, 4]]
+			},
+			"output": "result",
+			"expect": [1, 2, 3, 4]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

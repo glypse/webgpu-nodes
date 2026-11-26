@@ -1,0 +1,98 @@
+{
+	"node": "std-hash",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Hash, vec4i",
+			"types": {
+				"Value": "vec4i"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Hash",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Hash, vec3i",
+			"types": {
+				"Value": "vec3i"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Hash",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Hash, vec2i",
+			"types": {
+				"Value": "vec2i"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Hash",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Hash, i32",
+			"types": {
+				"Value": "i32"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Hash",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

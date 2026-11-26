@@ -1,0 +1,232 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "zero",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "f32"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "outer",
+					"type": "pass-repeat-input",
+					"data": {
+						"values": {
+							"iterations": 3
+						},
+						"pairedOutput": "outerEnd"
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "outerEnd",
+					"type": "pass-repeat-output",
+					"data": {
+						"items": [
+							{
+								"id": "count",
+								"label": "Count",
+								"type": "f32"
+							}
+						]
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "inner",
+					"type": "pass-repeat-input",
+					"data": {
+						"values": {
+							"iterations": 2
+						},
+						"pairedOutput": "innerEnd"
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "innerEnd",
+					"type": "pass-repeat-output",
+					"data": {
+						"items": [
+							{
+								"id": "count",
+								"label": "Count",
+								"type": "f32"
+							}
+						]
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "one",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "f32"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "next",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "zero",
+					"target": "outer",
+					"sourceHandle": "value",
+					"targetHandle": "count"
+				},
+				{
+					"id": "1",
+					"source": "outer",
+					"target": "inner",
+					"sourceHandle": "count",
+					"targetHandle": "count"
+				},
+				{
+					"id": "2",
+					"source": "inner",
+					"target": "next",
+					"sourceHandle": "count",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "3",
+					"source": "one",
+					"target": "next",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "4",
+					"source": "next",
+					"target": "innerEnd",
+					"sourceHandle": "result",
+					"targetHandle": "count"
+				},
+				{
+					"id": "5",
+					"source": "innerEnd",
+					"target": "outerEnd",
+					"sourceHandle": "count",
+					"targetHandle": "count"
+				},
+				{
+					"id": "6",
+					"source": "outerEnd",
+					"target": "out",
+					"sourceHandle": "count",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

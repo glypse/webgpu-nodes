@@ -1,0 +1,138 @@
+{
+	"node": "step",
+	"cases": [
+		{
+			"note": "gives 0 below the edge",
+			"inputs": {
+				"e1": [[0.5]],
+				"e2": [[0.25]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives 1 above the edge",
+			"inputs": {
+				"e1": [[0.5]],
+				"e2": [[0.75]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives 1 at the edge",
+			"inputs": {
+				"e1": [[0.5]],
+				"e2": [[0.5]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives 0 below a negative edge",
+			"inputs": {
+				"e1": [[-1]],
+				"e2": [[-2]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives 1 at a negative edge",
+			"inputs": {
+				"e1": [[-1]],
+				"e2": [[-1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "compares large f32s",
+			"inputs": {
+				"e1": [[3e38]],
+				"e2": [[3e38]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "compares large f32s of opposite sign",
+			"inputs": {
+				"e1": [[3e38]],
+				"e2": [[-3e38]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "steps vec2f component-wise",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": [[0.5, 0.5]],
+				"e2": [[0.25, 0.75]]
+			},
+			"output": "result",
+			"expect": [0, 1]
+		},
+		{
+			"note": "steps vec3f against a vector edge",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": [[0.5, 0.5, 0.5]],
+				"e2": [[0.25, 0.75, 0.5]]
+			},
+			"output": "result",
+			"expect": [0, 1, 1]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep against a fixed edge",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "constant",
+					"value": [0.5]
+				},
+				"e2": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep against a fixed edge",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "constant",
+					"value": [0, 0.5, -0.5]
+				},
+				"e2": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

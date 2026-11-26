@@ -1,0 +1,206 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "source",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "pixels",
+							"mips": "on"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 100,
+								"y": 60
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "size",
+					"type": "texture-size",
+					"data": {
+						"values": {
+							"level": 9
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "sizes",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "levelCount",
+					"type": "to-float",
+					"data": {
+						"values": {
+							"e": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "c",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 1
+						},
+						"types": {
+							"declare": "vec4f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "source",
+					"target": "size",
+					"sourceHandle": "item",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "1",
+					"source": "size",
+					"target": "sizes",
+					"sourceHandle": "size",
+					"targetHandle": "v"
+				},
+				{
+					"id": "2",
+					"source": "sizes",
+					"target": "c",
+					"sourceHandle": "x",
+					"targetHandle": "x"
+				},
+				{
+					"id": "3",
+					"source": "sizes",
+					"target": "c",
+					"sourceHandle": "y",
+					"targetHandle": "y"
+				},
+				{
+					"id": "4",
+					"source": "size",
+					"target": "levelCount",
+					"sourceHandle": "levels",
+					"targetHandle": "e"
+				},
+				{
+					"id": "5",
+					"source": "levelCount",
+					"target": "c",
+					"sourceHandle": "result",
+					"targetHandle": "z"
+				},
+				{
+					"id": "6",
+					"source": "c",
+					"target": "out",
+					"sourceHandle": "value",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

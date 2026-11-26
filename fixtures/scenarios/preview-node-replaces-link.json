@@ -1,0 +1,68 @@
+{
+	"description": "Previewing a node links it straight to the output, replacing the output's link.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "sum",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->out.color",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "out",
+						"targetHandle": "color"
+					},
+					{
+						"id": "t.seconds->sum.operands",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "sum",
+						"targetHandle": "operands"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "previewNode",
+			"args": ["sum"]
+		}
+	],
+	"expect": {
+		"results": [true],
+		"documents": {
+			"": {
+				"links": ["sum.result -> out.color", "t.seconds -> sum.operands"]
+			}
+		}
+	}
+}

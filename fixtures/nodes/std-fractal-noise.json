@@ -1,0 +1,255 @@
+{
+	"node": "std-fractal-noise",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Fac, vec2f, Type=fBm, Variant=Fast, Orientation=Standard",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Type": 0,
+				"Variant": 0,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Distortion": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Fac",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Fac, vec2f, Type=fBm, Variant=Fast, Orientation=Y Vertical",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Type": 0,
+				"Variant": 0,
+				"Orientation": 1
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Distortion": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Fac",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Color, vec2f, Type=fBm, Variant=Fast, Orientation=Standard",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Type": 0,
+				"Variant": 0,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Distortion": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Color, vec2f, Type=fBm, Variant=Smooth, Orientation=Standard",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Type": 0,
+				"Variant": 1,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Distortion": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

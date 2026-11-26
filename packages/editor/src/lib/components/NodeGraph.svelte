@@ -77,7 +77,7 @@
 									title="Locked group - clone & edit"
 									onclick={() => {
 										view.activate();
-										graph.deepClone(segment.id);
+										graph.apply({ kind: "deepClone", args: [segment.id] });
 									}}
 								>
 									<LockSimpleIcon />

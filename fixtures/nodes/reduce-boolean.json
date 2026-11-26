@@ -1,0 +1,154 @@
+{
+	"node": "reduce-boolean",
+	"cases": [
+		{
+			"note": "is any over vec3b with a true",
+			"settings": {
+				"op": "any"
+			},
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": [[1, 0, 1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "is any over vec3b with none true",
+			"settings": {
+				"op": "any"
+			},
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": [[0, 0, 0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "is any over vec4b with the last true",
+			"settings": {
+				"op": "any"
+			},
+			"types": {
+				"e": "vec4b"
+			},
+			"inputs": {
+				"e": [[0, 0, 0, 1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "is all over vec3b with one false",
+			"settings": {
+				"op": "all"
+			},
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": [[1, 0, 1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "is all over vec3b with all true",
+			"settings": {
+				"op": "all"
+			},
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": [[1, 1, 1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "is all over vec2b with none true",
+			"settings": {
+				"op": "all"
+			},
+			"types": {
+				"e": "vec2b"
+			},
+			"inputs": {
+				"e": [[0, 0]]
+			},
+			"output": "result",
+			"expect": [0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "any over a vec2b sweep",
+			"settings": {
+				"op": "any"
+			},
+			"types": {
+				"e": "vec2b"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "all over a vec3b sweep",
+			"settings": {
+				"op": "all"
+			},
+			"types": {
+				"e": "vec3b"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "any over a vec4b sweep",
+			"settings": {
+				"op": "any"
+			},
+			"types": {
+				"e": "vec4b"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

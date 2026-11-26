@@ -1,0 +1,159 @@
+{
+	"node": "distance",
+	"cases": [
+		{
+			"note": "measures f32s as their absolute difference",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[1]],
+				"e2": [[4]]
+			},
+			"output": "result",
+			"expect": [3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures vec2f",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": [[0, 0]],
+				"e2": [[3, 4]]
+			},
+			"output": "result",
+			"expect": [5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures vec3f",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": [[1, 2, 2]],
+				"e2": [[0, 0, 0]]
+			},
+			"output": "result",
+			"expect": [3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures vec4f",
+			"types": {
+				"e1": "vec4f"
+			},
+			"inputs": {
+				"e1": [[1, 1, 1, 1]],
+				"e2": [[0, 0, 0, 0]]
+			},
+			"output": "result",
+			"expect": [2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep from a fixed point",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [0.5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec2f sweep from a fixed point",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [1, 1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep from the origin",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec4f sweep from the origin",
+			"types": {
+				"e1": "vec4f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [0, 0, 0, 0]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	]
+}

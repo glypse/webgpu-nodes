@@ -1,0 +1,94 @@
+{
+	"description": "Undoing each recorded edit in turn brings back the starting project.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t2",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "r",
+						"type": "reroute",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->r.in",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "r",
+						"targetHandle": "in"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "connect",
+			"args": [
+				{
+					"source": "t2",
+					"sourceHandle": "seconds",
+					"target": "r",
+					"targetHandle": "in"
+				}
+			]
+		},
+		{
+			"kind": "recordHistory",
+			"args": []
+		},
+		{
+			"kind": "deleteNodes",
+			"args": [["r"]]
+		},
+		{
+			"kind": "recordHistory",
+			"args": []
+		},
+		{
+			"kind": "setNodeLabel",
+			"args": ["t2", "Second"]
+		},
+		{
+			"kind": "recordHistory",
+			"args": []
+		}
+	],
+	"expect": {
+		"history": {
+			"undoAll": "start"
+		}
+	}
+}

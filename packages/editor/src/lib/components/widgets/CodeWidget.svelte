@@ -21,7 +21,7 @@
 	function commit() {
 		clearTimeout(timer);
 		if (draft === null) return;
-		graph.setCustomCode(id, draft);
+		graph.apply({ kind: "setCustomCode", args: [id, draft] });
 		draft = null;
 	}
 

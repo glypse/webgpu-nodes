@@ -1,0 +1,33 @@
+{
+	"description": "The offset loop on a 1 by 1 canvas: texel rows and columns keep their place, and the far corner is read.",
+	"size": {
+		"width": 1,
+		"height": 1
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.5, 0.5, null, null]
+				}
+			]
+		},
+		{
+			"kind": "cpu",
+			"stride": 1,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"maxOff": 0
+		}
+	]
+}

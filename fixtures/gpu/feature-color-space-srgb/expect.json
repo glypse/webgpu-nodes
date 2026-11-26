@@ -1,0 +1,20 @@
+{
+	"description": "A colour outside sRGB, clipped to the srgb display gamut: the GPU and the CPU agree on the clipped value.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"colorSpace": "srgb",
+	"checks": [
+		{
+			"kind": "cpu",
+			"stride": 1,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"maxOff": 0
+		}
+	]
+}

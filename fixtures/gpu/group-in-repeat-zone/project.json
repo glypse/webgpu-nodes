@@ -1,0 +1,163 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "time",
+					"type": "time",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "start",
+					"type": "repeat-input",
+					"data": {
+						"values": {
+							"iterations": 3
+						},
+						"maxIterations": 1024,
+						"pairedOutput": "end"
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "end",
+					"type": "repeat-output",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "f32"
+							}
+						]
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "double",
+					"type": "node-group",
+					"data": {
+						"values": {
+							"31323136-3eb6-4a06-a1ec-9498f0076d42": 0,
+							"af1991d1-efe5-44d1-93d4-96417ead48fd": 1,
+							"7c5f2ac5-e600-48e8-9c70-b80d8ef9fc87": 0,
+							"affc0487-7cfc-4e3e-bcc9-9f11053bcccf": 2
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					},
+					"group": {
+						"definitionRef": "std-remap@18bb11b8c3230a",
+						"locked": true
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "time",
+					"target": "start",
+					"sourceHandle": "seconds",
+					"targetHandle": "item"
+				},
+				{
+					"id": "1",
+					"source": "start",
+					"target": "double",
+					"sourceHandle": "item",
+					"targetHandle": "eea4cecc-824c-4632-a970-c46c18fe0bde"
+				},
+				{
+					"id": "2",
+					"source": "double",
+					"target": "end",
+					"sourceHandle": "eac37b1d-0ab4-43da-927e-ac0c96005c13",
+					"targetHandle": "item"
+				},
+				{
+					"id": "3",
+					"source": "end",
+					"target": "out",
+					"sourceHandle": "item",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

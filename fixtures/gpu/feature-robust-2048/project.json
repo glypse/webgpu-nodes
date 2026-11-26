@@ -1,0 +1,312 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "uv",
+					"type": "uv",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "source",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "scale",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 256,
+								"y": 256
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "loop",
+					"type": "pass-repeat-input",
+					"data": {
+						"values": {
+							"iterations": 2
+						},
+						"pairedOutput": "end"
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "end",
+					"type": "pass-repeat-output",
+					"data": {
+						"items": [
+							{
+								"id": "tex",
+								"label": "Tex",
+								"type": "texture",
+								"size": "scale",
+								"format": "rgba32float"
+							}
+						],
+						"values": {
+							"scale:tex": 1
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "offset",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0.125,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec2f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "moved",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "before",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "next",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "scale",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 256,
+								"y": 256
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "final",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "uv",
+					"target": "source",
+					"sourceHandle": "uv",
+					"targetHandle": "item"
+				},
+				{
+					"id": "1",
+					"source": "source",
+					"target": "loop",
+					"sourceHandle": "item",
+					"targetHandle": "tex"
+				},
+				{
+					"id": "2",
+					"source": "uv",
+					"target": "moved",
+					"sourceHandle": "uv",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "3",
+					"source": "offset",
+					"target": "moved",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "4",
+					"source": "moved",
+					"target": "before",
+					"sourceHandle": "result",
+					"targetHandle": "uv"
+				},
+				{
+					"id": "5",
+					"source": "loop",
+					"target": "before",
+					"sourceHandle": "tex",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "6",
+					"source": "before",
+					"target": "next",
+					"sourceHandle": "color",
+					"targetHandle": "item"
+				},
+				{
+					"id": "7",
+					"source": "next",
+					"target": "end",
+					"sourceHandle": "item",
+					"targetHandle": "tex"
+				},
+				{
+					"id": "8",
+					"source": "end",
+					"target": "final",
+					"sourceHandle": "tex",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "9",
+					"source": "uv",
+					"target": "final",
+					"sourceHandle": "uv",
+					"targetHandle": "uv"
+				},
+				{
+					"id": "10",
+					"source": "final",
+					"target": "out",
+					"sourceHandle": "color",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

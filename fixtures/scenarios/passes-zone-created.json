@@ -1,0 +1,45 @@
+{
+	"description": "A passes zone is created as its own paired boundary nodes.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "createZone",
+			"args": [
+				"passes",
+				{
+					"x": 0,
+					"y": 0
+				}
+			]
+		}
+	],
+	"expect": {
+		"results": ["id1"],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"id1": "pass-repeat-input",
+					"id2": "pass-repeat-output"
+				}
+			}
+		}
+	}
+}

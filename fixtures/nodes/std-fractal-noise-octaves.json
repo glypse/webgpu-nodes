@@ -1,0 +1,631 @@
+{
+	"node": "std-fractal-noise-octaves",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Value, vec2f, Type=fBm, Variant=Fast, Orientation=Standard",
+			"types": {
+				"Coordinates": "vec2f"
+			},
+			"values": {
+				"Type": 0,
+				"Variant": 0,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec2f, Type=Hybrid Multifractal, Variant=Fast, Orientation=Y Vertical",
+			"types": {
+				"Coordinates": "vec2f"
+			},
+			"values": {
+				"Type": 2,
+				"Variant": 0,
+				"Orientation": 1
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec2f, Type=Ridged Multifractal, Variant=Smooth, Orientation=Standard",
+			"types": {
+				"Coordinates": "vec2f"
+			},
+			"values": {
+				"Type": 4,
+				"Variant": 1,
+				"Orientation": 0
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec3f, Type=Multifractal, Variant=Fast, Orientation=XZ Plane",
+			"types": {
+				"Coordinates": "vec3f"
+			},
+			"values": {
+				"Type": 1,
+				"Variant": 0,
+				"Orientation": 3
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec3f, Type=Hybrid Multifractal, Variant=Smooth, Orientation=XZ Plane",
+			"types": {
+				"Coordinates": "vec3f"
+			},
+			"values": {
+				"Type": 2,
+				"Variant": 1,
+				"Orientation": 3
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec3f, Type=Ridged Multifractal, Variant=Fast, Orientation=XZ Plane",
+			"types": {
+				"Coordinates": "vec3f"
+			},
+			"values": {
+				"Type": 4,
+				"Variant": 0,
+				"Orientation": 3
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Type=fBm, Variant=Fast, Orientation=Classic",
+			"types": {
+				"Coordinates": "vec4f"
+			},
+			"values": {
+				"Type": 0,
+				"Variant": 0,
+				"Orientation": 6
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Type=Multifractal, Variant=Fast, Orientation=XY and ZW Planes",
+			"types": {
+				"Coordinates": "vec4f"
+			},
+			"values": {
+				"Type": 1,
+				"Variant": 0,
+				"Orientation": 5
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Type=Hybrid Multifractal, Variant=Fast, Orientation=XYZ Volume",
+			"types": {
+				"Coordinates": "vec4f"
+			},
+			"values": {
+				"Type": 2,
+				"Variant": 0,
+				"Orientation": 4
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Type=Heterogeneous Terrain, Variant=Fast, Orientation=XZ Plane",
+			"types": {
+				"Coordinates": "vec4f"
+			},
+			"values": {
+				"Type": 3,
+				"Variant": 0,
+				"Orientation": 3
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Type=Ridged Multifractal, Variant=Fast, Orientation=XY Plane",
+			"types": {
+				"Coordinates": "vec4f"
+			},
+			"values": {
+				"Type": 4,
+				"Variant": 0,
+				"Orientation": 2
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Value, vec4f, Type=Ridged Multifractal, Variant=Smooth, Orientation=Classic",
+			"types": {
+				"Coordinates": "vec4f"
+			},
+			"values": {
+				"Type": 4,
+				"Variant": 1,
+				"Orientation": 6
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Offset": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Gain": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Value",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

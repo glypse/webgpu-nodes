@@ -1,0 +1,6 @@
+{
+	"node": "test-invalid-wgsl",
+	"skip": "a developer aid that fails on purpose",
+	"cases": [],
+	"sweeps": []
+}

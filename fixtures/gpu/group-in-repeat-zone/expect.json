@@ -1,0 +1,31 @@
+{
+	"description": "A group in a repeat zone over frame values runs in every iteration: time 3 doubled three times is 24.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba16float",
+	"frames": [
+		{
+			"time": 3,
+			"delta": 0.016666666666666666,
+			"frame": 180
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [24, null, null, null]
+				}
+			]
+		}
+	]
+}

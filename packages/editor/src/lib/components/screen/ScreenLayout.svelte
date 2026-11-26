@@ -81,7 +81,7 @@
 	}
 
 	function apply(screen: Screen | undefined) {
-		if (screen) graph.setScreen(screen);
+		if (screen) graph.apply({ kind: "setScreen", args: [screen] });
 	}
 
 	// ── Edges ────────────────────────────────────────────────────────────────
@@ -97,7 +97,10 @@
 		const position = pendingEdge;
 		pendingEdge = null;
 		if (drag && position !== null)
-			graph.setScreen(moveEdge(drag.screen, drag.edge, position, min));
+			graph.apply({
+				kind: "setScreen",
+				args: [moveEdge(drag.screen, drag.edge, position, min)],
+			});
 	}
 
 	function handlePointerMove(event: PointerEvent) {
@@ -407,7 +410,7 @@
 		setEditorType(areaId, type) {
 			const area = findArea(graph.screen, areaId);
 			if (!area || area.editor.type === type) return;
-			graph.setAreaEditor(areaId, defaultEditor(type));
+			graph.apply({ kind: "setAreaEditor", args: [areaId, defaultEditor(type)] });
 		},
 		get maximized() {
 			return maximized;

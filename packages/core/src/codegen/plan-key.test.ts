@@ -37,6 +37,29 @@ describe("planKey", () => {
 		expect(planKey(plan("rgba16float", 0.5))).toBe(planKey(plan("rgba16float", 0.25)));
 	});
 
+	it("differs for each format of a texture read by a Load Texel, the shader being the same", () => {
+		const keys = new Set(
+			(["rgba16float", "rgba8unorm", "rgba32float"] as const).map((format) => {
+				const nodes: TestNode[] = [
+					{ id: "uv", type: "uv" },
+					{
+						id: "drawn",
+						type: "render-texture",
+						data: { items: [{ id: "item", label: "Item", type: "vec4f", format }] },
+					},
+					{ id: "read", type: "load-texel" },
+				];
+				const edges: TestEdge[] = [
+					["uv", "uv", "drawn", "item"],
+					["drawn", "item", "read", "texture"],
+					["read", "value", "out", "color"],
+				];
+				return planKey(generateRenderPlan(managerFor(nodes, edges)));
+			}),
+		);
+		expect(keys.size).toBe(3);
+	});
+
 	describe("of a hand-made plan", () => {
 		const program = (code: string): ShaderProgram => ({
 			code,

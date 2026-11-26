@@ -80,7 +80,7 @@ export abstract class PreviewModel extends FrameModel {
 		const existing = definition.outputs.find((h) => h.viewer);
 		if (existing) return existing;
 		const viewer: GroupHandleDef = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			label: "Viewer",
 			type: { inferred: true },
 			viewer: true,
@@ -92,7 +92,7 @@ export abstract class PreviewModel extends FrameModel {
 	/** Link `source` into an input of `doc`, replacing what fed it. */
 	private linkInto(doc: HydratedGraphDocument, source: Source, target: Source) {
 		const edge: GraphEdge = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			source: source.node,
 			sourceHandle: source.handle,
 			target: target.node,

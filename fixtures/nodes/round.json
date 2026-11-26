@@ -1,0 +1,142 @@
+{
+	"node": "round",
+	"cases": [
+		{
+			"note": "rounds 0.5 to the even neighbour, 0",
+			"inputs": {
+				"e": [[0.5]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "rounds 1.5 to the even neighbour, 2",
+			"inputs": {
+				"e": [[1.5]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "rounds 2.5 to the even neighbour, 2",
+			"inputs": {
+				"e": [[2.5]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "rounds 3.5 to the even neighbour, 4",
+			"inputs": {
+				"e": [[3.5]]
+			},
+			"output": "result",
+			"expect": [4]
+		},
+		{
+			"note": "rounds -1.5 to the even neighbour, -2",
+			"inputs": {
+				"e": [[-1.5]]
+			},
+			"output": "result",
+			"expect": [-2]
+		},
+		{
+			"note": "rounds -2.5 to the even neighbour, -2",
+			"inputs": {
+				"e": [[-2.5]]
+			},
+			"output": "result",
+			"expect": [-2]
+		},
+		{
+			"note": "keeps the sign of -0.5 rounded to -0",
+			"inputs": {
+				"e": [[-0.5]]
+			},
+			"output": "result",
+			"expect": ["-0"]
+		},
+		{
+			"note": "rounds 2.4 to the nearest, 2",
+			"inputs": {
+				"e": [[2.4]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "rounds -2.6 to the nearest, -3",
+			"inputs": {
+				"e": [[-2.6]]
+			},
+			"output": "result",
+			"expect": [-3]
+		},
+		{
+			"note": "rounds just under a half down",
+			"inputs": {
+				"e": [[0.49999997]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "leaves a large f32 unchanged",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [3.0000000054977558e38]
+		},
+		{
+			"note": "rounds vec4f to even component-wise",
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[0.5, 1.5, 2.5, -2.5]]
+			},
+			"output": "result",
+			"expect": [0, 2, 2, -2]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

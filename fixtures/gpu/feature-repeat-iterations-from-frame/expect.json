@@ -1,0 +1,112 @@
+{
+	"description": "A repeat zone whose iteration count is the frame index: each frame adds one per frame it has passed, so the frame's index is the item.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.016666666666666666,
+			"delta": 0.016666666666666666,
+			"frame": 1
+		},
+		{
+			"time": 0.03333333333333333,
+			"delta": 0.016666666666666666,
+			"frame": 2
+		},
+		{
+			"time": 0.05,
+			"delta": 0.016666666666666666,
+			"frame": 3
+		},
+		{
+			"time": 0.06666666666666667,
+			"delta": 0.016666666666666666,
+			"frame": 4
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [1, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [2, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [3, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 4,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [4, null, null, null]
+				}
+			]
+		}
+	]
+}

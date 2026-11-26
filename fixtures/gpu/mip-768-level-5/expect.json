@@ -1,0 +1,24 @@
+{
+	"description": "A 768 px tall texture sampled at mip level 5 stays in place: its green at 90 % of the height is the UV there, within 1.5 px. A half float's step at this value is about a pixel.",
+	"size": {
+		"width": 64,
+		"height": 768
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.001953125,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 32,
+					"y": 691,
+					"rgba": [null, 0.099609375, null, null]
+				}
+			]
+		}
+	]
+}

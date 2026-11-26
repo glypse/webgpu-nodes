@@ -1,0 +1,39 @@
+{
+	"description": "The Resolution of a 64 by 64 canvas and the UV at the corners' pixel centres, read back with what the canvas holds.",
+	"size": {
+		"width": 64,
+		"height": 64
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [64, 64, 0.0078125, 0.9921875]
+				},
+				{
+					"x": 63,
+					"y": 0,
+					"rgba": [64, 64, 0.9921875, 0.9921875]
+				},
+				{
+					"x": 0,
+					"y": 63,
+					"rgba": [64, 64, 0.0078125, 0.0078125]
+				},
+				{
+					"x": 63,
+					"y": 63,
+					"rgba": [64, 64, 0.9921875, 0.0078125]
+				}
+			]
+		}
+	]
+}

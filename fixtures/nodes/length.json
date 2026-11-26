@@ -1,0 +1,169 @@
+{
+	"node": "length",
+	"cases": [
+		{
+			"note": "measures a negative f32 as its magnitude",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[-3]]
+			},
+			"output": "result",
+			"expect": [3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures a zero f32",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures vec2f",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": [[3, 4]]
+			},
+			"output": "result",
+			"expect": [5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures vec3f",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": [[2, 3, 6]]
+			},
+			"output": "result",
+			"expect": [7],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures vec4f",
+			"types": {
+				"e1": "vec4f"
+			},
+			"inputs": {
+				"e1": [[1, 1, 1, 1]]
+			},
+			"output": "result",
+			"expect": [2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "measures a negative vec3f",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": [[-2, 0, 0]]
+			},
+			"output": "result",
+			"expect": [2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec2f sweep",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec4f sweep",
+			"types": {
+				"e1": "vec4f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	]
+}

@@ -1,0 +1,499 @@
+{
+	"node": "std-voronoi-nearest",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "F1 Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F1 Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F1 Distance, vec2f, Metric=Manhattan",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F1 Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F2 Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F2 Distance, vec2f, Metric=Chebyshev",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F1 Point, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F1 Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F1 Point, vec2f, Metric=Minkowski",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 3
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F1 Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F2 Point, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F2 Point, vec3f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec3f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F1 Offset, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F1 Offset",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F1 Offset, vec3f, Metric=Manhattan",
+			"types": {
+				"Cell": "vec3f"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F1 Offset",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F2 Offset, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Offset",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "F2 Offset, vec3f, Metric=Chebyshev",
+			"types": {
+				"Cell": "vec3f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Offset",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

@@ -55,7 +55,7 @@
 		componentInputs.forEach((c, i) => {
 			if (!connected.has(c)) values[c] = next[i] ?? 0;
 		});
-		graph.updateNodeData(id, { values }, { retype: false });
+		graph.apply({ kind: "updateNodeData", args: [id, { values }, { retype: false }] });
 	}
 </script>
 

@@ -1,0 +1,22 @@
+{
+	"node": "resolution",
+	"cases": [
+		{
+			"note": "gives the canvas size, here 1 by 1",
+			"inputs": {},
+			"output": "resolution",
+			"expect": [1, 1]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "the canvas size across a 16 by 16 canvas",
+			"inputs": {},
+			"output": "resolution",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

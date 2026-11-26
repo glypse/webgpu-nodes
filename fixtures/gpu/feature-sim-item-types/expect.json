@@ -1,0 +1,92 @@
+{
+	"description": "A simulation zone with an i32 and a vec3f item, four frames: the counter counts each frame from its start, the vec3f drifts by 1 in x, and the delta time is the step since the last frame.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.25,
+			"delta": 0.016666666666666666,
+			"frame": 1
+		},
+		{
+			"time": 0.5,
+			"delta": 0.016666666666666666,
+			"frame": 2
+		},
+		{
+			"time": 0.75,
+			"delta": 0.016666666666666666,
+			"frame": 3
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, 1, 1, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.25, 2, 2, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.5, 3, 3, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.75, 4, 4, 1]
+				}
+			]
+		}
+	]
+}

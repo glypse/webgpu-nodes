@@ -1,0 +1,6 @@
+{
+	"node": "delta",
+	"skip": "reads the frame clock, which a case can't set: the GPU fixtures pin it",
+	"cases": [],
+	"sweeps": []
+}

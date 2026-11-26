@@ -45,7 +45,7 @@
 		if (tracked.length === 0) return;
 		tracked.push(graph.settings, graph.assets);
 		const timer = setTimeout(() => {
-			graph.recordHistory();
+			graph.apply({ kind: "recordHistory", args: [] });
 		}, HISTORY_DEBOUNCE_MS);
 		return () => {
 			clearTimeout(timer);
@@ -144,8 +144,8 @@
 		const key = event.key.toLowerCase();
 		if (mod && (key === "z" || key === "y")) {
 			event.preventDefault();
-			if (key === "y" || event.shiftKey) graph.redo();
-			else graph.undo();
+			if (key === "y" || event.shiftKey) graph.apply({ kind: "redo", args: [] });
+			else graph.apply({ kind: "undo", args: [] });
 			return;
 		}
 		if (mod || event.altKey) return;

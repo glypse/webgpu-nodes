@@ -97,7 +97,13 @@ export class GraphView implements DocumentView {
 		const start = drag?.from.get(anchorId);
 		if (!drag || !start) return;
 		if (drag.inside.size > 0) {
-			this.graph.moveNodes(drag.inside, { x: position.x - start.x, y: position.y - start.y });
+			this.graph.apply({
+				kind: "moveNodes",
+				args: [
+					Object.fromEntries(drag.inside),
+					{ x: position.x - start.x, y: position.y - start.y },
+				],
+			});
 		}
 		const anchor = this.document.nodesById.get(anchorId);
 		const frames = this.graph.frameAnalysis(this.document);
@@ -119,7 +125,11 @@ export class GraphView implements DocumentView {
 	cancelDrag() {
 		const drag = this.drag;
 		if (!drag) return;
-		if (drag.inside.size > 0) this.graph.moveNodes(drag.inside, { x: 0, y: 0 });
+		if (drag.inside.size > 0)
+			this.graph.apply({
+				kind: "moveNodes",
+				args: [Object.fromEntries(drag.inside), { x: 0, y: 0 }],
+			});
 		this.drag = null;
 		this.loose = undefined;
 		this.dropFrame = null;
@@ -133,7 +143,8 @@ export class GraphView implements DocumentView {
 	) {
 		const frames = this.graph.frameAnalysis(this.document);
 		const targets = dropTargets(this.document, frames, this.frameBoxes, nodeIds, moving);
-		for (const [target, ids] of targets) this.graph.setNodesFrame(ids, target);
+		for (const [target, ids] of targets)
+			this.graph.apply({ kind: "setNodesFrame", args: [ids, target] });
 	}
 
 	get pathLabels() {
@@ -184,17 +195,17 @@ export class GraphView implements DocumentView {
 
 	enterGroup(groupNodeId: string) {
 		this.activate();
-		this.graph.enterGroup(groupNodeId);
+		this.graph.apply({ kind: "enterGroup", args: [groupNodeId] });
 	}
 
 	exitGroup() {
 		this.activate();
-		this.graph.exitGroup();
+		this.graph.apply({ kind: "exitGroup", args: [] });
 	}
 
 	jumpToPath(path: string[]) {
 		this.activate();
-		this.graph.setAreaPath(this.areaId, path);
+		this.graph.apply({ kind: "setAreaPath", args: [this.areaId, path] });
 	}
 
 	/** The camera the area left its document at, if any. */
@@ -204,7 +215,11 @@ export class GraphView implements DocumentView {
 
 	set viewport(viewport: Viewport | undefined) {
 		const area = this.graph.graphArea(this.areaId);
-		if (area) this.graph.setAreaEditor(this.areaId, { ...area.editor, viewport });
+		if (area)
+			this.graph.apply({
+				kind: "setAreaEditor",
+				args: [this.areaId, { ...area.editor, viewport }],
+			});
 	}
 }
 

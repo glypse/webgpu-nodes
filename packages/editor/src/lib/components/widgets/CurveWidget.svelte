@@ -22,6 +22,6 @@
 	points={curve ?? LINEAR_CURVE}
 	{disabled}
 	onchange={(points: CurvePoint[]) => {
-		graph.setCurve(id, points);
+		graph.apply({ kind: "setCurve", args: [id, points] });
 	}}
 />

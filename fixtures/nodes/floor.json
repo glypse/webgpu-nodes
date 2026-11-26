@@ -1,0 +1,121 @@
+{
+	"node": "floor",
+	"cases": [
+		{
+			"note": "rounds f32s down",
+			"inputs": {
+				"e": [[1.7]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "rounds a negative f32 down",
+			"inputs": {
+				"e": [[-1.2]]
+			},
+			"output": "result",
+			"expect": [-2]
+		},
+		{
+			"note": "keeps a whole f32",
+			"inputs": {
+				"e": [[2]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "rounds -0.5 to -1",
+			"inputs": {
+				"e": [[-0.5]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "rounds 0.5 to 0",
+			"inputs": {
+				"e": [[0.5]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "leaves a large f32 unchanged",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [3.0000000054977558e38]
+		},
+		{
+			"note": "leaves a large negative f32 unchanged",
+			"inputs": {
+				"e": [[-3e38]]
+			},
+			"output": "result",
+			"expect": [-3.0000000054977558e38]
+		},
+		{
+			"note": "floors vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[1.5, -1.5, 2]]
+			},
+			"output": "result",
+			"expect": [1, -2, 2]
+		},
+		{
+			"note": "floors vec2f component-wise",
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[0.25, -0.25]]
+			},
+			"output": "result",
+			"expect": [0, -1]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

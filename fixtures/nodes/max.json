@@ -1,0 +1,192 @@
+{
+	"node": "max",
+	"cases": [
+		{
+			"note": "takes the greatest of f32s",
+			"types": {},
+			"inputs": {
+				"operands": [[3], [1], [2]]
+			},
+			"output": "result",
+			"expect": [3]
+		},
+		{
+			"note": "takes the greatest of negatives",
+			"types": {},
+			"inputs": {
+				"operands": [[-1], [-2]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "compares large f32s",
+			"types": {},
+			"inputs": {
+				"operands": [[3e38], [-3e38]]
+			},
+			"output": "result",
+			"expect": [3.0000000054977558e38]
+		},
+		{
+			"note": "compares i32 extremes",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[-2147483648], [-1]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "takes the greatest u32 past the sign bit",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": [[4294967295], [1]]
+			},
+			"output": "result",
+			"expect": [4294967295]
+		},
+		{
+			"note": "takes the greatest of vec3f component-wise",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": [
+					[1, 5, 3],
+					[4, 2, 6]
+				]
+			},
+			"output": "result",
+			"expect": [4, 5, 6]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep reaching the only operand",
+			"types": {
+				"operands": "f32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep reaching the only operand",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep reaching the only operand",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep reaching the only operand",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep over two operands",
+			"types": {
+				"operands": "f32"
+			},
+			"inputs": {
+				"operands": [
+					{
+						"kind": "uv",
+						"from": -2,
+						"to": 2
+					},
+					{
+						"kind": "uv",
+						"from": 2,
+						"to": -2
+					}
+				]
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep over two operands",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": [
+					{
+						"kind": "uv",
+						"from": -2,
+						"to": 2
+					},
+					{
+						"kind": "uv",
+						"from": 2,
+						"to": -2
+					}
+				]
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

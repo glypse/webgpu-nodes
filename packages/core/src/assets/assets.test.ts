@@ -73,7 +73,7 @@ describe("assets", () => {
 		);
 		source.addAsset(image);
 		source.addAsset({ ...image, id: "unused", hash: "b".repeat(64) });
-		source.groupSelection(new Set(["a", "b"]));
+		source.groupSelection(["a", "b"]);
 		const ref = source.root.nodes.find((n) => n.type === "node-group")?.group?.definitionRef;
 		if (!ref) throw new Error("not grouped");
 		const { json, assets } = source.exportGroups(ref);

@@ -19,7 +19,10 @@
 	];
 
 	function update(patch: Partial<ProjectSettings["canvas"]>) {
-		graph.updateSettings({ ...graph.settings, canvas: { ...graph.settings.canvas, ...patch } });
+		graph.apply({
+			kind: "updateSettings",
+			args: [{ ...graph.settings, canvas: { ...graph.settings.canvas, ...patch } }],
+		});
 	}
 
 	function gcd(a: number, b: number): number {

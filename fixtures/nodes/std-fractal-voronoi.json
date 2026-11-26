@@ -1,0 +1,1593 @@
+{
+	"node": "std-fractal-voronoi",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Distance, vec2f, Metric=Manhattan",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Color, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Color, vec2f, Metric=Chebyshev",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Position, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Position",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Position, vec2f, Metric=Minkowski",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 3
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Position",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Distance, vec3f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Color, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Color, vec3f, Metric=Manhattan",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Position, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Position",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Position, vec3f, Metric=Chebyshev",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Position",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Smooth Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Smooth Distance, vec3f, Metric=Minkowski",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {
+				"Metric": 3
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Smooth Color, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Smooth Color, vec4f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Smooth Position, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Position",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Smooth Position, vec4f, Metric=Manhattan",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Position",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Distance to Edge, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance to Edge",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Distance to Edge, vec4f, Metric=Chebyshev",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance to Edge",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Distance to Edge, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Distance to Edge",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "F2 Distance to Edge, vec4f, Metric=Minkowski",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {
+				"Metric": 3
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "F2 Distance to Edge",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Cell, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Cell",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Cell, f32, Metric=Euclidean",
+			"types": {
+				"Vector": "f32"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Cell",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Radius, vec2f, Metric=Euclidean",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Radius",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		},
+		{
+			"note": "Radius, f32, Metric=Manhattan",
+			"types": {
+				"Vector": "f32"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Scale": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Radius",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02,
+			"stride": 4
+		}
+	]
+}

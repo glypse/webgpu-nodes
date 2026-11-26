@@ -1,0 +1,145 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "state",
+					"type": "simulation-input",
+					"data": {
+						"pairedOutput": "stateEnd",
+						"values": {
+							"acc": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "stateEnd",
+					"type": "simulation-output",
+					"data": {
+						"items": [
+							{
+								"id": "acc",
+								"label": "Acc",
+								"type": "f32"
+							}
+						],
+						"values": {
+							"skip": false
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "next",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "state",
+					"target": "next",
+					"sourceHandle": "acc",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "1",
+					"source": "state",
+					"target": "next",
+					"sourceHandle": "delta-time",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "2",
+					"source": "next",
+					"target": "stateEnd",
+					"sourceHandle": "result",
+					"targetHandle": "acc"
+				},
+				{
+					"id": "3",
+					"source": "stateEnd",
+					"target": "out",
+					"sourceHandle": "acc",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

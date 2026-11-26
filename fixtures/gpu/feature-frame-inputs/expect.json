@@ -1,0 +1,112 @@
+{
+	"description": "Time, Delta and Frame at five frames, given in order: the frame inputs are the ones each frame was drawn with, the frame index read back as a float.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.5,
+			"delta": 0.03333333333333333,
+			"frame": 1
+		},
+		{
+			"time": 1.25,
+			"delta": 0.1,
+			"frame": 7
+		},
+		{
+			"time": 3.75,
+			"delta": 0.0625,
+			"frame": 300
+		},
+		{
+			"time": 10,
+			"delta": 0.25,
+			"frame": 1000
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, 0.016666666666666666, 0, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.5, 0.03333333333333333, 1, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [1.25, 0.1, 7, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [3.75, 0.0625, 300, 1]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 4,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [10, 0.25, 1000, 1]
+				}
+			]
+		}
+	]
+}

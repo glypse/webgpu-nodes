@@ -1,0 +1,132 @@
+{
+	"description": "A simulation accumulating its delta time over frames 0 to 5: frame 0 starts from the initial value, then each frame adds 1 / 60.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.016666666666666666,
+			"delta": 0.016666666666666666,
+			"frame": 1
+		},
+		{
+			"time": 0.03333333333333333,
+			"delta": 0.016666666666666666,
+			"frame": 2
+		},
+		{
+			"time": 0.05,
+			"delta": 0.016666666666666666,
+			"frame": 3
+		},
+		{
+			"time": 0.06666666666666667,
+			"delta": 0.016666666666666666,
+			"frame": 4
+		},
+		{
+			"time": 0.08333333333333333,
+			"delta": 0.016666666666666666,
+			"frame": 5
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.016666666666666666, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.03333333333333333, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.05, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 4,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.06666666666666667, null, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 5,
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.08333333333333333, null, null, null]
+				}
+			]
+		}
+	]
+}

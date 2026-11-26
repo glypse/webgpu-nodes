@@ -1,0 +1,84 @@
+{
+	"description": "A link that would close a cycle is refused, leaving the links as they were.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "d",
+						"type": "declare",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "sum",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->sum.operands",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "sum",
+						"targetHandle": "operands"
+					},
+					{
+						"id": "sum.result->out.color",
+						"source": "sum",
+						"sourceHandle": "result",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "connect",
+			"args": [
+				{
+					"source": "sum",
+					"sourceHandle": "result",
+					"target": "sum",
+					"targetHandle": "operands"
+				}
+			]
+		}
+	],
+	"expect": {
+		"results": [false],
+		"documents": {
+			"": {
+				"links": ["sum.result -> out.color", "t.seconds -> sum.operands"]
+			}
+		}
+	}
+}

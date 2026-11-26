@@ -1,0 +1,187 @@
+{
+	"node": "std-lattice-neighbor",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Offset, vec2f",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Radius": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Offset",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Offset, vec3f",
+			"types": {
+				"Cell": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Radius": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Offset",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Neighbor, vec2f",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Radius": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Neighbor",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Neighbor, vec4f",
+			"types": {
+				"Cell": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Radius": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Neighbor",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Count, vec2f",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Radius": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Count",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Count, f32",
+			"types": {
+				"Cell": "f32"
+			},
+			"values": {},
+			"inputs": {
+				"Index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Cell": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Radius": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Count",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

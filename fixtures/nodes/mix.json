@@ -1,0 +1,224 @@
+{
+	"node": "mix",
+	"cases": [
+		{
+			"note": "interpolates f32s between the endpoints",
+			"inputs": {
+				"e1": [[0]],
+				"e2": [[10]],
+				"e3": [[0.25]]
+			},
+			"output": "result",
+			"expect": [2.5]
+		},
+		{
+			"note": "gives the first endpoint at 0",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[4]],
+				"e3": [[0]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "gives the second endpoint at 1",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[4]],
+				"e3": [[1]]
+			},
+			"output": "result",
+			"expect": [4]
+		},
+		{
+			"note": "gives the midpoint at 0.5",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[4]],
+				"e3": [[0.5]]
+			},
+			"output": "result",
+			"expect": [3]
+		},
+		{
+			"note": "extrapolates past the second endpoint",
+			"inputs": {
+				"e1": [[0]],
+				"e2": [[10]],
+				"e3": [[2]]
+			},
+			"output": "result",
+			"expect": [20]
+		},
+		{
+			"note": "extrapolates before the first endpoint",
+			"inputs": {
+				"e1": [[0]],
+				"e2": [[10]],
+				"e3": [[-1]]
+			},
+			"output": "result",
+			"expect": [-10]
+		},
+		{
+			"note": "interpolates large f32s without overflowing",
+			"inputs": {
+				"e1": [[-3e38]],
+				"e2": [[3e38]],
+				"e3": [[0.5]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "interpolates a typical f32 value",
+			"inputs": {
+				"e1": [[0.1]],
+				"e2": [[0.2]],
+				"e3": [[0.3]]
+			},
+			"output": "result",
+			"expect": [0.12999999523162842],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "interpolates vec3f endpoints",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": [[0, 0, 0]],
+				"e2": [[1, 2, 3]],
+				"e3": [[0.5, 0.5, 0.5]]
+			},
+			"output": "result",
+			"expect": [0.5, 1, 1.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "interpolates each vec2f component by its own factor",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": [[0, 10]],
+				"e2": [[10, 20]],
+				"e3": [[0.5, 0.25]]
+			},
+			"output": "result",
+			"expect": [5, 12.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "interpolates vec4f with a factor per component",
+			"types": {
+				"e1": "vec4f"
+			},
+			"inputs": {
+				"e1": [[0, 0, 0, 0]],
+				"e2": [[4, 4, 4, 4]],
+				"e3": [[0, 0.25, 0.5, 1]]
+			},
+			"output": "result",
+			"expect": [0, 1, 2, 4],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep of the factor",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "constant",
+					"value": [0]
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [10]
+				},
+				"e3": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep of the factor",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [1, 2, 3]
+				},
+				"e3": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec4f sweep of the factor",
+			"types": {
+				"e1": "vec4f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "constant",
+					"value": [0, 0, 0, 0]
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [4, 4, 4, 4]
+				},
+				"e3": {
+					"kind": "uv",
+					"from": -1,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	]
+}

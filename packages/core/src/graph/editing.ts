@@ -6,6 +6,7 @@ import type {
 	GraphNode,
 	HydratedGraphDocument,
 } from "./document";
+import type { IdSource } from "./ids";
 
 /** Node types delimiting a group's subgraph. */
 export const BOUNDARY_TYPES: ReadonlySet<string> = new Set(["group-input", "group-output"]);
@@ -63,9 +64,10 @@ export function stableStringify(value: unknown): string {
 export function cloneSubgraph(
 	nodes: readonly GraphNode[],
 	edges: readonly GraphDocumentEdge[],
-	offset = { x: 0, y: 0 },
+	offset: { x: number; y: number },
+	newId: IdSource,
 ): { nodes: GraphDocumentNode[]; edges: GraphDocumentEdge[]; idMap: Map<string, string> } {
-	const idMap = new Map(nodes.map((n) => [n.id, crypto.randomUUID()]));
+	const idMap = new Map(nodes.map((n) => [n.id, newId()]));
 	const remap = (id: string) => idMap.get(id) ?? id;
 	return {
 		nodes: nodes.map((n) => ({
@@ -79,7 +81,7 @@ export function cloneSubgraph(
 		edges: edges
 			.filter((e) => idMap.has(e.source) && idMap.has(e.target))
 			.map((e) => ({
-				id: crypto.randomUUID(),
+				id: newId(),
 				source: remap(e.source),
 				target: remap(e.target),
 				sourceHandle: e.sourceHandle,
@@ -161,6 +163,7 @@ export function buildBoundaryNode(
 	deduped: GraphDocumentEdge[][],
 	typeResolver: TypeResolver,
 	position: { x: number; y: number },
+	newId: IdSource,
 ): BoundaryBuildResult {
 	const handleFor = new Map<GraphDocumentEdge[], GroupHandleDef>();
 	const handles: GroupHandleDef[] = [];
@@ -174,7 +177,7 @@ export function buildBoundaryNode(
 			continue;
 		}
 		const handle: GroupHandleDef = {
-			id: crypto.randomUUID(),
+			id: newId(),
 			label: `${prefix} ${String(i + 1)}`,
 			type: typeResolver.inferHandleType(representative),
 		};
@@ -184,7 +187,7 @@ export function buildBoundaryNode(
 
 	return {
 		node: {
-			id: crypto.randomUUID(),
+			id: newId(),
 			type: nodeType,
 			data: {},
 			position,
@@ -199,12 +202,13 @@ export function rewireIncomingGroup(
 	handle: GroupHandleDef,
 	groupInputNodeId: string,
 	groupNodeId: string,
+	newId: IdSource,
 ): { outer: GraphDocumentEdge; inner: GraphDocumentEdge[] } {
 	const representative = group[0];
 	if (!representative) throw new Error("empty group");
 
 	const outer: GraphDocumentEdge = {
-		id: crypto.randomUUID(),
+		id: newId(),
 		source: representative.source,
 		sourceHandle: representative.sourceHandle,
 		target: groupNodeId,
@@ -212,7 +216,7 @@ export function rewireIncomingGroup(
 	};
 
 	const inner: GraphDocumentEdge[] = group.map((edge) => ({
-		id: crypto.randomUUID(),
+		id: newId(),
 		source: groupInputNodeId,
 		sourceHandle: handle.id,
 		target: edge.target,
@@ -227,12 +231,13 @@ export function rewireOutgoingGroup(
 	handle: GroupHandleDef,
 	groupOutputNodeId: string,
 	groupNodeId: string,
+	newId: IdSource,
 ): { outer: GraphDocumentEdge[]; inner: GraphDocumentEdge } {
 	const representative = group[0];
 	if (!representative) throw new Error("empty group");
 
 	const inner: GraphDocumentEdge = {
-		id: crypto.randomUUID(),
+		id: newId(),
 		source: representative.source,
 		sourceHandle: representative.sourceHandle,
 		target: groupOutputNodeId,
@@ -240,7 +245,7 @@ export function rewireOutgoingGroup(
 	};
 
 	const outer: GraphDocumentEdge[] = group.map((edge) => ({
-		id: crypto.randomUUID(),
+		id: newId(),
 		source: groupNodeId,
 		sourceHandle: handle.id,
 		target: edge.target,

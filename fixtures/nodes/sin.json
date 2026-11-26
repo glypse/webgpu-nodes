@@ -1,0 +1,118 @@
+{
+	"node": "sin",
+	"cases": [
+		{
+			"note": "gives 0 at 0",
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives 1 at pi/2",
+			"inputs": {
+				"e": [[1.5707963267948966]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives -1 at -pi/2",
+			"inputs": {
+				"e": [[-1.5707963267948966]]
+			},
+			"output": "result",
+			"expect": [-1],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives 0 at pi",
+			"inputs": {
+				"e": [[3.141592653589793]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives sin(1)",
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [0.8414709568023682],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		},
+		{
+			"note": "takes vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[0, 1.5707963267948966, -1.5707963267948966]]
+			},
+			"output": "result",
+			"expect": [0, 1, -1],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over [-pi, pi]",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3.141592653589793,
+					"to": 3.141592653589793
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep over [-pi, pi]",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3.141592653589793,
+					"to": 3.141592653589793
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0
+			}
+		}
+	]
+}

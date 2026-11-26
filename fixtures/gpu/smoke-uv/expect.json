@@ -1,0 +1,18 @@
+{
+	"description": "The UV node feeds the output: each pixel's red and green are its centre's UV (y up), so the top-left pixel is (1/8, 7/8) of a 4 by 4 canvas.",
+	"size": { "width": 4, "height": 4 },
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": { "abs": 0 },
+			"pixels": [
+				{ "x": 0, "y": 0, "rgba": [0.125, 0.875, null, null] },
+				{ "x": 3, "y": 3, "rgba": [0.875, 0.125, null, null] }
+			]
+		},
+		{
+			"kind": "cpu",
+			"tolerance": { "abs": 0 }
+		}
+	]
+}

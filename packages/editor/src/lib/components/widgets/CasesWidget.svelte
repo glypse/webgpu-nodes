@@ -23,7 +23,7 @@
 		class="nodrag"
 		title="Remove the last case"
 		disabled={disabled || count <= 1}
-		onclick={() => graph.setIndexSwitchCases(id, count - 1)}
+		onclick={() => graph.apply({ kind: "setIndexSwitchCases", args: [id, count - 1] })}
 	>
 		<MinusIcon />
 	</Button>
@@ -33,7 +33,7 @@
 		class="nodrag"
 		title="Add a case"
 		{disabled}
-		onclick={() => graph.setIndexSwitchCases(id, count + 1)}
+		onclick={() => graph.apply({ kind: "setIndexSwitchCases", args: [id, count + 1] })}
 	>
 		<PlusIcon />
 	</Button>

@@ -1,0 +1,122 @@
+{
+	"node": "std-fractal-octave",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Scale",
+			"values": {},
+			"inputs": {
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Scale",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Amplitude",
+			"values": {},
+			"inputs": {
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Amplitude",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Power",
+			"values": {},
+			"inputs": {
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Power",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Octaves",
+			"values": {},
+			"inputs": {
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Detail": {
+					"kind": "constant",
+					"value": [3.5]
+				},
+				"Roughness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Lacunarity": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Octaves",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

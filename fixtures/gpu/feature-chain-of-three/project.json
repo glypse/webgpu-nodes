@@ -1,0 +1,292 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "uv",
+					"type": "uv",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "first",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "pixels",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 8,
+								"y": 8
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "read1",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "second",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "pixels",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 16,
+								"y": 16
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "read2",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "third",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba32float"
+							}
+						],
+						"settings": {
+							"mode": "scale",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 0.5,
+							"pixels": {
+								"x": 256,
+								"y": 256
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "read3",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "uv",
+					"target": "first",
+					"sourceHandle": "uv",
+					"targetHandle": "item"
+				},
+				{
+					"id": "1",
+					"source": "uv",
+					"target": "read1",
+					"sourceHandle": "uv",
+					"targetHandle": "uv"
+				},
+				{
+					"id": "2",
+					"source": "first",
+					"target": "read1",
+					"sourceHandle": "item",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "3",
+					"source": "read1",
+					"target": "second",
+					"sourceHandle": "color",
+					"targetHandle": "item"
+				},
+				{
+					"id": "4",
+					"source": "uv",
+					"target": "read2",
+					"sourceHandle": "uv",
+					"targetHandle": "uv"
+				},
+				{
+					"id": "5",
+					"source": "second",
+					"target": "read2",
+					"sourceHandle": "item",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "6",
+					"source": "read2",
+					"target": "third",
+					"sourceHandle": "color",
+					"targetHandle": "item"
+				},
+				{
+					"id": "7",
+					"source": "second",
+					"target": "third",
+					"sourceHandle": "item",
+					"targetHandle": "like"
+				},
+				{
+					"id": "8",
+					"source": "uv",
+					"target": "read3",
+					"sourceHandle": "uv",
+					"targetHandle": "uv"
+				},
+				{
+					"id": "9",
+					"source": "third",
+					"target": "read3",
+					"sourceHandle": "item",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "10",
+					"source": "read3",
+					"target": "out",
+					"sourceHandle": "color",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

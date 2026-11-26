@@ -11,7 +11,10 @@
 	const RATES = [24, 25, 30, 50, 60, 120];
 
 	function update(patch: Partial<ProjectSettings["timing"]>) {
-		graph.updateSettings({ ...graph.settings, timing: { ...graph.settings.timing, ...patch } });
+		graph.apply({
+			kind: "updateSettings",
+			args: [{ ...graph.settings, timing: { ...graph.settings.timing, ...patch } }],
+		});
 	}
 </script>
 

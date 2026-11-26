@@ -1,0 +1,88 @@
+{
+	"description": "Grouping a selection makes an interface from the links crossing its edge.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "s",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->s.operands",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "s",
+						"targetHandle": "operands"
+					},
+					{
+						"id": "s.result->out.color",
+						"source": "s",
+						"sourceHandle": "result",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "groupSelection",
+			"args": [["s"]]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time",
+					"id6": "node-group"
+				},
+				"links": ["t.seconds -> id6.id1", "id6.id3 -> out.color"]
+			}
+		},
+		"groups": {
+			"id5": {
+				"inputs": [
+					{
+						"id": "id1",
+						"type": "f32"
+					}
+				],
+				"outputs": [
+					{
+						"id": "id3",
+						"type": "f32"
+					}
+				]
+			}
+		}
+	}
+}

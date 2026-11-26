@@ -82,20 +82,20 @@
 		const crossings = crossedLinks(points);
 		if (crossings.length === 0) return;
 		if (mode === "cut") {
-			graph.deleteNodes(
-				[],
-				crossings.map((c) => c.edgeId),
-			);
+			graph.apply({ kind: "deleteNodes", args: [[], crossings.map((c) => c.edgeId)] });
 		} else {
-			graph.rerouteEdges(
-				crossings.map(({ edgeId, position }) => ({
-					edgeId,
-					position: {
-						x: position.x - REROUTE_SIZE / 2,
-						y: position.y - REROUTE_SIZE / 2,
-					},
-				})),
-			);
+			graph.apply({
+				kind: "rerouteEdges",
+				args: [
+					crossings.map(({ edgeId, position }) => ({
+						edgeId,
+						position: {
+							x: position.x - REROUTE_SIZE / 2,
+							y: position.y - REROUTE_SIZE / 2,
+						},
+					})),
+				],
+			});
 		}
 	}
 

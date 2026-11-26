@@ -1,0 +1,83 @@
+{
+	"description": "Undoing zone and group edits in turn brings back the starting project.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "sum",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->sum.operands",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "sum",
+						"targetHandle": "operands"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "createRepeatZone",
+			"args": [
+				{
+					"x": 0,
+					"y": 300
+				}
+			]
+		},
+		{
+			"kind": "recordHistory",
+			"args": []
+		},
+		{
+			"kind": "groupSelection",
+			"args": [["sum"]]
+		},
+		{
+			"kind": "recordHistory",
+			"args": []
+		},
+		{
+			"kind": "addZoneItem",
+			"args": ["id1", "f32", "Extra"]
+		},
+		{
+			"kind": "recordHistory",
+			"args": []
+		}
+	],
+	"expect": {
+		"history": {
+			"undoAll": "start"
+		}
+	}
+}

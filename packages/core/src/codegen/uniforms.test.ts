@@ -62,7 +62,7 @@ describe("uniforms", () => {
 	it("scopes uniforms to a group's definition, used inside its function", () => {
 		const graph = managerFor([...sine, { id: "t", type: "time" }], toOutput);
 		graph.selectedNodeIds = ["s"];
-		graph.groupSelection(new Set(["s"]));
+		graph.groupSelection(["s"]);
 		const group = graph.root.nodes.find((n) => n.type === "node-group");
 		const ref = group?.group?.definitionRef ?? "";
 		const { shader, uniforms } = generateShader(graph, { uniformScopes: [ref] });

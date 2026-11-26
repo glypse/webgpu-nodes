@@ -1,0 +1,43 @@
+{
+	"node": "std-linear-rgb-to-xyz",
+	"cases": [
+		{
+			"note": "maps black to black",
+			"inputs": {
+				"Linear RGB": [[0, 0, 0]]
+			},
+			"output": "XYZ",
+			"expect": [0, 0, 0]
+		},
+		{
+			"note": "maps white to the D65 white point",
+			"inputs": {
+				"Linear RGB": [[1, 1, 1]]
+			},
+			"output": "XYZ",
+			"expect": [0.95047, 1, 1.08883],
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "XYZ",
+			"values": {},
+			"inputs": {
+				"Linear RGB": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "XYZ",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

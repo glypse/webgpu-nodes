@@ -1,0 +1,22 @@
+{
+	"node": "std-oklch-gamut-map",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Linear RGB",
+			"values": {},
+			"inputs": {
+				"OKLch": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "Linear RGB",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

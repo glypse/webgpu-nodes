@@ -233,10 +233,10 @@
 
 	function duplicateSelection() {
 		const originals = view.selectedNodeIds;
-		const ids = graph.duplicateNodes(originals);
+		const ids = graph.apply({ kind: "duplicateNodes", args: [originals] });
 		startGrab(ids, () => {
-			graph.deleteNodes(ids);
-			graph.selectNodes(originals);
+			graph.apply({ kind: "deleteNodes", args: [ids] });
+			graph.apply({ kind: "selectNodes", args: [originals] });
 		});
 	}
 
@@ -244,7 +244,7 @@
 		if (!grab) return;
 		const at = screenToFlowPosition(pointer);
 		const offset = { x: at.x - grab.start.x, y: at.y - grab.start.y };
-		graph.moveNodes(grab.from, offset);
+		graph.apply({ kind: "moveNodes", args: [Object.fromEntries(grab.from), offset] });
 		const [anchor] = grab.ids;
 		const from = anchor === undefined ? undefined : grab.from.get(anchor);
 		if (anchor !== undefined && from) {
@@ -255,7 +255,10 @@
 	function endGrab(cancel: boolean) {
 		if (!grab) return;
 		if (cancel) {
-			graph.moveNodes(grab.from, { x: 0, y: 0 });
+			graph.apply({
+				kind: "moveNodes",
+				args: [Object.fromEntries(grab.from), { x: 0, y: 0 }],
+			});
 			view.cancelDrag();
 			grab.cancel();
 		} else {
@@ -287,14 +290,18 @@
 
 	function pickAddEntry(entry: AddMenuEntry) {
 		const position = screenToFlowPosition({ x: addMenuAt.x, y: addMenuAt.y });
-		if (addMenuAt.pending) graph.addMenuEntryConnected(entry, position, addMenuAt.pending);
-		else graph.addMenuEntry(entry, position);
+		if (addMenuAt.pending)
+			graph.apply({
+				kind: "addMenuEntryConnected",
+				args: [entry, position, addMenuAt.pending],
+			});
+		else graph.apply({ kind: "addMenuEntry", args: [entry, position] });
 	}
 
 	function handleConnect(connection: Connection) {
 		const { source, target, sourceHandle, targetHandle } = connection;
 		if (!sourceHandle || !targetHandle) return;
-		graph.connect({ source, target, sourceHandle, targetHandle });
+		graph.apply({ kind: "connect", args: [{ source, target, sourceHandle, targetHandle }] });
 	}
 
 	/** A link dropped on empty space opens the add menu for what can take it. */
@@ -312,7 +319,8 @@
 	};
 
 	function deleteGroupEntry(entry: AddMenuEntry) {
-		if (entry.definitionRef) graph.deleteDefinition(entry.definitionRef);
+		if (entry.definitionRef)
+			graph.apply({ kind: "deleteDefinition", args: [entry.definitionRef] });
 	}
 
 	/** Whether a drag brings assets (from the Assets area) or files to drop here. */
@@ -337,8 +345,8 @@
 				? event.target.closest<HTMLElement>(".svelte-flow__node")?.dataset.id
 				: undefined;
 		const assets = dragged ? [dragged] : (await graph.importFiles(files)).map((a) => a.id);
-		const changed = graph.dropAssets(assets, at, onto);
-		if (changed.length > 0) graph.selectNodes(changed);
+		const changed = graph.apply({ kind: "dropAssets", args: [assets, at, onto] });
+		if (changed.length > 0) graph.apply({ kind: "selectNodes", args: [changed] });
 	}
 
 	/** Last pointer position, for keyboard-opened menus and pastes. */
@@ -373,8 +381,12 @@
 		}
 		if (event.key === "Delete" || event.key === "Backspace") {
 			event.preventDefault();
-			if (mod) graph.dissolveNodes(view.selectedNodeIds);
-			else graph.deleteNodes(view.selectedNodeIds, view.selectedEdgeIds);
+			if (mod) graph.apply({ kind: "dissolveNodes", args: [view.selectedNodeIds] });
+			else
+				graph.apply({
+					kind: "deleteNodes",
+					args: [view.selectedNodeIds, view.selectedEdgeIds],
+				});
 			return;
 		}
 		if (key === "d" && event.shiftKey && !mod && !event.altKey) {
@@ -384,24 +396,24 @@
 		}
 		if (key === "j" && mod && !event.altKey && !event.shiftKey) {
 			event.preventDefault();
-			if (!isLocked) graph.frameNodes(view.selectedNodeIds);
+			if (!isLocked) graph.apply({ kind: "frameNodes", args: [view.selectedNodeIds] });
 			return;
 		}
 		// By code: Alt changes the key typed (π on a Mac).
 		if (event.code === "KeyP" && event.altKey && !mod && !event.shiftKey) {
 			event.preventDefault();
-			graph.removeFromFrame(view.selectedNodeIds);
+			graph.apply({ kind: "removeFromFrame", args: [view.selectedNodeIds] });
 			return;
 		}
 		// Ctrl even on a Mac, where Cmd+H hides the app.
 		if (key === "h" && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey) {
 			event.preventDefault();
-			graph.toggleUnlinkedSockets(view.selectedNodeIds);
+			graph.apply({ kind: "toggleUnlinkedSockets", args: [view.selectedNodeIds] });
 			return;
 		}
 		if (key === "r" && !mod && !event.altKey && !event.shiftKey) {
 			event.preventDefault();
-			graph.resetNodes(view.selectedNodeIds);
+			graph.apply({ kind: "resetNodes", args: [view.selectedNodeIds] });
 			return;
 		}
 
@@ -431,12 +443,13 @@
 		} else if (event.code === "KeyG" && !event.shiftKey) {
 			// G grabs, Ctrl/Cmd+G groups and Ctrl/Cmd+Alt+G ungroups, as in Blender.
 			if (isLocked) return;
-			const selectedIds = new Set(view.selectedNodeIds);
-			if (selectedIds.size < 1) return;
+			const selectedIds = view.selectedNodeIds;
+			if (selectedIds.length < 1) return;
 			event.preventDefault();
 			if (!mod && !event.altKey) moveSelection();
-			else if (mod && event.altKey) graph.ungroupSelection(selectedIds);
-			else if (mod) graph.groupSelection(selectedIds);
+			else if (mod && event.altKey)
+				graph.apply({ kind: "ungroupSelection", args: [selectedIds] });
+			else if (mod) graph.apply({ kind: "groupSelection", args: [selectedIds] });
 		}
 	}
 </script>
@@ -513,7 +526,8 @@
 				// Ctrl/Cmd+Shift+click previews the node.
 				if (!event.shiftKey || !(event.metaKey || event.ctrlKey)) return;
 				view.activate();
-				if (graph.previewNode(node.id)) graph.selectNodes([node.id]);
+				if (graph.apply({ kind: "previewNode", args: [node.id] }))
+					graph.apply({ kind: "selectNodes", args: [[node.id]] });
 			}}
 			onselectionchange={({ nodes: selectedNodes }) => {
 				if (view.active) graph.selectedNodeIds = selectedNodes.map((n) => n.id);

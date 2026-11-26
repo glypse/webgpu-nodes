@@ -1,0 +1,166 @@
+{
+	"node": "negate",
+	"cases": [
+		{
+			"note": "negates f32s",
+			"inputs": {
+				"e": [[1.5]]
+			},
+			"output": "result",
+			"expect": [-1.5]
+		},
+		{
+			"note": "negates a negative f32",
+			"inputs": {
+				"e": [[-2]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "negates a large f32",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [-3.0000000054977558e38]
+		},
+		{
+			"note": "gives -0 for +0",
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": ["-0"]
+		},
+		{
+			"note": "wraps i32 MIN to itself",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-2147483648]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "negates an i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[5]]
+			},
+			"output": "result",
+			"expect": [-5]
+		},
+		{
+			"note": "negates the largest i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-2147483647]]
+			},
+			"output": "result",
+			"expect": [2147483647]
+		},
+		{
+			"note": "negates vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[1, -2, 3]]
+			},
+			"output": "result",
+			"expect": [-1, 2, -3]
+		},
+		{
+			"note": "negates vec2i component-wise",
+			"types": {
+				"e": "vec2i"
+			},
+			"inputs": {
+				"e": [[2147483647, 0]]
+			},
+			"output": "result",
+			"expect": [-2147483647, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2i sweep",
+			"types": {
+				"e": "vec2i"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

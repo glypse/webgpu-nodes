@@ -1,0 +1,76 @@
+{
+	"description": "A second link into a single-valued input replaces the first one.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t2",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "r",
+						"type": "reroute",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->r.in",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "r",
+						"targetHandle": "in"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "connect",
+			"args": [
+				{
+					"source": "t2",
+					"sourceHandle": "seconds",
+					"target": "r",
+					"targetHandle": "in"
+				}
+			]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"links": ["t2.seconds -> r.in"]
+			}
+		}
+	}
+}

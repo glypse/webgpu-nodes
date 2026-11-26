@@ -1,0 +1,192 @@
+{
+	"node": "pow",
+	"cases": [
+		{
+			"note": "raises f32s to powers",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[3]]
+			},
+			"output": "result",
+			"expect": [8],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes a square root by a half power",
+			"inputs": {
+				"e1": [[4]],
+				"e2": [[0.5]]
+			},
+			"output": "result",
+			"expect": [2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "raises to a negative power",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[-1]]
+			},
+			"output": "result",
+			"expect": [0.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "raises 10 to 2",
+			"inputs": {
+				"e1": [[10]],
+				"e2": [[2]]
+			},
+			"output": "result",
+			"expect": [100],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "raises a fraction to 2",
+			"inputs": {
+				"e1": [[3.5]],
+				"e2": [[2]]
+			},
+			"output": "result",
+			"expect": [12.25],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "raises 2 to the f32 of 0.5",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[0.5]]
+			},
+			"output": "result",
+			"expect": [1.4142135381698608],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 1 for any positive base at exponent 0",
+			"inputs": {
+				"e1": [[0.5]],
+				"e2": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives 1 for a large base at exponent 0",
+			"inputs": {
+				"e1": [[3e38]],
+				"e2": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "raises 2 to 127",
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[127]]
+			},
+			"output": "result",
+			"expect": [1.7014118346046923e38],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "raises vec2f component-wise",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": [[2, 3]],
+				"e2": [[2, 2]]
+			},
+			"output": "result",
+			"expect": [4, 9],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 1 for a zero exponent in vec3f",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": [[2, 5, 3]],
+				"e2": [[0, 2, 0]]
+			},
+			"output": "result",
+			"expect": [1, 25, 1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over a positive base",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": 0.25,
+					"to": 4
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [2]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0.00001
+			}
+		},
+		{
+			"note": "vec3f sweep over a positive base",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": 0.25,
+					"to": 4
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [0.5, 1.5, 2]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0.00001
+			}
+		}
+	]
+}

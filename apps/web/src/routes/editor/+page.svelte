@@ -75,32 +75,32 @@
 	}
 
 	function handleGroupSelected() {
-		const ids = new Set(graph.selectedNodeIds);
-		if (ids.size === 0) return;
-		graph.groupSelection(ids);
+		const ids = graph.selectedNodeIds;
+		if (ids.length === 0) return;
+		graph.apply({ kind: "groupSelection", args: [ids] });
 	}
 
 	function handleUngroupSelected() {
-		const ids = new Set(graph.selectedNodeIds);
-		if (ids.size === 0) return;
-		graph.ungroupSelection(ids);
+		const ids = graph.selectedNodeIds;
+		if (ids.length === 0) return;
+		graph.apply({ kind: "ungroupSelection", args: [ids] });
 	}
 
 	function handlePreviewSelected() {
 		const [id] = graph.selectedNodeIds;
-		if (id) graph.previewNode(id);
+		if (id) graph.apply({ kind: "previewNode", args: [id] });
 	}
 
 	async function handleLayoutSelected() {
-		await graph.layoutSelection();
+		await graph.apply({ kind: "layoutSelection", args: [] });
 	}
 
 	async function handleLayoutDocument() {
-		if (await graph.layoutDocument()) await graph.canvas?.fitView();
+		if (await graph.apply({ kind: "layoutDocument", args: [] })) await graph.canvas?.fitView();
 	}
 
 	async function handleLayoutGraph() {
-		if (await graph.layoutProject()) await graph.canvas?.fitView();
+		if (await graph.apply({ kind: "layoutProject", args: [] })) await graph.canvas?.fitView();
 	}
 
 	let pruneDialogOpen = $state(false);
@@ -110,17 +110,17 @@
 	}
 
 	function confirmPruneUnused() {
-		graph.pruneUnusedDefinitions();
+		graph.apply({ kind: "pruneUnusedDefinitions", args: [] });
 		pruneDialogOpen = false;
 	}
 
 	function handleEnterGroup() {
 		const id = getSelectedGroupNodeId();
-		if (id) graph.enterGroup(id);
+		if (id) graph.apply({ kind: "enterGroup", args: [id] });
 	}
 
 	function handleExitGroup() {
-		graph.exitGroup();
+		graph.apply({ kind: "exitGroup", args: [] });
 	}
 
 	/** The selected node's sheet, or that of the group entered. */
@@ -212,11 +212,17 @@
 		<Menubar.Menu>
 			<Menubar.Trigger>Edit</Menubar.Trigger>
 			<Menubar.Content>
-				<Menubar.Item onSelect={() => graph.undo()} disabled={!graph.history.canUndo}>
+				<Menubar.Item
+					onSelect={() => graph.apply({ kind: "undo", args: [] })}
+					disabled={!graph.history.canUndo}
+				>
 					Undo
 					<Menubar.Shortcut>⌘Z</Menubar.Shortcut>
 				</Menubar.Item>
-				<Menubar.Item onSelect={() => graph.redo()} disabled={!graph.history.canRedo}>
+				<Menubar.Item
+					onSelect={() => graph.apply({ kind: "redo", args: [] })}
+					disabled={!graph.history.canRedo}
+				>
 					Redo
 					<Menubar.Shortcut>⇧⌘Z</Menubar.Shortcut>
 				</Menubar.Item>

@@ -1,0 +1,23 @@
+{
+	"description": "Optical Flow of two layers at 960 by 540: the flow it draws matches the motion of the frames.",
+	"size": {
+		"width": 960,
+		"height": 540
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "flow",
+			"motion": {
+				"kind": "disc",
+				"radius": 135,
+				"inside": [10, 0],
+				"outside": [-4, 2]
+			},
+			"margin": 80,
+			"maxMean": 0.6,
+			"maxOff": 0.11
+		}
+	],
+	"timed": false
+}

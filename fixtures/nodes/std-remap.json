@@ -1,0 +1,181 @@
+{
+	"node": "std-remap",
+	"cases": [
+		{
+			"note": "maps the middle of the source range to the middle of the target",
+			"types": {
+				"Value": "f32"
+			},
+			"values": {
+				"From Min": 0,
+				"From Max": 1,
+				"To Min": 10,
+				"To Max": 20
+			},
+			"inputs": {
+				"Value": [[0.5]]
+			},
+			"output": "Result",
+			"expect": [15]
+		},
+		{
+			"note": "maps the ends of the source range to the ends of the target",
+			"types": {
+				"Value": "f32"
+			},
+			"values": {
+				"From Min": 0,
+				"From Max": 1,
+				"To Min": 10,
+				"To Max": 20
+			},
+			"inputs": {
+				"Value": [[0]]
+			},
+			"output": "Result",
+			"expect": [10]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "Result, f32",
+			"types": {
+				"Value": "f32"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"From Min": {
+					"kind": "constant",
+					"value": [0]
+				},
+				"From Max": {
+					"kind": "constant",
+					"value": [1]
+				},
+				"To Min": {
+					"kind": "constant",
+					"value": [0]
+				},
+				"To Max": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "Result",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Result, vec2f",
+			"types": {
+				"Value": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"From Min": {
+					"kind": "constant",
+					"value": [0, 0]
+				},
+				"From Max": {
+					"kind": "constant",
+					"value": [1, 1]
+				},
+				"To Min": {
+					"kind": "constant",
+					"value": [0, 0]
+				},
+				"To Max": {
+					"kind": "constant",
+					"value": [1, 1]
+				}
+			},
+			"output": "Result",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Result, vec3f",
+			"types": {
+				"Value": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"From Min": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"From Max": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				},
+				"To Min": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"To Max": {
+					"kind": "constant",
+					"value": [1, 1, 1]
+				}
+			},
+			"output": "Result",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Result, vec4f",
+			"types": {
+				"Value": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"From Min": {
+					"kind": "constant",
+					"value": [0, 0, 0, 0]
+				},
+				"From Max": {
+					"kind": "constant",
+					"value": [1, 1, 1, 1]
+				},
+				"To Min": {
+					"kind": "constant",
+					"value": [0, 0, 0, 0]
+				},
+				"To Max": {
+					"kind": "constant",
+					"value": [1, 1, 1, 1]
+				}
+			},
+			"output": "Result",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

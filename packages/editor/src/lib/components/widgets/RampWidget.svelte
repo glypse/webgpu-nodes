@@ -79,7 +79,7 @@
 				{ x: r, y: g, z: b, w: a },
 			]),
 		);
-		graph.setColorRamp(id, next, values);
+		graph.apply({ kind: "setColorRamp", args: [id, next, values] });
 	}
 </script>
 

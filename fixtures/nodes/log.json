@@ -1,0 +1,118 @@
+{
+	"node": "log",
+	"cases": [
+		{
+			"note": "gives 0 at 1",
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives 1 at e",
+			"inputs": {
+				"e": [[2.718281828459045]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives ln 10",
+			"inputs": {
+				"e": [[10]]
+			},
+			"output": "result",
+			"expect": [2.3025851249694824],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives -ln 2 at 0.5",
+			"inputs": {
+				"e": [[0.5]]
+			},
+			"output": "result",
+			"expect": [-0.6931471805599453],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives ln of a large f32",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [88.59684753417969],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "takes vec2f component-wise",
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[1, 2.718281828459045]]
+			},
+			"output": "result",
+			"expect": [0, 1],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over positives",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0.25,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "vec3f sweep over positives",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0.25,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		}
+	]
+}

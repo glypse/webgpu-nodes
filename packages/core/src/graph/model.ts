@@ -36,6 +36,7 @@ import {
 	zoneKindOf,
 } from "../zones";
 import { rerouteBranches } from "./branches";
+import { applyCommand, type CommandKind, type CommandOf, type CommandResult } from "./commands";
 import {
 	type GraphEdge,
 	type GraphNode,
@@ -46,6 +47,7 @@ import {
 import { BOUNDARY_TYPES, stableStringify } from "./editing";
 import { History } from "./history";
 import { hydrateNode, indexDocument, serialiseDocument } from "./hydrate";
+import { type IdSource, randomIds } from "./ids";
 import { AssetModel, MEDIA_NODE_OF } from "./model-assets";
 import { emptyProject, withEntry } from "./model-base";
 import { ZONE_SPACING } from "./model-zones";
@@ -93,11 +95,24 @@ export class GraphModel extends AssetModel {
 	/** Content snapshots of past states (see `contentSnapshot`). */
 	readonly history = new History(this.createHistoryCounts());
 
-	constructor(project: GraphProject = emptyProject()) {
+	constructor(
+		project: GraphProject = emptyProject(),
+		{ ids = randomIds }: { ids?: IdSource } = {},
+	) {
 		super();
+		this.newId = ids;
 		this.setProject(project);
 		this.markSaved();
 		this.history.reset(this.contentSnapshot());
+	}
+
+	/**
+	 * Run an edit given as data. Front ends edit through this, so every edit
+	 * can be recorded, sent or replayed; it dispatches to the method of the
+	 * same name, so overrides run too.
+	 */
+	apply<K extends CommandKind>(command: CommandOf<K>): CommandResult<K> {
+		return applyCommand(this, command);
 	}
 
 	/**
@@ -234,16 +249,21 @@ export class GraphModel extends AssetModel {
 	/**
 	 * Link two handles of the active document. Non-variadic inputs keep a
 	 * single incoming link (the new one replaces it); a zone's virtual handle
-	 * creates a state item.
+	 * creates a state item. Refuses a link closing a cycle, which nothing could
+	 * compute; other rules are the caller's to check with `isValidConnection`,
+	 * since a link breaking them is kept and shown invalid.
 	 */
 	connect(connection: {
 		source: string;
 		sourceHandle: string;
 		target: string;
 		targetHandle: string;
-	}) {
-		if (this.connectNewZoneItem(connection)) return;
+	}): boolean {
+		if (this.connectNewZoneItem(connection)) return true;
 		const doc = this.activeDocument;
+		if (wouldCreateCycle(doc.nodes, doc.edges, connection.source, connection.target)) {
+			return false;
+		}
 		const targetNode = doc.nodesById.get(connection.target);
 		const variadic = targetNode
 			? this.resolveDescriptor(targetNode).inputs.find(
@@ -258,10 +278,11 @@ export class GraphModel extends AssetModel {
 				(output && doc.nodesById.get(e.target)?.type === "group-output")) &&
 			(!variadic ||
 				(e.source === connection.source && e.sourceHandle === connection.sourceHandle));
-		const edge: GraphEdge = { id: crypto.randomUUID(), ...connection };
+		const edge: GraphEdge = { id: this.newId(), ...connection };
 		doc.edges = [...doc.edges.filter((e) => !replaced(e)), edge];
 		indexDocument(doc);
 		this.rebuildTypeCache();
+		return true;
 	}
 
 	/**
@@ -616,7 +637,7 @@ export class GraphModel extends AssetModel {
 		data: NodeData = defaultDataForType(type),
 	): string | undefined {
 		if (this.isLocked) return undefined;
-		const id = crypto.randomUUID();
+		const id = this.newId();
 		const doc = this.activeDocument;
 		doc.nodes = [...doc.nodes, { id, type, data, position }];
 		indexDocument(doc);
@@ -760,13 +781,14 @@ export class GraphModel extends AssetModel {
 		const nodes = only
 			? doc.nodes.filter((n) => only.has(n.id) || branched.has(n.id))
 			: doc.nodes;
+		const measure = await this.measuredGeometry(definitionRef);
 		const positions = await computeLayout({
 			nodes,
 			edges: doc.edges,
 			zones: this.zoneAnalysis(doc),
 			frames: this.frameAnalysis(doc),
 			geometry: (node) =>
-				options.measure?.(definitionRef, node) ??
+				measure?.(node) ??
 				(node.type === LAYOUT_FRAME
 					? estimateFrameHeader(this.nodeLabel(node.id), node.data.note)
 					: node.type === "reroute"
@@ -783,7 +805,7 @@ export class GraphModel extends AssetModel {
 			doc.nodes,
 			doc.edges,
 			(id) => !only || only.has(id),
-			() => crypto.randomUUID(),
+			() => this.newId(),
 			this.zoneAnalysis(doc).invalidEdges,
 		);
 		if (reroutes.length === 0) return new Set();
@@ -794,6 +816,18 @@ export class GraphModel extends AssetModel {
 		});
 		this.rebuildTypeCache();
 		return new Set(reroutes.map((n) => n.id));
+	}
+
+	/**
+	 * How a front end measures the nodes of a document as it draws them, or
+	 * undefined when it can't (layouts then estimate). Not a command: it is
+	 * the front end's own drawing, so it stays out of the serialisable edits.
+	 */
+	protected measuredGeometry(
+		// eslint-disable-next-line @typescript-eslint/no-unused-vars -- only overrides measure, so the base ignores the document
+		_definitionRef: string,
+	): Promise<((node: GraphNode) => NodeGeometry | undefined) | undefined> {
+		return Promise.resolve(undefined);
 	}
 
 	/** Lay out the selected nodes of the document in view, among themselves. */
@@ -861,12 +895,7 @@ export class GraphModel extends AssetModel {
 
 export type LayoutOptions = {
 	/** Lay out these nodes only, keeping the others in place. */
-	nodeIds?: Iterable<string>;
-	/**
-	 * The node as the front end draws it; undefined when it can't tell (an
-	 * estimate is used instead).
-	 */
-	measure?: (definitionRef: string, node: GraphNode) => NodeGeometry | undefined;
+	nodeIds?: readonly string[];
 	spacing?: Partial<LayoutSpacing>;
 };
 

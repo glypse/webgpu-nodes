@@ -1,0 +1,6 @@
+{
+	"node": "std-previous-frame",
+	"skip": "reads a texture: covered by fixtures/gpu",
+	"cases": [],
+	"sweeps": []
+}

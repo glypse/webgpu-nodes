@@ -1,0 +1,283 @@
+{
+	"node": "std-voronoi-smooth",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Smooth Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Smooth Distance, vec2f, Metric=Manhattan",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 1
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Smooth Color, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Smooth Color, vec2f, Metric=Chebyshev",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Smooth Point, vec2f, Metric=Euclidean",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Smooth Point, vec2f, Metric=Minkowski",
+			"types": {
+				"Cell": "vec2f"
+			},
+			"values": {
+				"Metric": 3
+			},
+			"inputs": {
+				"Cell": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Local Position": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Randomness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Smoothness": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Smooth Point",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

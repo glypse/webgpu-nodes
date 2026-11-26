@@ -1,0 +1,6 @@
+{
+	"node": "layout-frame",
+	"skip": "a frame's layout has no value",
+	"cases": [],
+	"sweeps": []
+}

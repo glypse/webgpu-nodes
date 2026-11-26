@@ -1,0 +1,21 @@
+{
+	"description": "Optical Flow of rotation at 960 by 540: the flow it draws matches the motion of the frames.",
+	"size": {
+		"width": 960,
+		"height": 540
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "flow",
+			"motion": {
+				"kind": "rotate",
+				"rate": 0.03
+			},
+			"margin": 80,
+			"maxMean": 0.1,
+			"maxOff": 0.002
+		}
+	],
+	"timed": false
+}

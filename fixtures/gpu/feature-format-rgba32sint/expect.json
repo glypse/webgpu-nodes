@@ -1,0 +1,39 @@
+{
+	"description": "A render texture of rgba32sint, drawn with a constant and read back by Load Texel: each texel keeps what the format rounds it to, and the read gives the missing components their defaults.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [3, 2, 1, 4]
+				},
+				{
+					"x": 3,
+					"y": 0,
+					"rgba": [3, 2, 1, 4]
+				},
+				{
+					"x": 0,
+					"y": 3,
+					"rgba": [3, 2, 1, 4]
+				},
+				{
+					"x": 3,
+					"y": 3,
+					"rgba": [3, 2, 1, 4]
+				}
+			]
+		}
+	]
+}

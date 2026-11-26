@@ -1,0 +1,133 @@
+{
+	"node": "sqrt",
+	"cases": [
+		{
+			"note": "takes the root of 4",
+			"inputs": {
+				"e": [[4]]
+			},
+			"output": "result",
+			"expect": [2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes the root of 0.25",
+			"inputs": {
+				"e": [[0.25]]
+			},
+			"output": "result",
+			"expect": [0.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes the root of 2",
+			"inputs": {
+				"e": [[2]]
+			},
+			"output": "result",
+			"expect": [1.4142135381698608],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes the root of a large f32",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [17320507716308828000],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for 0",
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[4, 9, 16]]
+			},
+			"output": "result",
+			"expect": [2, 3, 4],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes vec2f component-wise",
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[1, 0.25]]
+			},
+			"output": "result",
+			"expect": [1, 0.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over non-negatives",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep over non-negatives",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	]
+}

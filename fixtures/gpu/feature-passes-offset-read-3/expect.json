@@ -1,0 +1,39 @@
+{
+	"description": "A passes zone of a 8 px texture read at the previous iteration's texel shifted by 1/8 of the texture, 3 times: each texel takes the one 3 to its right, clamped at the edge.",
+	"size": {
+		"width": 8,
+		"height": 8
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.4375, 0.9375, null, null]
+				},
+				{
+					"x": 7,
+					"y": 0,
+					"rgba": [0.9375, 0.9375, null, null]
+				},
+				{
+					"x": 0,
+					"y": 7,
+					"rgba": [0.4375, 0.0625, null, null]
+				},
+				{
+					"x": 7,
+					"y": 7,
+					"rgba": [0.9375, 0.0625, null, null]
+				}
+			]
+		}
+	]
+}

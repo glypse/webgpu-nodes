@@ -1,0 +1,72 @@
+{
+	"description": "Deleting nodes removes the links into and out of them.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "sum",
+						"type": "add",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->sum.operands",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "sum",
+						"targetHandle": "operands"
+					},
+					{
+						"id": "sum.result->out.color",
+						"source": "sum",
+						"sourceHandle": "result",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "deleteNodes",
+			"args": [["sum"]]
+		}
+	],
+	"expect": {
+		"results": [true],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time"
+				},
+				"links": []
+			}
+		}
+	}
+}

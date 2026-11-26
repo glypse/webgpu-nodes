@@ -83,7 +83,7 @@ export abstract class EditModel extends CustomWgslModel {
 					y: position.y - Math.min(...nodes.map((n) => n.position.y)),
 				}
 			: { x: 0, y: 0 };
-		const copies = cloneSubgraph(nodes, clipboard.edges, offset);
+		const copies = cloneSubgraph(nodes, clipboard.edges, offset, this.newId);
 		const doc = this.activeDocument;
 		this.setContent(doc, {
 			nodes: [
@@ -99,13 +99,13 @@ export abstract class EditModel extends CustomWgslModel {
 	}
 
 	/** Copies of nodes, in place and selected. Returns the new ids. */
-	duplicateNodes(nodeIds: Iterable<string>): string[] {
+	duplicateNodes(nodeIds: readonly string[]): string[] {
 		const clipboard = this.copyNodes(nodeIds);
 		return clipboard ? this.pasteNodes(clipboard) : [];
 	}
 
 	/** Select exactly these nodes of the active document. */
-	selectNodes(nodeIds: Iterable<string>) {
+	selectNodes(nodeIds: readonly string[]) {
 		const ids = new Set(nodeIds);
 		const doc = this.activeDocument;
 		this.setContent(doc, {
@@ -117,11 +117,11 @@ export abstract class EditModel extends CustomWgslModel {
 	}
 
 	/** Move nodes of the active document by an offset from the positions given. */
-	moveNodes(from: ReadonlyMap<string, Point>, offset: Point) {
+	moveNodes(from: Readonly<Record<string, Point>>, offset: Point) {
 		const doc = this.activeDocument;
 		this.setContent(doc, {
 			nodes: doc.nodes.map((n) => {
-				const start = from.get(n.id);
+				const start = Object.hasOwn(from, n.id) ? from[n.id] : undefined;
 				return start
 					? { ...n, position: { x: start.x + offset.x, y: start.y + offset.y } }
 					: n;
@@ -134,7 +134,7 @@ export abstract class EditModel extends CustomWgslModel {
 	 * nodes and the partner of any zone boundary. Nodes a document must keep
 	 * are left. Returns whether anything was deleted.
 	 */
-	deleteNodes(nodeIds: Iterable<string>, edgeIds: Iterable<string> = []): boolean {
+	deleteNodes(nodeIds: readonly string[], edgeIds: readonly string[] = []): boolean {
 		if (this.isLocked) return false;
 		const doc = this.activeDocument;
 		const ids = new Set(nodeIds);
@@ -173,7 +173,7 @@ export abstract class EditModel extends CustomWgslModel {
 	 * same type as the output it leaves (or the first linked input), to a
 	 * node that stays. Links that wouldn't be valid are dropped.
 	 */
-	dissolveNodes(nodeIds: Iterable<string>): boolean {
+	dissolveNodes(nodeIds: readonly string[]): boolean {
 		if (this.isLocked) return false;
 		const doc = this.activeDocument;
 		const removed = this.withZonePartners(nodeIds);
@@ -194,7 +194,7 @@ export abstract class EditModel extends CustomWgslModel {
 					]
 				: [];
 		});
-		if (!this.deleteNodes(removed)) return false;
+		if (!this.deleteNodes([...removed])) return false;
 		for (const link of links) {
 			if (this.isValidConnection(link)) this.connect(link);
 		}
@@ -236,7 +236,7 @@ export abstract class EditModel extends CustomWgslModel {
 	 * their defaults. What makes a node what it is (its code, sockets, zone
 	 * items, label) is kept.
 	 */
-	resetNodes(nodeIds: Iterable<string>) {
+	resetNodes(nodeIds: readonly string[]) {
 		if (this.isLocked) return;
 		const doc = this.activeDocument;
 		const patches = new Map<string, NodeData>();
@@ -261,7 +261,7 @@ export abstract class EditModel extends CustomWgslModel {
 	 * Show only the linked sockets of nodes, or all of them again when every
 	 * one of them already shows only those.
 	 */
-	toggleUnlinkedSockets(nodeIds: Iterable<string>) {
+	toggleUnlinkedSockets(nodeIds: readonly string[]) {
 		if (this.isLocked) return;
 		const nodes = [...nodeIds].flatMap((id) => this.activeDocument.nodesById.get(id) ?? []);
 		const hide = nodes.some((n) => n.data.hideUnlinked !== true);
@@ -274,7 +274,7 @@ export abstract class EditModel extends CustomWgslModel {
 	 * Hide the links out of reroutes (see `NodeData.hideLinks`), or show
 	 * them again when every one of them already hides them.
 	 */
-	toggleHiddenLinks(nodeIds: Iterable<string>) {
+	toggleHiddenLinks(nodeIds: readonly string[]) {
 		if (this.isLocked) return;
 		const reroutes = [...nodeIds].flatMap((id) => {
 			const node = this.activeDocument.nodesById.get(id);
@@ -331,7 +331,7 @@ export abstract class EditModel extends CustomWgslModel {
 		for (const { edges, positions } of bySource.values()) {
 			const [first] = edges;
 			if (!first) continue;
-			const id = crypto.randomUUID();
+			const id = this.newId();
 			reroutes.push({
 				id,
 				type: "reroute",
@@ -342,7 +342,7 @@ export abstract class EditModel extends CustomWgslModel {
 				},
 			});
 			links.push({
-				id: crypto.randomUUID(),
+				id: this.newId(),
 				source: first.source,
 				sourceHandle: first.sourceHandle,
 				target: id,
@@ -351,7 +351,7 @@ export abstract class EditModel extends CustomWgslModel {
 			for (const edge of edges) {
 				cut.add(edge.id);
 				links.push({
-					id: crypto.randomUUID(),
+					id: this.newId(),
 					source: id,
 					sourceHandle: "out",
 					target: edge.target,

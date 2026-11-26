@@ -1,0 +1,374 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "loop",
+					"type": "repeat-input",
+					"data": {
+						"values": {
+							"iterations": 3,
+							"acc": 0.5,
+							"count": 1
+						},
+						"maxIterations": 1024,
+						"pairedOutput": "end"
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "end",
+					"type": "repeat-output",
+					"data": {
+						"items": [
+							{
+								"id": "acc",
+								"label": "Acc",
+								"type": "f32"
+							},
+							{
+								"id": "velocity",
+								"label": "Velocity",
+								"type": "vec3f"
+							},
+							{
+								"id": "count",
+								"label": "Count",
+								"type": "i32"
+							}
+						]
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "zero",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec3f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "stepF",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "f32"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "stepV",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 2,
+							"z": 3,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec3f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "stepI",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 2,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "i32"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nextAcc",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nextVelocity",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nextCount",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "velocityY",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "countFloat",
+					"type": "to-float",
+					"data": {
+						"values": {
+							"e": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "c",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 1
+						},
+						"types": {
+							"declare": "vec4f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "loop",
+					"target": "nextAcc",
+					"sourceHandle": "acc",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "1",
+					"source": "stepF",
+					"target": "nextAcc",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "2",
+					"source": "nextAcc",
+					"target": "end",
+					"sourceHandle": "result",
+					"targetHandle": "acc"
+				},
+				{
+					"id": "3",
+					"source": "loop",
+					"target": "nextVelocity",
+					"sourceHandle": "velocity",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "4",
+					"source": "stepV",
+					"target": "nextVelocity",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "5",
+					"source": "nextVelocity",
+					"target": "end",
+					"sourceHandle": "result",
+					"targetHandle": "velocity"
+				},
+				{
+					"id": "6",
+					"source": "loop",
+					"target": "nextCount",
+					"sourceHandle": "count",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "7",
+					"source": "stepI",
+					"target": "nextCount",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "8",
+					"source": "nextCount",
+					"target": "end",
+					"sourceHandle": "result",
+					"targetHandle": "count"
+				},
+				{
+					"id": "9",
+					"source": "zero",
+					"target": "loop",
+					"sourceHandle": "value",
+					"targetHandle": "velocity"
+				},
+				{
+					"id": "10",
+					"source": "end",
+					"target": "c",
+					"sourceHandle": "acc",
+					"targetHandle": "x"
+				},
+				{
+					"id": "11",
+					"source": "end",
+					"target": "velocityY",
+					"sourceHandle": "velocity",
+					"targetHandle": "v"
+				},
+				{
+					"id": "12",
+					"source": "velocityY",
+					"target": "c",
+					"sourceHandle": "y",
+					"targetHandle": "y"
+				},
+				{
+					"id": "13",
+					"source": "end",
+					"target": "countFloat",
+					"sourceHandle": "count",
+					"targetHandle": "e"
+				},
+				{
+					"id": "14",
+					"source": "countFloat",
+					"target": "c",
+					"sourceHandle": "result",
+					"targetHandle": "z"
+				},
+				{
+					"id": "15",
+					"source": "c",
+					"target": "out",
+					"sourceHandle": "value",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

@@ -72,6 +72,7 @@ import {
 	normaliseDocument,
 	resolveDescriptor,
 } from "./hydrate";
+import { type IdSource, randomIds } from "./ids";
 import { defaultSettings, type ProjectSettings, ProjectSettingsSchema } from "./settings";
 import { edgesStructure } from "./structure";
 import { readComponent } from "./values";
@@ -135,6 +136,9 @@ export abstract class GraphModelBase {
 
 	/** Centralised type resolver — single source of truth for all type resolution. */
 	typeResolver!: TypeResolver;
+
+	/** Injected so tests and fixtures can make reproducible ids. */
+	protected newId: IdSource = randomIds;
 
 	// ── Factories for front ends ────────────────────────────────────────────────
 

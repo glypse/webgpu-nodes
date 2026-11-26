@@ -1,0 +1,60 @@
+{
+	"node": "std-aspect-uv",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Coordinates, Mode=Contain (Fit)",
+			"values": {
+				"Mode": 0
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Coordinates, Mode=Cover (Fill)",
+			"values": {
+				"Mode": 1
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Coordinates, Mode=Stretch",
+			"values": {
+				"Mode": 2
+			},
+			"inputs": {
+				"Coordinates": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

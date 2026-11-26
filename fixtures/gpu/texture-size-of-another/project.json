@@ -1,0 +1,253 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "time",
+					"type": "time",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "uv",
+					"type": "uv",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "one",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "a",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba16float"
+							}
+						],
+						"settings": {
+							"mode": "scale",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 1,
+							"pixels": {
+								"x": 256,
+								"y": 256
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "b",
+					"type": "render-texture",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "vec4f",
+								"format": "rgba16float"
+							}
+						],
+						"settings": {
+							"mode": "scale",
+							"mips": "off"
+						},
+						"values": {
+							"scale": 0.5,
+							"pixels": {
+								"x": 256,
+								"y": 256
+							}
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "size",
+					"type": "texture-size",
+					"data": {
+						"values": {
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "x",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "scaled",
+					"type": "mul",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "time",
+					"target": "a",
+					"sourceHandle": "seconds",
+					"targetHandle": "scale"
+				},
+				{
+					"id": "1",
+					"source": "uv",
+					"target": "a",
+					"sourceHandle": "uv",
+					"targetHandle": "item"
+				},
+				{
+					"id": "2",
+					"source": "a",
+					"target": "b",
+					"sourceHandle": "item",
+					"targetHandle": "item"
+				},
+				{
+					"id": "3",
+					"source": "b",
+					"target": "size",
+					"sourceHandle": "item",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "4",
+					"source": "size",
+					"target": "x",
+					"sourceHandle": "size",
+					"targetHandle": "v"
+				},
+				{
+					"id": "5",
+					"source": "x",
+					"target": "scaled",
+					"sourceHandle": "x",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "6",
+					"source": "one",
+					"target": "scaled",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "7",
+					"source": "scaled",
+					"target": "out",
+					"sourceHandle": "result",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

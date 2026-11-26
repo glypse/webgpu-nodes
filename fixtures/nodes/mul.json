@@ -1,0 +1,271 @@
+{
+	"node": "mul",
+	"cases": [
+		{
+			"note": "multiplies f32s",
+			"inputs": {
+				"operands": [[1.5], [4]]
+			},
+			"output": "result",
+			"expect": [6]
+		},
+		{
+			"note": "rounds each product to f32",
+			"inputs": {
+				"operands": [[0.1], [3]]
+			},
+			"output": "result",
+			"expect": [0.30000001192092896]
+		},
+		{
+			"note": "multiplies three operands",
+			"inputs": {
+				"operands": [[2], [3], [4]]
+			},
+			"output": "result",
+			"expect": [24]
+		},
+		{
+			"note": "gives a lone operand as it is",
+			"inputs": {
+				"operands": [[7]]
+			},
+			"output": "result",
+			"expect": [7]
+		},
+		{
+			"note": "gives -0 for a zero times a negative",
+			"inputs": {
+				"operands": [[0], [-5]]
+			},
+			"output": "result",
+			"expect": ["-0"]
+		},
+		{
+			"note": "multiplies large f32s",
+			"inputs": {
+				"operands": [[3e38], [0.5]]
+			},
+			"output": "result",
+			"expect": [1.5000000027488779e38]
+		},
+		{
+			"note": "wraps i32 products to the low 32 bits",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[65536], [65536]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "wraps i32 products past the sign bit",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[46341], [46341]]
+			},
+			"output": "result",
+			"expect": [-2147479015]
+		},
+		{
+			"note": "keeps MIN times -1 as MIN",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[-2147483648], [-1]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "multiplies negative i32s",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[-3], [4]]
+			},
+			"output": "result",
+			"expect": [-12]
+		},
+		{
+			"note": "wraps u32 products to the low 32 bits",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": [[4294967295], [4294967295]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "wraps u32 products above 2^32",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": [[65536], [65537]]
+			},
+			"output": "result",
+			"expect": [65536]
+		},
+		{
+			"note": "multiplies vec3f component-wise",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": [
+					[1, 2, 3],
+					[4, 5, 6]
+				]
+			},
+			"output": "result",
+			"expect": [4, 10, 18]
+		},
+		{
+			"note": "multiplies vec4i component-wise",
+			"types": {
+				"operands": "vec4i"
+			},
+			"inputs": {
+				"operands": [
+					[2, 3, 4, 5],
+					[1, 1, -1, -1]
+				]
+			},
+			"output": "result",
+			"expect": [2, 3, -4, -5]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep reaching the only operand",
+			"types": {
+				"operands": "f32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep reaching the only operand",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep reaching the only operand",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep reaching the only operand",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep over two operands",
+			"types": {
+				"operands": "f32"
+			},
+			"inputs": {
+				"operands": [
+					{
+						"kind": "uv",
+						"from": -2,
+						"to": 2
+					},
+					{
+						"kind": "uv",
+						"from": 1,
+						"to": 3
+					}
+				]
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep over two operands",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": [
+					{
+						"kind": "uv",
+						"from": -2,
+						"to": 2
+					},
+					{
+						"kind": "uv",
+						"from": 1,
+						"to": 3
+					}
+				]
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

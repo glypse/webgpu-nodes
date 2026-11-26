@@ -1,0 +1,155 @@
+{
+	"description": "A handle added to a group's interface gets the next free label and its type; retyping and removing change the interface.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "g",
+						"type": "node-group",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": {
+							"definitionRef": "def",
+							"locked": false
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->g.a",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "g",
+						"targetHandle": "a"
+					},
+					{
+						"id": "g.r->out.color",
+						"source": "g",
+						"sourceHandle": "r",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			},
+			"def": {
+				"inputs": [
+					{
+						"id": "a",
+						"label": "A",
+						"type": "f32"
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "f32"
+					}
+				],
+				"nodes": [
+					{
+						"id": "gi",
+						"type": "group-input",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "o1",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "o2",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "gi.a->o1.r",
+						"source": "gi",
+						"sourceHandle": "a",
+						"target": "o1",
+						"targetHandle": "r"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "addHandle",
+			"args": ["def", "input", "f32"]
+		},
+		{
+			"kind": "setHandleType",
+			"args": ["def", "output", "r", "vec2f"]
+		},
+		{
+			"kind": "removeHandle",
+			"args": ["def", "input", "id1"]
+		}
+	],
+	"expect": {
+		"results": [
+			{
+				"id": "id1",
+				"label": "Input 1",
+				"type": "f32"
+			},
+			null,
+			null
+		],
+		"groups": {
+			"def": {
+				"inputs": [
+					{
+						"id": "a",
+						"label": "A",
+						"type": "f32"
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "vec2f"
+					}
+				]
+			}
+		}
+	}
+}

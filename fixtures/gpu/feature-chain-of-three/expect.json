@@ -1,0 +1,39 @@
+{
+	"description": "Three render textures, each sampling the one before at the UV: 8, then 16, then 8 px. Away from the edges the linear sample keeps the UV, so the canvas' centre pixel reads the UV there.",
+	"size": {
+		"width": 16,
+		"height": 16
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 8,
+					"y": 8,
+					"rgba": [0.53125, 0.46875, null, null]
+				}
+			]
+		},
+		{
+			"kind": "cpu",
+			"region": {
+				"x": 4,
+				"y": 4,
+				"width": 8,
+				"height": 8
+			},
+			"stride": 1,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"maxOff": 0
+		}
+	]
+}

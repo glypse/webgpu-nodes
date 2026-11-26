@@ -1,0 +1,67 @@
+{
+	"description": "A repeat zone is created as a paired input and output, with one inferred state item passed through.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "createRepeatZone",
+			"args": [
+				{
+					"x": 0,
+					"y": 0
+				}
+			]
+		}
+	],
+	"expect": {
+		"results": ["id1"],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time",
+					"id1": "repeat-input",
+					"id2": "repeat-output"
+				},
+				"data": {
+					"id2": {
+						"items": [
+							{
+								"label": "Value",
+								"type": {
+									"inferred": true
+								}
+							}
+						]
+					}
+				}
+			}
+		},
+		"codegen": "ok"
+	}
+}

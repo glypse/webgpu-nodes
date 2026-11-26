@@ -1,0 +1,263 @@
+{
+	"node": "std-voronoi-distance",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Distance, vec2f, Metric=Euclidean",
+			"types": {
+				"A": "vec2f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"B": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, vec2f, Metric=Chebyshev",
+			"types": {
+				"A": "vec2f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"B": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, vec3f, Metric=Euclidean",
+			"types": {
+				"A": "vec3f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"B": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, vec3f, Metric=Chebyshev",
+			"types": {
+				"A": "vec3f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"B": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, vec4f, Metric=Euclidean",
+			"types": {
+				"A": "vec4f"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"B": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, vec4f, Metric=Chebyshev",
+			"types": {
+				"A": "vec4f"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"B": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, f32, Metric=Euclidean",
+			"types": {
+				"A": "f32"
+			},
+			"values": {
+				"Metric": 0
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"B": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Distance, f32, Metric=Chebyshev",
+			"types": {
+				"A": "f32"
+			},
+			"values": {
+				"Metric": 2
+			},
+			"inputs": {
+				"A": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"B": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Exponent": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Distance",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

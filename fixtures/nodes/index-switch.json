@@ -1,0 +1,107 @@
+{
+	"node": "index-switch",
+	"cases": [
+		{
+			"note": "picks case 0",
+			"data": {
+				"cases": 3
+			},
+			"inputs": {
+				"case-0": [[10]],
+				"case-1": [[20]],
+				"case-2": [[30]],
+				"index": [[0]]
+			},
+			"output": "result",
+			"expect": [10]
+		},
+		{
+			"note": "picks case 1",
+			"data": {
+				"cases": 3
+			},
+			"inputs": {
+				"case-0": [[10]],
+				"case-1": [[20]],
+				"case-2": [[30]],
+				"index": [[1]]
+			},
+			"output": "result",
+			"expect": [20]
+		},
+		{
+			"note": "picks case 2",
+			"data": {
+				"cases": 3
+			},
+			"inputs": {
+				"case-0": [[10]],
+				"case-1": [[20]],
+				"case-2": [[30]],
+				"index": [[2]]
+			},
+			"output": "result",
+			"expect": [30]
+		},
+		{
+			"note": "takes the last case past the end",
+			"data": {
+				"cases": 3
+			},
+			"inputs": {
+				"case-0": [[10]],
+				"case-1": [[20]],
+				"case-2": [[30]],
+				"index": [[7]]
+			},
+			"output": "result",
+			"expect": [30]
+		},
+		{
+			"note": "takes the first case below zero",
+			"data": {
+				"cases": 3
+			},
+			"inputs": {
+				"case-0": [[10]],
+				"case-1": [[20]],
+				"case-2": [[30]],
+				"index": [[-3]]
+			},
+			"output": "result",
+			"expect": [10]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 result over an index sweep of three cases",
+			"data": {
+				"cases": 3
+			},
+			"inputs": {
+				"case-0": {
+					"kind": "constant",
+					"value": [0.5]
+				},
+				"case-1": {
+					"kind": "constant",
+					"value": [1.5]
+				},
+				"case-2": {
+					"kind": "constant",
+					"value": [2.5]
+				},
+				"index": {
+					"kind": "uv",
+					"from": 0,
+					"to": 2.99
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			}
+		}
+	]
+}

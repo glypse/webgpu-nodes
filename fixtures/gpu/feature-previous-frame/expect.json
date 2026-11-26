@@ -1,0 +1,112 @@
+{
+	"description": "The Previous Frame group over five frames of a time-varying texture: Previous is the last frame's texture, Current this frame's. The first frame starts from its input, so Previous is that too. The state is half floats, hence the 1e-3 tolerance.",
+	"size": {
+		"width": 4,
+		"height": 4
+	},
+	"format": "rgba32float",
+	"frames": [
+		{
+			"time": 0.1,
+			"delta": 0.016666666666666666,
+			"frame": 0
+		},
+		{
+			"time": 0.35,
+			"delta": 0.016666666666666666,
+			"frame": 1
+		},
+		{
+			"time": 0.6,
+			"delta": 0.016666666666666666,
+			"frame": 2
+		},
+		{
+			"time": 0.85,
+			"delta": 0.016666666666666666,
+			"frame": 3
+		},
+		{
+			"time": 1.1,
+			"delta": 0.016666666666666666,
+			"frame": 4
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"frame": 0,
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.1, 0.1, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 1,
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.1, 0.35, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 2,
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.35, 0.6, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 3,
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.6, 0.85, null, null]
+				}
+			]
+		},
+		{
+			"kind": "pixels",
+			"frame": 4,
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [0.85, 1.1, null, null]
+				}
+			]
+		}
+	]
+}

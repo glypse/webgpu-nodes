@@ -32,7 +32,7 @@
 	function commit(itemId: string) {
 		const name = names.get(itemId);
 		names.delete(itemId);
-		if (name !== undefined) graph.renameRenderItem(id, itemId, name);
+		if (name !== undefined) graph.apply({ kind: "renameRenderItem", args: [id, itemId, name] });
 	}
 </script>
 
@@ -61,7 +61,7 @@
 					title="Move up"
 					aria-label="Move up"
 					disabled={disabled || i === 0}
-					onclick={() => graph.moveRenderItem(id, item.id, -1)}
+					onclick={() => graph.apply({ kind: "moveRenderItem", args: [id, item.id, -1] })}
 				>
 					<ArrowUpIcon />
 				</Button>
@@ -71,7 +71,7 @@
 					title="Move down"
 					aria-label="Move down"
 					disabled={disabled || i === items.length - 1}
-					onclick={() => graph.moveRenderItem(id, item.id, 1)}
+					onclick={() => graph.apply({ kind: "moveRenderItem", args: [id, item.id, 1] })}
 				>
 					<ArrowDownIcon />
 				</Button>
@@ -81,7 +81,7 @@
 					title="Remove item"
 					aria-label="Remove item"
 					disabled={disabled || items.length <= 1}
-					onclick={() => graph.removeRenderItem(id, item.id)}
+					onclick={() => graph.apply({ kind: "removeRenderItem", args: [id, item.id] })}
 				>
 					<TrashIcon />
 				</Button>
@@ -94,7 +94,7 @@
 					class="w-full"
 					title="Item type"
 					onpick={(type: WgslType) => {
-						graph.setRenderItemType(id, item.id, type);
+						graph.apply({ kind: "setRenderItemType", args: [id, item.id, type] });
 					}}
 				/>
 				<Select.Root
@@ -104,7 +104,11 @@
 					{disabled}
 					onValueChange={(value: string) => {
 						const format = TEXTURE_FORMATS.find((f) => f === value);
-						if (format) graph.setRenderItemFormat(id, item.id, format);
+						if (format)
+							graph.apply({
+								kind: "setRenderItemFormat",
+								args: [id, item.id, format],
+							});
 					}}
 				>
 					<Select.Trigger class="w-full" title="Format" aria-label="Format">
@@ -127,7 +131,7 @@
 		size="xs"
 		title="Add an item"
 		{disabled}
-		onclick={() => graph.addRenderItem(id)}
+		onclick={() => graph.apply({ kind: "addRenderItem", args: [id] })}
 	>
 		<PlusIcon /> Add item
 	</Button>

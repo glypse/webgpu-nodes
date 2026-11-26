@@ -1,0 +1,93 @@
+{
+	"description": "An enum's variants can be decided by a type variable, which then names the input it's by.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			},
+			"def": {
+				"typeVariables": [
+					{
+						"id": "T",
+						"name": "T",
+						"types": ["f32", "vec2f"]
+					}
+				],
+				"inputs": [
+					{
+						"id": "mode",
+						"label": "Mode",
+						"type": "u32",
+						"variants": [
+							{
+								"value": 0,
+								"label": "Zero"
+							},
+							{
+								"value": 1,
+								"label": "One"
+							}
+						]
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "f32"
+					}
+				],
+				"nodes": [
+					{
+						"id": "gi",
+						"type": "group-input",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "go",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "setVariantsBy",
+			"args": ["def", "mode", "T"]
+		}
+	],
+	"expect": {
+		"groups": {
+			"def": {
+				"inputs": [
+					{
+						"id": "mode",
+						"variantsBy": "T"
+					}
+				]
+			}
+		}
+	}
+}

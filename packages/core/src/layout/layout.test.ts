@@ -1,7 +1,26 @@
 import { describe, expect, it } from "bun:test";
 
-import { managerFor } from "../testing/graph";
+import type { GraphNode } from "../graph/document";
+import { GraphModel } from "../graph/model";
+import { managerFor, rootProject } from "../testing/graph";
 import { pairedOutputId } from "../zones";
+import type { NodeGeometry } from "./layout";
+
+/** A model whose front end measures each node as `measure` says. */
+class MeasuredModel extends GraphModel {
+	constructor(
+		project: ConstructorParameters<typeof GraphModel>[0],
+		private readonly measure: (node: GraphNode) => NodeGeometry | undefined,
+	) {
+		super(project);
+	}
+
+	protected override measuredGeometry(): Promise<
+		((node: GraphNode) => NodeGeometry | undefined) | undefined
+	> {
+		return Promise.resolve(this.measure);
+	}
+}
 
 describe("GraphModel layout", () => {
 	it("lays a chain out left to right, keeping its top-left corner", async () => {
@@ -29,22 +48,24 @@ describe("GraphModel layout", () => {
 	});
 
 	it("uses the front end's node sizes", async () => {
-		const graph = managerFor(
-			[
-				{ id: "a", type: "sin" },
-				{ id: "b", type: "sin" },
-			],
-			[["a", "result", "b", "e"]],
-		);
 		const geometry = (width: number) => ({
 			width,
 			height: 50,
 			inputs: new Map([["e", 25]]),
 			outputs: new Map([["result", 25]]),
 		});
+		const graph = new MeasuredModel(
+			rootProject(
+				[
+					{ id: "a", type: "sin" },
+					{ id: "b", type: "sin" },
+				],
+				[["a", "result", "b", "e"]],
+			),
+			(node) => geometry(node.id === "a" ? 500 : 100),
+		);
 		await graph.layoutDocument(undefined, {
 			nodeIds: ["a", "b"],
-			measure: (_ref, node) => geometry(node.id === "a" ? 500 : 100),
 			spacing: { betweenLayers: 10 },
 		});
 		const a = graph.root.nodesById.get("a")?.position.x ?? NaN;

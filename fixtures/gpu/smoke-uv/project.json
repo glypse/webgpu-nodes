@@ -1,0 +1,20 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{ "id": "out", "type": "frag-output", "data": {}, "position": { "x": 0, "y": 0 } },
+				{ "id": "uv", "type": "uv", "data": {}, "position": { "x": 200, "y": 0 } }
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "uv",
+					"sourceHandle": "uv",
+					"target": "out",
+					"targetHandle": "color"
+				}
+			]
+		}
+	},
+	"assets": []
+}

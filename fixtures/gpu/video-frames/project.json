@@ -1,0 +1,287 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "time",
+					"type": "time",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "now",
+					"type": "video",
+					"data": {
+						"asset": "greys",
+						"playback": {
+							"start": 0,
+							"speed": 1,
+							"end": "hold"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "before",
+					"type": "video",
+					"data": {
+						"asset": "greys",
+						"playback": {
+							"start": 0,
+							"speed": 1,
+							"end": "hold"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "then",
+					"type": "sub",
+					"data": {
+						"values": {
+							"a": 0,
+							"b": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nowRead",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "beforeRead",
+					"type": "sample-texture",
+					"data": {
+						"values": {
+							"interpolation": 0,
+							"extension": 0,
+							"level": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nowX",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "beforeX",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "both",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec2f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "time",
+					"target": "now",
+					"sourceHandle": "seconds",
+					"targetHandle": "time"
+				},
+				{
+					"id": "1",
+					"source": "time",
+					"target": "then",
+					"sourceHandle": "seconds",
+					"targetHandle": "a"
+				},
+				{
+					"id": "2",
+					"source": "now",
+					"target": "then",
+					"sourceHandle": "interval",
+					"targetHandle": "b"
+				},
+				{
+					"id": "3",
+					"source": "then",
+					"target": "before",
+					"sourceHandle": "result",
+					"targetHandle": "time"
+				},
+				{
+					"id": "4",
+					"source": "now",
+					"target": "nowRead",
+					"sourceHandle": "texture",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "5",
+					"source": "before",
+					"target": "beforeRead",
+					"sourceHandle": "texture",
+					"targetHandle": "texture"
+				},
+				{
+					"id": "6",
+					"source": "nowRead",
+					"target": "nowX",
+					"sourceHandle": "color",
+					"targetHandle": "v"
+				},
+				{
+					"id": "7",
+					"source": "beforeRead",
+					"target": "beforeX",
+					"sourceHandle": "color",
+					"targetHandle": "v"
+				},
+				{
+					"id": "8",
+					"source": "nowX",
+					"target": "both",
+					"sourceHandle": "x",
+					"targetHandle": "x"
+				},
+				{
+					"id": "9",
+					"source": "beforeX",
+					"target": "both",
+					"sourceHandle": "x",
+					"targetHandle": "y"
+				},
+				{
+					"id": "10",
+					"source": "both",
+					"target": "out",
+					"sourceHandle": "value",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": [
+		{
+			"kind": "video",
+			"id": "greys",
+			"name": "greys",
+			"file": "assets/videos/greys.webm",
+			"mime": "video/webm",
+			"bytes": 1972,
+			"hash": "b4e69f82d462b898514a88bcc031d96eaef352e55a35fe95880742720b27b63d",
+			"width": 64,
+			"height": 64,
+			"duration": 0.8,
+			"frameRate": 30
+		}
+	]
+}

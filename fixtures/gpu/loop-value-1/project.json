@@ -1,0 +1,242 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "start",
+					"type": "pass-repeat-input",
+					"data": {
+						"values": {
+							"iterations": 1
+						},
+						"pairedOutput": "end"
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "end",
+					"type": "pass-repeat-output",
+					"data": {
+						"items": [
+							{
+								"id": "item",
+								"label": "Item",
+								"type": "f32",
+								"size": "scale"
+							}
+						]
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "uv",
+					"type": "uv",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "x",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "one",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "half",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0.5,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "next",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "scale",
+					"type": "pow",
+					"data": {
+						"values": {
+							"e1": 0,
+							"e2": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "uv",
+					"target": "x",
+					"sourceHandle": "uv",
+					"targetHandle": "v"
+				},
+				{
+					"id": "1",
+					"source": "start",
+					"target": "end",
+					"sourceHandle": "item",
+					"targetHandle": "item"
+				},
+				{
+					"id": "2",
+					"source": "end",
+					"target": "out",
+					"sourceHandle": "item",
+					"targetHandle": "color"
+				},
+				{
+					"id": "3",
+					"source": "start",
+					"target": "next",
+					"sourceHandle": "iteration",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "4",
+					"source": "one",
+					"target": "next",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "5",
+					"source": "half",
+					"target": "scale",
+					"sourceHandle": "value",
+					"targetHandle": "e1"
+				},
+				{
+					"id": "6",
+					"source": "next",
+					"target": "scale",
+					"sourceHandle": "result",
+					"targetHandle": "e2"
+				},
+				{
+					"id": "7",
+					"source": "scale",
+					"target": "end",
+					"sourceHandle": "result",
+					"targetHandle": "scale:item"
+				},
+				{
+					"id": "8",
+					"source": "x",
+					"target": "start",
+					"sourceHandle": "x",
+					"targetHandle": "item"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

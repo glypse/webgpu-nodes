@@ -1,0 +1,24 @@
+{
+	"description": "A render texture scaled by 0.5 of another texture takes that texture's size: 24 by 10 halves to 12 by 5.",
+	"size": {
+		"width": 16,
+		"height": 16
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [12, 5, 0, 1]
+				}
+			]
+		}
+	]
+}

@@ -1,0 +1,161 @@
+{
+	"node": "fallback",
+	"cases": [
+		{
+			"note": "gives the value when it's linked",
+			"types": {
+				"value": "f32"
+			},
+			"values": {
+				"default": 4
+			},
+			"inputs": {
+				"value": [[7]]
+			},
+			"output": "result",
+			"expect": [7]
+		},
+		{
+			"note": "gives the default when the value isn't linked",
+			"types": {
+				"value": "f32"
+			},
+			"values": {
+				"default": 4
+			},
+			"inputs": {},
+			"output": "result",
+			"expect": [4]
+		},
+		{
+			"note": "gives a linked true bool as 1",
+			"types": {
+				"value": "bool"
+			},
+			"values": {
+				"default": 0
+			},
+			"inputs": {
+				"value": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives a linked false bool as 0",
+			"types": {
+				"value": "bool"
+			},
+			"values": {
+				"default": 1
+			},
+			"inputs": {
+				"value": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives a linked i32 as it is",
+			"types": {
+				"value": "i32"
+			},
+			"values": {
+				"default": 5
+			},
+			"inputs": {
+				"value": [[-3]]
+			},
+			"output": "result",
+			"expect": [-3]
+		},
+		{
+			"note": "gives a linked vec2f as it is",
+			"types": {
+				"value": "vec2f"
+			},
+			"values": {
+				"default": 0
+			},
+			"inputs": {
+				"value": [[1, 2]]
+			},
+			"output": "result",
+			"expect": [1, 2]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep of the value",
+			"types": {
+				"value": "f32"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep of the value",
+			"types": {
+				"value": "vec3f"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep of the value",
+			"types": {
+				"value": "i32"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "bool sweep of the value",
+			"types": {
+				"value": "bool"
+			},
+			"inputs": {
+				"value": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

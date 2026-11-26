@@ -1,0 +1,6 @@
+{
+	"node": "image",
+	"skip": "its value is an image asset's pixels",
+	"cases": [],
+	"sweeps": []
+}

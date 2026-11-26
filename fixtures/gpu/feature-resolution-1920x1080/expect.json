@@ -1,0 +1,39 @@
+{
+	"description": "The Resolution of a 1920 by 1080 canvas and the UV at the corners' pixel centres, read back with what the canvas holds.",
+	"size": {
+		"width": 1920,
+		"height": 1080
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [1920, 1080, 0.00026041666666666666, 0.999537037037037]
+				},
+				{
+					"x": 1919,
+					"y": 0,
+					"rgba": [1920, 1080, 0.9997395833333333, 0.999537037037037]
+				},
+				{
+					"x": 0,
+					"y": 1079,
+					"rgba": [1920, 1080, 0.00026041666666666666, 0.0004629629629629983]
+				},
+				{
+					"x": 1919,
+					"y": 1079,
+					"rgba": [1920, 1080, 0.9997395833333333, 0.0004629629629629983]
+				}
+			]
+		}
+	]
+}

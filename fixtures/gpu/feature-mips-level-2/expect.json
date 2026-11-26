@@ -1,0 +1,33 @@
+{
+	"description": "A 100 by 60 texture with mips, sampled at level 2 with the canvas' UV: the UV survives the averaging within about 1.5 px.",
+	"size": {
+		"width": 100,
+		"height": 60
+	},
+	"format": "rgba32float",
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0.03,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 50,
+					"y": 30,
+					"rgba": [0.505, 0.4916666666666667, null, null]
+				}
+			]
+		},
+		{
+			"kind": "cpu",
+			"stride": 7,
+			"tolerance": {
+				"abs": 0.00001,
+				"rel": 0
+			},
+			"maxOff": 0
+		}
+	]
+}

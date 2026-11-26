@@ -1,0 +1,88 @@
+{
+	"description": "Dissolving a chain of nodes links what fed the chain to what it fed.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "r1",
+						"type": "reroute",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "r2",
+						"type": "reroute",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->r1.in",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "r1",
+						"targetHandle": "in"
+					},
+					{
+						"id": "r1.out->r2.in",
+						"source": "r1",
+						"sourceHandle": "out",
+						"target": "r2",
+						"targetHandle": "in"
+					},
+					{
+						"id": "r2.out->out.color",
+						"source": "r2",
+						"sourceHandle": "out",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "dissolveNodes",
+			"args": [["r1", "r2"]]
+		}
+	],
+	"expect": {
+		"results": [true],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"t": "time"
+				},
+				"links": ["t.seconds -> out.color"]
+			}
+		}
+	}
+}

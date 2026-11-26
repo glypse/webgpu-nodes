@@ -1,0 +1,356 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "state",
+					"type": "simulation-input",
+					"data": {
+						"pairedOutput": "stateEnd",
+						"values": {
+							"acc": 0,
+							"count": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "stateEnd",
+					"type": "simulation-output",
+					"data": {
+						"items": [
+							{
+								"id": "acc",
+								"label": "Acc",
+								"type": "f32"
+							},
+							{
+								"id": "count",
+								"label": "Count",
+								"type": "i32"
+							},
+							{
+								"id": "drift",
+								"label": "Drift",
+								"type": "vec3f"
+							}
+						],
+						"values": {
+							"skip": false
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "zero",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec3f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "stepV",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec3f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "one",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 1,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "i32"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nextAcc",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nextCount",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "nextDrift",
+					"type": "add",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "drift",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "countFloat",
+					"type": "to-float",
+					"data": {
+						"values": {
+							"e": 0
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "c",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 1
+						},
+						"types": {
+							"declare": "vec4f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "state",
+					"target": "nextAcc",
+					"sourceHandle": "acc",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "1",
+					"source": "state",
+					"target": "nextAcc",
+					"sourceHandle": "delta-time",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "2",
+					"source": "nextAcc",
+					"target": "stateEnd",
+					"sourceHandle": "result",
+					"targetHandle": "acc"
+				},
+				{
+					"id": "3",
+					"source": "zero",
+					"target": "state",
+					"sourceHandle": "value",
+					"targetHandle": "drift"
+				},
+				{
+					"id": "4",
+					"source": "state",
+					"target": "nextDrift",
+					"sourceHandle": "drift",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "5",
+					"source": "stepV",
+					"target": "nextDrift",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "6",
+					"source": "nextDrift",
+					"target": "stateEnd",
+					"sourceHandle": "result",
+					"targetHandle": "drift"
+				},
+				{
+					"id": "7",
+					"source": "state",
+					"target": "nextCount",
+					"sourceHandle": "count",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "8",
+					"source": "one",
+					"target": "nextCount",
+					"sourceHandle": "value",
+					"targetHandle": "operands"
+				},
+				{
+					"id": "9",
+					"source": "nextCount",
+					"target": "stateEnd",
+					"sourceHandle": "result",
+					"targetHandle": "count"
+				},
+				{
+					"id": "10",
+					"source": "stateEnd",
+					"target": "c",
+					"sourceHandle": "acc",
+					"targetHandle": "x"
+				},
+				{
+					"id": "11",
+					"source": "stateEnd",
+					"target": "countFloat",
+					"sourceHandle": "count",
+					"targetHandle": "e"
+				},
+				{
+					"id": "12",
+					"source": "countFloat",
+					"target": "c",
+					"sourceHandle": "result",
+					"targetHandle": "y"
+				},
+				{
+					"id": "13",
+					"source": "stateEnd",
+					"target": "drift",
+					"sourceHandle": "drift",
+					"targetHandle": "v"
+				},
+				{
+					"id": "14",
+					"source": "drift",
+					"target": "c",
+					"sourceHandle": "x",
+					"targetHandle": "z"
+				},
+				{
+					"id": "15",
+					"source": "c",
+					"target": "out",
+					"sourceHandle": "value",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

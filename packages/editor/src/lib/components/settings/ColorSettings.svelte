@@ -23,7 +23,8 @@
 	value={graph.settings.colorSpace}
 	onValueChange={(value: string) => {
 		const colorSpace = COLOR_SPACES.find((c) => c === value);
-		if (colorSpace) graph.updateSettings({ ...graph.settings, colorSpace });
+		if (colorSpace)
+			graph.apply({ kind: "updateSettings", args: [{ ...graph.settings, colorSpace }] });
 	}}
 	class="grid w-full gap-2"
 >

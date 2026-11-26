@@ -1,0 +1,22 @@
+{
+	"node": "uv",
+	"cases": [
+		{
+			"note": "gives the centre of a 1x1 canvas",
+			"inputs": {},
+			"output": "uv",
+			"expect": [0.5, 0.5]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "the pixel's UV across a canvas",
+			"inputs": {},
+			"output": "uv",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

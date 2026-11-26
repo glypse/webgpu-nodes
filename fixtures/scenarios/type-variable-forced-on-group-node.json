@@ -1,0 +1,106 @@
+{
+	"description": "A group node can force its type variable, with nothing linked.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "u",
+						"type": "uv",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "g",
+						"type": "node-group",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": {
+							"definitionRef": "def3",
+							"locked": false
+						}
+					}
+				],
+				"edges": []
+			},
+			"def3": {
+				"typeVariables": [
+					{
+						"id": "T",
+						"name": "T",
+						"types": ["f32", "vec2f"]
+					}
+				],
+				"inputs": [
+					{
+						"id": "v",
+						"label": "V",
+						"type": {
+							"variable": "T"
+						}
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "f32"
+					}
+				],
+				"nodes": [
+					{
+						"id": "gi",
+						"type": "group-input",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "go",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "setVariableType",
+			"args": ["g", "T", "vec2f"]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"types": {
+					"g": {
+						"in:v": "vec2f"
+					}
+				}
+			}
+		}
+	}
+}

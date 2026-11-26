@@ -1,0 +1,22 @@
+{
+	"node": "std-in-display-gamut",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "In Gamut",
+			"values": {},
+			"inputs": {
+				"Linear RGB": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "In Gamut",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

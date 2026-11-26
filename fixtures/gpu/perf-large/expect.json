@@ -1,0 +1,6 @@
+{
+	"description": "A synthetic project of about 3,400 nodes: long chains, user groups nested two deep, repeat zones, render textures, a Repeat Passes loop and library groups. Measured on the GPU: the perf baseline for a large graph.",
+	"size": { "width": 1920, "height": 1080 },
+	"timed": true,
+	"checks": []
+}

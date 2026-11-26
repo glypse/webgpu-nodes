@@ -1,0 +1,22 @@
+{
+	"description": "Optical Flow of 32 px at 960 by 540: the flow it draws matches the motion of the frames.",
+	"size": {
+		"width": 960,
+		"height": 540
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "flow",
+			"motion": {
+				"kind": "translate",
+				"dx": 28,
+				"dy": -16
+			},
+			"margin": 80,
+			"maxMean": 0.3,
+			"maxOff": 0.01
+		}
+	],
+	"timed": false
+}

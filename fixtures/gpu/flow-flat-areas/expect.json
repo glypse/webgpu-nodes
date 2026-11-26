@@ -1,0 +1,22 @@
+{
+	"description": "Optical Flow of flat areas at 960 by 540: the flow it draws matches the motion of the frames.",
+	"size": {
+		"width": 960,
+		"height": 540
+	},
+	"format": "rgba16float",
+	"checks": [
+		{
+			"kind": "flow",
+			"motion": {
+				"kind": "translate",
+				"dx": 2,
+				"dy": 1.2
+			},
+			"margin": 80,
+			"maxMean": 0.7,
+			"maxOff": 0.25
+		}
+	],
+	"timed": false
+}

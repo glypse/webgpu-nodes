@@ -28,7 +28,7 @@ describe("GraphManager reactivity", () => {
 		expect(
 			reruns(
 				() => graph.root.nodes,
-				() => graph.addNode("sin", { x: 0, y: 0 }),
+				() => graph.apply({ kind: "addNode", args: ["sin", { x: 0, y: 0 }] }),
 			),
 		).toBe(1);
 	});
@@ -38,15 +38,15 @@ describe("GraphManager reactivity", () => {
 		expect(
 			reruns(
 				() => graph.typeCache,
-				() => graph.addNode("sin", { x: 0, y: 0 }),
+				() => graph.apply({ kind: "addNode", args: ["sin", { x: 0, y: 0 }] }),
 			),
 		).toBe(1);
-		const group = graph.createGroup({ x: 0, y: 0 });
+		const group = graph.apply({ kind: "createGroup", args: [{ x: 0, y: 0 }] });
 		expect(
 			reruns(
 				() => graph.activeDocument,
 				() => {
-					graph.enterGroup(group ?? "");
+					graph.apply({ kind: "enterGroup", args: [group ?? ""] });
 				},
 			),
 		).toBe(1);
@@ -54,8 +54,8 @@ describe("GraphManager reactivity", () => {
 			reruns(
 				() => graph.history.canUndo,
 				() => {
-					graph.exitGroup();
-					graph.recordHistory();
+					graph.apply({ kind: "exitGroup", args: [] });
+					graph.apply({ kind: "recordHistory", args: [] });
 				},
 			),
 		).toBe(1);

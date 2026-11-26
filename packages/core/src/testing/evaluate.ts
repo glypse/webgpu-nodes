@@ -83,6 +83,9 @@ export function evaluationContext(
 	};
 }
 
+/** The frame inputs the Time, Delta and Frame nodes read, as the runtime gives them. */
+export type ClockInputs = { time: number; delta: number; frame: number };
+
 export type EvaluateOptions = {
 	/** Textures drawn by earlier evaluations, if given: the model, canvas and images must be the same. */
 	context?: EvaluationContext;
@@ -90,6 +93,8 @@ export type EvaluateOptions = {
 	uv?: readonly [number, number];
 	/** The images of the project's assets, by asset id. */
 	images?: ReadonlyMap<string, CpuTexture>;
+	/** Zero when absent. */
+	frame?: ClockInputs;
 };
 
 /** Where a Repeat Passes loop being run is: its iteration, and its items as they are then. */
@@ -142,6 +147,7 @@ type Frame = {
 	colorSpace: ColorSpace;
 	/** The size of the canvas drawn to, in pixels. */
 	resolution: readonly [number, number];
+	clock: ClockInputs;
 	/** The types the document's variables take (see `TypeBindings`). */
 	bindings: TypeBindings;
 	groupInputs: ReadonlyMap<string, Value>;
@@ -165,11 +171,18 @@ export function evaluate(
 	handleId: string,
 	colorSpace: ColorSpace = "srgb",
 	resolution: readonly [number, number] = [1, 1],
-	{ uv = [0.5, 0.5], images = new Map(), context }: EvaluateOptions = {},
+	{ uv = [0.5, 0.5], images = new Map(), context, frame = NO_CLOCK }: EvaluateOptions = {},
 ): Value {
 	const { env } = context ?? evaluationContext(model, images);
-	return output(model, rootFrame(model, env, uv, colorSpace, resolution), nodeId, handleId);
+	return output(
+		model,
+		rootFrame(model, env, uv, colorSpace, resolution, frame),
+		nodeId,
+		handleId,
+	);
 }
+
+const NO_CLOCK: ClockInputs = { time: 0, delta: 0, frame: 0 };
 
 function rootFrame(
 	model: GraphModel,
@@ -177,6 +190,7 @@ function rootFrame(
 	uv: readonly [number, number],
 	colorSpace: ColorSpace,
 	resolution: readonly [number, number],
+	clock: ClockInputs,
 ): Frame {
 	return {
 		env,
@@ -185,6 +199,7 @@ function rootFrame(
 		uv,
 		colorSpace,
 		resolution,
+		clock,
 		groupInputs: new Map(),
 		zones: new Map(),
 		finals: new Map(),
@@ -236,9 +251,7 @@ function sizeOf(
 	if (like) resolve(like);
 	for (const texture of env.frame.sizedTextures()) resolve(texture);
 	const values = evaluateFrame(env.frame.program(), {
-		time: 0,
-		delta: 0,
-		frame: 0,
+		...frame.clock,
 		canvas,
 		passSize: canvas,
 		iteration: (id) => env.loops.get(id)?.iteration,
@@ -259,7 +272,7 @@ function frameAt(
 	uv: readonly [number, number],
 	resolution: readonly [number, number],
 ): Frame {
-	let at = rootFrame(model, frame.env, uv, frame.colorSpace, resolution);
+	let at = rootFrame(model, frame.env, uv, frame.colorSpace, resolution, frame.clock);
 	for (const id of path) {
 		const node = at.doc.nodesById.get(id);
 		if (!node) throw new Error(`no group node "${id}"`);
@@ -733,6 +746,10 @@ function compute(model: GraphModel, frame: Frame, nodeId: string, handleId: stri
 			return [...frame.resolution];
 		case "uv":
 			return [...frame.uv];
+		case "time":
+			return handleId === "frame" ? [frame.clock.frame] : [frame.clock.time];
+		case "delta":
+			return [frame.clock.delta];
 		case SAMPLE_TEXTURE: {
 			const color = sampleTexture(
 				textureInput(model, frame, node, "texture"),

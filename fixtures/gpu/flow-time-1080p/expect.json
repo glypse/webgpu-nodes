@@ -1,0 +1,10 @@
+{
+	"description": "Optical Flow's time at 1920 by 1080, measured and not checked.",
+	"size": {
+		"width": 1920,
+		"height": 1080
+	},
+	"format": "rgba16float",
+	"checks": [],
+	"timed": true
+}

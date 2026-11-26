@@ -26,7 +26,7 @@ export abstract class FrameModel extends EditModel {
 	 * Put nodes of the active document in a new frame, itself in the
 	 * innermost frame they share, and select it. Returns its id.
 	 */
-	frameNodes(nodeIds: Iterable<string>): string | undefined {
+	frameNodes(nodeIds: readonly string[]): string | undefined {
 		if (this.isLocked) return undefined;
 		const doc = this.activeDocument;
 		const analysis = this.frameAnalysis(doc);
@@ -36,7 +36,7 @@ export abstract class FrameModel extends EditModel {
 		if (nodes.length === 0) return undefined;
 		const parent = commonFrame(analysis, moved);
 		const frame: GraphNode = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			type: LAYOUT_FRAME,
 			data: defaultDataForType(LAYOUT_FRAME),
 			position: {
@@ -67,7 +67,7 @@ export abstract class FrameModel extends EditModel {
 	 * with null. A frame can't go in itself or a frame it holds; nodes in
 	 * the frame of another node given stay in it. Returns whether any moved.
 	 */
-	setNodesFrame(nodeIds: Iterable<string>, frameId: string | null): boolean {
+	setNodesFrame(nodeIds: readonly string[], frameId: string | null): boolean {
 		if (this.isLocked) return false;
 		const doc = this.activeDocument;
 		if (frameId !== null && doc.nodesById.get(frameId)?.type !== LAYOUT_FRAME) return false;
@@ -92,7 +92,7 @@ export abstract class FrameModel extends EditModel {
 	 * Take nodes of the active document out of their frame, into the frame
 	 * around it if any. Returns whether any moved.
 	 */
-	removeFromFrame(nodeIds: Iterable<string>): boolean {
+	removeFromFrame(nodeIds: readonly string[]): boolean {
 		if (this.isLocked) return false;
 		const doc = this.activeDocument;
 		const analysis = this.frameAnalysis(doc);

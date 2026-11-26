@@ -1,0 +1,6 @@
+{
+	"node": "std-flow-error",
+	"skip": "reads a texture: covered by fixtures/gpu",
+	"cases": [],
+	"sweeps": []
+}

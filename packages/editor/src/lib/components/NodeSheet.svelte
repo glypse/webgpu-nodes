@@ -36,7 +36,7 @@
 	let labelBuffer = $derived(node?.data.label ?? "");
 
 	function commitLabel() {
-		if (node) graph.setNodeLabel(node.id, labelBuffer);
+		if (node) graph.apply({ kind: "setNodeLabel", args: [node.id, labelBuffer] });
 		labelBuffer = node?.data.label ?? "";
 	}
 </script>
@@ -84,7 +84,8 @@
 							size="icon-sm"
 							title="Reset to {defaultLabel}"
 							disabled={locked || node.data.label === undefined}
-							onclick={() => graph.setNodeLabel(node.id, undefined)}
+							onclick={() =>
+								graph.apply({ kind: "setNodeLabel", args: [node.id, undefined] })}
 						>
 							<ArrowCounterClockwiseIcon />
 						</Button>
@@ -97,11 +98,14 @@
 							checked={node.data.hideLinks === true}
 							disabled={locked}
 							onCheckedChange={(checked: boolean) =>
-								graph.updateNodeData(
-									node.id,
-									{ hideLinks: checked || undefined },
-									{ retype: false },
-								)}
+								graph.apply({
+									kind: "updateNodeData",
+									args: [
+										node.id,
+										{ hideLinks: checked || undefined },
+										{ retype: false },
+									],
+								})}
 						/>
 						<span class="flex flex-col gap-0.5">
 							<span class="text-sm font-medium">Hide links</span>

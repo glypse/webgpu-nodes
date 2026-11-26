@@ -140,7 +140,7 @@ describe("GraphModel zones", () => {
 			},
 		];
 		graph.rebuildTypeCache();
-		graph.groupSelection(new Set([zoneId]));
+		graph.groupSelection([zoneId]);
 		expect(graph.root.nodesById.has(zoneId)).toBe(false);
 		expect(graph.root.nodesById.has(outputId)).toBe(false);
 		const group = graph.root.nodes.find((n) => n.type === "node-group");
@@ -151,7 +151,7 @@ describe("GraphModel zones", () => {
 
 		// Ungrouping clones nodes with fresh ids: the pairing must follow.
 		if (!group) return;
-		graph.ungroupSelection(new Set([group.id]));
+		graph.ungroupSelection([group.id]);
 		const inputs = graph.root.nodes.filter((n) => n.type === "repeat-input");
 		expect(inputs).toHaveLength(1);
 		const clone = inputs[0];
@@ -172,7 +172,7 @@ describe("GraphModel zones", () => {
 				["b", "result", "c", "e"],
 			],
 		);
-		graph.groupSelection(new Set(["a", "c"]));
+		graph.groupSelection(["a", "c"]);
 		expect(graph.root.nodes.some((n) => n.type === "node-group")).toBe(false);
 	});
 

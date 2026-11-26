@@ -1,0 +1,55 @@
+{
+	"description": "A custom socket takes a WGSL identifier as its name, and only that.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "c",
+						"type": "custom-wgsl",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "addCustomSocket",
+			"args": ["c", "inputs", "f32"]
+		},
+		{
+			"kind": "renameCustomSocket",
+			"args": ["c", "inputs", "id1", "1bad"]
+		},
+		{
+			"kind": "renameCustomSocket",
+			"args": ["c", "inputs", "id1", "amount"]
+		}
+	],
+	"expect": {
+		"results": [
+			{
+				"id": "id1",
+				"label": "input",
+				"type": "f32"
+			},
+			false,
+			true
+		]
+	}
+}

@@ -1,0 +1,118 @@
+{
+	"node": "exp",
+	"cases": [
+		{
+			"note": "gives 1 at 0 (WGSL bound: exp is 3 + 2·|x| ULP, abs is the largest component's bound in ULP of its result)",
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 3.5762786865234375e-7,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives e at 1 (WGSL bound: exp is 3 + 2·|x| ULP, abs is the largest component's bound in ULP of its result)",
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [2.7182817459106445],
+			"tolerance": {
+				"abs": 1.1920928955078125e-6,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives 1/e at -1 (WGSL bound: exp is 3 + 2·|x| ULP, abs is the largest component's bound in ULP of its result)",
+			"inputs": {
+				"e": [[-1]]
+			},
+			"output": "result",
+			"expect": [0.3678794503211975],
+			"tolerance": {
+				"abs": 1.4901161193847656e-7,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives e^10 (WGSL bound: exp is 3 + 2·|x| ULP, abs is the largest component's bound in ULP of its result)",
+			"inputs": {
+				"e": [[10]]
+			},
+			"output": "result",
+			"expect": [22026.46484375],
+			"tolerance": {
+				"abs": 0.044921875,
+				"rel": 0
+			}
+		},
+		{
+			"note": "gives e^88, near the top of f32 (WGSL bound: exp is 3 + 2·|x| ULP, abs is the largest component's bound in ULP of its result)",
+			"inputs": {
+				"e": [[88]]
+			},
+			"output": "result",
+			"expect": [1.6516362661361307e38],
+			"tolerance": {
+				"abs": 1.8152756595268245e33,
+				"rel": 0
+			}
+		},
+		{
+			"note": "takes vec2f component-wise (WGSL bound: exp is 3 + 2·|x| ULP, abs is the largest component's bound in ULP of its result)",
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[0, 1]]
+			},
+			"output": "result",
+			"expect": [1, 2.7182817459106445],
+			"tolerance": {
+				"abs": 1.1920928955078125e-6,
+				"rel": 0
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep (WGSL bound: exp is 3 + 2·|x| ULP; rel is 23·2^-24, the bound at |x| = 10, since one rel cannot follow the bound's |x| dependence)",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -10,
+					"to": 10
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 1.3709068298339844e-6
+			}
+		},
+		{
+			"note": "vec3f sweep (WGSL bound: exp is 3 + 2·|x| ULP; rel is 23·2^-24, the bound at |x| = 10, since one rel cannot follow the bound's |x| dependence)",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -10,
+					"to": 10
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 1.3709068298339844e-6
+			}
+		}
+	]
+}

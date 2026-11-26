@@ -1,0 +1,432 @@
+{
+	"node": "boolean-math",
+	"cases": [
+		{
+			"note": "computes and of (0, 0)",
+			"settings": {
+				"op": "and"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes and of (0, 1)",
+			"settings": {
+				"op": "and"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes and of (1, 0)",
+			"settings": {
+				"op": "and"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes and of (1, 1)",
+			"settings": {
+				"op": "and"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes or of (0, 0)",
+			"settings": {
+				"op": "or"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes or of (0, 1)",
+			"settings": {
+				"op": "or"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes or of (1, 0)",
+			"settings": {
+				"op": "or"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes or of (1, 1)",
+			"settings": {
+				"op": "or"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes xor of (0, 0)",
+			"settings": {
+				"op": "xor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes xor of (0, 1)",
+			"settings": {
+				"op": "xor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes xor of (1, 0)",
+			"settings": {
+				"op": "xor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes xor of (1, 1)",
+			"settings": {
+				"op": "xor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes nand of (0, 0)",
+			"settings": {
+				"op": "nand"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes nand of (0, 1)",
+			"settings": {
+				"op": "nand"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes nand of (1, 0)",
+			"settings": {
+				"op": "nand"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes nand of (1, 1)",
+			"settings": {
+				"op": "nand"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes nor of (0, 0)",
+			"settings": {
+				"op": "nor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes nor of (0, 1)",
+			"settings": {
+				"op": "nor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes nor of (1, 0)",
+			"settings": {
+				"op": "nor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes nor of (1, 1)",
+			"settings": {
+				"op": "nor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes xnor of (0, 0)",
+			"settings": {
+				"op": "xnor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "computes xnor of (0, 1)",
+			"settings": {
+				"op": "xnor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes xnor of (1, 0)",
+			"settings": {
+				"op": "xnor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "computes xnor of (1, 1)",
+			"settings": {
+				"op": "xnor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "combines each component of vec2b",
+			"settings": {
+				"op": "and"
+			},
+			"types": {
+				"a": "vec2b"
+			},
+			"inputs": {
+				"a": [[1, 0]],
+				"b": [[1, 1]]
+			},
+			"output": "result",
+			"expect": [1, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "bool sweep xor a true",
+			"settings": {
+				"op": "xor"
+			},
+			"types": {
+				"a": "bool"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				},
+				"b": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3b sweep or a mask",
+			"settings": {
+				"op": "or"
+			},
+			"types": {
+				"a": "vec3b"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				},
+				"b": {
+					"kind": "constant",
+					"value": [1, 0, 1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

@@ -1,0 +1,182 @@
+{
+	"description": "A passes zone can't sit inside a repeat zone: a link feeding it from the repeat body is invalid, with its reason.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "z1",
+						"type": "repeat-input",
+						"data": {
+							"pairedOutput": "z2",
+							"values": {
+								"iterations": 1,
+								"z3": 0
+							},
+							"maxIterations": 1024
+						},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "z2",
+						"type": "repeat-output",
+						"data": {
+							"items": [
+								{
+									"id": "z3",
+									"label": "Value",
+									"type": {
+										"inferred": true
+									}
+								}
+							]
+						},
+						"position": {
+							"x": 450,
+							"y": 0
+						}
+					},
+					{
+						"id": "z5",
+						"type": "pass-repeat-input",
+						"data": {
+							"pairedOutput": "z6",
+							"values": {
+								"iterations": 1,
+								"z7": 0
+							}
+						},
+						"position": {
+							"x": 0,
+							"y": 500
+						}
+					},
+					{
+						"id": "z6",
+						"type": "pass-repeat-output",
+						"data": {
+							"items": [
+								{
+									"id": "z7",
+									"label": "Value",
+									"type": {
+										"inferred": true
+									}
+								}
+							]
+						},
+						"position": {
+							"x": 450,
+							"y": 500
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "z4",
+						"source": "z1",
+						"target": "z2",
+						"sourceHandle": "z3",
+						"targetHandle": "z3"
+					},
+					{
+						"id": "z8",
+						"source": "z5",
+						"target": "z6",
+						"sourceHandle": "z7",
+						"targetHandle": "z7"
+					}
+				],
+				"locked": false
+			}
+		},
+		"settings": {
+			"canvas": {
+				"width": 1920,
+				"height": 1080,
+				"followPreview": false
+			},
+			"timing": {
+				"fps": 60,
+				"realtime": true
+			},
+			"colorSpace": "srgb"
+		},
+		"layout": {
+			"areas": [
+				{
+					"id": "preview",
+					"rect": {
+						"left": 0,
+						"top": 0,
+						"right": 0.3,
+						"bottom": 0.92
+					},
+					"editor": {
+						"type": "preview"
+					}
+				},
+				{
+					"id": "graph",
+					"rect": {
+						"left": 0.3,
+						"top": 0,
+						"right": 1,
+						"bottom": 0.92
+					},
+					"editor": {
+						"type": "graph",
+						"path": []
+					}
+				},
+				{
+					"id": "timeline",
+					"rect": {
+						"left": 0,
+						"top": 0.92,
+						"right": 1,
+						"bottom": 1
+					},
+					"editor": {
+						"type": "timeline"
+					}
+				}
+			]
+		},
+		"assets": []
+	},
+	"commands": [
+		{
+			"kind": "connect",
+			"args": [
+				{
+					"source": "z1",
+					"sourceHandle": "z3",
+					"target": "z5",
+					"targetHandle": "iterations"
+				}
+			]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"invalidLinks": {
+					"z1.z3 -> z5.iterations": "can't repeat whole passes"
+				}
+			}
+		}
+	}
+}

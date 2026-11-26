@@ -1,0 +1,6 @@
+{
+	"node": "std-optical-flow",
+	"skip": "reads a texture: covered by fixtures/gpu",
+	"cases": [],
+	"sweeps": []
+}

@@ -1,0 +1,178 @@
+{
+	"definitions": {
+		"__root__": {
+			"nodes": [
+				{
+					"id": "out",
+					"type": "frag-output",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "res",
+					"type": "resolution",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "uv",
+					"type": "uv",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "size",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "coords",
+					"type": "separate-vector",
+					"data": {},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				},
+				{
+					"id": "c",
+					"type": "declare",
+					"data": {
+						"values": {
+							"x": 0,
+							"y": 0,
+							"z": 0,
+							"w": 0
+						},
+						"types": {
+							"declare": "vec4f"
+						}
+					},
+					"position": {
+						"x": 0,
+						"y": 0
+					}
+				}
+			],
+			"edges": [
+				{
+					"id": "0",
+					"source": "res",
+					"target": "size",
+					"sourceHandle": "resolution",
+					"targetHandle": "v"
+				},
+				{
+					"id": "1",
+					"source": "uv",
+					"target": "coords",
+					"sourceHandle": "uv",
+					"targetHandle": "v"
+				},
+				{
+					"id": "2",
+					"source": "size",
+					"target": "c",
+					"sourceHandle": "x",
+					"targetHandle": "x"
+				},
+				{
+					"id": "3",
+					"source": "size",
+					"target": "c",
+					"sourceHandle": "y",
+					"targetHandle": "y"
+				},
+				{
+					"id": "4",
+					"source": "coords",
+					"target": "c",
+					"sourceHandle": "x",
+					"targetHandle": "z"
+				},
+				{
+					"id": "5",
+					"source": "coords",
+					"target": "c",
+					"sourceHandle": "y",
+					"targetHandle": "w"
+				},
+				{
+					"id": "6",
+					"source": "c",
+					"target": "out",
+					"sourceHandle": "value",
+					"targetHandle": "color"
+				}
+			],
+			"locked": false
+		}
+	},
+	"settings": {
+		"canvas": {
+			"width": 1920,
+			"height": 1080,
+			"followPreview": false
+		},
+		"timing": {
+			"fps": 60,
+			"realtime": true
+		},
+		"colorSpace": "srgb"
+	},
+	"layout": {
+		"areas": [
+			{
+				"id": "preview",
+				"rect": {
+					"left": 0,
+					"top": 0,
+					"right": 0.3,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "preview"
+				}
+			},
+			{
+				"id": "graph",
+				"rect": {
+					"left": 0.3,
+					"top": 0,
+					"right": 1,
+					"bottom": 0.92
+				},
+				"editor": {
+					"type": "graph",
+					"path": []
+				}
+			},
+			{
+				"id": "timeline",
+				"rect": {
+					"left": 0,
+					"top": 0.92,
+					"right": 1,
+					"bottom": 1
+				},
+				"editor": {
+					"type": "timeline"
+				}
+			}
+		]
+	},
+	"assets": []
+}

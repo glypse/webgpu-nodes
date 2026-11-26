@@ -107,7 +107,7 @@ describe("importing groups", () => {
 	it("adds nothing for groups the project has already", async () => {
 		const model = mine();
 		const ref = (() => {
-			model.groupSelection(new Set(["mine"]));
+			model.groupSelection(["mine"]);
 			const group = model.root.nodes.find((n) => n.type === "node-group")?.group;
 			if (!group) throw new Error("not grouped");
 			return group.definitionRef;

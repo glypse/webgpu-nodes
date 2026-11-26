@@ -1,0 +1,31 @@
+{
+	"node": "std-oklch-to-oklab",
+	"cases": [
+		{
+			"note": "maps zero chroma to the lightness axis",
+			"inputs": {
+				"OKLch": [[1, 0, 0]]
+			},
+			"output": "OKLab",
+			"expect": [1, 0, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "OKLab",
+			"values": {},
+			"inputs": {
+				"OKLch": {
+					"kind": "uv",
+					"from": 0,
+					"to": 1
+				}
+			},
+			"output": "OKLab",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

@@ -1,0 +1,266 @@
+{
+	"node": "add",
+	"cases": [
+		{
+			"note": "adds f32s, rounding each sum to f32",
+			"inputs": {
+				"operands": [[0.1], [0.2]]
+			},
+			"output": "result",
+			"expect": [0.30000001192092896]
+		},
+		{
+			"note": "adds three operands",
+			"inputs": {
+				"operands": [[1], [2], [3]]
+			},
+			"output": "result",
+			"expect": [6]
+		},
+		{
+			"note": "rounds after each operand, absorbing a small term",
+			"inputs": {
+				"operands": [[100000000], [1], [-100000000]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives +0 for a sum that cancels",
+			"inputs": {
+				"operands": [[1.5], [-1.5]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "adds large f32s without overflowing",
+			"inputs": {
+				"operands": [[3e38], [-1e38]]
+			},
+			"output": "result",
+			"expect": [2.0000001388812345e38]
+		},
+		{
+			"note": "adds subnormal f32s",
+			"inputs": {
+				"operands": [[1e-40], [1e-40]]
+			},
+			"output": "result",
+			"expect": [1.999989220222952e-40]
+		},
+		{
+			"note": "wraps i32 sums past MAX",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[2147483647], [1]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "wraps i32 sums past MIN",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": [[-2147483648], [-1]]
+			},
+			"output": "result",
+			"expect": [2147483647]
+		},
+		{
+			"note": "wraps u32 sums",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": [[4294967295], [1]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "adds vec2f component-wise",
+			"types": {
+				"operands": "vec2f"
+			},
+			"inputs": {
+				"operands": [
+					[1, 2],
+					[3, 4]
+				]
+			},
+			"output": "result",
+			"expect": [4, 6]
+		},
+		{
+			"note": "adds vec3f component-wise",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": [
+					[1, 2, 3],
+					[10, 20, 30]
+				]
+			},
+			"output": "result",
+			"expect": [11, 22, 33]
+		},
+		{
+			"note": "adds vec4f component-wise",
+			"types": {
+				"operands": "vec4f"
+			},
+			"inputs": {
+				"operands": [
+					[1, 2, 3, 4],
+					[4, 3, 2, 1]
+				]
+			},
+			"output": "result",
+			"expect": [5, 5, 5, 5]
+		},
+		{
+			"note": "wraps integer vector sums per component",
+			"types": {
+				"operands": "vec2i"
+			},
+			"inputs": {
+				"operands": [
+					[2147483647, 0],
+					[1, 0]
+				]
+			},
+			"output": "result",
+			"expect": [-2147483648, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep reaching the only operand",
+			"types": {
+				"operands": "f32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep reaching the only operand",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep reaching the only operand",
+			"types": {
+				"operands": "i32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep reaching the only operand",
+			"types": {
+				"operands": "u32"
+			},
+			"inputs": {
+				"operands": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep over two operands",
+			"types": {
+				"operands": "f32"
+			},
+			"inputs": {
+				"operands": [
+					{
+						"kind": "uv",
+						"from": -2,
+						"to": 2
+					},
+					{
+						"kind": "uv",
+						"from": 1,
+						"to": -1
+					}
+				]
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep over two operands",
+			"types": {
+				"operands": "vec3f"
+			},
+			"inputs": {
+				"operands": [
+					{
+						"kind": "uv",
+						"from": -2,
+						"to": 2
+					},
+					{
+						"kind": "uv",
+						"from": 1,
+						"to": -1
+					}
+				]
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

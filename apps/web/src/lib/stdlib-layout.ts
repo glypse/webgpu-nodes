@@ -10,12 +10,12 @@ export const STDLIB_LAYOUT_PARAM = "stdlib-layout";
  */
 export async function layoutServedProject(graph: GraphManager, server: string): Promise<void> {
 	const response = await fetch(new URL("project", server));
-	if (!(await graph.loadFromString(await response.text())).ok) {
+	if (!(await graph.apply({ kind: "loadFromString", args: [await response.text()] })).ok) {
 		throw new Error("[stdlib-layout] the served project didn't load");
 	}
 	await document.fonts.ready;
 	while (!graph.canvas) await new Promise(requestAnimationFrame);
-	await graph.layoutProject();
+	await graph.apply({ kind: "layoutProject", args: [] });
 	await fetch(new URL("result", server), { method: "POST", body: graph.getProjectJson() });
-	graph.markSaved();
+	graph.apply({ kind: "markSaved", args: [] });
 }

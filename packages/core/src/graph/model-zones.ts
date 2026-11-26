@@ -78,10 +78,10 @@ export abstract class ZoneModel extends GraphModelBase {
 	 */
 	createZone(kind: ZoneKind, position: { x: number; y: number }): string | undefined {
 		if (this.isLocked) return undefined;
-		const inputId = crypto.randomUUID();
-		const outputId = crypto.randomUUID();
+		const inputId = this.newId();
+		const outputId = this.newId();
 		const item: ZoneItem = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			label: "Value",
 			type: { inferred: true },
 		};
@@ -113,7 +113,7 @@ export abstract class ZoneModel extends GraphModelBase {
 			},
 		];
 		const passthrough: GraphEdge = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			source: inputId,
 			sourceHandle: item.id,
 			target: outputId,
@@ -216,7 +216,7 @@ export abstract class ZoneModel extends GraphModelBase {
 		const existing = new Set(items.map((i) => i.label));
 		let name = label ?? "Value";
 		for (let n = 2; existing.has(name); n++) name = `${label ?? "Value"} ${String(n)}`;
-		const item: ZoneItem = { id: crypto.randomUUID(), label: name, type };
+		const item: ZoneItem = { id: this.newId(), label: name, type };
 		this.setZoneItems(zoneId, [...items, item]);
 		return item;
 	}
@@ -380,7 +380,7 @@ export abstract class ZoneModel extends GraphModelBase {
 		}
 
 		const edge: GraphEdge = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			source: connection.source,
 			sourceHandle: fromNew ? item.id : connection.sourceHandle,
 			target: connection.target,

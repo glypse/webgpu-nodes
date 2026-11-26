@@ -1,0 +1,401 @@
+{
+	"node": "div",
+	"cases": [
+		{
+			"note": "divides f32s",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [3.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "divides negatives exactly",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[-9]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [-3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "rounds the quotient to f32",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [0.3333333432674408],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for division by zero",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[5]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for a negative over zero",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[-5]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for zero over zero",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "keeps the sign of a zero quotient",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[-3]]
+			},
+			"output": "result",
+			"expect": ["-0"],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "divides large f32s",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[3e38]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [1.5e38],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "truncates i32 quotients toward zero",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "truncates a negative i32 quotient",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-7]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [-3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "truncates i32 quotients with a negative divisor",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[-2]]
+			},
+			"output": "result",
+			"expect": [-3],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "divides u32s",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [2147483647],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for i32 division by zero",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for u32 division by zero",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "wraps i32 MIN divided by -1 to MIN",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-2147483648]],
+				"b": [[-1]]
+			},
+			"output": "result",
+			"expect": [-2147483648],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "divides vec3f component-wise",
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[6, 8, 10]],
+				"b": [[2, 4, 5]]
+			},
+			"output": "result",
+			"expect": [3, 2, 2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "divides vec2i component-wise, truncating",
+			"types": {
+				"a": "vec2i"
+			},
+			"inputs": {
+				"a": [[-7, 7]],
+				"b": [[2, -2]]
+			},
+			"output": "result",
+			"expect": [-3, -3]
+		},
+		{
+			"note": "gives 0 for zero divisors in vec4f",
+			"types": {
+				"a": "vec4f"
+			},
+			"inputs": {
+				"a": [[1, 2, 3, 4]],
+				"b": [[1, 0, 3, 0]]
+			},
+			"output": "result",
+			"expect": [1, 0, 1, 0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over the dividend",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"b": {
+					"kind": "constant",
+					"value": [0.5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "f32 sweep over a divisor near zero",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "constant",
+					"value": [1]
+				},
+				"b": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep over the dividend",
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"b": {
+					"kind": "constant",
+					"value": [2, 4, 5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "i32 sweep over the dividend",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep over the dividend",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": 0,
+					"to": 16
+				},
+				"b": {
+					"kind": "constant",
+					"value": [3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

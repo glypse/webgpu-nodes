@@ -1,0 +1,94 @@
+{
+	"node": "std-component-sum",
+	"cases": [
+		{
+			"note": "adds the components",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"inputs": {
+				"Vector": [[1, 2, 3]]
+			},
+			"output": "Sum",
+			"expect": [6]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "Sum, vec3f",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Sum",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Sum, vec2f",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Sum",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Sum, vec4f",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Sum",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Sum, f32",
+			"types": {
+				"Vector": "f32"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Sum",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

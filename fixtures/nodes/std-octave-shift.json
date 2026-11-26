@@ -1,0 +1,119 @@
+{
+	"node": "std-octave-shift",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Shifted, vec2f",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Shifted",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Shifted, vec3f",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Shifted",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Shifted, vec4f",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Shifted",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Shifted, f32",
+			"types": {
+				"Vector": "f32"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Octave": {
+					"kind": "constant",
+					"value": [2]
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Shifted",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

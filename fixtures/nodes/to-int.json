@@ -1,0 +1,326 @@
+{
+	"node": "to-int",
+	"cases": [
+		{
+			"note": "rounds trunc to -2,-1,1,2",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[-2.5, -1.5, 1.5, 2.5]]
+			},
+			"output": "result",
+			"expect": [-2, -1, 1, 2]
+		},
+		{
+			"note": "rounds trunc to 1,-1,3,-3",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[1.7, -1.7, 3, -3]]
+			},
+			"output": "result",
+			"expect": [1, -1, 3, -3]
+		},
+		{
+			"note": "rounds floor to -3,-2,1,2",
+			"settings": {
+				"rounding": "floor"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[-2.5, -1.5, 1.5, 2.5]]
+			},
+			"output": "result",
+			"expect": [-3, -2, 1, 2]
+		},
+		{
+			"note": "rounds floor to 1,-2,3,-3",
+			"settings": {
+				"rounding": "floor"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[1.7, -1.7, 3, -3]]
+			},
+			"output": "result",
+			"expect": [1, -2, 3, -3]
+		},
+		{
+			"note": "rounds ceil to -2,-1,2,3",
+			"settings": {
+				"rounding": "ceil"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[-2.5, -1.5, 1.5, 2.5]]
+			},
+			"output": "result",
+			"expect": [-2, -1, 2, 3]
+		},
+		{
+			"note": "rounds ceil to 2,-1,3,-3",
+			"settings": {
+				"rounding": "ceil"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[1.7, -1.7, 3, -3]]
+			},
+			"output": "result",
+			"expect": [2, -1, 3, -3]
+		},
+		{
+			"note": "rounds round to -2,-2,2,2",
+			"settings": {
+				"rounding": "round"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[-2.5, -1.5, 1.5, 2.5]]
+			},
+			"output": "result",
+			"expect": [-2, -2, 2, 2]
+		},
+		{
+			"note": "rounds round to 2,-2,3,-3",
+			"settings": {
+				"rounding": "round"
+			},
+			"types": {
+				"e": "vec4f"
+			},
+			"inputs": {
+				"e": [[1.7, -1.7, 3, -3]]
+			},
+			"output": "result",
+			"expect": [2, -2, 3, -3]
+		},
+		{
+			"note": "reinterprets the top u32 as -1",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[4294967295]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "reinterprets 2^31 as the i32 MIN",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[2147483648]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "reinterprets vec2u components",
+			"types": {
+				"e": "vec2u"
+			},
+			"inputs": {
+				"e": [[4294967295, 5]]
+			},
+			"output": "result",
+			"expect": [-1, 5]
+		},
+		{
+			"note": "keeps an i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-7]]
+			},
+			"output": "result",
+			"expect": [-7]
+		},
+		{
+			"note": "gives true as 1",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "gives false as 0",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep, truncated",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep, floored",
+			"settings": {
+				"rounding": "floor"
+			},
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep, ceiled",
+			"settings": {
+				"rounding": "ceil"
+			},
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "f32 sweep, rounded",
+			"settings": {
+				"rounding": "round"
+			},
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep, truncated",
+			"settings": {
+				"rounding": "trunc"
+			},
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep reinterpreted",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "bool sweep",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

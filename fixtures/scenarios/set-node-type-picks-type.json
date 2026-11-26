@@ -1,0 +1,47 @@
+{
+	"description": "A declare node with no link takes the type it is set to.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "d",
+						"type": "declare",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "setNodeType",
+			"args": ["d", "vec3f"]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"types": {
+					"d": {
+						"out:value": "vec3f"
+					}
+				}
+			}
+		}
+	}
+}

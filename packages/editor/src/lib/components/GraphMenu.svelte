@@ -42,7 +42,7 @@
 
 	/** A reroute whose links get hidden is named by its tags: an unnamed one asks for a name. */
 	function toggleHiddenLinks() {
-		graph.toggleHiddenLinks(selected);
+		graph.apply({ kind: "toggleHiddenLinks", args: [selected] });
 		const unnamed = reroutes.find((n) => n.data.label === undefined);
 		if (unnamed && graph.resolveNode(unnamed.id)?.data.hideLinks) graph.openSheet(unnamed.id);
 	}
@@ -61,7 +61,8 @@
 		const nodeId = target?.closest<HTMLElement>(".svelte-flow__node")?.dataset.id;
 		onNode = nodeId;
 		// A node right-clicked outside the selection becomes the selection.
-		if (nodeId && !selected.includes(nodeId)) graph.selectNodes([nodeId]);
+		if (nodeId && !selected.includes(nodeId))
+			graph.apply({ kind: "selectNodes", args: [[nodeId]] });
 	}
 </script>
 
@@ -72,7 +73,10 @@
 	<ContextMenu.Content class="w-52">
 		{#if onNode}
 			{@const nodeId = onNode}
-			<ContextMenu.Item disabled={locked} onSelect={() => graph.previewNode(nodeId)}>
+			<ContextMenu.Item
+				disabled={locked}
+				onSelect={() => graph.apply({ kind: "previewNode", args: [nodeId] })}
+			>
 				Preview
 				<ContextMenu.Shortcut>⇧⌘Click</ContextMenu.Shortcut>
 			</ContextMenu.Item>
@@ -116,7 +120,7 @@
 			{/if}
 			<ContextMenu.Item
 				disabled={locked}
-				onSelect={() => graph.toggleUnlinkedSockets(selected)}
+				onSelect={() => graph.apply({ kind: "toggleUnlinkedSockets", args: [selected] })}
 			>
 				{allUnlinkedHidden ? "Show all sockets" : "Hide unlinked sockets"}
 				<ContextMenu.Shortcut>⌃H</ContextMenu.Shortcut>
@@ -125,26 +129,33 @@
 			<ContextMenu.Item
 				disabled={locked}
 				variant="destructive"
-				onSelect={() => graph.deleteNodes(selected, view.selectedEdgeIds)}
+				onSelect={() =>
+					graph.apply({ kind: "deleteNodes", args: [selected, view.selectedEdgeIds] })}
 			>
 				Delete
 				<ContextMenu.Shortcut>⌫</ContextMenu.Shortcut>
 			</ContextMenu.Item>
-			<ContextMenu.Item disabled={locked} onSelect={() => graph.dissolveNodes(selected)}>
+			<ContextMenu.Item
+				disabled={locked}
+				onSelect={() => graph.apply({ kind: "dissolveNodes", args: [selected] })}
+			>
 				Dissolve
 				<ContextMenu.Shortcut>⌘⌫</ContextMenu.Shortcut>
 			</ContextMenu.Item>
 		{/if}
 		{#if selected.length > 0}
 			<ContextMenu.Separator />
-			<ContextMenu.Item disabled={locked} onSelect={() => graph.frameNodes(selected)}>
+			<ContextMenu.Item
+				disabled={locked}
+				onSelect={() => graph.apply({ kind: "frameNodes", args: [selected] })}
+			>
 				Frame selected
 				<ContextMenu.Shortcut>⌘J</ContextMenu.Shortcut>
 			</ContextMenu.Item>
 			{#if inFrame}
 				<ContextMenu.Item
 					disabled={locked}
-					onSelect={() => graph.removeFromFrame(selected)}
+					onSelect={() => graph.apply({ kind: "removeFromFrame", args: [selected] })}
 				>
 					Remove from frame
 					<ContextMenu.Shortcut>⌥P</ContextMenu.Shortcut>
@@ -154,7 +165,7 @@
 		{#if selected.length > 1}
 			<ContextMenu.Item
 				disabled={locked}
-				onSelect={() => graph.groupSelection(new Set(selected))}
+				onSelect={() => graph.apply({ kind: "groupSelection", args: [selected] })}
 			>
 				Group selected
 				<ContextMenu.Shortcut>⌘G</ContextMenu.Shortcut>

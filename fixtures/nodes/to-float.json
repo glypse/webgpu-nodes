@@ -1,0 +1,196 @@
+{
+	"node": "to-float",
+	"cases": [
+		{
+			"note": "converts f32 as it is",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[0.1]]
+			},
+			"output": "result",
+			"expect": [0.10000000149011612]
+		},
+		{
+			"note": "converts a negative i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-7]]
+			},
+			"output": "result",
+			"expect": [-7]
+		},
+		{
+			"note": "converts the top u32 to 2^32",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[4294967295]]
+			},
+			"output": "result",
+			"expect": [4294967296]
+		},
+		{
+			"note": "converts the top i32 to 2^31",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[2147483647]]
+			},
+			"output": "result",
+			"expect": [2147483648]
+		},
+		{
+			"note": "converts true to 1",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "converts false to 0",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "converts vec3i component-wise",
+			"types": {
+				"e": "vec3i"
+			},
+			"inputs": {
+				"e": [[1, -2, 3]]
+			},
+			"output": "result",
+			"expect": [1, -2, 3]
+		},
+		{
+			"note": "converts vec2b component-wise",
+			"types": {
+				"e": "vec2b"
+			},
+			"inputs": {
+				"e": [[1, 0]]
+			},
+			"output": "result",
+			"expect": [1, 0]
+		},
+		{
+			"note": "converts vec4u component-wise",
+			"types": {
+				"e": "vec4u"
+			},
+			"inputs": {
+				"e": [[0, 1, 2, 4294967295]]
+			},
+			"output": "result",
+			"expect": [0, 1, 2, 4294967296]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3i sweep",
+			"types": {
+				"e": "vec3i"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "bool sweep",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

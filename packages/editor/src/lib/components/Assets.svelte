@@ -31,7 +31,7 @@
 
 	function remove(asset: Asset) {
 		if ((usages.get(asset.id) ?? 0) > 0) deleting = asset;
-		else graph.removeAsset(asset.id);
+		else graph.apply({ kind: "removeAsset", args: [asset.id] });
 	}
 
 	async function importPicked() {
@@ -49,7 +49,7 @@
 	}
 
 	function commitRename() {
-		if (renaming) graph.renameAsset(renaming, nameBuffer);
+		if (renaming) graph.apply({ kind: "renameAsset", args: [renaming, nameBuffer] });
 		renaming = null;
 	}
 
@@ -219,7 +219,7 @@
 						{...props}
 						variant="destructive"
 						onclick={() => {
-							if (deleting) graph.removeAsset(deleting.id);
+							if (deleting) graph.apply({ kind: "removeAsset", args: [deleting.id] });
 							deleting = null;
 						}}>Delete</Button
 					>

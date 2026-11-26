@@ -1,0 +1,138 @@
+{
+	"description": "Retyping a custom socket drops a link that no longer fits it.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "u",
+						"type": "uv",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "c",
+						"type": "custom-wgsl",
+						"data": {
+							"code": "color = vec3f(uv, 0.5);",
+							"sockets": {
+								"inputs": [
+									{
+										"id": "uv",
+										"label": "uv",
+										"type": "vec2f"
+									},
+									{
+										"id": "c1",
+										"label": "input",
+										"type": "vec2f"
+									}
+								],
+								"outputs": [
+									{
+										"id": "color",
+										"label": "color",
+										"type": "vec3f"
+									}
+								]
+							}
+						},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "c2",
+						"source": "u",
+						"target": "c",
+						"sourceHandle": "uv",
+						"targetHandle": "c1"
+					}
+				],
+				"locked": false
+			}
+		},
+		"settings": {
+			"canvas": {
+				"width": 1920,
+				"height": 1080,
+				"followPreview": false
+			},
+			"timing": {
+				"fps": 60,
+				"realtime": true
+			},
+			"colorSpace": "srgb"
+		},
+		"layout": {
+			"areas": [
+				{
+					"id": "preview",
+					"rect": {
+						"left": 0,
+						"top": 0,
+						"right": 0.3,
+						"bottom": 0.92
+					},
+					"editor": {
+						"type": "preview"
+					}
+				},
+				{
+					"id": "graph",
+					"rect": {
+						"left": 0.3,
+						"top": 0,
+						"right": 1,
+						"bottom": 0.92
+					},
+					"editor": {
+						"type": "graph",
+						"path": []
+					}
+				},
+				{
+					"id": "timeline",
+					"rect": {
+						"left": 0,
+						"top": 0.92,
+						"right": 1,
+						"bottom": 1
+					},
+					"editor": {
+						"type": "timeline"
+					}
+				}
+			]
+		},
+		"assets": []
+	},
+	"commands": [
+		{
+			"kind": "setCustomSocketType",
+			"args": ["c", "inputs", "c1", "f32"]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"links": []
+			}
+		}
+	}
+}

@@ -4,5 +4,5 @@
 		"lib": ["esnext", "DOM", "DOM.Iterable"],
 		"types": ["bun"]
 	},
-	"include": ["src/**/*", "eslint.config.ts"]
+	"include": ["src/**/*", "scripts/**/*", "eslint.config.ts"]
 }

@@ -15,7 +15,7 @@ import {
 	type GroupsFile,
 	type HistoryCounts,
 	type HydratedGraphDocument,
-	type LayoutOptions,
+	type IdSource,
 	type LoadError,
 	type LoadResult,
 	MAX_BUNDLE_BYTES,
@@ -41,8 +41,8 @@ import { downloadFile } from "./utils";
 export class GraphManager extends GraphModel {
 	readonly assetFiles = new AssetFiles();
 
-	constructor(project: GraphProject = defaultScene) {
-		super(project);
+	constructor(project: GraphProject = defaultScene, options?: { ids?: IdSource }) {
+		super(project, options);
 	}
 
 	protected override createState(): GraphModelState {
@@ -94,12 +94,15 @@ export class GraphManager extends GraphModel {
 	}
 
 	cut(nodeIds: string[]) {
-		if (!this.isLocked && this.copy(nodeIds)) this.deleteNodes(nodeIds);
+		if (!this.isLocked && this.copy(nodeIds))
+			this.apply({ kind: "deleteNodes", args: [nodeIds] });
 	}
 
 	/** Paste the clipboard into the active document (see `pasteNodes`). Returns the new ids. */
 	paste(position?: { x: number; y: number }): string[] {
-		return this.clipboard ? this.pasteNodes(this.clipboard, position) : [];
+		return this.clipboard
+			? this.apply({ kind: "pasteNodes", args: [this.clipboard, position] })
+			: [];
 	}
 
 	// ── Layout ──────────────────────────────────────────────────────────────
@@ -116,18 +119,14 @@ export class GraphManager extends GraphModel {
 		return (this.activeArea === null ? undefined : this.canvases.get(this.activeArea)) ?? null;
 	}
 
-	override async layoutDocument(
-		definitionRef: string = this.activeDefinitionRef,
-		options: LayoutOptions = {},
-	): Promise<boolean> {
+	protected override async measuredGeometry(
+		definitionRef: string,
+	): Promise<((node: GraphNode) => NodeGeometry | undefined) | undefined> {
 		const canvas = this.canvas;
-		if (!canvas) return super.layoutDocument(definitionRef, options);
+		if (!canvas) return undefined;
 		const inView = definitionRef === this.activeDefinitionRef;
 		const measured = inView ? undefined : await canvas.measureDocument(definitionRef);
-		return super.layoutDocument(definitionRef, {
-			measure: (_ref, node) => (measured ? measured.get(node.id) : canvas.measure(node)),
-			...options,
-		});
+		return (node) => (measured ? measured.get(node.id) : canvas.measure(node));
 	}
 
 	// ── Files ───────────────────────────────────────────────────────────────
@@ -190,7 +189,7 @@ export class GraphManager extends GraphModel {
 			this.getProjectJson(),
 			this.assets,
 		);
-		this.markSaved();
+		this.apply({ kind: "markSaved", args: [] });
 	}
 
 	/** Load a project bundle picked by the user; failing leaves the project as it was. */
@@ -241,7 +240,7 @@ export class GraphManager extends GraphModel {
 				continue;
 			}
 			this.assetFiles.set(asset.id, file);
-			this.addAsset(asset);
+			this.apply({ kind: "addAsset", args: [asset] });
 			imported.push(asset);
 		}
 		return imported;
@@ -259,7 +258,7 @@ export class GraphManager extends GraphModel {
 			return false;
 		}
 		this.assetFiles.set(id, file);
-		this.replaceAsset({ ...asset, name: current.name });
+		this.apply({ kind: "replaceAsset", args: [{ ...asset, name: current.name }] });
 		return true;
 	}
 
@@ -295,7 +294,7 @@ export class GraphManager extends GraphModel {
 		}
 		if (groups.length === 0) return;
 
-		const result = await this.importGroups(groups);
+		const result = await this.apply({ kind: "importGroups", args: [groups] });
 		if (!result.ok) {
 			this.reportFile(names.join(", "), result.error);
 			return;

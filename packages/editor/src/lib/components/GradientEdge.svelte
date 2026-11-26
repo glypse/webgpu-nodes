@@ -155,7 +155,7 @@
 
 	function selectSource() {
 		view.activate();
-		graph.selectNodes([source]);
+		graph.apply({ kind: "selectNodes", args: [[source]] });
 	}
 </script>
 

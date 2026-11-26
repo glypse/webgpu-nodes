@@ -1,0 +1,31 @@
+{
+	"description": "A texture sized by another is right while its own size is read: a half-scale texture of a 64 px canvas is 8 px wide at this frame.",
+	"size": {
+		"width": 64,
+		"height": 64
+	},
+	"format": "rgba16float",
+	"frames": [
+		{
+			"time": 0.25,
+			"delta": 0.016666666666666666,
+			"frame": 15
+		}
+	],
+	"checks": [
+		{
+			"kind": "pixels",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			},
+			"pixels": [
+				{
+					"x": 0,
+					"y": 0,
+					"rgba": [8, null, null, null]
+				}
+			]
+		}
+	]
+}

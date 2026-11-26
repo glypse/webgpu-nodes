@@ -1,0 +1,6 @@
+{
+	"node": "std-lucas-kanade-step",
+	"skip": "reads a texture: covered by fixtures/gpu",
+	"cases": [],
+	"sweeps": []
+}

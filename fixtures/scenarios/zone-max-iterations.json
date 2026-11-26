@@ -1,0 +1,145 @@
+{
+	"description": "A zone's maximum iteration count is set on its input.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "z1",
+						"type": "repeat-input",
+						"data": {
+							"pairedOutput": "z2",
+							"values": {
+								"iterations": 1,
+								"z3": 0
+							},
+							"maxIterations": 1024
+						},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "z2",
+						"type": "repeat-output",
+						"data": {
+							"items": [
+								{
+									"id": "z3",
+									"label": "Value",
+									"type": {
+										"inferred": true
+									}
+								}
+							]
+						},
+						"position": {
+							"x": 450,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "z4",
+						"source": "z1",
+						"target": "z2",
+						"sourceHandle": "z3",
+						"targetHandle": "z3"
+					}
+				],
+				"locked": false
+			}
+		},
+		"settings": {
+			"canvas": {
+				"width": 1920,
+				"height": 1080,
+				"followPreview": false
+			},
+			"timing": {
+				"fps": 60,
+				"realtime": true
+			},
+			"colorSpace": "srgb"
+		},
+		"layout": {
+			"areas": [
+				{
+					"id": "preview",
+					"rect": {
+						"left": 0,
+						"top": 0,
+						"right": 0.3,
+						"bottom": 0.92
+					},
+					"editor": {
+						"type": "preview"
+					}
+				},
+				{
+					"id": "graph",
+					"rect": {
+						"left": 0.3,
+						"top": 0,
+						"right": 1,
+						"bottom": 0.92
+					},
+					"editor": {
+						"type": "graph",
+						"path": []
+					}
+				},
+				{
+					"id": "timeline",
+					"rect": {
+						"left": 0,
+						"top": 0.92,
+						"right": 1,
+						"bottom": 1
+					},
+					"editor": {
+						"type": "timeline"
+					}
+				}
+			]
+		},
+		"assets": []
+	},
+	"commands": [
+		{
+			"kind": "setZoneMaxIterations",
+			"args": ["z1", 16]
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"data": {
+					"z1": {
+						"maxIterations": 16
+					}
+				}
+			}
+		}
+	}
+}

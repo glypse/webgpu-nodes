@@ -1,0 +1,177 @@
+{
+	"node": "width-switch",
+	"cases": [
+		{
+			"note": "picks the one-component case for an f32",
+			"types": {
+				"value": "f32",
+				"case-1": "f32"
+			},
+			"inputs": {
+				"value": [[9]],
+				"case-1": [[5]]
+			},
+			"output": "result",
+			"expect": [5]
+		},
+		{
+			"note": "picks the two-component case for a vec2f",
+			"types": {
+				"value": "vec2f",
+				"case-2": "vec2f"
+			},
+			"inputs": {
+				"value": [[9, 9]],
+				"case-2": [[1, 2]]
+			},
+			"output": "result",
+			"expect": [1, 2]
+		},
+		{
+			"note": "picks the three-component case for a vec3f",
+			"types": {
+				"value": "vec3f",
+				"case-3": "vec3f"
+			},
+			"inputs": {
+				"value": [[0, 0, 0]],
+				"case-3": [[4, 5, 6]]
+			},
+			"output": "result",
+			"expect": [4, 5, 6]
+		},
+		{
+			"note": "picks the three-component case for a vec3b, as a vec3f",
+			"types": {
+				"value": "vec3b",
+				"case-3": "vec3f"
+			},
+			"inputs": {
+				"value": [[0, 0, 0]],
+				"case-3": [[4, 5, 6]]
+			},
+			"output": "result",
+			"expect": [4, 5, 6]
+		},
+		{
+			"note": "picks the four-component case for a vec4u, as a vec4i",
+			"types": {
+				"value": "vec4u",
+				"case-4": "vec4i"
+			},
+			"inputs": {
+				"value": [[0, 0, 0, 0]],
+				"case-4": [[1, -2, 3, 4]]
+			},
+			"output": "result",
+			"expect": [1, -2, 3, 4]
+		},
+		{
+			"note": "picks the four-component case for a vec4i",
+			"types": {
+				"value": "vec4i",
+				"case-4": "vec4i"
+			},
+			"inputs": {
+				"value": [[0, 0, 0, 0]],
+				"case-4": [[1, -2, 3, 4]]
+			},
+			"output": "result",
+			"expect": [1, -2, 3, 4]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 case swept",
+			"types": {
+				"value": "f32",
+				"case-1": "f32"
+			},
+			"inputs": {
+				"value": {
+					"kind": "constant",
+					"value": [9]
+				},
+				"case-1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2f case swept",
+			"types": {
+				"value": "vec2f",
+				"case-2": "vec2f"
+			},
+			"inputs": {
+				"value": {
+					"kind": "constant",
+					"value": [9, 9]
+				},
+				"case-2": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f case swept",
+			"types": {
+				"value": "vec3f",
+				"case-3": "vec3f"
+			},
+			"inputs": {
+				"value": {
+					"kind": "constant",
+					"value": [0, 0, 0]
+				},
+				"case-3": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec4i case swept",
+			"types": {
+				"value": "vec4i",
+				"case-4": "vec4i"
+			},
+			"inputs": {
+				"value": {
+					"kind": "constant",
+					"value": [0, 0, 0, 0]
+				},
+				"case-4": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

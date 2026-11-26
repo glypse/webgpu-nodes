@@ -1,0 +1,200 @@
+{
+	"node": "to-bool",
+	"cases": [
+		{
+			"note": "is false for an f32 zero",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "is true for a positive f32",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[0.5]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "is true for a negative f32",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": [[-2]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "is false for an i32 zero",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "is true for a negative i32",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": [[-3]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "is false for a u32 zero",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "is true for the top u32",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": [[4294967295]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "keeps a true bool",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "keeps a false bool",
+			"types": {
+				"e": "bool"
+			},
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "converts vec3f component-wise",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": [[0, 1, -2]]
+			},
+			"output": "result",
+			"expect": [0, 1, 1]
+		},
+		{
+			"note": "converts vec4u component-wise",
+			"types": {
+				"e": "vec4u"
+			},
+			"inputs": {
+				"e": [[0, 1, 2, 0]]
+			},
+			"output": "result",
+			"expect": [0, 1, 1, 0]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep with zeros",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep with zeros",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep with zeros",
+			"types": {
+				"e": "i32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep with zeros",
+			"types": {
+				"e": "u32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": 0,
+					"to": 16
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

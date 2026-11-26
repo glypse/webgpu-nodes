@@ -1,0 +1,380 @@
+{
+	"node": "bit-shift",
+	"cases": [
+		{
+			"note": "shifts 1 left to the sign bit",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[31]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "shifts 3 left past the sign bit",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[3]],
+				"b": [[30]]
+			},
+			"output": "result",
+			"expect": [-1073741824]
+		},
+		{
+			"note": "shifts -1 left",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-1]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [-2]
+		},
+		{
+			"note": "shifts -8 right, keeping the sign",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-8]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [-4]
+		},
+		{
+			"note": "shifts -1 right by 31, keeping the sign",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-1]],
+				"b": [[31]]
+			},
+			"output": "result",
+			"expect": [-1]
+		},
+		{
+			"note": "shifts 16 right",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[16]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [4]
+		},
+		{
+			"note": "shifts u32 1 left to the top bit",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[31]]
+			},
+			"output": "result",
+			"expect": [2147483648]
+		},
+		{
+			"note": "shifts the top u32 left",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [4294967294]
+		},
+		{
+			"note": "shifts u32 right without a sign",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967288]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [2147483644]
+		},
+		{
+			"note": "shifts the top bit of u32 down",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[2147483648]],
+				"b": [[31]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "masks the shift to 5 bits, 32 leaves it",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[32]]
+			},
+			"output": "result",
+			"expect": [1]
+		},
+		{
+			"note": "masks the shift to 5 bits, 33 is 1",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[33]]
+			},
+			"output": "result",
+			"expect": [2]
+		},
+		{
+			"note": "masks the shift to 5 bits, 63 is 31",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[63]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "masks the shift to 5 bits, 255 is 31",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[255]]
+			},
+			"output": "result",
+			"expect": [-2147483648]
+		},
+		{
+			"note": "masks a right shift of 33 to 1",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-8]],
+				"b": [[33]]
+			},
+			"output": "result",
+			"expect": [-4]
+		},
+		{
+			"note": "masks a right shift of 32 to 0 for u32",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[32]]
+			},
+			"output": "result",
+			"expect": [4294967295]
+		},
+		{
+			"note": "shifts each component by its own amount",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "vec2i",
+				"b": "vec2u"
+			},
+			"inputs": {
+				"a": [[1, -8]],
+				"b": [[1, 2]]
+			},
+			"output": "result",
+			"expect": [2, -32]
+		},
+		{
+			"note": "masks each component's shift to 5 bits",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "vec2i",
+				"b": "vec2u"
+			},
+			"inputs": {
+				"a": [[1, -8]],
+				"b": [[33, 1]]
+			},
+			"output": "result",
+			"expect": [2, -16]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "i32 sweep shifted left by 3",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep shifted right by 2",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [2]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep shifted right by 2",
+			"settings": {
+				"op": ">>"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": 0,
+					"to": 16
+				},
+				"b": {
+					"kind": "constant",
+					"value": [2]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3i sweep shifted left",
+			"settings": {
+				"op": "<<"
+			},
+			"types": {
+				"a": "vec3i",
+				"b": "vec3u"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [1, 2, 3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

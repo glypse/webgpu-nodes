@@ -1,0 +1,6 @@
+{
+	"node": "frag-output",
+	"skip": "the canvas output has no value: the GPU fixtures draw it",
+	"cases": [],
+	"sweeps": []
+}

@@ -1,0 +1,27 @@
+{
+	"node": "std-flow-wheel",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Color",
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Max": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

@@ -1,0 +1,82 @@
+{
+	"node": "std-noise-coordinates",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Coordinates, vec2f",
+			"types": {
+				"Vector": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Coordinates, vec3f",
+			"types": {
+				"Vector": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Coordinates, vec4f",
+			"types": {
+				"Vector": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		},
+		{
+			"note": "Coordinates, f32",
+			"types": {
+				"Vector": "f32"
+			},
+			"values": {},
+			"inputs": {
+				"Vector": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				}
+			},
+			"output": "Coordinates",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

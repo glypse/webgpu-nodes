@@ -1,0 +1,112 @@
+{
+	"description": "A link into an input owned by types the group node doesn't have is kept, and not reported invalid: the input is only hidden.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "d",
+						"type": "declare",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "g",
+						"type": "node-group",
+						"data": {
+							"types": {
+								"T": "vec2f"
+							}
+						},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": {
+							"definitionRef": "def2",
+							"locked": false
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "d.value->g.s",
+						"source": "d",
+						"sourceHandle": "value",
+						"target": "g",
+						"targetHandle": "s"
+					}
+				]
+			},
+			"def2": {
+				"typeVariables": [
+					{
+						"id": "T",
+						"name": "T",
+						"types": ["vec2f", "vec3f"]
+					}
+				],
+				"inputs": [
+					{
+						"id": "s",
+						"label": "S",
+						"type": "f32",
+						"typeOwner": {
+							"variable": "T",
+							"types": ["vec3f"]
+						}
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "f32"
+					}
+				],
+				"nodes": [
+					{
+						"id": "gi",
+						"type": "group-input",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "go",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": []
+			}
+		}
+	},
+	"commands": [],
+	"expect": {
+		"documents": {
+			"": {
+				"links": ["d.value -> g.s"],
+				"invalidLinks": {}
+			}
+		}
+	}
+}

@@ -129,11 +129,11 @@
 	);
 
 	function pickType(type: SocketType) {
-		graph.setNodeType(id, type);
+		graph.apply({ kind: "setNodeType", args: [id, type] });
 	}
 
 	function resetType() {
-		graph.setNodeType(id, undefined);
+		graph.apply({ kind: "setNodeType", args: [id, undefined] });
 	}
 
 	function settingValue(setting: NodeSetting): string {
@@ -146,7 +146,7 @@
 	}
 
 	function handleSettingSelect(setting: NodeSetting, value: string) {
-		graph.setSetting(id, setting.key, value);
+		graph.apply({ kind: "setSetting", args: [id, setting.key, value] });
 	}
 
 	function resolvedInputType(inputDef: { id: string }): SocketType {
@@ -189,11 +189,11 @@
 	const itemTypes = $derived(keepsTextures(zoneKindOf(nodeType)) ? SOCKET_TYPES : WGSL_TYPES);
 
 	function addZoneItem(type: SocketType) {
-		if (zoneId) graph.addZoneItem(zoneId, type);
+		if (zoneId) graph.apply({ kind: "addZoneItem", args: [zoneId, type] });
 	}
 
 	function addHandle(type: SocketType) {
-		graph.addBoundaryHandle(id, type);
+		graph.apply({ kind: "addBoundaryHandle", args: [id, type] });
 	}
 
 	/** Dotted underline of the label of an input that needs a frame value. */
@@ -256,7 +256,7 @@
 						disabled={isLocked}
 						onclick={() => {
 							view.activate();
-							graph.toggleUnlinkedSockets([id]);
+							graph.apply({ kind: "toggleUnlinkedSockets", args: [[id]] });
 						}}
 					>
 						<EyeSlashIcon />
@@ -301,7 +301,7 @@
 					title="Enter node group"
 					onclick={() => {
 						view.activate();
-						graph.enterGroup(id);
+						graph.apply({ kind: "enterGroup", args: [id] });
 					}}
 				>
 					<TreeViewIcon class="size-4" />
@@ -312,7 +312,7 @@
 						type="button"
 						size="icon-sm"
 						title="Locked group - clone & edit"
-						onclick={() => graph.deepClone(id)}
+						onclick={() => graph.apply({ kind: "deepClone", args: [id] })}
 					>
 						<LockSimpleIcon />
 					</Button>
@@ -348,8 +348,16 @@
 					class="flex-1"
 					title="The type of {choice.variable.name}"
 					onpick={(type: SocketType) =>
-						type !== "texture" && graph.setVariableType(id, choice.variable.id, type)}
-					onreset={() => graph.setVariableType(id, choice.variable.id, undefined)}
+						type !== "texture" &&
+						graph.apply({
+							kind: "setVariableType",
+							args: [id, choice.variable.id, type],
+						})}
+					onreset={() =>
+						graph.apply({
+							kind: "setVariableType",
+							args: [id, choice.variable.id, undefined],
+						})}
 				/>
 			</div>
 		{/each}
@@ -522,7 +530,10 @@
 								disabled={isLocked}
 								name="{id}-{inputDef.id}"
 								onchange={(value: InputValue) =>
-									graph.setInputValue(id, inputDef.id, value)}
+									graph.apply({
+										kind: "setInputValue",
+										args: [id, inputDef.id, value],
+									})}
 							/>
 						</div>
 					{/if}

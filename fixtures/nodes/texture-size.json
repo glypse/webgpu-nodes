@@ -1,0 +1,6 @@
+{
+	"node": "texture-size",
+	"skip": "reads a texture",
+	"cases": [],
+	"sweeps": []
+}

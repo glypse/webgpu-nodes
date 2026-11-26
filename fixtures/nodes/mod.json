@@ -1,0 +1,395 @@
+{
+	"node": "mod",
+	"cases": [
+		{
+			"note": "takes f32 remainders",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes a negative dividend's sign",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[-7]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [-1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "ignores a negative divisor's sign",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[-3]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes both negative",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[-7]],
+				"b": [[-3]]
+			},
+			"output": "result",
+			"expect": [-1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes fractional remainders",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[5.5]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [1.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes exact fractional remainders",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[1024.25]],
+				"b": [[512]]
+			},
+			"output": "result",
+			"expect": [0.25],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for a zero divisor",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[5]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for a zero dividend",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[5]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes i32 remainders with the dividend's sign",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-7]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [-1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes i32 remainders for a negative divisor",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[-3]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes i32 remainders when both are negative",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-7]],
+				"b": [[-3]]
+			},
+			"output": "result",
+			"expect": [-1],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes i32 MIN remainder by 3",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-2147483648]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [-2],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for an i32 remainder by zero",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for a u32 remainder by zero",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[7]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for i32 MIN by -1",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-2147483648]],
+				"b": [[-1]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "gives 0 for i32 MIN by 2",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-2147483648]],
+				"b": [[2]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes u32 remainders",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[10]]
+			},
+			"output": "result",
+			"expect": [5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "takes vec3i remainders component-wise",
+			"types": {
+				"a": "vec3i"
+			},
+			"inputs": {
+				"a": [[7, -7, 5]],
+				"b": [[3, 3, 0]]
+			},
+			"output": "result",
+			"expect": [1, -1, 0]
+		},
+		{
+			"note": "takes vec2f remainders component-wise",
+			"types": {
+				"a": "vec2f"
+			},
+			"inputs": {
+				"a": [[5.5, -5.5]],
+				"b": [[2, 2]]
+			},
+			"output": "result",
+			"expect": [1.5, -1.5],
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over the dividend",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				},
+				"b": {
+					"kind": "constant",
+					"value": [1.5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "vec3f sweep over the dividend",
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -4,
+					"to": 4
+				},
+				"b": {
+					"kind": "constant",
+					"value": [2, 3, 1.5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.000001,
+				"rel": 0.000001
+			}
+		},
+		{
+			"note": "i32 sweep over the dividend",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep over the dividend",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": 0,
+					"to": 16
+				},
+				"b": {
+					"kind": "constant",
+					"value": [5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

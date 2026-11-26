@@ -1,0 +1,82 @@
+{
+	"description": "Deep-cloning a locked library group gives an unlocked copy of its definition, with the same nodes around it.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "g",
+						"type": "node-group",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": {
+							"definitionRef": "std-aspect-uv@1b256db7053e2f",
+							"locked": true
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "g.9fea0252-08f7-4834-b374-d7d8f0459181->out.color",
+						"source": "g",
+						"sourceHandle": "9fea0252-08f7-4834-b374-d7d8f0459181",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "deepClone",
+			"args": ["g"]
+		}
+	],
+	"expect": {
+		"results": ["id1"],
+		"documents": {
+			"": {
+				"nodes": {
+					"out": "frag-output",
+					"g": "node-group"
+				}
+			}
+		},
+		"groups": {
+			"id1": {
+				"inputs": [
+					{
+						"id": "0fc403a7-0e22-4dc2-9ca5-cc4aeb5e6de8",
+						"label": "Coordinates",
+						"type": "vec2f"
+					},
+					{
+						"id": "de465282-23fa-439c-8cff-7799cffd2eae",
+						"label": "Mode",
+						"type": "u32"
+					}
+				],
+				"outputs": [
+					{
+						"id": "9fea0252-08f7-4834-b374-d7d8f0459181",
+						"label": "Coordinates",
+						"type": "vec2f"
+					}
+				]
+			}
+		}
+	}
+}

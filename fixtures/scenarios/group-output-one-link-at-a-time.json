@@ -1,0 +1,143 @@
+{
+	"description": "An output of a group is linked on one Group Output node at a time.",
+	"project": {
+		"definitions": {
+			"__root__": {
+				"nodes": [
+					{
+						"id": "out",
+						"type": "frag-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "t",
+						"type": "time",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "g",
+						"type": "node-group",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						},
+						"group": {
+							"definitionRef": "def",
+							"locked": false
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "t.seconds->g.a",
+						"source": "t",
+						"sourceHandle": "seconds",
+						"target": "g",
+						"targetHandle": "a"
+					},
+					{
+						"id": "g.r->out.color",
+						"source": "g",
+						"sourceHandle": "r",
+						"target": "out",
+						"targetHandle": "color"
+					}
+				]
+			},
+			"def": {
+				"inputs": [
+					{
+						"id": "a",
+						"label": "A",
+						"type": "f32"
+					}
+				],
+				"outputs": [
+					{
+						"id": "r",
+						"label": "R",
+						"type": "f32"
+					}
+				],
+				"nodes": [
+					{
+						"id": "gi",
+						"type": "group-input",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "o1",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					},
+					{
+						"id": "o2",
+						"type": "group-output",
+						"data": {},
+						"position": {
+							"x": 0,
+							"y": 0
+						}
+					}
+				],
+				"edges": [
+					{
+						"id": "gi.a->o1.r",
+						"source": "gi",
+						"sourceHandle": "a",
+						"target": "o1",
+						"targetHandle": "r"
+					}
+				]
+			}
+		}
+	},
+	"commands": [
+		{
+			"kind": "enterGroup",
+			"args": ["g"]
+		},
+		{
+			"kind": "connect",
+			"args": [
+				{
+					"source": "gi",
+					"sourceHandle": "a",
+					"target": "o2",
+					"targetHandle": "r"
+				}
+			]
+		},
+		{
+			"kind": "exitGroup",
+			"args": []
+		}
+	],
+	"expect": {
+		"documents": {
+			"": {
+				"links": ["g.r -> out.color", "t.seconds -> g.a"]
+			},
+			"g": {
+				"links": ["gi.a -> o2.r"]
+			}
+		}
+	}
+}

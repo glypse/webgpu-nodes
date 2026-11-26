@@ -1,0 +1,179 @@
+{
+	"node": "atan2",
+	"cases": [
+		{
+			"note": "gives pi/4 for (1, 1)",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[1]],
+				"e2": [[1]]
+			},
+			"output": "result",
+			"expect": [0.7853981633974483],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives pi/2 for (1, 0)",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[1]],
+				"e2": [[0]]
+			},
+			"output": "result",
+			"expect": [1.5707963267948966],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives 3pi/4 for (1, -1)",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[1]],
+				"e2": [[-1]]
+			},
+			"output": "result",
+			"expect": [2.356194490192345],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives -3pi/4 for (-1, -1)",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[-1]],
+				"e2": [[-1]]
+			},
+			"output": "result",
+			"expect": [-2.356194490192345],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives -pi/2 for (-1, 0)",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[-1]],
+				"e2": [[0]]
+			},
+			"output": "result",
+			"expect": [-1.5707963267948966],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives pi/4 for (2, 2)",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[2]],
+				"e2": [[2]]
+			},
+			"output": "result",
+			"expect": [0.7853981633974483],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "gives pi/4 for large equal f32s",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": [[3e38]],
+				"e2": [[3e38]]
+			},
+			"output": "result",
+			"expect": [0.7853981633974483],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "takes vec2f component-wise",
+			"types": {
+				"e1": "vec2f"
+			},
+			"inputs": {
+				"e1": [[1, 1]],
+				"e2": [[1, -1]]
+			},
+			"output": "result",
+			"expect": [0.7853981633974483, 2.356194490192345],
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep over y",
+			"types": {
+				"e1": "f32"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [1]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		},
+		{
+			"note": "vec3f sweep over y",
+			"types": {
+				"e1": "vec3f"
+			},
+			"inputs": {
+				"e1": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"e2": {
+					"kind": "constant",
+					"value": [1, -1, 2]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 1e-7,
+				"rel": 4e-7
+			}
+		}
+	]
+}

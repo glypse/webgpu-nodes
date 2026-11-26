@@ -1,0 +1,107 @@
+{
+	"node": "switch",
+	"cases": [
+		{
+			"note": "picks the true input for a true condition",
+			"types": {
+				"false": "f32"
+			},
+			"inputs": {
+				"condition": [[1]],
+				"false": [[10]],
+				"true": [[20]]
+			},
+			"output": "result",
+			"expect": [20]
+		},
+		{
+			"note": "picks the false input for a false condition",
+			"types": {
+				"false": "f32"
+			},
+			"inputs": {
+				"condition": [[0]],
+				"false": [[10]],
+				"true": [[20]]
+			},
+			"output": "result",
+			"expect": [10]
+		},
+		{
+			"note": "picks i32 inputs as they are",
+			"types": {
+				"false": "i32"
+			},
+			"inputs": {
+				"condition": [[1]],
+				"false": [[-7]],
+				"true": [[5]]
+			},
+			"output": "result",
+			"expect": [5]
+		},
+		{
+			"note": "picks i32 inputs as they are when false",
+			"types": {
+				"false": "i32"
+			},
+			"inputs": {
+				"condition": [[0]],
+				"false": [[-7]],
+				"true": [[5]]
+			},
+			"output": "result",
+			"expect": [-7]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep chosen by a ramp",
+			"false": "f32",
+			"inputs": {
+				"condition": {
+					"kind": "uv",
+					"from": -17,
+					"to": 15
+				},
+				"false": {
+					"kind": "constant",
+					"value": [10]
+				},
+				"true": {
+					"kind": "constant",
+					"value": [20]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep of the true input",
+			"false": "i32",
+			"inputs": {
+				"condition": {
+					"kind": "constant",
+					"value": [1]
+				},
+				"false": {
+					"kind": "constant",
+					"value": [-3]
+				},
+				"true": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

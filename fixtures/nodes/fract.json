@@ -1,0 +1,110 @@
+{
+	"node": "fract",
+	"cases": [
+		{
+			"note": "takes x - floor(x) of a positive f32",
+			"inputs": {
+				"e": [[1.25]]
+			},
+			"output": "result",
+			"expect": [0.25]
+		},
+		{
+			"note": "takes x - floor(x) of a negative f32",
+			"inputs": {
+				"e": [[-1.25]]
+			},
+			"output": "result",
+			"expect": [0.75]
+		},
+		{
+			"note": "gives 0 for a whole f32",
+			"inputs": {
+				"e": [[3]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives 0.5 for -0.5",
+			"inputs": {
+				"e": [[-0.5]]
+			},
+			"output": "result",
+			"expect": [0.5]
+		},
+		{
+			"note": "keeps the f32 of a fraction",
+			"inputs": {
+				"e": [[0.1]]
+			},
+			"output": "result",
+			"expect": [0.10000000149011612]
+		},
+		{
+			"note": "gives 0 for a large f32, which is whole",
+			"inputs": {
+				"e": [[3e38]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "gives 0 for a large negative f32, which is whole",
+			"inputs": {
+				"e": [[-3e38]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "takes vec2f components",
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[1.5, -1.5]]
+			},
+			"output": "result",
+			"expect": [0.5, 0.5]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -3,
+					"to": 3
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

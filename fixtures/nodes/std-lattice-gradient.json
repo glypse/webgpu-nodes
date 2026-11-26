@@ -1,0 +1,103 @@
+{
+	"node": "std-lattice-gradient",
+	"note": "Chaotic in its inputs: a value on a cell or hash boundary can land on the other side on the GPU, so a small share of the sweep may be off.",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Gradient, vec2f",
+			"types": {
+				"Vertex": "vec2f"
+			},
+			"values": {},
+			"inputs": {
+				"Vertex": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Gradient",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Gradient, vec3f",
+			"types": {
+				"Vertex": "vec3f"
+			},
+			"values": {},
+			"inputs": {
+				"Vertex": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Gradient",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Gradient, vec4f",
+			"types": {
+				"Vertex": "vec4f"
+			},
+			"values": {},
+			"inputs": {
+				"Vertex": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Gradient",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		},
+		{
+			"note": "Gradient, f32",
+			"types": {
+				"Vertex": "f32"
+			},
+			"values": {},
+			"inputs": {
+				"Vertex": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"Seed": {
+					"kind": "constant",
+					"value": [7]
+				}
+			},
+			"output": "Gradient",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			},
+			"maxOff": 0.02
+		}
+	]
+}

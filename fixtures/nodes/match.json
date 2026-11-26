@@ -1,0 +1,6 @@
+{
+	"node": "match",
+	"skip": "its cases are the variants of an enum linked to it, which a lone node lacks",
+	"cases": [],
+	"sweeps": []
+}

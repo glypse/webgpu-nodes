@@ -1,0 +1,227 @@
+{
+	"node": "sub",
+	"cases": [
+		{
+			"note": "subtracts f32s",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[0.5]],
+				"b": [[0.25]]
+			},
+			"output": "result",
+			"expect": [0.25]
+		},
+		{
+			"note": "subtracts to a negative",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[1]],
+				"b": [[5]]
+			},
+			"output": "result",
+			"expect": [-4]
+		},
+		{
+			"note": "rounds the difference to f32",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[3.7]],
+				"b": [[1.2]]
+			},
+			"output": "result",
+			"expect": [2.5]
+		},
+		{
+			"note": "gives +0 for equal operands",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[0]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "subtracts large f32s",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[3e38]],
+				"b": [[1e38]]
+			},
+			"output": "result",
+			"expect": [2.0000001388812345e38]
+		},
+		{
+			"note": "subtracts subnormal f32s",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": [[1e-40]],
+				"b": [[1e-40]]
+			},
+			"output": "result",
+			"expect": [0]
+		},
+		{
+			"note": "wraps i32 MIN minus one to MAX",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-2147483648]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [2147483647]
+		},
+		{
+			"note": "wraps u32 below zero",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[0]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [4294967295]
+		},
+		{
+			"note": "subtracts u32s past zero",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[5]],
+				"b": [[7]]
+			},
+			"output": "result",
+			"expect": [4294967294]
+		},
+		{
+			"note": "subtracts vec3f component-wise",
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": [[5, 5, 5]],
+				"b": [[1, 2, 3]]
+			},
+			"output": "result",
+			"expect": [4, 3, 2]
+		},
+		{
+			"note": "wraps i32 vector differences per component",
+			"types": {
+				"a": "vec2i"
+			},
+			"inputs": {
+				"a": [[-2147483648, 0]],
+				"b": [[1, 1]]
+			},
+			"output": "result",
+			"expect": [2147483647, -1]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep from the minuend",
+			"types": {
+				"a": "f32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"b": {
+					"kind": "constant",
+					"value": [1.25]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec3f sweep from the minuend",
+			"types": {
+				"a": "vec3f"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -2,
+					"to": 2
+				},
+				"b": {
+					"kind": "constant",
+					"value": [1, 2, 3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "i32 sweep from the minuend",
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [3]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep from the minuend",
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": 0,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

@@ -1,0 +1,202 @@
+{
+	"node": "bitwise",
+	"cases": [
+		{
+			"note": "ands signed integers",
+			"settings": {
+				"op": "&"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[12]],
+				"b": [[10]]
+			},
+			"output": "result",
+			"expect": [8]
+		},
+		{
+			"note": "ors signed integers",
+			"settings": {
+				"op": "|"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[12]],
+				"b": [[10]]
+			},
+			"output": "result",
+			"expect": [14]
+		},
+		{
+			"note": "xors signed integers",
+			"settings": {
+				"op": "^"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[12]],
+				"b": [[10]]
+			},
+			"output": "result",
+			"expect": [6]
+		},
+		{
+			"note": "ors a negative i32",
+			"settings": {
+				"op": "|"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": [[-8]],
+				"b": [[3]]
+			},
+			"output": "result",
+			"expect": [-5]
+		},
+		{
+			"note": "ands u32s above 2^31",
+			"settings": {
+				"op": "&"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4026531840]],
+				"b": [[4278190080]]
+			},
+			"output": "result",
+			"expect": [4026531840]
+		},
+		{
+			"note": "ors u32s above 2^31",
+			"settings": {
+				"op": "|"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[2147483648]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [2147483649]
+		},
+		{
+			"note": "xors the top u32 with 1",
+			"settings": {
+				"op": "^"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": [[4294967295]],
+				"b": [[1]]
+			},
+			"output": "result",
+			"expect": [4294967294]
+		},
+		{
+			"note": "ands each component of vec2i",
+			"settings": {
+				"op": "&"
+			},
+			"types": {
+				"a": "vec2i"
+			},
+			"inputs": {
+				"a": [[6, -1]],
+				"b": [[3, 5]]
+			},
+			"output": "result",
+			"expect": [2, 5]
+		}
+	],
+	"sweeps": [
+		{
+			"note": "i32 sweep xor 5",
+			"settings": {
+				"op": "^"
+			},
+			"types": {
+				"a": "i32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [5]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "u32 sweep or 8",
+			"settings": {
+				"op": "|"
+			},
+			"types": {
+				"a": "u32"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": 0,
+					"to": 16
+				},
+				"b": {
+					"kind": "constant",
+					"value": [8]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		},
+		{
+			"note": "vec2i sweep and a mask",
+			"settings": {
+				"op": "&"
+			},
+			"types": {
+				"a": "vec2i"
+			},
+			"inputs": {
+				"a": {
+					"kind": "uv",
+					"from": -8,
+					"to": 8
+				},
+				"b": {
+					"kind": "constant",
+					"value": [3, 6]
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0,
+				"rel": 0
+			}
+		}
+	]
+}

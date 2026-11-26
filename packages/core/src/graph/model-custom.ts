@@ -80,7 +80,7 @@ export abstract class CustomWgslModel extends GroupModel {
 		const node = this.customNode(nodeId);
 		if (!node) return undefined;
 		const socket: HandleDef = {
-			id: crypto.randomUUID(),
+			id: this.newId(),
 			label: newSocketLabel(customSockets(node.data), side),
 			type,
 		};
@@ -228,7 +228,7 @@ export abstract class CustomWgslModel extends GroupModel {
 		const labels = new Set(items.map((i) => i.label));
 		let label = "Color";
 		for (let n = 2; labels.has(label); n++) label = `Color ${String(n)}`;
-		const item: ZoneItem = { id: crypto.randomUUID(), label, type, format };
+		const item: ZoneItem = { id: this.newId(), label, type, format };
 		this.setRenderItems(node, [...items, item]);
 		return item;
 	}

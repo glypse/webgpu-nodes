@@ -1,0 +1,106 @@
+{
+	"node": "tan",
+	"cases": [
+		{
+			"note": "gives 0 at 0",
+			"inputs": {
+				"e": [[0]]
+			},
+			"output": "result",
+			"expect": [0],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		},
+		{
+			"note": "gives 1 at pi/4",
+			"inputs": {
+				"e": [[0.7853981633974483]]
+			},
+			"output": "result",
+			"expect": [1],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		},
+		{
+			"note": "gives -1 at -pi/4",
+			"inputs": {
+				"e": [[-0.7853981633974483]]
+			},
+			"output": "result",
+			"expect": [-1],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		},
+		{
+			"note": "gives tan(1)",
+			"inputs": {
+				"e": [[1]]
+			},
+			"output": "result",
+			"expect": [1.5574077367782593],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		},
+		{
+			"note": "takes vec2f component-wise",
+			"types": {
+				"e": "vec2f"
+			},
+			"inputs": {
+				"e": [[0, 0.7853981633974483]]
+			},
+			"output": "result",
+			"expect": [0, 1],
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		}
+	],
+	"sweeps": [
+		{
+			"note": "f32 sweep away from the poles",
+			"types": {
+				"e": "f32"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		},
+		{
+			"note": "vec3f sweep away from the poles",
+			"types": {
+				"e": "vec3f"
+			},
+			"inputs": {
+				"e": {
+					"kind": "uv",
+					"from": -1,
+					"to": 1
+				}
+			},
+			"output": "result",
+			"tolerance": {
+				"abs": 0.00048828125,
+				"rel": 0.00048828125
+			}
+		}
+	]
+}

@@ -1,0 +1,16 @@
+{
+	"node": "std-flow-legend",
+	"cases": [],
+	"sweeps": [
+		{
+			"note": "Color",
+			"values": {},
+			"inputs": {},
+			"output": "Color",
+			"tolerance": {
+				"abs": 0.001,
+				"rel": 0.002
+			}
+		}
+	]
+}

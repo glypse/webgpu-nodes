@@ -21,7 +21,7 @@ function grouped() {
 			["b", "result", "c", "e"],
 		],
 	);
-	graph.groupSelection(new Set(["a", "b"]));
+	graph.groupSelection(["a", "b"]);
 	const group = graph.root.nodes.find((n) => n.type === "node-group");
 	if (!group?.group) throw new Error("not grouped");
 	return { graph, groupId: group.id, ref: group.group.definitionRef };
