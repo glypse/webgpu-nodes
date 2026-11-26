@@ -16,7 +16,11 @@ export default defineConfig({
 	},
 	server: {
 		fs: {
-			allow: [path.join(os.homedir(), ".bun", "install", "cache")],
+			allow: [
+				path.join(os.homedir(), ".bun", "install", "cache"),
+				// Workers load their module by URL, which no allowed import vouches for.
+				path.resolve(import.meta.dirname, "../../packages"),
+			],
 		},
 	},
 });

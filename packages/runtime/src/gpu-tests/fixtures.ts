@@ -1,14 +1,6 @@
-import {
-	type ColorSpace,
-	generateRenderPlan,
-	GraphModel,
-	type GraphProject,
-	type Value,
-} from "$core";
+import { type ColorSpace, generateRenderPlan, GraphModel, type GraphProject } from "$core";
 import {
 	type Check,
-	evaluate,
-	evaluationContext,
 	exactNumber,
 	type FixtureFrame,
 	type GpuFixture,
@@ -18,6 +10,7 @@ import {
 } from "$core/testing";
 
 import type { Size } from "../renderer";
+import { cpuReference } from "./cpu-reference";
 import { type Pixels, type TestGpu } from "./harness";
 
 export type GpuFixtureFiles = {
@@ -97,7 +90,14 @@ export async function measureGpuFixture(
 					break;
 				case "cpu":
 					results.push(
-						checkCpu(model, check, expect.size, expect.colorSpace, frame, pixels),
+						await checkCpu(
+							project,
+							check,
+							expect.size,
+							expect.colorSpace,
+							frame,
+							pixels,
+						),
 					);
 					break;
 				case "flow":
@@ -150,7 +150,7 @@ function compare(
 	};
 }
 
-function component(rgba: readonly number[], channel: number): number {
+function component(rgba: ArrayLike<number>, channel: number): number {
 	return rgba[channel] ?? NaN;
 }
 
@@ -187,48 +187,37 @@ function checkPixels(check: CheckOf<"pixels">, pixels: Pixels): CheckResult {
  * is, vec3f opaque, and narrower values widened to vec3f first (a scalar
  * splatted, a vec2 zero-filled), as the codegen converts them.
  */
-function canvasColor(value: Value): [number, number, number, number] {
-	const [x = 0, y = 0, z = 0, w = 1] = value;
-	if (value.length >= 4) return [x, y, z, w];
-	if (value.length === 3) return [x, y, z, 1];
-	if (value.length === 2) return [x, y, 0, 1];
-	return [x, x, x, 1];
-}
-
-function checkCpu(
-	model: GraphModel,
+async function checkCpu(
+	project: GraphProject,
 	check: CheckOf<"cpu">,
 	size: Size,
 	colorSpace: ColorSpace,
 	frame: FixtureFrame,
 	pixels: Pixels,
-): CheckResult {
-	const edge = model.root.edgesByTarget.get("out")?.find((e) => e.targetHandle === "color");
-	if (!edge) throw new Error(`the output has no link into its color`);
-
+): Promise<CheckResult> {
 	const { width, height } = size;
 	const region = check.region ?? { x: 0, y: 0, width, height };
 	const channels = check.channels ?? [0, 1, 2, 3];
-	const context = evaluationContext(model);
+	const steps = (from: number, length: number) =>
+		Array.from({ length: Math.ceil(length / check.stride) }, (_, i) => from + i * check.stride);
+	const xs = steps(region.x, region.width);
+	const ys = steps(region.y, region.height);
+	const reference = await cpuReference({
+		project,
+		size,
+		colorSpace,
+		frame,
+		pixels: ys.flatMap((y) => xs.map((x) => [x, y] as const)),
+	});
 	let worst = 0;
 	let compared = 0;
 	let off = 0;
 	const misses: string[] = [];
-	for (let y = region.y; y < region.y + region.height; y += check.stride) {
-		for (let x = region.x; x < region.x + region.width; x += check.stride) {
-			const value = evaluate(
-				model,
-				edge.source,
-				edge.sourceHandle,
-				colorSpace,
-				[width, height],
-				{
-					uv: [(x + 0.5) / width, 1 - (y + 0.5) / height],
-					context,
-					frame,
-				},
-			);
-			const expected = canvasColor(value);
+	let at = 0;
+	for (const y of ys) {
+		for (const x of xs) {
+			const expected = reference.subarray(at, at + 4);
+			at += 4;
 			const got = pixels.at(x, y);
 			for (const channel of channels) {
 				compared++;
