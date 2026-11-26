@@ -45,10 +45,7 @@
 							"items": [
 								{
 									"id": "z3",
-									"label": "Value",
-									"type": {
-										"inferred": true
-									}
+									"label": "Value"
 								}
 							]
 						},

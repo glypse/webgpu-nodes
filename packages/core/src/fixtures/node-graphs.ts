@@ -174,7 +174,7 @@ function feedsWire(feeds: readonly Feed[]): Wire {
 function typeVariableOf(group: StandardLibraryEntry, label: string): string {
 	const sockets = [...(group.definition.inputs ?? []), ...(group.definition.outputs ?? [])];
 	const type = sockets.find((socket) => socket.label === label)?.type;
-	if (type !== undefined && typeof type === "object" && "variable" in type) return type.variable;
+	if (typeof type === "object") return type.variable;
 	throw new Error(`"${label}" has no type variable in "${group.id}"`);
 }
 

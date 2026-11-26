@@ -548,11 +548,19 @@ class Builder<I extends string, O extends string> {
 		return { node: GROUP_INPUT, handle: id, variants };
 	}
 
-	output(key: O, source: Operand, type: HandleType, options: { label?: string } = {}): void {
+	/**
+	 * An output: of the type reaching it, unless `type` gives one (a type
+	 * variable's, or one the value is converted to).
+	 */
+	output(key: O, source: Operand, options: { label?: string; type?: HandleType } = {}): void {
 		if (this.outputKeys.has(key)) throw new Error(`${this.id}: output "${key}" added twice`);
 		const id = handleId(this.id, "out", key);
 		this.outputKeys.set(key, id);
-		this.handles.outputs.push({ id, label: options.label ?? key, type });
+		this.handles.outputs.push({
+			id,
+			label: options.label ?? key,
+			...(options.type ? { type: options.type } : {}),
+		});
 		this.feed(this.boundary("group-output"), id, source);
 	}
 

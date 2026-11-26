@@ -26,7 +26,7 @@ Valibot's own checks, and what the converter can't carry:
 ## Mapping to serde
 
 - `InputValue` (`values`, `defaults`): a number, a boolean, or an object with optional `x`, `y`, `z`, `w` (each a number or boolean) and no other keys. `#[serde(untagged)]`, told apart by JSON kind.
-- Socket `type` on group `inputs` and `outputs` and on zone `items`: a socket type string, `{"variable": id}` or `{"inferred": true}`, each object closed. `#[serde(untagged)]`, told apart by kind and then by key. Custom WGSL sockets take the string form only.
+- Socket `type` on group `inputs` and `outputs` and on zone `items`: a socket type string or `{"variable": id}`, the object closed. `#[serde(untagged)]` inside an `Option`, told apart by kind. Absent, the type is inferred: group inputs always have one. Custom WGSL sockets take the string form only.
 - Node `data`: one closed struct of optional fields, where unknown keys are rejected. Which fields apply depends on the node `type`, which the schema doesn't tie to fields. `#[serde(deny_unknown_fields)]` with `Option` fields, and the per-type rules belong in core.
 - `settings`: absent means the schema's `default` (the values of `defaultSettings`). `#[serde(default)]` on the field.
 - Asset `kind` and screen editor `type`: tagged by that key. `#[serde(tag = "kind")]` and `#[serde(tag = "type")]`.

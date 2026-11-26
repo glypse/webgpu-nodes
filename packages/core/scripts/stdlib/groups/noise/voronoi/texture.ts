@@ -95,13 +95,13 @@ export const voronoiTexture = group({
 				const f2Offset = g.wireless("F2 Offset", nearest["f2-offset"]);
 				const f1Color = g.wireless("F1 Color", colorOf(f1Offset));
 				const f1Position = g.wireless("F1 Position", positionOf(f1Point));
-				g.output("distance", nearest["f1-distance"], "f32", { label: "Distance" });
-				g.output("color", f1Color, "vec3f", { label: "Color" });
-				g.output("position", f1Position, t, { label: "Position" });
-				g.output("cell", g.add(cell, f1Offset), t, { label: "Cell" });
-				g.output("f2-distance", nearest["f2-distance"], "f32", { label: "F2 Distance" });
-				g.output("f2-color", colorOf(f2Offset), "vec3f", { label: "F2 Color" });
-				g.output("f2-position", positionOf(f2Point), t, { label: "F2 Position" });
+				g.output("distance", nearest["f1-distance"], { label: "Distance" });
+				g.output("color", f1Color, { type: "vec3f", label: "Color" });
+				g.output("position", f1Position, { type: t, label: "Position" });
+				g.output("cell", g.add(cell, f1Offset), { type: t, label: "Cell" });
+				g.output("f2-distance", nearest["f2-distance"], { label: "F2 Distance" });
+				g.output("f2-color", colorOf(f2Offset), { type: "vec3f", label: "F2 Color" });
+				g.output("f2-position", positionOf(f2Point), { type: t, label: "F2 Position" });
 				return {
 					f1Point,
 					f1Offset,
@@ -125,23 +125,17 @@ export const voronoiTexture = group({
 					smoothness,
 				});
 				const smoothed = g.compare(smoothness, 0, { op: ">" });
-				g.output(
-					"smooth-distance",
-					g.switch(smoothed, nearest.f1, smooth.distance),
-					"f32",
-					{ label: "Smooth Distance" },
-				);
-				g.output(
-					"smooth-color",
-					g.switch(smoothed, nearest.f1Color, smooth.color),
-					"vec3f",
-					{ label: "Smooth Color" },
-				);
+				g.output("smooth-distance", g.switch(smoothed, nearest.f1, smooth.distance), {
+					label: "Smooth Distance",
+				});
+				g.output("smooth-color", g.switch(smoothed, nearest.f1Color, smooth.color), {
+					type: "vec3f",
+					label: "Smooth Color",
+				});
 				g.output(
 					"smooth-position",
 					g.switch(smoothed, nearest.f1Position, positionOf(smooth.point)),
-					t,
-					{ label: "Smooth Position" },
+					{ type: t, label: "Smooth Position" },
 				);
 			},
 		);
@@ -156,8 +150,8 @@ export const voronoiTexture = group({
 				"f2-point": nearest.f2Point,
 				"f2-offset": nearest.f2Offset,
 			});
-			g.output("edge", edges.edge, "f32", { label: "Distance to Edge" });
-			g.output("f2-edge", edges["f2-edge"], "f32", { label: "F2 Distance to Edge" });
+			g.output("edge", edges.edge, { label: "Distance to Edge" });
+			g.output("f2-edge", edges["f2-edge"], { label: "F2 Distance to Edge" });
 		});
 
 		g.frame("Radius", { note: "The largest ball of the metric inside F1's cell." }, () => {
@@ -170,7 +164,7 @@ export const voronoiTexture = group({
 				"f1-point": nearest.f1Point,
 				"f1-offset": nearest.f1Offset,
 			});
-			g.output("radius", radius, "f32", { label: "Radius" });
+			g.output("radius", radius, { label: "Radius" });
 		});
 	},
 });
@@ -303,48 +297,42 @@ export const fractalVoronoi = group({
 		const normalized = (value: Ref, by: Ref) => g.switch(normalize, value, g.div(value, by));
 		const distanceRange = g.wireless("Distance Range", g.mul(total, farthest));
 		g.frame("F1", { note: "Divided by their greatest, when normalized." }, () => {
-			g.output("distance", normalized(sum.Distance, distanceRange), "f32", {
-				label: "Distance",
-			});
-			g.output("color", normalized(sum.Color, total), "vec3f", { label: "Color" });
-			g.output("position", sum.Position, t, { label: "Position" });
+			g.output("distance", normalized(sum.Distance, distanceRange), { label: "Distance" });
+			g.output("color", normalized(sum.Color, total), { label: "Color" });
+			g.output("position", sum.Position, { type: t, label: "Position" });
 		});
 		g.frame("F2", {}, () => {
-			g.output(
-				"f2-distance",
-				normalized(sum["F2 Distance"], g.mul(distanceRange, 2)),
-				"f32",
-				{ label: "F2 Distance" },
-			);
-			g.output("f2-color", normalized(sum["F2 Color"], total), "vec3f", {
-				label: "F2 Color",
+			g.output("f2-distance", normalized(sum["F2 Distance"], g.mul(distanceRange, 2)), {
+				label: "F2 Distance",
 			});
-			g.output("f2-position", sum["F2 Position"], t, { label: "F2 Position" });
+			g.output("f2-color", normalized(sum["F2 Color"], total), { label: "F2 Color" });
+			g.output("f2-position", sum["F2 Position"], { type: t, label: "F2 Position" });
 		});
 		g.frame("Smooth F1", {}, () => {
-			g.output("smooth-distance", normalized(sum["Smooth Distance"], distanceRange), "f32", {
+			g.output("smooth-distance", normalized(sum["Smooth Distance"], distanceRange), {
 				label: "Smooth Distance",
 			});
-			g.output("smooth-color", normalized(sum["Smooth Color"], total), "vec3f", {
+			g.output("smooth-color", normalized(sum["Smooth Color"], total), {
 				label: "Smooth Color",
 			});
-			g.output("smooth-position", sum["Smooth Position"], t, {
+			g.output("smooth-position", sum["Smooth Position"], {
+				type: t,
 				label: "Smooth Position",
 			});
 		});
 		g.frame("Edges", {}, () => {
 			const edgeMax = sum["Edge Max"];
-			g.output("edge", normalized(sum["Edge Distance"], edgeMax), "f32", {
+			g.output("edge", normalized(sum["Edge Distance"], edgeMax), {
 				label: "Distance to Edge",
 			});
-			g.output("f2-edge", normalized(sum["F2 Edge Distance"], edgeMax), "f32", {
+			g.output("f2-edge", normalized(sum["F2 Edge Distance"], edgeMax), {
 				label: "F2 Distance to Edge",
 			});
 		});
 		g.frame("First octave", { note: "Not fractal: the first octave's." }, () => {
 			const first = g.call(voronoiTexture, inputs);
-			g.output("cell", first.cell, t, { label: "Cell" });
-			g.output("radius", first.radius, "f32", { label: "Radius" });
+			g.output("cell", first.cell, { type: t, label: "Cell" });
+			g.output("radius", first.radius, { label: "Radius" });
 		});
 	},
 });

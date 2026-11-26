@@ -44,9 +44,7 @@ export const fitUv = group({
 			},
 		);
 		const centred = g.sub(g.fallback(coordinates, g.uv()), 0.5);
-		g.output("coordinates", g.add(g.mul(centred, scale), 0.5), "vec2f", {
-			label: "Coordinates",
-		});
+		g.output("coordinates", g.add(g.mul(centred, scale), 0.5), { label: "Coordinates" });
 	},
 });
 

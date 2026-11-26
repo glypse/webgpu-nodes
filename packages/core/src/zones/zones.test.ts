@@ -403,7 +403,7 @@ describe("repeat zone codegen", () => {
 });
 
 describe("inferred zone items", () => {
-	const ITEM: ZoneItem = { id: "acc", label: "Accumulator", type: { inferred: true } };
+	const ITEM: ZoneItem = { id: "acc", label: "Accumulator" };
 
 	const declare = (id: string, type: WgslType): TestNode => ({
 		id,
@@ -537,7 +537,7 @@ describe("inferred zone items", () => {
 					label: "Zoned",
 					typeVariables: [{ id: T, name: "T", types: FLOAT_TYPES }],
 					inputs: [{ id: "a", label: "A", type: { variable: T } }],
-					outputs: [{ id: "sum", label: "Sum", type: { inferred: true } }],
+					outputs: [{ id: "sum", label: "Sum" }],
 					nodes: [
 						node("in", "group-input"),
 						node("ri", "repeat-input", {

@@ -269,8 +269,7 @@
 		"outputs": [
 			{
 				"id": "9baa836b-c1bf-4732-ba08-5239a2ddbcb5",
-				"label": "OKLab",
-				"type": "vec3f"
+				"label": "OKLab"
 			}
 		]
 	}

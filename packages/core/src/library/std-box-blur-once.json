@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "Blur"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-box-blur-1d@115e2218fd2bd3", "std-box-blur-2d@0641a2aed2bcfa"],
+	"dependencies": ["std-box-blur-1d@1c2587588bb57b", "std-box-blur-2d@1e7ca6c4f90c3b"],
 	"definition": {
 		"nodes": [
 			{
@@ -148,7 +148,7 @@
 					"y": 399
 				},
 				"group": {
-					"definitionRef": "std-box-blur-1d@115e2218fd2bd3",
+					"definitionRef": "std-box-blur-1d@1c2587588bb57b",
 					"locked": true
 				}
 			},
@@ -188,7 +188,7 @@
 					"y": 687
 				},
 				"group": {
-					"definitionRef": "std-box-blur-1d@115e2218fd2bd3",
+					"definitionRef": "std-box-blur-1d@1c2587588bb57b",
 					"locked": true
 				}
 			},
@@ -201,7 +201,7 @@
 					"y": 126
 				},
 				"group": {
-					"definitionRef": "std-box-blur-2d@0641a2aed2bcfa",
+					"definitionRef": "std-box-blur-2d@1e7ca6c4f90c3b",
 					"locked": true
 				}
 			},
@@ -332,7 +332,7 @@
 					"y": 1052
 				},
 				"group": {
-					"definitionRef": "std-box-blur-1d@115e2218fd2bd3",
+					"definitionRef": "std-box-blur-1d@1c2587588bb57b",
 					"locked": true
 				},
 				"frame": "9fea4daf-fb0b-4227-8be9-5a3b67c61879"

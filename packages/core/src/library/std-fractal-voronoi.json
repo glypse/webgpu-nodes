@@ -3,7 +3,7 @@
 	"name": "Fractal Voronoi",
 	"aliases": ["Voronoi fBm", "Voronoi FBM", "Fractal Worley", "Voronoi Texture", "Cellular fBm"],
 	"category": "texture",
-	"dependencies": ["std-fractal-octave@009987a5825aa9", "std-voronoi-texture@0e0b1eb92d4525"],
+	"dependencies": ["std-fractal-octave@02759e6b0725fe", "std-voronoi-texture@14158b5e42a199"],
 	"definition": {
 		"nodes": [
 			{
@@ -232,7 +232,7 @@
 					"y": 2324
 				},
 				"group": {
-					"definitionRef": "std-fractal-octave@009987a5825aa9",
+					"definitionRef": "std-fractal-octave@02759e6b0725fe",
 					"locked": true
 				},
 				"frame": "8ead46ed-2fcf-465a-805c-1b5ba8c68699"
@@ -368,7 +368,7 @@
 					"y": 2971
 				},
 				"group": {
-					"definitionRef": "std-fractal-octave@009987a5825aa9",
+					"definitionRef": "std-fractal-octave@02759e6b0725fe",
 					"locked": true
 				},
 				"frame": "8ead46ed-2fcf-465a-805c-1b5ba8c68699"
@@ -392,7 +392,7 @@
 					"y": 721
 				},
 				"group": {
-					"definitionRef": "std-voronoi-texture@0e0b1eb92d4525",
+					"definitionRef": "std-voronoi-texture@14158b5e42a199",
 					"locked": true
 				},
 				"frame": "8ead46ed-2fcf-465a-805c-1b5ba8c68699"
@@ -1071,7 +1071,7 @@
 					"y": 3700
 				},
 				"group": {
-					"definitionRef": "std-voronoi-texture@0e0b1eb92d4525",
+					"definitionRef": "std-voronoi-texture@14158b5e42a199",
 					"locked": true
 				},
 				"frame": "11f9457b-7d43-4c8a-b322-5d542e414ec9"
@@ -2745,13 +2745,11 @@
 		"outputs": [
 			{
 				"id": "3f9db78a-7dfe-4d94-8f9b-45eb136e3c06",
-				"label": "Distance",
-				"type": "f32"
+				"label": "Distance"
 			},
 			{
 				"id": "b913564f-bd6c-4d82-9e2c-54ef81683840",
-				"label": "Color",
-				"type": "vec3f"
+				"label": "Color"
 			},
 			{
 				"id": "8f0b4f1c-0578-40ac-b900-004ac622ba76",
@@ -2762,13 +2760,11 @@
 			},
 			{
 				"id": "6ffb4ced-cb5a-40c0-a7e5-6201df3b6a22",
-				"label": "F2 Distance",
-				"type": "f32"
+				"label": "F2 Distance"
 			},
 			{
 				"id": "902ddd00-0713-4b73-b6fb-6cce0d2a3916",
-				"label": "F2 Color",
-				"type": "vec3f"
+				"label": "F2 Color"
 			},
 			{
 				"id": "2c0e3d8e-65f2-4717-92b4-2727500457da",
@@ -2779,13 +2775,11 @@
 			},
 			{
 				"id": "e8b67471-0cde-49b6-823f-283f01b958ec",
-				"label": "Smooth Distance",
-				"type": "f32"
+				"label": "Smooth Distance"
 			},
 			{
 				"id": "10e245a0-eb6a-4bbe-8a28-74ce28e77155",
-				"label": "Smooth Color",
-				"type": "vec3f"
+				"label": "Smooth Color"
 			},
 			{
 				"id": "067c4cde-ac31-4479-b4ac-e4688560e0a7",
@@ -2796,13 +2790,11 @@
 			},
 			{
 				"id": "a3662631-ff6d-4229-861d-153c2b244518",
-				"label": "Distance to Edge",
-				"type": "f32"
+				"label": "Distance to Edge"
 			},
 			{
 				"id": "6b3a2ba8-7c07-4843-bf2a-fe9a3f6f38b9",
-				"label": "F2 Distance to Edge",
-				"type": "f32"
+				"label": "F2 Distance to Edge"
 			},
 			{
 				"id": "26315541-64b7-4935-9d71-9334cdd96edb",
@@ -2813,8 +2805,7 @@
 			},
 			{
 				"id": "b4902afd-a607-4f3d-853f-d089d17735fa",
-				"label": "Radius",
-				"type": "f32"
+				"label": "Radius"
 			}
 		],
 		"defaults": {

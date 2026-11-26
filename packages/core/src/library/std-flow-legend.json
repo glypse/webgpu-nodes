@@ -4,7 +4,7 @@
 	"aliases": ["Direction Legend", "Flow Key", "Motion Legend"],
 	"category": "color",
 	"section": ["Motion"],
-	"dependencies": ["std-flow-wheel@1b40293cc28090"],
+	"dependencies": ["std-flow-wheel@1ec27590112491"],
 	"definition": {
 		"nodes": [
 			{
@@ -136,7 +136,7 @@
 					"y": 271
 				},
 				"group": {
-					"definitionRef": "std-flow-wheel@1b40293cc28090",
+					"definitionRef": "std-flow-wheel@1ec27590112491",
 					"locked": true
 				}
 			},
@@ -447,8 +447,7 @@
 		"outputs": [
 			{
 				"id": "b71f52dd-81ab-46cd-ad87-4e2125bdeb07",
-				"label": "Color",
-				"type": "vec4f"
+				"label": "Color"
 			}
 		]
 	}

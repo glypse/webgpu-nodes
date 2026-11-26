@@ -79,7 +79,7 @@ const sampleCubic = group({
 				return g.mul(total(taps), weightY);
 			}),
 		);
-		g.output("color", sum, "vec4f", { label: "Color" });
+		g.output("color", sum, { label: "Color" });
 	},
 });
 
@@ -288,7 +288,7 @@ const lucasKanadeStep = group({
 				).flow;
 			},
 		);
-		g.output("flow", solved, "texture", { label: "Flow" });
+		g.output("flow", solved, { label: "Flow" });
 	},
 });
 
@@ -383,11 +383,11 @@ export const opticalFlow = group({
 				return { flow: refined.flow };
 			},
 		);
-		g.output("flow", flow, "texture", { label: "Flow" });
+		g.output("flow", flow, { label: "Flow" });
 		const { z: confidence } = g.separateVector(
 			g.sampleTexture(flow, g.uv(), 0, CLAMP, 0).color,
 		);
-		g.output("confidence", confidence, "f32", { label: "Confidence" });
+		g.output("confidence", confidence, { label: "Confidence" });
 	},
 });
 

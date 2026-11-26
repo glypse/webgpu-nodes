@@ -64,16 +64,14 @@ const HandleFields = {
 
 const HandleSchema = v.object({ ...HandleFields, type: v.picklist(WGSL_TYPES) });
 
-const VariableTypeSchemas = [
+const HandleTypeSchema = v.union([
+	v.picklist(SOCKET_TYPES),
 	v.strictObject({ variable: IdSchema }),
-	v.strictObject({ inferred: v.literal(true) }),
-] as const;
-
-const HandleTypeSchema = v.union([v.picklist(SOCKET_TYPES), ...VariableTypeSchemas]);
+]);
 
 const ZoneItemSchema = v.object({
 	...HandleFields,
-	type: HandleTypeSchema,
+	type: v.optional(HandleTypeSchema),
 	format: v.optional(v.picklist(TEXTURE_FORMATS)),
 	size: v.optional(v.picklist(["scale", "pixels"])),
 });
@@ -81,7 +79,7 @@ const ZoneItemSchema = v.object({
 const GroupHandleSchema = v.object({
 	...HandleFields,
 	viewer: v.optional(v.literal(true)),
-	type: HandleTypeSchema,
+	type: v.optional(HandleTypeSchema),
 });
 
 const TypeVariableSchema = v.object({

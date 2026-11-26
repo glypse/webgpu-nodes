@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-hash@195359940b5270"],
+	"dependencies": ["std-hash@0b73cc3ab3f912"],
 	"definition": {
 		"nodes": [
 			{
@@ -46,7 +46,7 @@
 					"y": 326
 				},
 				"group": {
-					"definitionRef": "std-hash@195359940b5270",
+					"definitionRef": "std-hash@0b73cc3ab3f912",
 					"locked": true
 				}
 			},

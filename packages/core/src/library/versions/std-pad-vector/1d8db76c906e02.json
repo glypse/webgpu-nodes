@@ -1,0 +1,175 @@
+{
+	"id": "std-pad-vector",
+	"name": "Pad to vec4f",
+	"aliases": ["Zero Pad", "Widen Vector", "Extend Vector", "Pad Vector"],
+	"category": "vector",
+	"section": ["Helpers"],
+	"searchSection": "Helpers",
+	"dependencies": [],
+	"definition": {
+		"nodes": [
+			{
+				"id": "68d15d63-c0ef-47b2-b880-b70a87e8420e",
+				"type": "layout-frame",
+				"data": {
+					"label": "Padding",
+					"note": "Zeros past the vector's own components:\na scalar would be spread into all four."
+				},
+				"position": {
+					"x": 0,
+					"y": 0
+				}
+			},
+			{
+				"id": "db434407-32bd-48d3-88a6-ac20ce764f8f",
+				"type": "declare",
+				"data": {
+					"types": {
+						"declare": "vec4f"
+					},
+					"values": {
+						"y": 0,
+						"z": 0,
+						"w": 0
+					}
+				},
+				"position": {
+					"x": 262,
+					"y": 90
+				},
+				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
+			},
+			{
+				"id": "8700fe5d-acf9-4833-86bc-6bdbbd56f538",
+				"type": "group-input",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 24,
+					"y": 350
+				},
+				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
+			},
+			{
+				"id": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"type": "width-switch",
+				"data": {
+					"types": {
+						"case-1": "vec4f",
+						"case-2": "vec4f",
+						"case-3": "vec4f",
+						"case-4": "vec4f"
+					}
+				},
+				"position": {
+					"x": 472,
+					"y": 174
+				},
+				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
+			},
+			{
+				"id": "b0e4c370-8bcd-4a0a-af3e-844b5147f728",
+				"type": "group-output",
+				"data": {
+					"hideUnlinked": true
+				},
+				"position": {
+					"x": 672,
+					"y": 206
+				},
+				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
+			},
+			{
+				"id": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"type": "reroute",
+				"data": {},
+				"position": {
+					"x": 224,
+					"y": 410
+				},
+				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
+			}
+		],
+		"edges": [
+			{
+				"id": "33cae062-7b34-4cd8-8495-8e35dbfd5038",
+				"source": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"sourceHandle": "out",
+				"target": "db434407-32bd-48d3-88a6-ac20ce764f8f",
+				"targetHandle": "x"
+			},
+			{
+				"id": "f073acd2-adae-4f6b-a792-8253d0709fd7",
+				"source": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"sourceHandle": "out",
+				"target": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"targetHandle": "value"
+			},
+			{
+				"id": "c7f9513b-415c-44df-b2fa-0311114d06eb",
+				"source": "db434407-32bd-48d3-88a6-ac20ce764f8f",
+				"sourceHandle": "value",
+				"target": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"targetHandle": "case-1"
+			},
+			{
+				"id": "b51d71ce-2485-4c6e-8f82-5f371ad7fd6a",
+				"source": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"sourceHandle": "out",
+				"target": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"targetHandle": "case-2"
+			},
+			{
+				"id": "e15a55e0-22a0-4092-aa3c-c4565abce39e",
+				"source": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"sourceHandle": "out",
+				"target": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"targetHandle": "case-3"
+			},
+			{
+				"id": "d2dccdad-f38e-462c-9546-434530567084",
+				"source": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"sourceHandle": "out",
+				"target": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"targetHandle": "case-4"
+			},
+			{
+				"id": "6761b4a6-0bd2-4578-9d17-5014e0e37336",
+				"source": "f8984df5-49f2-4bc6-904e-34b5c93ad158",
+				"sourceHandle": "result",
+				"target": "b0e4c370-8bcd-4a0a-af3e-844b5147f728",
+				"targetHandle": "4c11698f-1e2e-4be6-9d52-cf2c24e3a9c3"
+			},
+			{
+				"id": "53fd7602-fa54-4792-9054-bedf260d5b5f",
+				"source": "8700fe5d-acf9-4833-86bc-6bdbbd56f538",
+				"sourceHandle": "1af46f25-7476-4563-8d60-9d54f5bf33b4",
+				"target": "3fe52e0e-41f9-472f-8b7f-99f88b135d67",
+				"targetHandle": "in"
+			}
+		],
+		"inputs": [
+			{
+				"id": "1af46f25-7476-4563-8d60-9d54f5bf33b4",
+				"label": "Vector",
+				"type": {
+					"variable": "974c279c-3942-449b-8b98-87ab301c1786"
+				}
+			}
+		],
+		"outputs": [
+			{
+				"id": "4c11698f-1e2e-4be6-9d52-cf2c24e3a9c3",
+				"label": "Padded"
+			}
+		],
+		"typeVariables": [
+			{
+				"id": "974c279c-3942-449b-8b98-87ab301c1786",
+				"name": "T",
+				"types": ["vec3f", "vec2f", "vec4f", "f32"]
+			}
+		]
+	}
+}

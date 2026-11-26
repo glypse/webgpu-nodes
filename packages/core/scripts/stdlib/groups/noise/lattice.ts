@@ -60,9 +60,7 @@ export const hash = group({
 			() => {
 				const second = round(mixed);
 				const positive = g.bitwise(second, 2147483647, { op: "&" });
-				g.output("hash", g.mul(g.toFloat(positive), 1 / 2147483647), "vec4f", {
-					label: "Hash",
-				});
+				g.output("hash", g.mul(g.toFloat(positive), 1 / 2147483647), { label: "Hash" });
 			},
 		);
 	},
@@ -97,8 +95,8 @@ export const latticeNeighbor = group({
 				return { offset: g.toFloat(g.sub(digits, radius)) };
 			},
 		);
-		g.output("offset", offset, t, { label: "Offset" });
-		g.output("neighbor", g.add(cell, offset), t, { label: "Neighbor" });
-		g.output("count", count, "i32", { label: "Count" });
+		g.output("offset", offset, { type: t, label: "Offset" });
+		g.output("neighbor", g.add(cell, offset), { type: t, label: "Neighbor" });
+		g.output("count", count, { label: "Count" });
 	},
 });

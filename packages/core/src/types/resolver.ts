@@ -192,7 +192,7 @@ function resolveGroupNodeTypes(
 	// An inferred output takes the type of what reaches it, on the Group
 	// Output node it's linked on.
 	const outputs = def.nodes.filter((n) => n.type === "group-output");
-	const inferable = def.outputs.some((h) => typeof h.type === "object" && "inferred" in h.type);
+	const inferable = def.outputs.some((h) => h.type === undefined);
 	const innerType = (handleId: string): SocketType | undefined => {
 		if (!inferable) return undefined;
 		const output =

@@ -4,7 +4,7 @@
 	"aliases": ["Blur", "Mean Blur", "Average"],
 	"category": "texture",
 	"section": ["Blur"],
-	"dependencies": ["std-box-blur-once@15398ff92cf5e1"],
+	"dependencies": ["std-box-blur-once@0b8c499ff148ae"],
 	"definition": {
 		"nodes": [
 			{
@@ -20,8 +20,8 @@
 					]
 				},
 				"position": {
-					"x": 735,
-					"y": 0
+					"x": 717,
+					"y": 4
 				}
 			},
 			{
@@ -31,8 +31,8 @@
 					"pairedOutput": "e75c3303-6c36-4931-b51f-3356e8a7bef7"
 				},
 				"position": {
-					"x": 335,
-					"y": 0
+					"x": 317,
+					"y": 4
 				}
 			},
 			{
@@ -43,7 +43,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 333
+					"y": 165
 				}
 			},
 			{
@@ -51,11 +51,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 535,
-					"y": 145
+					"x": 517,
+					"y": 65
 				},
 				"group": {
-					"definitionRef": "std-box-blur-once@15398ff92cf5e1",
+					"definitionRef": "std-box-blur-once@0b8c499ff148ae",
 					"locked": true
 				}
 			},
@@ -66,8 +66,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1040,
-					"y": 208
+					"x": 1022,
+					"y": 0
 				}
 			}
 		],
@@ -233,8 +233,7 @@
 		"outputs": [
 			{
 				"id": "9d918a1c-3a1f-4f1e-baf7-9687f046ee3b",
-				"label": "Texture",
-				"type": "texture"
+				"label": "Texture"
 			}
 		],
 		"defaults": {

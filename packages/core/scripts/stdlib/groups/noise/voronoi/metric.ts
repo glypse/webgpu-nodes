@@ -63,7 +63,7 @@ export const voronoiDistance = group({
 			2: g.call(maxComponent, { vector: d }).max,
 			3: g.pow(sum(g, g.pow(d, exponent)), g.div(1, exponent)),
 		});
-		g.output("distance", distance, "f32", { label: "Distance" });
+		g.output("distance", distance, { label: "Distance" });
 	},
 });
 
@@ -159,7 +159,6 @@ export const voronoiBisector = group({
 		g.output(
 			"distance",
 			g.match(metric, { 0: euclidean, 1: manhattan, 2: chebyshev, 3: minkowski }),
-			"f32",
 			{ label: "Distance" },
 		);
 	},

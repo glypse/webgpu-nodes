@@ -24,8 +24,8 @@ function socketTypes(
 	variables: readonly TypeVariable[],
 ): Pick<NodeInputDef, "types" | "family"> {
 	const type = handle.type;
+	if (type === undefined) return { types: SOCKET_TYPES, family: `inferred:${handle.id}` };
 	if (typeof type === "string") return { types: [type] };
-	if ("inferred" in type) return { types: SOCKET_TYPES, family: `inferred:${handle.id}` };
 	const variable = variables.find((v) => v.id === type.variable);
 	return { types: variable?.types ?? ["f32"], family: type.variable };
 }

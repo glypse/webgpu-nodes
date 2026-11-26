@@ -65,7 +65,7 @@ export const openSimplexNoise = group({
 					4: g.call(openSimplex4d, options).value,
 				}),
 		);
-		g.output("value", value, "f32", { label: "Value" });
+		g.output("value", value, { label: "Value" });
 	},
 });
 
@@ -120,7 +120,7 @@ export const noiseDistortion = group({
 					},
 				),
 		);
-		g.output("distorted", distorted.Distorted, t, { label: "Distorted" });
+		g.output("distorted", distorted.Distorted, { type: t, label: "Distorted" });
 	},
 });
 
@@ -144,7 +144,8 @@ export const octaveShift = group({
 			},
 			() => {
 				const { hash: random } = g.call(hash, { value: octave, seed });
-				g.output("shifted", g.add(vector, g.mul(random, OCTAVE_SPREAD)), t, {
+				g.output("shifted", g.add(vector, g.mul(random, OCTAVE_SPREAD)), {
+					type: t,
 					label: "Shifted",
 				});
 			},
@@ -366,7 +367,6 @@ export const fractalNoiseOctaves = group({
 						[HETERO]: value,
 						[RIDGED]: value,
 					}),
-					"f32",
 					{ label: "Value" },
 				);
 			},
@@ -438,16 +438,14 @@ export const fractalNoise = group({
 			}).value;
 		const fac = g.frame("Fac", { note: "The octaves, combined as Type does." }, () => {
 			const fac = sum(options.seed);
-			g.output("fac", fac, "f32", { label: "Fac" });
+			g.output("fac", fac, { label: "Fac" });
 			return fac;
 		});
 		g.frame("Color", { note: "Fac and two more fractal noises, seeded apart." }, () => {
 			const [green, blue] = COLOR_SALTS.map((salt) =>
 				sum(g.bitwise(options.seed, g.constant("i32", salt), { op: "^" })),
 			);
-			g.output("color", g.vec("vec3f", fac, green ?? 0, blue ?? 0), "vec3f", {
-				label: "Color",
-			});
+			g.output("color", g.vec("vec3f", fac, green ?? 0, blue ?? 0), { label: "Color" });
 		});
 	},
 });

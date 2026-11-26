@@ -374,16 +374,6 @@
 																},
 																"required": ["variable"],
 																"additionalProperties": false
-															},
-															{
-																"type": "object",
-																"properties": {
-																	"inferred": {
-																		"const": true
-																	}
-																},
-																"required": ["inferred"],
-																"additionalProperties": false
 															}
 														]
 													},
@@ -410,7 +400,7 @@
 														"type": "string"
 													}
 												},
-												"required": ["id", "label", "type"]
+												"required": ["id", "label"]
 											},
 											"maxItems": 1024
 										},
@@ -1131,21 +1121,11 @@
 											},
 											"required": ["variable"],
 											"additionalProperties": false
-										},
-										{
-											"type": "object",
-											"properties": {
-												"inferred": {
-													"const": true
-												}
-											},
-											"required": ["inferred"],
-											"additionalProperties": false
 										}
 									]
 								}
 							},
-							"required": ["id", "label", "type"]
+							"required": ["id", "label"]
 						},
 						"maxItems": 1024
 					},
@@ -1306,21 +1286,11 @@
 											},
 											"required": ["variable"],
 											"additionalProperties": false
-										},
-										{
-											"type": "object",
-											"properties": {
-												"inferred": {
-													"const": true
-												}
-											},
-											"required": ["inferred"],
-											"additionalProperties": false
 										}
 									]
 								}
 							},
-							"required": ["id", "label", "type"]
+							"required": ["id", "label"]
 						},
 						"maxItems": 1024
 					},

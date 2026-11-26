@@ -853,23 +853,19 @@
 		"outputs": [
 			{
 				"id": "c839fe46-3203-4387-a6af-1ed4997d769e",
-				"label": "Scale",
-				"type": "f32"
+				"label": "Scale"
 			},
 			{
 				"id": "864aff8d-c613-405b-a6fb-987c8eefe81e",
-				"label": "Amplitude",
-				"type": "f32"
+				"label": "Amplitude"
 			},
 			{
 				"id": "16f39a60-27f2-4cbd-8eff-c38e6c6aca4e",
-				"label": "Power",
-				"type": "f32"
+				"label": "Power"
 			},
 			{
 				"id": "d77337cd-d811-492c-90d2-5f00c8a35204",
-				"label": "Octaves",
-				"type": "i32"
+				"label": "Octaves"
 			}
 		],
 		"defaults": {

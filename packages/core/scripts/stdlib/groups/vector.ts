@@ -31,7 +31,7 @@ export const padVector = group({
 					{ 1: g.vec("vec4f", vector, 0, 0, 0), 2: vector, 3: vector, 4: vector },
 					"vec4f",
 				);
-				g.output("padded", padded, "vec4f", { label: "Padded" });
+				g.output("padded", padded, { label: "Padded" });
 			},
 		);
 	},
@@ -50,7 +50,7 @@ export const componentSum = group({
 		// WGSL's dot takes no scalars.
 		const dot = g.dot(vector, 1);
 		const sum = g.widthSwitch(vector, { 1: vector, 2: dot, 3: dot, 4: dot });
-		g.output("sum", sum, "f32", { label: "Sum" });
+		g.output("sum", sum, { label: "Sum" });
 	},
 });
 
@@ -73,7 +73,7 @@ export const maxComponent = group({
 			3: g.max(x, y, z),
 			4: g.max(x, y, z, w),
 		});
-		g.output("max", max, "f32", { label: "Max" });
+		g.output("max", max, { label: "Max" });
 	},
 });
 

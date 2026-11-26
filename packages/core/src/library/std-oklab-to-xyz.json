@@ -435,8 +435,7 @@
 		"outputs": [
 			{
 				"id": "791228ef-01e1-4756-9c8e-fbbfc77846c0",
-				"label": "XYZ",
-				"type": "vec3f"
+				"label": "XYZ"
 			}
 		]
 	}

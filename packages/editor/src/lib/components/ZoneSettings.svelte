@@ -43,9 +43,7 @@
 
 	function variableOf(item: ZoneItem) {
 		const type = item.type;
-		return typeof type === "object" && "variable" in type
-			? variables.find((v) => v.id === type.variable)
-			: undefined;
+		return typeof type === "object" ? variables.find((v) => v.id === type.variable) : undefined;
 	}
 
 	/** The picker's value for the format an item's type decides. */
@@ -162,7 +160,7 @@
 							onSelect={() => {
 								graph.apply({
 									kind: "setZoneItemType",
-									args: [zoneId, item.id, { inferred: true }],
+									args: [zoneId, item.id, null],
 								});
 							}}
 						>
@@ -307,7 +305,7 @@
 						onSelect={() => {
 							graph.apply({
 								kind: "addZoneItem",
-								args: [zoneId, { inferred: true }],
+								args: [zoneId, null],
 							});
 						}}
 					>

@@ -10,7 +10,7 @@
 	"category": "texture",
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-component-sum@0e43caf9357ab7", "std-max-component@0d14bdb467cde4"],
+	"dependencies": ["std-component-sum@008336fd6fb64a", "std-max-component@1adbaacef78617"],
 	"definition": {
 		"nodes": [
 			{
@@ -60,7 +60,7 @@
 					"y": 172
 				},
 				"group": {
-					"definitionRef": "std-component-sum@0e43caf9357ab7",
+					"definitionRef": "std-component-sum@008336fd6fb64a",
 					"locked": true
 				}
 			},
@@ -73,7 +73,7 @@
 					"y": 234
 				},
 				"group": {
-					"definitionRef": "std-max-component@0d14bdb467cde4",
+					"definitionRef": "std-max-component@1adbaacef78617",
 					"locked": true
 				}
 			},
@@ -95,7 +95,7 @@
 					"y": 459
 				},
 				"group": {
-					"definitionRef": "std-component-sum@0e43caf9357ab7",
+					"definitionRef": "std-component-sum@008336fd6fb64a",
 					"locked": true
 				}
 			},
@@ -355,8 +355,7 @@
 		"outputs": [
 			{
 				"id": "271aa96d-a644-4ef0-b141-3bb46fdc8351",
-				"label": "Distance",
-				"type": "f32"
+				"label": "Distance"
 			}
 		],
 		"defaults": {

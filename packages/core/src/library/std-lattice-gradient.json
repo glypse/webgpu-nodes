@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-hash@195359940b5270"],
+	"dependencies": ["std-hash@0b73cc3ab3f912"],
 	"definition": {
 		"nodes": [
 			{
@@ -13,8 +13,8 @@
 				"type": "to-int",
 				"data": {},
 				"position": {
-					"x": 360,
-					"y": 3454
+					"x": 367,
+					"y": 0
 				}
 			},
 			{
@@ -25,7 +25,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 3560
+					"y": 106
 				}
 			},
 			{
@@ -33,11 +33,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 621,
-					"y": 3437
+					"x": 629,
+					"y": 6
 				},
 				"group": {
-					"definitionRef": "std-hash@195359940b5270",
+					"definitionRef": "std-hash@0b73cc3ab3f912",
 					"locked": true
 				}
 			},
@@ -46,8 +46,8 @@
 				"type": "separate-vector",
 				"data": {},
 				"position": {
-					"x": 964,
-					"y": 1707
+					"x": 954,
+					"y": 1225
 				}
 			},
 			{
@@ -58,8 +58,8 @@
 					"note": "A slope in [-1, 1]."
 				},
 				"position": {
-					"x": 2987,
-					"y": 3317
+					"x": 3017,
+					"y": 0
 				}
 			},
 			{
@@ -67,8 +67,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 3211,
-					"y": 3451
+					"x": 3241,
+					"y": 134
 				},
 				"frame": "9d60926c-7cb3-4902-bb00-ddda4b58d906"
 			},
@@ -87,8 +87,8 @@
 					}
 				},
 				"position": {
-					"x": 3011,
-					"y": 3391
+					"x": 3041,
+					"y": 74
 				},
 				"frame": "9d60926c-7cb3-4902-bb00-ddda4b58d906"
 			},
@@ -101,8 +101,8 @@
 					}
 				},
 				"position": {
-					"x": 3411,
-					"y": 3423
+					"x": 3441,
+					"y": 106
 				},
 				"frame": "9d60926c-7cb3-4902-bb00-ddda4b58d906"
 			},
@@ -114,8 +114,8 @@
 					"note": "A direction at a random angle."
 				},
 				"position": {
-					"x": 2418,
-					"y": 2739
+					"x": 2449,
+					"y": 373
 				}
 			},
 			{
@@ -123,8 +123,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2642,
-					"y": 2873
+					"x": 2673,
+					"y": 507
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -143,8 +143,8 @@
 					}
 				},
 				"position": {
-					"x": 2442,
-					"y": 2813
+					"x": 2473,
+					"y": 447
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -153,8 +153,8 @@
 				"type": "cos",
 				"data": {},
 				"position": {
-					"x": 2842,
-					"y": 2845
+					"x": 2873,
+					"y": 479
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -163,8 +163,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2642,
-					"y": 3050
+					"x": 2673,
+					"y": 711
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -183,8 +183,8 @@
 					}
 				},
 				"position": {
-					"x": 2442,
-					"y": 3078
+					"x": 2473,
+					"y": 651
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -193,8 +193,8 @@
 				"type": "sin",
 				"data": {},
 				"position": {
-					"x": 2842,
-					"y": 3022
+					"x": 2873,
+					"y": 683
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -207,8 +207,8 @@
 					}
 				},
 				"position": {
-					"x": 3042,
-					"y": 2966
+					"x": 3073,
+					"y": 627
 				},
 				"frame": "6f86ee0c-f8bb-499c-a977-2e3f9111f0e2"
 			},
@@ -220,8 +220,8 @@
 					"note": "One of OpenSimplex2's 48 directions, an expanded rhombic dodecahedron's:\na cube corner, one of its 3 edges (zeroing an axis), and one of 2 points\non that face, all made the same length."
 				},
 				"position": {
-					"x": 1482,
-					"y": 1406
+					"x": 1512,
+					"y": 924
 				}
 			},
 			{
@@ -229,8 +229,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 1706,
-					"y": 1679
+					"x": 1736,
+					"y": 1197
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -249,8 +249,8 @@
 					}
 				},
 				"position": {
-					"x": 1506,
-					"y": 1619
+					"x": 1536,
+					"y": 1137
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -259,8 +259,8 @@
 				"type": "floor",
 				"data": {},
 				"position": {
-					"x": 1906,
-					"y": 1651
+					"x": 1936,
+					"y": 1169
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -269,8 +269,8 @@
 				"type": "min",
 				"data": {},
 				"position": {
-					"x": 2106,
-					"y": 1800
+					"x": 2136,
+					"y": 1318
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -289,8 +289,8 @@
 					}
 				},
 				"position": {
-					"x": 1906,
-					"y": 1828
+					"x": 1936,
+					"y": 1346
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -308,8 +308,8 @@
 					}
 				},
 				"position": {
-					"x": 2306,
-					"y": 1934
+					"x": 2336,
+					"y": 1452
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -318,8 +318,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 2506,
-					"y": 1878
+					"x": 2536,
+					"y": 1396
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -328,8 +328,8 @@
 				"type": "floor",
 				"data": {},
 				"position": {
-					"x": 2706,
-					"y": 1850
+					"x": 2736,
+					"y": 1368
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -342,8 +342,8 @@
 					}
 				},
 				"position": {
-					"x": 2906,
-					"y": 1822
+					"x": 2936,
+					"y": 1340
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -352,8 +352,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 3106,
-					"y": 2091
+					"x": 3136,
+					"y": 1609
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -372,8 +372,8 @@
 					}
 				},
 				"position": {
-					"x": 2906,
-					"y": 2119
+					"x": 2936,
+					"y": 1637
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -386,8 +386,8 @@
 					}
 				},
 				"position": {
-					"x": 3306,
-					"y": 2063
+					"x": 3336,
+					"y": 1581
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -400,8 +400,8 @@
 					}
 				},
 				"position": {
-					"x": 2506,
-					"y": 2472
+					"x": 2536,
+					"y": 1990
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -410,8 +410,8 @@
 				"type": "floor",
 				"data": {},
 				"position": {
-					"x": 2706,
-					"y": 2444
+					"x": 2736,
+					"y": 1962
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -429,8 +429,8 @@
 					}
 				},
 				"position": {
-					"x": 2706,
-					"y": 2133
+					"x": 2736,
+					"y": 1651
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -439,8 +439,8 @@
 				"type": "sub",
 				"data": {},
 				"position": {
-					"x": 2906,
-					"y": 2388
+					"x": 2936,
+					"y": 1906
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -449,8 +449,8 @@
 				"type": "abs",
 				"data": {},
 				"position": {
-					"x": 3306,
-					"y": 2360
+					"x": 3336,
+					"y": 1878
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -463,8 +463,8 @@
 					}
 				},
 				"position": {
-					"x": 3506,
-					"y": 2212
+					"x": 3536,
+					"y": 1730
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -473,8 +473,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 3706,
-					"y": 2184
+					"x": 3736,
+					"y": 1702
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -487,8 +487,8 @@
 					}
 				},
 				"position": {
-					"x": 3106,
-					"y": 1678
+					"x": 3136,
+					"y": 1196
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -497,8 +497,8 @@
 				"type": "floor",
 				"data": {},
 				"position": {
-					"x": 3906,
-					"y": 1650
+					"x": 3936,
+					"y": 1168
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -511,8 +511,8 @@
 					}
 				},
 				"position": {
-					"x": 4106,
-					"y": 1622
+					"x": 4136,
+					"y": 1140
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -521,8 +521,8 @@
 				"type": "cross",
 				"data": {},
 				"position": {
-					"x": 4106,
-					"y": 2071
+					"x": 4136,
+					"y": 1589
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -531,8 +531,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 4306,
-					"y": 2156
+					"x": 4336,
+					"y": 1674
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -541,8 +541,8 @@
 				"type": "mix",
 				"data": {},
 				"position": {
-					"x": 4516,
-					"y": 2100
+					"x": 4546,
+					"y": 1618
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -551,8 +551,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 4106,
-					"y": 2300
+					"x": 4136,
+					"y": 1818
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -571,8 +571,8 @@
 					}
 				},
 				"position": {
-					"x": 3906,
-					"y": 2328
+					"x": 3936,
+					"y": 1846
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -581,8 +581,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 4716,
-					"y": 2272
+					"x": 4746,
+					"y": 1790
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -591,8 +591,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 4516,
-					"y": 1594
+					"x": 4546,
+					"y": 1112
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -611,8 +611,8 @@
 					}
 				},
 				"position": {
-					"x": 4306,
-					"y": 1515
+					"x": 4336,
+					"y": 1033
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -625,8 +625,8 @@
 					}
 				},
 				"position": {
-					"x": 4716,
-					"y": 1512
+					"x": 4746,
+					"y": 1030
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -635,8 +635,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 4916,
-					"y": 2244
+					"x": 4946,
+					"y": 1762
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -648,8 +648,8 @@
 					"note": "A direction spread evenly over the 4D sphere: two circles\nwhose radii share the length (r₁² + r₂² = 1) at random."
 				},
 				"position": {
-					"x": 1853,
-					"y": 0
+					"x": 1883,
+					"y": 2257
 				}
 			},
 			{
@@ -657,8 +657,8 @@
 				"type": "sqrt",
 				"data": {},
 				"position": {
-					"x": 2077,
-					"y": 295
+					"x": 2107,
+					"y": 2552
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -671,8 +671,8 @@
 					}
 				},
 				"position": {
-					"x": 1877,
-					"y": 935
+					"x": 1907,
+					"y": 3253
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -681,8 +681,8 @@
 				"type": "sqrt",
 				"data": {},
 				"position": {
-					"x": 2077,
-					"y": 907
+					"x": 2107,
+					"y": 3225
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -691,8 +691,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2077,
-					"y": 118
+					"x": 2107,
+					"y": 2375
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -711,8 +711,8 @@
 					}
 				},
 				"position": {
-					"x": 1877,
-					"y": 146
+					"x": 1907,
+					"y": 2403
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -721,8 +721,8 @@
 				"type": "cos",
 				"data": {},
 				"position": {
-					"x": 2277,
-					"y": 90
+					"x": 2307,
+					"y": 2347
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -731,8 +731,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2477,
-					"y": 267
+					"x": 2507,
+					"y": 2524
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -741,8 +741,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2077,
-					"y": 500
+					"x": 2107,
+					"y": 2757
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -761,8 +761,8 @@
 					}
 				},
 				"position": {
-					"x": 1877,
-					"y": 528
+					"x": 1907,
+					"y": 2785
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -771,8 +771,8 @@
 				"type": "sin",
 				"data": {},
 				"position": {
-					"x": 2277,
-					"y": 472
+					"x": 2307,
+					"y": 2729
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -781,8 +781,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2477,
-					"y": 444
+					"x": 2507,
+					"y": 2701
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -791,8 +791,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2077,
-					"y": 704
+					"x": 2107,
+					"y": 3048
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -811,8 +811,8 @@
 					}
 				},
 				"position": {
-					"x": 1877,
-					"y": 732
+					"x": 1907,
+					"y": 2988
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -821,8 +821,8 @@
 				"type": "cos",
 				"data": {},
 				"position": {
-					"x": 2277,
-					"y": 676
+					"x": 2307,
+					"y": 3020
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -831,8 +831,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2477,
-					"y": 879
+					"x": 2507,
+					"y": 3197
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -841,8 +841,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2077,
-					"y": 1139
+					"x": 2107,
+					"y": 3457
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -861,8 +861,8 @@
 					}
 				},
 				"position": {
-					"x": 1877,
-					"y": 1167
+					"x": 1907,
+					"y": 3485
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -871,8 +871,8 @@
 				"type": "sin",
 				"data": {},
 				"position": {
-					"x": 2277,
-					"y": 1111
+					"x": 2307,
+					"y": 3429
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -881,8 +881,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2477,
-					"y": 1083
+					"x": 2507,
+					"y": 3401
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -895,8 +895,8 @@
 					}
 				},
 				"position": {
-					"x": 2687,
-					"y": 795
+					"x": 2717,
+					"y": 3113
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -905,8 +905,8 @@
 				"type": "width-switch",
 				"data": {},
 				"position": {
-					"x": 5313,
-					"y": 2992
+					"x": 5357,
+					"y": 543
 				}
 			},
 			{
@@ -916,8 +916,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 5573,
-					"y": 3034
+					"x": 5617,
+					"y": 575
 				}
 			},
 			{
@@ -926,7 +926,7 @@
 				"data": {},
 				"position": {
 					"x": 260,
-					"y": 3620
+					"y": 160
 				}
 			},
 			{
@@ -934,8 +934,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1290,
-					"y": 1803
+					"x": 1304,
+					"y": 1321
 				}
 			},
 			{
@@ -943,8 +943,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2387,
-					"y": 1896
+					"x": 2417,
+					"y": 1414
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -953,8 +953,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 3587,
-					"y": 2159
+					"x": 3617,
+					"y": 1677
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -963,8 +963,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 3987,
-					"y": 2280
+					"x": 4017,
+					"y": 1798
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -973,8 +973,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4387,
-					"y": 1718
+					"x": 4417,
+					"y": 1236
 				},
 				"frame": "db512b20-0214-45fd-b66f-ee2e9eb86c17"
 			},
@@ -983,8 +983,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1290,
-					"y": 508
+					"x": 1304,
+					"y": 2383
 				}
 			},
 			{
@@ -992,8 +992,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2358,
-					"y": 391
+					"x": 2388,
+					"y": 2648
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			},
@@ -1002,8 +1002,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1290,
-					"y": 1147
+					"x": 1304,
+					"y": 3172
 				}
 			},
 			{
@@ -1011,8 +1011,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2358,
-					"y": 1003
+					"x": 2388,
+					"y": 3321
 				},
 				"frame": "11d3ad58-73d0-4dba-be33-3d62488c9d93"
 			}

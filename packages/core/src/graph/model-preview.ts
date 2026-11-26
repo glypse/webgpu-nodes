@@ -82,7 +82,6 @@ export abstract class PreviewModel extends FrameModel {
 		const viewer: GroupHandleDef = {
 			id: this.newId(),
 			label: "Viewer",
-			type: { inferred: true },
 			viewer: true,
 		};
 		this.setInterface(definition, "output", [...definition.outputs, viewer]);

@@ -171,7 +171,7 @@ function renderTexture(d: DocBuilder, color: Port): Port {
 function repeatZone(d: DocBuilder, initial: Port): Port {
 	const item = d.id();
 	const output = d.node("repeat-output", {
-		items: [{ id: item, label: "Value", type: { inferred: true } }],
+		items: [{ id: item, label: "Value" }],
 	});
 	const input = d.node("repeat-input", {
 		pairedOutput: output,

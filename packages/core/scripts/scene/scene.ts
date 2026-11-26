@@ -78,7 +78,7 @@ export const movingPicture = group({
 			},
 		);
 		const { x: red, y: green, z: blue } = g.separateVector(g.mix(background, colour, mask));
-		g.output("color", g.vec("vec4f", red, green, blue, 1), "vec4f", { label: "Color" });
+		g.output("color", g.vec("vec4f", red, green, blue, 1), { label: "Color" });
 	},
 });
 
@@ -109,7 +109,7 @@ export const pyramid = group({
 				image: g.sampleTexture(state.image, g.uv(), LINEAR, CLAMP, 0).color,
 			}),
 		);
-		g.output("texture", image, "texture", { label: "Texture" });
+		g.output("texture", image, { label: "Texture" });
 	},
 });
 
@@ -174,9 +174,7 @@ export const glow = group({
 		);
 		const below = rgbOf(g.sampleTexture(texture, g.uv(), LINEAR, CLAMP, 0).color);
 		const above = rgbOf(g.sampleTexture(blurred, g.uv(), LINEAR, CLAMP, 0).color);
-		g.output("color", opaque(g.add(below, g.mul(above, strength))), "vec4f", {
-			label: "Color",
-		});
+		g.output("color", opaque(g.add(below, g.mul(above, strength))), { label: "Color" });
 	},
 });
 
@@ -210,7 +208,7 @@ export const texels = group({
 		const { x: r, y: gr, z: b } = g.separateVector(texel);
 		const rgb = g.mul(g.vec("vec3f", r, gr, b), g.mix(0.25, 1, lines));
 		const { x: red, y: green, z: blue } = g.separateVector(rgb);
-		g.output("color", g.vec("vec4f", red, green, blue, 1), "vec4f", { label: "Color" });
+		g.output("color", g.vec("vec4f", red, green, blue, 1), { label: "Color" });
 	},
 });
 
@@ -252,7 +250,7 @@ export const contactSheet = group({
 			y: green,
 			z: blue,
 		} = g.separateVector(g.mul(g.vec("vec3f", r, gr, b), edge));
-		g.output("color", g.vec("vec4f", red, green, blue, 1), "vec4f", { label: "Color" });
+		g.output("color", g.vec("vec4f", red, green, blue, 1), { label: "Color" });
 	},
 });
 
@@ -471,6 +469,6 @@ export const root = group({
 			h: tiles.Halves,
 			i: tiles.Texels,
 		});
-		g.output("color", color, "vec4f", { label: "Color" });
+		g.output("color", color, { label: "Color" });
 	},
 });

@@ -17,8 +17,8 @@
 					}
 				},
 				"position": {
-					"x": 366,
-					"y": 0
+					"x": 365,
+					"y": 155
 				}
 			},
 			{
@@ -29,7 +29,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 218
+					"y": 75
 				}
 			},
 			{
@@ -37,8 +37,8 @@
 				"type": "width-switch",
 				"data": {},
 				"position": {
-					"x": 733,
-					"y": 165
+					"x": 727,
+					"y": 0
 				}
 			},
 			{
@@ -48,8 +48,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 993,
-					"y": 207
+					"x": 987,
+					"y": 32
 				}
 			},
 			{
@@ -58,7 +58,7 @@
 				"data": {},
 				"position": {
 					"x": 260,
-					"y": 278
+					"y": 135
 				}
 			},
 			{
@@ -66,8 +66,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 633,
-					"y": 235
+					"x": 626,
+					"y": 236
 				}
 			}
 		],
@@ -148,8 +148,7 @@
 		"outputs": [
 			{
 				"id": "65886007-d50c-4193-bfba-1f07ed200d36",
-				"label": "Sum",
-				"type": "f32"
+				"label": "Sum"
 			}
 		],
 		"typeVariables": [

@@ -435,8 +435,7 @@
 		"outputs": [
 			{
 				"id": "841f164a-bab7-4132-a582-27a1123e4573",
-				"label": "OKLab",
-				"type": "vec3f"
+				"label": "OKLab"
 			}
 		]
 	}

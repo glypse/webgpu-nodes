@@ -181,7 +181,7 @@ function findNode(
 }
 
 export function isInferredItem(item: ZoneItem): boolean {
-	return typeof item.type === "object" && "inferred" in item.type;
+	return item.type === undefined;
 }
 
 /**
@@ -200,9 +200,9 @@ export function inferredItemFamily(itemId: string): string {
  */
 function itemInput(item: ZoneItem, variables: readonly TypeVariable[]): NodeInputDef {
 	const { id, label, type } = item;
+	if (type === undefined) return { id, label, types: WGSL_TYPES, family: inferredItemFamily(id) };
 	if (isTexture(type)) return { id, label, types: ["vec4f"] };
 	if (typeof type === "string") return { id, label, types: [type] };
-	if ("inferred" in type) return { id, label, types: WGSL_TYPES, family: inferredItemFamily(id) };
 	const variable = variables.find((v) => v.id === type.variable);
 	return { id, label, types: variable?.types ?? ["f32"], family: type.variable };
 }

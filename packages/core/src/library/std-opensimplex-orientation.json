@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-pad-vector@1728760d9cd716"],
+	"dependencies": ["std-pad-vector@1d8db76c906e02"],
 	"definition": {
 		"nodes": [
 			{
@@ -17,7 +17,7 @@
 					"y": 9053
 				},
 				"group": {
-					"definitionRef": "std-pad-vector@1728760d9cd716",
+					"definitionRef": "std-pad-vector@1d8db76c906e02",
 					"locked": true
 				}
 			},

@@ -170,15 +170,15 @@
 	const sharedTypes: Record<string, string> = $derived.by(() => {
 		const side = sideOf({ type: nodeType });
 		const zoneOutput = zoneId && graph.zoneAnalysis(view.document).zones.get(zoneId)?.outputId;
-		const handles: readonly { id: string; type: HandleType }[] = side
+		const handles: readonly { id: string; type?: HandleType }[] = side
 			? interfaceOf(view.document, side)
 			: zoneItems(view.document.nodesById.get(zoneOutput ?? ""));
 		const variables = view.document.typeVariables;
 		return Object.fromEntries(
 			handles.flatMap((handle) => {
 				const type = handle.type;
+				if (type === undefined) return [[handle.id, "inferred"]];
 				if (typeof type === "string") return [];
-				if ("inferred" in type) return [[handle.id, "inferred"]];
 				const variable = variables.find((v) => v.id === type.variable);
 				return variable ? [[handle.id, variable.name]] : [];
 			}),

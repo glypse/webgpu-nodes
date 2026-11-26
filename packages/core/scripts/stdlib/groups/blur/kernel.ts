@@ -137,7 +137,7 @@ function kernel1d(
 						},
 					),
 			);
-			g.output("color", normalised(g, sum, total), "vec4f", { label: "Color" });
+			g.output("color", normalised(g, sum, total), { label: "Color" });
 		},
 	});
 }
@@ -213,7 +213,7 @@ function kernel2d(
 						},
 					),
 			);
-			g.output("color", normalised(g, sum, total), "vec4f", { label: "Color" });
+			g.output("color", normalised(g, sum, total), { label: "Color" });
 		},
 	});
 }

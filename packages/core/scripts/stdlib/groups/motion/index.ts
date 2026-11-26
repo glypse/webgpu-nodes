@@ -27,8 +27,8 @@ export const previousFrame = group({
 			},
 			(_, state) => ({ image: texture, previous: state.image }),
 		);
-		g.output("previous", previous, "texture", { label: "Previous" });
-		g.output("current", current, "texture", { label: "Current" });
+		g.output("previous", previous, { label: "Previous" });
+		g.output("current", current, { label: "Current" });
 	},
 });
 
@@ -84,9 +84,7 @@ const imageGradient = group({
 			0: g.div(acrossY(0), 2),
 			1: weighted(acrossY),
 		});
-		g.output("gradient", g.vec("vec2f", gradientX, gradientY), "vec2f", {
-			label: "Gradient",
-		});
+		g.output("gradient", g.vec("vec2f", gradientX, gradientY), { label: "Gradient" });
 	},
 });
 
@@ -114,7 +112,7 @@ export const warp = group({
 			},
 		);
 		const { color } = g.sampleTexture(texture, displaced, 0, edges, 0);
-		g.output("color", color, "vec4f", { label: "Color" });
+		g.output("color", color, { label: "Color" });
 	},
 });
 
@@ -136,7 +134,7 @@ export const flowError = group({
 		};
 		const { color: now } = g.sampleTexture(current, g.uv(), 0, CLAMP, 0);
 		const { color: warped } = g.call(warp, { texture: previous, flow: flowTexture });
-		g.output("error", g.abs(g.sub(lumaOf(now), lumaOf(warped))), "f32", { label: "Error" });
+		g.output("error", g.abs(g.sub(lumaOf(now), lumaOf(warped))), { label: "Error" });
 	},
 });
 

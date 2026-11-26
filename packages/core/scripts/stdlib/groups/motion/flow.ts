@@ -37,7 +37,7 @@ const flowWheel = group({
 		// Clamping a zero max to a tiny one keeps the division finite.
 		const saturation = g.min(g.div(length, g.max(max, 1e-9)), 1);
 		const { color: rgb } = g.call(color, { mode: 1, hue, saturation, value: 1 });
-		g.output("color", rgb, "vec3f", { label: "Color" });
+		g.output("color", rgb, { label: "Color" });
 	},
 });
 
@@ -70,7 +70,7 @@ export const flowToColor = group({
 			() => g.mul(g.vec("vec2f", x, y), aspect),
 		);
 		const { color: rgb } = g.call(flowWheel, { vector: motion, max });
-		g.output("color", rgb, "vec3f", { label: "Color" });
+		g.output("color", rgb, { label: "Color" });
 	},
 });
 
@@ -94,7 +94,7 @@ export const flowLegend = group({
 		const { x, y, z } = g.separateVector(rgb);
 		const distance = g.length(offset);
 		const alpha = g.clamp(g.add(g.div(g.sub(0.5, distance), pixel), 0.5), 0, 1);
-		g.output("color", g.vec("vec4f", x, y, z, alpha), "vec4f", { label: "Color" });
+		g.output("color", g.vec("vec4f", x, y, z, alpha), { label: "Color" });
 	},
 });
 
@@ -187,7 +187,7 @@ export const motionArrows = group({
 		const { x, y, z, w } = g.separateVector(below);
 		const rgb = g.mix(g.vec("vec3f", x, y, z), arrow, coverage);
 		const { x: r, y: green, z: blue } = g.separateVector(rgb);
-		g.output("color", g.vec("vec4f", r, green, blue, w), "vec4f", { label: "Color" });
+		g.output("color", g.vec("vec4f", r, green, blue, w), { label: "Color" });
 	},
 });
 

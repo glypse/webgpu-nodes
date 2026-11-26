@@ -153,13 +153,11 @@
 		"outputs": [
 			{
 				"id": "8f9b35f0-d632-412e-be48-330d651389e1",
-				"label": "Previous",
-				"type": "texture"
+				"label": "Previous"
 			},
 			{
 				"id": "cdcecc8a-7fc2-48e8-ac0a-018c61b31331",
-				"label": "Current",
-				"type": "texture"
+				"label": "Current"
 			}
 		]
 	}

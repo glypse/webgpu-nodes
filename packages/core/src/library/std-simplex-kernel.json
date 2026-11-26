@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-lattice-gradient@05900a454cf1a6", "std-component-sum@0e43caf9357ab7"],
+	"dependencies": ["std-lattice-gradient@1685031cd8d468", "std-component-sum@008336fd6fb64a"],
 	"definition": {
 		"nodes": [
 			{
@@ -17,7 +17,7 @@
 					"y": 146
 				},
 				"group": {
-					"definitionRef": "std-lattice-gradient@05900a454cf1a6",
+					"definitionRef": "std-lattice-gradient@1685031cd8d468",
 					"locked": true
 				}
 			},
@@ -75,7 +75,7 @@
 					"y": 375
 				},
 				"group": {
-					"definitionRef": "std-component-sum@0e43caf9357ab7",
+					"definitionRef": "std-component-sum@008336fd6fb64a",
 					"locked": true
 				},
 				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
@@ -149,7 +149,7 @@
 					"y": 90
 				},
 				"group": {
-					"definitionRef": "std-component-sum@0e43caf9357ab7",
+					"definitionRef": "std-component-sum@008336fd6fb64a",
 					"locked": true
 				},
 				"frame": "7a377af2-db58-4cfd-af46-e7e546b4e26c"
@@ -385,8 +385,7 @@
 		"outputs": [
 			{
 				"id": "059fbb89-471c-4b83-82f6-43522580f07f",
-				"label": "Value",
-				"type": "f32"
+				"label": "Value"
 			}
 		],
 		"defaults": {

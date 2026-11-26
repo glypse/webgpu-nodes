@@ -328,8 +328,7 @@
 		"outputs": [
 			{
 				"id": "41668a81-633a-44f9-8153-896d4c1266f6",
-				"label": "OKLch",
-				"type": "vec3f"
+				"label": "OKLch"
 			}
 		]
 	}

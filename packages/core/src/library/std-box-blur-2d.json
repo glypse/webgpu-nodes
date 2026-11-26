@@ -1855,8 +1855,7 @@
 		"outputs": [
 			{
 				"id": "b73fe66f-2a10-466a-ae2a-1b6fd96f3f90",
-				"label": "Color",
-				"type": "vec4f"
+				"label": "Color"
 			}
 		],
 		"defaults": {

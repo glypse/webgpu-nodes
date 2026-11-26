@@ -90,7 +90,7 @@ function blur(
 			);
 			const bothAxes = g.match(separable, { 0: exact.color, 1: vertical.color });
 			const color = g.match(direction, { 0: bothAxes, 1: along.color });
-			g.output("texture", color, "texture", { label: "Texture" });
+			g.output("texture", color, { type: "texture", label: "Texture" });
 		},
 	});
 }
@@ -132,7 +132,7 @@ export const boxBlur = group({
 				texture: g.call(boxBlurOnce, { texture: state.texture, ...settings }).texture,
 			}),
 		);
-		g.output("texture", blurred, "texture", { label: "Texture" });
+		g.output("texture", blurred, { label: "Texture" });
 	},
 });
 

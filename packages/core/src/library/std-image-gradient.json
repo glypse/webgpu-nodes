@@ -4,7 +4,7 @@
 	"aliases": ["Gradient", "Derivative", "Edges", "Sobel", "Scharr"],
 	"category": "texture",
 	"section": ["Motion"],
-	"dependencies": ["std-luma@01c853ca51a3ec"],
+	"dependencies": ["std-luma@11912c7e6b42ff"],
 	"definition": {
 		"nodes": [
 			{
@@ -166,7 +166,7 @@
 					"y": 56
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -246,7 +246,7 @@
 					"y": 245
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -367,7 +367,7 @@
 					"y": 783
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -447,7 +447,7 @@
 					"y": 1028
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -583,7 +583,7 @@
 					"y": 1301
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -663,7 +663,7 @@
 					"y": 1614
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -808,7 +808,7 @@
 					"y": 1959
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -888,7 +888,7 @@
 					"y": 2304
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1055,7 +1055,7 @@
 					"y": 2649
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1135,7 +1135,7 @@
 					"y": 2838
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1256,7 +1256,7 @@
 					"y": 4029
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1336,7 +1336,7 @@
 					"y": 4218
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1472,7 +1472,7 @@
 					"y": 4719
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1552,7 +1552,7 @@
 					"y": 4908
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1697,7 +1697,7 @@
 					"y": 3339
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -1777,7 +1777,7 @@
 					"y": 3684
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -4008,8 +4008,7 @@
 		"outputs": [
 			{
 				"id": "9ed71056-aa41-4347-a34f-7d1afab2b4c0",
-				"label": "Gradient",
-				"type": "vec2f"
+				"label": "Gradient"
 			}
 		],
 		"defaults": {

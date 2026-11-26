@@ -75,7 +75,7 @@ describe("GraphModel zones", () => {
 		graph.connectNewZoneItem(connection("uv", "uv", zoneId, NEW_ITEM_HANDLE));
 		const items = graph.getZoneItems(zoneId);
 		const created = items[items.length - 1];
-		expect(created?.type).toEqual({ inferred: true });
+		expect(created && "type" in created).toBe(false);
 		expect(graph.resolveOutputHandleType(zoneId, created?.id ?? "")).toBe("vec2f");
 		expect(graph.root.edges).toContainEqual(
 			containing({ source: "uv", target: zoneId, targetHandle: created?.id }),
@@ -95,7 +95,7 @@ describe("GraphModel zones", () => {
 	it("keeps an item's type when it becomes inferred", () => {
 		const { graph, zoneId, outputId, item } = setup();
 		graph.setZoneItemType(zoneId, item.id, "vec3f");
-		graph.setZoneItemType(zoneId, item.id, { inferred: true });
+		graph.setZoneItemType(zoneId, item.id, null);
 		expect(graph.resolveOutputHandleType(outputId, item.id)).toBe("vec3f");
 		expect(graph.root.edges.some((e) => e.target === outputId)).toBe(true);
 	});

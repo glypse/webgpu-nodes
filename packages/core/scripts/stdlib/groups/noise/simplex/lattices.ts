@@ -56,7 +56,7 @@ export const gradientNoise1d = group({
 					kernel(g, left, g.sub(x, left), 1, seed),
 					kernel(g, right, g.sub(x, right), 1, seed),
 				);
-				g.output("value", g.mul(sum, NORMALIZERS[1]), "f32", { label: "Value" });
+				g.output("value", g.mul(sum, NORMALIZERS[1]), { label: "Value" });
 			},
 		);
 	},
@@ -133,9 +133,7 @@ export const openSimplex2d = group({
 				return g.mul(sum, NORMALIZERS[2][SMOOTH]);
 			},
 		);
-		g.output("value", g.match(variant, { [FAST]: fast, [SMOOTH]: smooth }), "f32", {
-			label: "Value",
-		});
+		g.output("value", g.match(variant, { [FAST]: fast, [SMOOTH]: smooth }), { label: "Value" });
 	},
 });
 
@@ -200,9 +198,7 @@ export const bccHalfLattice = group({
 				);
 			},
 		);
-		g.output("value", g.match(variant, { [FAST]: fast, [SMOOTH]: smooth }), "f32", {
-			label: "Value",
-		});
+		g.output("value", g.match(variant, { [FAST]: fast, [SMOOTH]: smooth }), { label: "Value" });
 	},
 });
 
@@ -235,7 +231,7 @@ export const openSimplex3d = group({
 					[FAST]: NORMALIZERS[3][FAST],
 					[SMOOTH]: NORMALIZERS[3][SMOOTH],
 				});
-				g.output("value", g.mul(sum, normalizer), "f32", { label: "Value" });
+				g.output("value", g.mul(sum, normalizer), { label: "Value" });
 			},
 		);
 	},
@@ -459,8 +455,6 @@ export const openSimplex4d = group({
 				return g.mul(sum, NORMALIZERS[4][SMOOTH]);
 			},
 		);
-		g.output("value", g.match(variant, { [FAST]: fast, [SMOOTH]: smooth }), "f32", {
-			label: "Value",
-		});
+		g.output("value", g.match(variant, { [FAST]: fast, [SMOOTH]: smooth }), { label: "Value" });
 	},
 });

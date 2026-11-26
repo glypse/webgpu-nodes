@@ -6,9 +6,9 @@
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-voronoi-distance@0180c4aa500792",
-		"std-pad-vector@1728760d9cd716",
-		"std-component-sum@0e43caf9357ab7"
+		"std-voronoi-distance@005333aecb623c",
+		"std-pad-vector@1d8db76c906e02",
+		"std-component-sum@008336fd6fb64a"
 	],
 	"definition": {
 		"nodes": [
@@ -17,8 +17,8 @@
 				"type": "component-count",
 				"data": {},
 				"position": {
-					"x": 851,
-					"y": 2360
+					"x": 763,
+					"y": 2709
 				}
 			},
 			{
@@ -29,7 +29,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 4891
+					"y": 2655
 				}
 			},
 			{
@@ -41,11 +41,11 @@
 					}
 				},
 				"position": {
-					"x": 584,
-					"y": 2504
+					"x": 503,
+					"y": 2853
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0180c4aa500792",
+					"definitionRef": "std-voronoi-distance@005333aecb623c",
 					"locked": true
 				}
 			},
@@ -58,11 +58,11 @@
 					}
 				},
 				"position": {
-					"x": 584,
-					"y": 5019
+					"x": 503,
+					"y": 2496
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0180c4aa500792",
+					"definitionRef": "std-voronoi-distance@005333aecb623c",
 					"locked": true
 				}
 			},
@@ -74,8 +74,8 @@
 					"note": "A and B relative to the position: which of them it's closer to,\npadded with zeros for the axis-by-axis metrics."
 				},
 				"position": {
-					"x": 1302,
-					"y": 2263
+					"x": 1068,
+					"y": 2322
 				}
 			},
 			{
@@ -87,8 +87,8 @@
 					}
 				},
 				"position": {
-					"x": 1326,
-					"y": 2399
+					"x": 1092,
+					"y": 2468
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -97,8 +97,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 1584,
-					"y": 2417
+					"x": 1350,
+					"y": 2709
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -109,8 +109,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1326,
-					"y": 2714
+					"x": 1092,
+					"y": 2801
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -119,11 +119,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1784,
-					"y": 2353
+					"x": 1550,
+					"y": 2645
 				},
 				"group": {
-					"definitionRef": "std-pad-vector@1728760d9cd716",
+					"definitionRef": "std-pad-vector@1d8db76c906e02",
 					"locked": true
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
@@ -133,8 +133,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 1584,
-					"y": 2650
+					"x": 1350,
+					"y": 2476
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -143,11 +143,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 1784,
-					"y": 2586
+					"x": 1550,
+					"y": 2412
 				},
 				"group": {
-					"definitionRef": "std-pad-vector@1728760d9cd716",
+					"definitionRef": "std-pad-vector@1d8db76c906e02",
 					"locked": true
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
@@ -160,8 +160,8 @@
 					"note": "Straight: the distance to the plane half-way between them."
 				},
 				"position": {
-					"x": 5004,
-					"y": 4446
+					"x": 4788,
+					"y": 0
 				}
 			},
 			{
@@ -169,8 +169,8 @@
 				"type": "sub",
 				"data": {},
 				"position": {
-					"x": 5266,
-					"y": 4789
+					"x": 5050,
+					"y": 343
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -181,8 +181,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 5028,
-					"y": 4825
+					"x": 4812,
+					"y": 379
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -191,8 +191,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 5266,
-					"y": 4612
+					"x": 5050,
+					"y": 166
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -201,8 +201,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 5666,
-					"y": 4584
+					"x": 5450,
+					"y": 138
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -221,8 +221,8 @@
 					}
 				},
 				"position": {
-					"x": 5466,
-					"y": 4524
+					"x": 5250,
+					"y": 78
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -231,11 +231,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 5866,
-					"y": 4520
+					"x": 5650,
+					"y": 74
 				},
 				"group": {
-					"definitionRef": "std-component-sum@0e43caf9357ab7",
+					"definitionRef": "std-component-sum@008336fd6fb64a",
 					"locked": true
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
@@ -245,8 +245,8 @@
 				"type": "abs",
 				"data": {},
 				"position": {
-					"x": 6066,
-					"y": 4528
+					"x": 5850,
+					"y": 82
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -255,8 +255,8 @@
 				"type": "length",
 				"data": {},
 				"position": {
-					"x": 5866,
-					"y": 4761
+					"x": 5650,
+					"y": 315
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -265,8 +265,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 6266,
-					"y": 4705
+					"x": 6050,
+					"y": 259
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -278,8 +278,8 @@
 					"note": "For each sign pattern σ the far point is ahead of the near one along,\n(|far|₁ + σ·near) / 2: the least is the distance."
 				},
 				"position": {
-					"x": 2448,
-					"y": 2415
+					"x": 2234,
+					"y": 635
 				}
 			},
 			{
@@ -297,8 +297,8 @@
 					}
 				},
 				"position": {
-					"x": 2472,
-					"y": 3114
+					"x": 2258,
+					"y": 1231
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -317,8 +317,8 @@
 					}
 				},
 				"position": {
-					"x": 2472,
-					"y": 2911
+					"x": 2258,
+					"y": 1434
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -337,8 +337,8 @@
 					}
 				},
 				"position": {
-					"x": 2472,
-					"y": 2708
+					"x": 2258,
+					"y": 1637
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -357,8 +357,8 @@
 					}
 				},
 				"position": {
-					"x": 2472,
-					"y": 2505
+					"x": 2258,
+					"y": 1840
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -367,8 +367,8 @@
 				"type": "width-switch",
 				"data": {},
 				"position": {
-					"x": 2702,
-					"y": 2925
+					"x": 2488,
+					"y": 1050
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -379,8 +379,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 2472,
-					"y": 3317
+					"x": 2258,
+					"y": 1114
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -389,8 +389,8 @@
 				"type": "abs",
 				"data": {},
 				"position": {
-					"x": 2472,
-					"y": 4142
+					"x": 2258,
+					"y": 2341
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -403,8 +403,8 @@
 					}
 				},
 				"position": {
-					"x": 2702,
-					"y": 4156
+					"x": 2488,
+					"y": 2313
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -421,8 +421,8 @@
 					]
 				},
 				"position": {
-					"x": 5245,
-					"y": 2742
+					"x": 5021,
+					"y": 877
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -436,8 +436,8 @@
 					}
 				},
 				"position": {
-					"x": 2967,
-					"y": 2898
+					"x": 2783,
+					"y": 961
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -456,8 +456,8 @@
 					}
 				},
 				"position": {
-					"x": 2702,
-					"y": 3385
+					"x": 2488,
+					"y": 1339
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -466,8 +466,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 3177,
-					"y": 3299
+					"x": 2983,
+					"y": 1101
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -486,8 +486,8 @@
 					}
 				},
 				"position": {
-					"x": 2702,
-					"y": 3128
+					"x": 2488,
+					"y": 1704
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -496,8 +496,8 @@
 				"type": "mod",
 				"data": {},
 				"position": {
-					"x": 3377,
-					"y": 3299
+					"x": 3183,
+					"y": 1135
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -506,8 +506,8 @@
 				"type": "to-float",
 				"data": {},
 				"position": {
-					"x": 3577,
-					"y": 3326
+					"x": 3383,
+					"y": 1107
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -516,8 +516,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 3777,
-					"y": 3339
+					"x": 3583,
+					"y": 1197
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -536,8 +536,8 @@
 					}
 				},
 				"position": {
-					"x": 2702,
-					"y": 3642
+					"x": 2488,
+					"y": 1907
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -550,8 +550,8 @@
 					}
 				},
 				"position": {
-					"x": 3977,
-					"y": 3298
+					"x": 3783,
+					"y": 1169
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -560,8 +560,8 @@
 				"type": "sub",
 				"data": {},
 				"position": {
-					"x": 2702,
-					"y": 3899
+					"x": 2488,
+					"y": 845
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -570,8 +570,8 @@
 				"type": "dot",
 				"data": {},
 				"position": {
-					"x": 4435,
-					"y": 3284
+					"x": 4221,
+					"y": 789
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -587,8 +587,8 @@
 					}
 				},
 				"position": {
-					"x": 4835,
-					"y": 3253
+					"x": 4621,
+					"y": 725
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -597,8 +597,8 @@
 				"type": "dot",
 				"data": {},
 				"position": {
-					"x": 4225,
-					"y": 2753
+					"x": 4021,
+					"y": 1528
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -607,8 +607,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 4435,
-					"y": 3107
+					"x": 4221,
+					"y": 1500
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -617,8 +617,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 4635,
-					"y": 2849
+					"x": 4421,
+					"y": 1472
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -637,8 +637,8 @@
 					}
 				},
 				"position": {
-					"x": 2702,
-					"y": 2652
+					"x": 2488,
+					"y": 2110
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -647,8 +647,8 @@
 				"type": "min",
 				"data": {},
 				"position": {
-					"x": 4835,
-					"y": 2795
+					"x": 4621,
+					"y": 1444
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -657,8 +657,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 5045,
-					"y": 2846
+					"x": 4821,
+					"y": 897
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -670,8 +670,8 @@
 					"note": "For each axis and direction the far point isn't behind on, how far\nto half-way along it, the other axes keeping up: the least is the distance."
 				},
 				"position": {
-					"x": 2204,
-					"y": 0
+					"x": 1988,
+					"y": 2701
 				}
 			},
 			{
@@ -679,8 +679,8 @@
 				"type": "to-int",
 				"data": {},
 				"position": {
-					"x": 2228,
-					"y": 426
+					"x": 2012,
+					"y": 2791
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -699,8 +699,8 @@
 					}
 				},
 				"position": {
-					"x": 2228,
-					"y": 1162
+					"x": 2012,
+					"y": 3004
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -709,8 +709,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 2428,
-					"y": 444
+					"x": 2212,
+					"y": 2976
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -727,8 +727,8 @@
 					]
 				},
 				"position": {
-					"x": 6221,
-					"y": 191
+					"x": 6005,
+					"y": 3223
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -742,8 +742,8 @@
 					}
 				},
 				"position": {
-					"x": 2753,
-					"y": 191
+					"x": 2527,
+					"y": 3559
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -762,8 +762,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 1419
+					"x": 2212,
+					"y": 3925
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -772,8 +772,8 @@
 				"type": "div",
 				"data": {},
 				"position": {
-					"x": 3001,
-					"y": 584
+					"x": 2785,
+					"y": 4224
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -792,8 +792,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 904
+					"x": 2212,
+					"y": 3356
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -802,8 +802,8 @@
 				"type": "mod",
 				"data": {},
 				"position": {
-					"x": 3001,
-					"y": 379
+					"x": 2785,
+					"y": 3899
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -812,8 +812,8 @@
 				"type": "to-float",
 				"data": {},
 				"position": {
-					"x": 4211,
-					"y": 406
+					"x": 3985,
+					"y": 3871
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -822,8 +822,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 4411,
-					"y": 419
+					"x": 4205,
+					"y": 3843
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -842,8 +842,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 647
+					"x": 2212,
+					"y": 3153
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -856,8 +856,8 @@
 					}
 				},
 				"position": {
-					"x": 4611,
-					"y": 338
+					"x": 4405,
+					"y": 3761
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -876,8 +876,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 1676
+					"x": 2212,
+					"y": 3560
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -886,8 +886,8 @@
 				"type": "sub",
 				"data": {},
 				"position": {
-					"x": 3211,
-					"y": 844
+					"x": 2985,
+					"y": 4168
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -896,8 +896,8 @@
 				"type": "to-float",
 				"data": {},
 				"position": {
-					"x": 3411,
-					"y": 816
+					"x": 3185,
+					"y": 4140
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -906,8 +906,8 @@
 				"type": "abs",
 				"data": {},
 				"position": {
-					"x": 3611,
-					"y": 842
+					"x": 3385,
+					"y": 4112
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -916,8 +916,8 @@
 				"type": "min",
 				"data": {},
 				"position": {
-					"x": 3811,
-					"y": 856
+					"x": 3585,
+					"y": 4286
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -936,8 +936,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 1162
+					"x": 2212,
+					"y": 4128
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -950,8 +950,8 @@
 					}
 				},
 				"position": {
-					"x": 4011,
-					"y": 829
+					"x": 3785,
+					"y": 4105
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -960,8 +960,8 @@
 				"type": "dot",
 				"data": {},
 				"position": {
-					"x": 4411,
-					"y": 650
+					"x": 4205,
+					"y": 4049
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -970,8 +970,8 @@
 				"type": "dot",
 				"data": {},
 				"position": {
-					"x": 4411,
-					"y": 1032
+					"x": 4205,
+					"y": 3415
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -980,8 +980,8 @@
 				"type": "sub",
 				"data": {},
 				"position": {
-					"x": 4811,
-					"y": 1059
+					"x": 4605,
+					"y": 3209
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -990,8 +990,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 5011,
-					"y": 1045
+					"x": 4805,
+					"y": 3181
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1007,8 +1007,8 @@
 					}
 				},
 				"position": {
-					"x": 5411,
-					"y": 1041
+					"x": 5205,
+					"y": 3117
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1017,8 +1017,8 @@
 				"type": "abs",
 				"data": {},
 				"position": {
-					"x": 2428,
-					"y": 1934
+					"x": 2212,
+					"y": 4534
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1031,8 +1031,8 @@
 					}
 				},
 				"position": {
-					"x": 4411,
-					"y": 855
+					"x": 4205,
+					"y": 4665
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1041,8 +1041,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 4611,
-					"y": 1358
+					"x": 4405,
+					"y": 4637
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1051,8 +1051,8 @@
 				"type": "separate-vector",
 				"data": {},
 				"position": {
-					"x": 4811,
-					"y": 1413
+					"x": 4605,
+					"y": 4525
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1061,8 +1061,8 @@
 				"type": "max",
 				"data": {},
 				"position": {
-					"x": 5011,
-					"y": 1358
+					"x": 4805,
+					"y": 4497
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1071,8 +1071,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 5011,
-					"y": 622
+					"x": 4805,
+					"y": 4320
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1081,8 +1081,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 5211,
-					"y": 1330
+					"x": 5005,
+					"y": 4469
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1091,8 +1091,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 5411,
-					"y": 1344
+					"x": 5205,
+					"y": 4852
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1111,8 +1111,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 2191
+					"x": 2212,
+					"y": 4711
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1121,8 +1121,8 @@
 				"type": "add",
 				"data": {},
 				"position": {
-					"x": 4811,
-					"y": 1236
+					"x": 4605,
+					"y": 4021
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1131,8 +1131,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 5011,
-					"y": 419
+					"x": 4805,
+					"y": 3993
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1151,8 +1151,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 267
+					"x": 2212,
+					"y": 4331
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1161,8 +1161,8 @@
 				"type": "max",
 				"data": {},
 				"position": {
-					"x": 5611,
-					"y": 419
+					"x": 5405,
+					"y": 4824
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1181,8 +1181,8 @@
 					}
 				},
 				"position": {
-					"x": 2428,
-					"y": 90
+					"x": 2212,
+					"y": 4914
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1191,8 +1191,8 @@
 				"type": "min",
 				"data": {},
 				"position": {
-					"x": 5811,
-					"y": 365
+					"x": 5605,
+					"y": 4796
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1201,8 +1201,8 @@
 				"type": "switch",
 				"data": {},
 				"position": {
-					"x": 6021,
-					"y": 416
+					"x": 5805,
+					"y": 3243
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1214,8 +1214,8 @@
 					"note": "No closed form: half the gap between the two distances,\nexact on the edge itself, approximate away from it."
 				},
 				"position": {
-					"x": 1334,
-					"y": 1514
+					"x": 1100,
+					"y": 2971
 				}
 			},
 			{
@@ -1223,8 +1223,8 @@
 				"type": "sub",
 				"data": {},
 				"position": {
-					"x": 1358,
-					"y": 1604
+					"x": 1124,
+					"y": 3292
 				},
 				"frame": "59cbac9d-8f66-47eb-98ce-a78b62b6479f"
 			},
@@ -1233,8 +1233,8 @@
 				"type": "abs",
 				"data": {},
 				"position": {
-					"x": 1558,
-					"y": 1631
+					"x": 1324,
+					"y": 3264
 				},
 				"frame": "59cbac9d-8f66-47eb-98ce-a78b62b6479f"
 			},
@@ -1243,8 +1243,8 @@
 				"type": "mul",
 				"data": {},
 				"position": {
-					"x": 1758,
-					"y": 1644
+					"x": 1524,
+					"y": 3236
 				},
 				"frame": "59cbac9d-8f66-47eb-98ce-a78b62b6479f"
 			},
@@ -1263,8 +1263,8 @@
 					}
 				},
 				"position": {
-					"x": 1558,
-					"y": 1808
+					"x": 1324,
+					"y": 3061
 				},
 				"frame": "59cbac9d-8f66-47eb-98ce-a78b62b6479f"
 			},
@@ -1273,8 +1273,8 @@
 				"type": "match",
 				"data": {},
 				"position": {
-					"x": 6700,
-					"y": 2820
+					"x": 6545,
+					"y": 757
 				}
 			},
 			{
@@ -1284,8 +1284,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 6960,
-					"y": 2827
+					"x": 6805,
+					"y": 789
 				}
 			},
 			{
@@ -1293,8 +1293,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 374,
-					"y": 2664
+					"x": 266,
+					"y": 2833
 				}
 			},
 			{
@@ -1302,8 +1302,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 374,
-					"y": 4999
+					"x": 266,
+					"y": 2771
 				}
 			},
 			{
@@ -1311,8 +1311,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 374,
-					"y": 5049
+					"x": 266,
+					"y": 2883
 				}
 			},
 			{
@@ -1320,8 +1320,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 932,
-					"y": 5019
+					"x": 844,
+					"y": 2628
 				}
 			},
 			{
@@ -1329,8 +1329,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 932,
-					"y": 2549
+					"x": 844,
+					"y": 2985
 				}
 			},
 			{
@@ -1338,8 +1338,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1526,
-					"y": 2531
+					"x": 1292,
+					"y": 2600
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -1348,8 +1348,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1526,
-					"y": 2569
+					"x": 1292,
+					"y": 2861
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -1358,8 +1358,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1526,
-					"y": 2802
+					"x": 1292,
+					"y": 2899
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -1368,8 +1368,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 5228,
-					"y": 4913
+					"x": 5012,
+					"y": 467
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -1378,8 +1378,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 5228,
-					"y": 4736
+					"x": 5012,
+					"y": 290
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -1388,8 +1388,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 5547,
-					"y": 4885
+					"x": 5331,
+					"y": 439
 				},
 				"frame": "472fe529-22bf-4cae-b230-955105b7b894"
 			},
@@ -1398,8 +1398,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1984,
-					"y": 2718
+					"x": 1750,
+					"y": 2544
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -1408,8 +1408,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 1984,
-					"y": 2485
+					"x": 1750,
+					"y": 2777
 				},
 				"frame": "babb8c9c-d264-4577-aabb-cebdd46f0bda"
 			},
@@ -1418,8 +1418,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4177,
-					"y": 3394
+					"x": 3983,
+					"y": 1265
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -1428,8 +1428,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4716,
-					"y": 3087
+					"x": 4502,
+					"y": 1049
 				},
 				"frame": "516632d0-4d28-419e-ac0c-79e3b79eeb1a"
 			},
@@ -1438,8 +1438,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 2953,
-					"y": 299
+					"x": 2747,
+					"y": 4185
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1448,8 +1448,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4292,
-					"y": 925
+					"x": 4066,
+					"y": 4201
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1458,8 +1458,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4692,
-					"y": 1128
+					"x": 4486,
+					"y": 3511
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1468,8 +1468,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4692,
-					"y": 746
+					"x": 4486,
+					"y": 4145
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1478,8 +1478,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 4892,
-					"y": 502
+					"x": 4686,
+					"y": 3857
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			},
@@ -1488,8 +1488,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 5692,
-					"y": 318
+					"x": 5486,
+					"y": 3395
 				},
 				"frame": "63110f27-88d3-4f1e-8464-7ccaea52c7a6"
 			}
@@ -2606,8 +2606,7 @@
 		"outputs": [
 			{
 				"id": "f0dfbc03-07a5-4487-9274-799718ee80ce",
-				"label": "Distance",
-				"type": "f32"
+				"label": "Distance"
 			}
 		],
 		"defaults": {

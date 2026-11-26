@@ -7,11 +7,11 @@
 	"searchSection": "Helpers",
 	"dependencies": [
 		"std-noise-coordinates@099ff8c499b858",
-		"std-opensimplex-orientation@12616c2a725719",
-		"std-gradient-noise-1d@1bf7c19db4dbe5",
-		"std-opensimplex-2d@0cfc9edb3af544",
-		"std-opensimplex-3d@05d78c8e8e7b64",
-		"std-opensimplex-4d@1bd38fd7c8187b"
+		"std-opensimplex-orientation@0b9f5e542528b6",
+		"std-gradient-noise-1d@1d07f169ea639a",
+		"std-opensimplex-2d@0130c62fd75483",
+		"std-opensimplex-3d@0f4c15c628d005",
+		"std-opensimplex-4d@0a6d7099e1d86f"
 	],
 	"definition": {
 		"nodes": [
@@ -48,7 +48,7 @@
 					"y": 234
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-orientation@12616c2a725719",
+					"definitionRef": "std-opensimplex-orientation@0b9f5e542528b6",
 					"locked": true
 				}
 			},
@@ -73,7 +73,7 @@
 					"y": 90
 				},
 				"group": {
-					"definitionRef": "std-gradient-noise-1d@1bf7c19db4dbe5",
+					"definitionRef": "std-gradient-noise-1d@1d07f169ea639a",
 					"locked": true
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -99,7 +99,7 @@
 					"y": 295
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-2d@0cfc9edb3af544",
+					"definitionRef": "std-opensimplex-2d@0130c62fd75483",
 					"locked": true
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -113,7 +113,7 @@
 					"y": 528
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-3d@05d78c8e8e7b64",
+					"definitionRef": "std-opensimplex-3d@0f4c15c628d005",
 					"locked": true
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -127,7 +127,7 @@
 					"y": 761
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-4d@1bd38fd7c8187b",
+					"definitionRef": "std-opensimplex-4d@0a6d7099e1d86f",
 					"locked": true
 				},
 				"frame": "3a6466bf-a830-4a12-9f13-908ea9f6b664"
@@ -452,8 +452,7 @@
 		"outputs": [
 			{
 				"id": "96644875-1e05-40c6-86b5-79a8134e78df",
-				"label": "Value",
-				"type": "f32"
+				"label": "Value"
 			}
 		],
 		"defaults": {

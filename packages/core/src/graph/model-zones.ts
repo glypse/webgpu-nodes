@@ -1,6 +1,13 @@
 import { defaultSizeValues, itemSizeHandles, itemSizeInputIds } from "../passes/item-size";
 import type { TextureFormat } from "../passes/textures";
-import { isTexture, type SocketType, type WgslType, type ZoneItem } from "../types";
+import {
+	isTexture,
+	type ItemType,
+	type SocketType,
+	type WgslType,
+	withType,
+	type ZoneItem,
+} from "../types";
 import {
 	analyzeZones,
 	carriesItem,
@@ -83,7 +90,6 @@ export abstract class ZoneModel extends GraphModelBase {
 		const item: ZoneItem = {
 			id: this.newId(),
 			label: "Value",
-			type: { inferred: true },
 		};
 		const { input, output } = ZONE_BOUNDARIES[kind];
 		const counted = kind !== "simulation";
@@ -208,15 +214,17 @@ export abstract class ZoneModel extends GraphModelBase {
 		this.rebuildTypeCache();
 	}
 
-	/** Append a state item to a zone. Returns the new item. */
-	addZoneItem(zoneId: string, type: ZoneItem["type"], label?: string): ZoneItem | undefined {
+	/** Append a state item to a zone, inferred for a null type. Returns the new item. */
+	addZoneItem(zoneId: string, type: ItemType | null, label?: string): ZoneItem | undefined {
 		const zone = this.zoneNodes(zoneId);
-		if (!zone || this.isLocked || !carriesItem(zone.kind, { type })) return undefined;
+		if (!zone || this.isLocked || !carriesItem(zone.kind, { type: type ?? undefined })) {
+			return undefined;
+		}
 		const items = zoneItems(zone.output);
 		const existing = new Set(items.map((i) => i.label));
 		let name = label ?? "Value";
 		for (let n = 2; existing.has(name); n++) name = `${label ?? "Value"} ${String(n)}`;
-		const item: ZoneItem = { id: this.newId(), label: name, type };
+		const item = withType<ZoneItem>({ id: this.newId(), label: name }, type);
 		this.setZoneItems(zoneId, [...items, item]);
 		return item;
 	}
@@ -241,16 +249,20 @@ export abstract class ZoneModel extends GraphModelBase {
 
 	/**
 	 * Change a state item's type; links that no longer fit are removed. An
-	 * item becoming inferred keeps its type until its initial value is linked.
+	 * item becoming inferred (null) keeps its type until its initial value is
+	 * linked.
 	 */
-	setZoneItemType(zoneId: string, itemId: string, type: ZoneItem["type"]) {
+	setZoneItemType(zoneId: string, itemId: string, type: ItemType | null) {
 		const items = this.getZoneItems(zoneId);
-		const inferred = typeof type === "object" && "inferred" in type;
 		const current = this.resolveOutputHandleType(zoneId, itemId);
-		this.pickItemType(zoneId, itemId, inferred && !isTexture(current) ? current : undefined);
+		this.pickItemType(
+			zoneId,
+			itemId,
+			type === null && !isTexture(current) ? current : undefined,
+		);
 		this.setZoneItems(
 			zoneId,
-			items.map((i) => (i.id === itemId ? { ...i, type } : i)),
+			items.map((i) => (i.id === itemId ? withType(i, type) : i)),
 		);
 	}
 
@@ -373,7 +385,7 @@ export abstract class ZoneModel extends GraphModelBase {
 				(i) => i.id === connection.targetHandle,
 			)?.label;
 		}
-		const item = this.addZoneItem(zoneId, isTexture(type) ? type : { inferred: true }, label);
+		const item = this.addZoneItem(zoneId, isTexture(type) ? type : null, label);
 		if (!item) return true;
 		if (!isTexture(type) && !(toNew && connection.target === zoneId)) {
 			this.pickItemType(zoneId, item.id, type);

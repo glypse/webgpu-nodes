@@ -10,7 +10,7 @@
 	],
 	"category": "texture",
 	"section": ["Motion"],
-	"dependencies": ["std-luma@01c853ca51a3ec", "std-lucas-kanade-step@0feb9cd4d0ced0"],
+	"dependencies": ["std-luma@11912c7e6b42ff", "std-lucas-kanade-step@044e5a83b248d6"],
 	"definition": {
 		"nodes": [
 			{
@@ -96,7 +96,7 @@
 					"y": 297
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				},
 				"frame": "3072b2ab-03cc-43ab-accb-6e32522e0398"
@@ -253,7 +253,7 @@
 					"y": 915
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				},
 				"frame": "3072b2ab-03cc-43ab-accb-6e32522e0398"
@@ -587,7 +587,7 @@
 					"y": 493
 				},
 				"group": {
-					"definitionRef": "std-lucas-kanade-step@0feb9cd4d0ced0",
+					"definitionRef": "std-lucas-kanade-step@044e5a83b248d6",
 					"locked": true
 				}
 			},
@@ -1275,13 +1275,11 @@
 		"outputs": [
 			{
 				"id": "d8c52833-3494-433b-b4d5-19b1dcb40987",
-				"label": "Flow",
-				"type": "texture"
+				"label": "Flow"
 			},
 			{
 				"id": "274d510e-7af7-49c0-bbb9-89ce5a9c1dcb",
-				"label": "Confidence",
-				"type": "f32"
+				"label": "Confidence"
 			}
 		],
 		"defaults": {

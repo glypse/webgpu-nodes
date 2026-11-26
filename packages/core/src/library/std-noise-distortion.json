@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-pad-vector@1728760d9cd716", "std-opensimplex-noise@09aa98a1db9460"],
+	"dependencies": ["std-pad-vector@1d8db76c906e02", "std-opensimplex-noise@05e8259508e02e"],
 	"definition": {
 		"nodes": [
 			{
@@ -17,7 +17,7 @@
 					"y": 709
 				},
 				"group": {
-					"definitionRef": "std-pad-vector@1728760d9cd716",
+					"definitionRef": "std-pad-vector@1d8db76c906e02",
 					"locked": true
 				}
 			},
@@ -190,7 +190,7 @@
 					"y": 1043
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
+					"definitionRef": "std-opensimplex-noise@05e8259508e02e",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -238,7 +238,7 @@
 					"y": 1459
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
+					"definitionRef": "std-opensimplex-noise@05e8259508e02e",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -286,7 +286,7 @@
 					"y": 1756
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
+					"definitionRef": "std-opensimplex-noise@05e8259508e02e",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"
@@ -334,7 +334,7 @@
 					"y": 2071
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
+					"definitionRef": "std-opensimplex-noise@05e8259508e02e",
 					"locked": true
 				},
 				"frame": "014dbc45-e480-4f8c-9216-eb9ee6590d2a"

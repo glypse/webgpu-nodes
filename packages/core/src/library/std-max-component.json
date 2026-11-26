@@ -5,7 +5,7 @@
 	"category": "vector",
 	"section": ["Helpers"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-pad-vector@1728760d9cd716"],
+	"dependencies": ["std-pad-vector@1d8db76c906e02"],
 	"definition": {
 		"nodes": [
 			{
@@ -13,11 +13,11 @@
 				"type": "node-group",
 				"data": {},
 				"position": {
-					"x": 360,
-					"y": 368
+					"x": 383,
+					"y": 470
 				},
 				"group": {
-					"definitionRef": "std-pad-vector@1728760d9cd716",
+					"definitionRef": "std-pad-vector@1d8db76c906e02",
 					"locked": true
 				}
 			},
@@ -29,7 +29,7 @@
 				},
 				"position": {
 					"x": 0,
-					"y": 502
+					"y": 75
 				}
 			},
 			{
@@ -37,8 +37,8 @@
 				"type": "separate-vector",
 				"data": {},
 				"position": {
-					"x": 620,
-					"y": 292
+					"x": 643,
+					"y": 394
 				}
 			},
 			{
@@ -46,8 +46,8 @@
 				"type": "max",
 				"data": {},
 				"position": {
-					"x": 996,
-					"y": 0
+					"x": 1014,
+					"y": 155
 				}
 			},
 			{
@@ -55,8 +55,8 @@
 				"type": "max",
 				"data": {},
 				"position": {
-					"x": 996,
-					"y": 215
+					"x": 1014,
+					"y": 344
 				}
 			},
 			{
@@ -64,8 +64,8 @@
 				"type": "max",
 				"data": {},
 				"position": {
-					"x": 996,
-					"y": 404
+					"x": 1014,
+					"y": 533
 				}
 			},
 			{
@@ -73,8 +73,8 @@
 				"type": "width-switch",
 				"data": {},
 				"position": {
-					"x": 1280,
-					"y": 492
+					"x": 1293,
+					"y": 0
 				}
 			},
 			{
@@ -84,8 +84,8 @@
 					"hideUnlinked": true
 				},
 				"position": {
-					"x": 1540,
-					"y": 560
+					"x": 1553,
+					"y": 32
 				}
 			},
 			{
@@ -94,7 +94,7 @@
 				"data": {},
 				"position": {
 					"x": 260,
-					"y": 562
+					"y": 135
 				}
 			},
 			{
@@ -102,8 +102,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 883,
-					"y": 339
+					"x": 904,
+					"y": 468
 				}
 			},
 			{
@@ -111,8 +111,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 883,
-					"y": 389
+					"x": 904,
+					"y": 518
 				}
 			},
 			{
@@ -120,8 +120,8 @@
 				"type": "reroute",
 				"data": {},
 				"position": {
-					"x": 883,
-					"y": 444
+					"x": 904,
+					"y": 568
 				}
 			}
 		],
@@ -286,8 +286,7 @@
 		"outputs": [
 			{
 				"id": "f5b56753-4f89-4af3-aff6-604abe0765ac",
-				"label": "Max",
-				"type": "f32"
+				"label": "Max"
 			}
 		],
 		"typeVariables": [

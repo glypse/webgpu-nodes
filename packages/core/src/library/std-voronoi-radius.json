@@ -6,9 +6,9 @@
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-lattice-neighbor@00261a88c1423c",
-		"std-voronoi-point@0bfee95a7f94f4",
-		"std-voronoi-distance@0180c4aa500792"
+		"std-lattice-neighbor@0d089b4d4c96a4",
+		"std-voronoi-point@167d7ef6202908",
+		"std-voronoi-distance@005333aecb623c"
 	],
 	"definition": {
 		"nodes": [
@@ -37,7 +37,7 @@
 					"y": 315
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
+					"definitionRef": "std-lattice-neighbor@0d089b4d4c96a4",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -96,7 +96,7 @@
 					"y": 238
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
+					"definitionRef": "std-lattice-neighbor@0d089b4d4c96a4",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -147,7 +147,7 @@
 					"y": 423
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0bfee95a7f94f4",
+					"definitionRef": "std-voronoi-point@167d7ef6202908",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -161,7 +161,7 @@
 					"y": 657
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0180c4aa500792",
+					"definitionRef": "std-voronoi-distance@005333aecb623c",
 					"locked": true
 				},
 				"frame": "bcdd951c-0612-4f85-ab91-c51fe7fdfa7d"
@@ -539,8 +539,7 @@
 		"outputs": [
 			{
 				"id": "22facf12-1214-4232-98e7-8d0c72a574f3",
-				"label": "Radius",
-				"type": "f32"
+				"label": "Radius"
 			}
 		],
 		"defaults": {

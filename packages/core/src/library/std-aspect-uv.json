@@ -555,8 +555,7 @@
 		"outputs": [
 			{
 				"id": "9fea0252-08f7-4834-b374-d7d8f0459181",
-				"label": "Coordinates",
-				"type": "vec2f"
+				"label": "Coordinates"
 			}
 		],
 		"defaults": {

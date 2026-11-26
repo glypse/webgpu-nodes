@@ -68,7 +68,7 @@ const linearRgbToXyz = group({
 	category: "color",
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
-		g.output("xyz", transform(g, rgb, LINEAR_RGB_TO_XYZ), "vec3f", { label: "XYZ" });
+		g.output("xyz", transform(g, rgb, LINEAR_RGB_TO_XYZ), { label: "XYZ" });
 	},
 });
 
@@ -81,7 +81,7 @@ const xyzToLinearRgb = group({
 	category: "color",
 	build: (g) => {
 		const xyz = g.input("xyz", "vec3f", { label: "XYZ" });
-		g.output("rgb", transform(g, xyz, XYZ_TO_LINEAR_RGB), "vec3f", { label: "Linear RGB" });
+		g.output("rgb", transform(g, xyz, XYZ_TO_LINEAR_RGB), { label: "Linear RGB" });
 	},
 });
 
@@ -126,7 +126,7 @@ const xyzToOklab = group({
 	category: "color",
 	build: (g) => {
 		const xyz = g.input("xyz", "vec3f", { label: "XYZ" });
-		g.output("oklab", toOklab(g, xyz, XYZ_TO_LMS, "XYZ"), "vec3f", { label: "OKLab" });
+		g.output("oklab", toOklab(g, xyz, XYZ_TO_LMS, "XYZ"), { label: "OKLab" });
 	},
 });
 
@@ -139,7 +139,7 @@ const oklabToXyz = group({
 	category: "color",
 	build: (g) => {
 		const lab = g.input("oklab", "vec3f", { label: "OKLab" });
-		g.output("xyz", fromOklab(g, lab, LMS_TO_XYZ, "XYZ"), "vec3f", { label: "XYZ" });
+		g.output("xyz", fromOklab(g, lab, LMS_TO_XYZ, "XYZ"), { label: "XYZ" });
 	},
 });
 
@@ -152,9 +152,7 @@ const linearRgbToOklab = group({
 	category: "color",
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
-		g.output("oklab", toOklab(g, rgb, LINEAR_RGB_TO_LMS, "linear RGB"), "vec3f", {
-			label: "OKLab",
-		});
+		g.output("oklab", toOklab(g, rgb, LINEAR_RGB_TO_LMS, "linear RGB"), { label: "OKLab" });
 	},
 });
 
@@ -167,7 +165,7 @@ const oklabToLinearRgb = group({
 	category: "color",
 	build: (g) => {
 		const lab = g.input("oklab", "vec3f", { label: "OKLab" });
-		g.output("rgb", fromOklab(g, lab, LMS_TO_LINEAR_RGB, "linear RGB"), "vec3f", {
+		g.output("rgb", fromOklab(g, lab, LMS_TO_LINEAR_RGB, "linear RGB"), {
 			label: "Linear RGB",
 		});
 	},
@@ -189,7 +187,7 @@ const oklabToOklch = group({
 		const hue = g.frame("Hue", { note: "The angle of (a, b), in degrees from 0 to 360." }, () =>
 			g.mul(g.fract(g.mul(g.atan2(b, a), 1 / (2 * Math.PI))), 360),
 		);
-		g.output("oklch", g.vec("vec3f", lightness, chroma, hue), "vec3f", { label: "OKLch" });
+		g.output("oklch", g.vec("vec3f", lightness, chroma, hue), { label: "OKLch" });
 	},
 });
 
@@ -211,7 +209,7 @@ const oklchToOklab = group({
 				return { a: g.mul(chroma, g.cos(radians)), b: g.mul(chroma, g.sin(radians)) };
 			},
 		);
-		g.output("oklab", g.vec("vec3f", lightness, a, b), "vec3f", { label: "OKLab" });
+		g.output("oklab", g.vec("vec3f", lightness, a, b), { label: "OKLab" });
 	},
 });
 
@@ -225,9 +223,7 @@ const linearRgbToOklch = group({
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
 		const { oklab } = g.call(linearRgbToOklab, { rgb });
-		g.output("oklch", g.call(oklabToOklch, { oklab }).oklch, "vec3f", {
-			label: "OKLch",
-		});
+		g.output("oklch", g.call(oklabToOklch, { oklab }).oklch, { label: "OKLch" });
 	},
 });
 
@@ -241,9 +237,7 @@ const oklchToLinearRgb = group({
 	build: (g) => {
 		const oklch = g.input("oklch", "vec3f", { label: "OKLch" });
 		const { oklab } = g.call(oklchToOklab, { oklch });
-		g.output("rgb", g.call(oklabToLinearRgb, { oklab }).rgb, "vec3f", {
-			label: "Linear RGB",
-		});
+		g.output("rgb", g.call(oklabToLinearRgb, { oklab }).rgb, { label: "Linear RGB" });
 	},
 });
 
@@ -257,9 +251,7 @@ const inDisplayGamut = group({
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
 		const moved = g.distance(rgb, g.displayGamutClip(rgb));
-		g.output("in-gamut", g.compare(moved, 0.00001, { op: "<=" }), "bool", {
-			label: "In Gamut",
-		});
+		g.output("in-gamut", g.compare(moved, 0.00001, { op: "<=" }), { label: "In Gamut" });
 	},
 });
 
@@ -358,7 +350,7 @@ const oklchGamutMap = group({
 				white,
 				g.constant("vec3f", 0),
 			);
-			g.output("rgb", color, "vec3f", { label: "Linear RGB" });
+			g.output("rgb", color, { label: "Linear RGB" });
 		});
 	},
 });
@@ -485,11 +477,11 @@ export const color = group({
 		);
 
 		const chosen = g.match(mode, { 0: rgb, 1: hsv, 2: oklch });
-		g.output("color", chosen, "vec3f", { label: "Color" });
+		g.output("color", chosen, { label: "Color" });
 		g.frame("Alpha", {}, () => {
 			const { x, y, z } = g.separateVector(chosen);
 			const alpha = g.input("alpha", "f32", { label: "Alpha", default: 1, ...unit });
-			g.output("rgba", g.vec("vec4f", x, y, z, alpha), "vec4f", { label: "RGBA" });
+			g.output("rgba", g.vec("vec4f", x, y, z, alpha), { label: "RGBA" });
 		});
 	},
 	widget: (input) => ({

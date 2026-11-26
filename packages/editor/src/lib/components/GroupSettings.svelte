@@ -66,7 +66,7 @@
 
 	function variableOf(handle: GroupHandleDef): TypeVariable | undefined {
 		const type = handle.type;
-		if (typeof type === "string" || !("variable" in type)) return undefined;
+		if (type === undefined || typeof type === "string") return undefined;
 		return variables.find((v) => v.id === type.variable);
 	}
 
@@ -76,11 +76,7 @@
 			.length;
 	}
 
-	function isInferred(handle: GroupHandleDef): boolean {
-		return typeof handle.type === "object" && "inferred" in handle.type;
-	}
-
-	function setSocketType(side: GroupSide, handle: GroupHandleDef, type: HandleType) {
+	function setSocketType(side: GroupSide, handle: GroupHandleDef, type: HandleType | null) {
 		if (definitionRef)
 			graph.apply({ kind: "setHandleType", args: [definitionRef, side, handle.id, type] });
 	}
@@ -235,7 +231,7 @@
 			</span>
 		{:else}
 			{@const shared = variableOf(handle)}
-			{@const inferred = isInferred(handle)}
+			{@const inferred = handle.type === undefined}
 			<TypePicker
 				types={SOCKET_TYPES}
 				value={typeof handle.type === "string" ? handle.type : undefined}
@@ -263,9 +259,7 @@
 					</DropdownMenu.Item>
 					{#if side === "output"}
 						<DropdownMenu.Separator />
-						<DropdownMenu.Item
-							onSelect={() => setSocketType(side, handle, { inferred: true })}
-						>
+						<DropdownMenu.Item onSelect={() => setSocketType(side, handle, null)}>
 							Inferred
 							<span class="text-muted-foreground ml-auto text-xs"
 								>What reaches it</span
@@ -866,7 +860,7 @@
 								onSelect={() =>
 									graph.apply({
 										kind: "addHandle",
-										args: [ref, "output", { inferred: true }],
+										args: [ref, "output", null],
 									})}
 							>
 								Inferred

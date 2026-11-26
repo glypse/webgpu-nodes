@@ -5,7 +5,7 @@
 	"category": "color",
 	"section": ["Helpers", "Motion"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-color@1c6bb6de3a1d20"],
+	"dependencies": ["std-color@05a163386c75d4"],
 	"definition": {
 		"nodes": [
 			{
@@ -183,10 +183,10 @@
 				},
 				"position": {
 					"x": 2536,
-					"y": 228
+					"y": 376
 				},
 				"group": {
-					"definitionRef": "std-color@1c6bb6de3a1d20",
+					"definitionRef": "std-color@05a163386c75d4",
 					"locked": true
 				}
 			},
@@ -198,7 +198,7 @@
 				},
 				"position": {
 					"x": 2796,
-					"y": 260
+					"y": 408
 				}
 			},
 			{
@@ -385,8 +385,7 @@
 		"outputs": [
 			{
 				"id": "816f15ad-4721-45a0-a8a8-962b428c3b1e",
-				"label": "Color",
-				"type": "vec3f"
+				"label": "Color"
 			}
 		],
 		"defaults": {

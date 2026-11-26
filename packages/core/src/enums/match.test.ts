@@ -234,7 +234,7 @@ describe("Width Switch node", () => {
 						{ id: "t", name: "T", types: ["f32", "vec2f", "vec3f", "vec4f"] },
 					],
 					inputs: [{ id: "v", label: "V", type: { variable: "t" } }],
-					outputs: [{ id: "result", label: "Result", type: { inferred: true } }],
+					outputs: [{ id: "result", label: "Result" }],
 					nodes: [
 						node("in", "group-input"),
 						node("go", "group-output"),

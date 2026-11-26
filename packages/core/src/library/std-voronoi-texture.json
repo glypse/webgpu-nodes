@@ -7,11 +7,11 @@
 	"searchSection": "Helpers",
 	"dependencies": [
 		"std-noise-coordinates@099ff8c499b858",
-		"std-voronoi-nearest@1d722c208add8d",
-		"std-hash@195359940b5270",
-		"std-voronoi-smooth@04012c3e9902b8",
-		"std-voronoi-edges@170764a71f4576",
-		"std-voronoi-radius@08cda1a95cdbca"
+		"std-voronoi-nearest@03c2b299a40826",
+		"std-hash@0b73cc3ab3f912",
+		"std-voronoi-smooth@070548c9c2922e",
+		"std-voronoi-edges@00a129c67bc3e2",
+		"std-voronoi-radius@1e134d6b38b875"
 	],
 	"definition": {
 		"nodes": [
@@ -233,7 +233,7 @@
 					"y": 1479
 				},
 				"group": {
-					"definitionRef": "std-voronoi-nearest@1d722c208add8d",
+					"definitionRef": "std-voronoi-nearest@03c2b299a40826",
 					"locked": true
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
@@ -331,7 +331,7 @@
 					"y": 798
 				},
 				"group": {
-					"definitionRef": "std-hash@195359940b5270",
+					"definitionRef": "std-hash@0b73cc3ab3f912",
 					"locked": true
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
@@ -433,7 +433,7 @@
 					"y": 1271
 				},
 				"group": {
-					"definitionRef": "std-hash@195359940b5270",
+					"definitionRef": "std-hash@0b73cc3ab3f912",
 					"locked": true
 				},
 				"frame": "7ab1f4de-8b95-4fb0-9ea6-32574bd57011"
@@ -479,7 +479,7 @@
 					"y": 406
 				},
 				"group": {
-					"definitionRef": "std-voronoi-smooth@04012c3e9902b8",
+					"definitionRef": "std-voronoi-smooth@070548c9c2922e",
 					"locked": true
 				},
 				"frame": "61670854-a246-4f4f-b7ac-94d2ae6bd943"
@@ -596,7 +596,7 @@
 					"y": 1193
 				},
 				"group": {
-					"definitionRef": "std-voronoi-edges@170764a71f4576",
+					"definitionRef": "std-voronoi-edges@00a129c67bc3e2",
 					"locked": true
 				},
 				"frame": "19e41e74-664b-4c13-a392-8b8a2b6e425f"
@@ -646,7 +646,7 @@
 					"y": 2223
 				},
 				"group": {
-					"definitionRef": "std-voronoi-radius@08cda1a95cdbca",
+					"definitionRef": "std-voronoi-radius@1e134d6b38b875",
 					"locked": true
 				},
 				"frame": "eff7025e-eb2e-4df5-a69c-7e9241344111"
@@ -1536,8 +1536,7 @@
 		"outputs": [
 			{
 				"id": "68d63316-390f-430b-a664-d0dfdeacb576",
-				"label": "Distance",
-				"type": "f32"
+				"label": "Distance"
 			},
 			{
 				"id": "d3662c11-9f2a-4eeb-93dd-6b16d74a85af",
@@ -1560,8 +1559,7 @@
 			},
 			{
 				"id": "b2b839db-21f1-4e32-a6cd-fca66c920fe3",
-				"label": "F2 Distance",
-				"type": "f32"
+				"label": "F2 Distance"
 			},
 			{
 				"id": "aa897501-e2bb-49ab-99c1-82180b60dc8f",
@@ -1577,8 +1575,7 @@
 			},
 			{
 				"id": "a91d7bc3-1a8b-4a6a-a76b-d0624abd3d6c",
-				"label": "Smooth Distance",
-				"type": "f32"
+				"label": "Smooth Distance"
 			},
 			{
 				"id": "6c503001-b43d-4f92-b3bf-706d9cdbc89d",
@@ -1594,18 +1591,15 @@
 			},
 			{
 				"id": "602a6d44-2016-4eaf-a813-20022ff3e543",
-				"label": "Distance to Edge",
-				"type": "f32"
+				"label": "Distance to Edge"
 			},
 			{
 				"id": "2698aae2-a176-4bf6-84a2-990faa7f6a80",
-				"label": "F2 Distance to Edge",
-				"type": "f32"
+				"label": "F2 Distance to Edge"
 			},
 			{
 				"id": "90397f74-6541-4d70-931f-13dde18bd4e1",
-				"label": "Radius",
-				"type": "f32"
+				"label": "Radius"
 			}
 		],
 		"defaults": {

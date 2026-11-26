@@ -170,8 +170,7 @@
 		"outputs": [
 			{
 				"id": "3e3df020-b02d-4dad-b65c-0ced894b89f2",
-				"label": "XYZ",
-				"type": "vec3f"
+				"label": "XYZ"
 			}
 		]
 	}

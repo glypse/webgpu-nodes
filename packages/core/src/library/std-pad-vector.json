@@ -35,7 +35,7 @@
 				},
 				"position": {
 					"x": 262,
-					"y": 274
+					"y": 90
 				},
 				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
 			},
@@ -47,7 +47,7 @@
 				},
 				"position": {
 					"x": 24,
-					"y": 194
+					"y": 350
 				},
 				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
 			},
@@ -64,7 +64,7 @@
 				},
 				"position": {
 					"x": 472,
-					"y": 90
+					"y": 174
 				},
 				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
 			},
@@ -76,7 +76,7 @@
 				},
 				"position": {
 					"x": 672,
-					"y": 226
+					"y": 206
 				},
 				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
 			},
@@ -86,7 +86,7 @@
 				"data": {},
 				"position": {
 					"x": 224,
-					"y": 254
+					"y": 410
 				},
 				"frame": "68d15d63-c0ef-47b2-b880-b70a87e8420e"
 			}
@@ -161,8 +161,7 @@
 		"outputs": [
 			{
 				"id": "4c11698f-1e2e-4be6-9d52-cf2c24e3a9c3",
-				"label": "Padded",
-				"type": "vec4f"
+				"label": "Padded"
 			}
 		],
 		"typeVariables": [

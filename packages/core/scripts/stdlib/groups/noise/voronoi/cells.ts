@@ -29,8 +29,8 @@ export const voronoiPoint = group({
 		const seed = g.input("seed", "i32", { label: "Seed", default: 0 });
 		const neighbor = g.add(cell, offset);
 		const jitter = cellHash(g, neighbor, seed);
-		g.output("point", g.add(offset, g.mul(jitter, randomness)), t, { label: "Point" });
-		g.output("neighbor", neighbor, t, { label: "Neighbor Cell" });
+		g.output("point", g.add(offset, g.mul(jitter, randomness)), { type: t, label: "Point" });
+		g.output("neighbor", neighbor, { type: t, label: "Neighbor Cell" });
 	},
 });
 
@@ -133,12 +133,12 @@ export const voronoiNearest = group({
 					},
 				),
 		);
-		g.output("f1-distance", closest["F1 Distance"], "f32", { label: "F1 Distance" });
-		g.output("f2-distance", closest["F2 Distance"], "f32", { label: "F2 Distance" });
-		g.output("f1-point", closest["F1 Point"], t, { label: "F1 Point" });
-		g.output("f2-point", closest["F2 Point"], t, { label: "F2 Point" });
-		g.output("f1-offset", closest["F1 Offset"], t, { label: "F1 Offset" });
-		g.output("f2-offset", closest["F2 Offset"], t, { label: "F2 Offset" });
+		g.output("f1-distance", closest["F1 Distance"], { label: "F1 Distance" });
+		g.output("f2-distance", closest["F2 Distance"], { label: "F2 Distance" });
+		g.output("f1-point", closest["F1 Point"], { type: t, label: "F1 Point" });
+		g.output("f2-point", closest["F2 Point"], { type: t, label: "F2 Point" });
+		g.output("f1-offset", closest["F1 Offset"], { type: t, label: "F1 Offset" });
+		g.output("f2-offset", closest["F2 Offset"], { type: t, label: "F2 Offset" });
 	},
 });
 
@@ -201,16 +201,14 @@ export const voronoiEdges = group({
 				note: "The bisectors of the F1 point and the points around it,\nin the metric: the edges of its cell.",
 			},
 			() => {
-				g.output("edge", closestBisector(f1Point, f1Offset), "f32", {
-					label: "Distance to Edge",
-				});
+				g.output("edge", closestBisector(f1Point, f1Offset), { label: "Distance to Edge" });
 			},
 		);
 		g.frame(
 			"F2",
 			{ note: "The same around the F2 point, F1's bisector included\nfrom its far side." },
 			() => {
-				g.output("f2-edge", closestBisector(f2Point, f2Offset), "f32", {
+				g.output("f2-edge", closestBisector(f2Point, f2Offset), {
 					label: "F2 Distance to Edge",
 				});
 			},
@@ -257,7 +255,7 @@ export const voronoiRadius = group({
 			"Half-way",
 			{ note: "The largest ball of the metric around F1 inside its cell." },
 			() => {
-				g.output("radius", g.mul(sphere.Distance, 0.5), "f32", { label: "Radius" });
+				g.output("radius", g.mul(sphere.Distance, 0.5), { label: "Radius" });
 			},
 		);
 	},
@@ -324,8 +322,8 @@ export const voronoiSmooth = group({
 					},
 				),
 		);
-		g.output("distance", smooth["Smooth Distance"], "f32", { label: "Smooth Distance" });
-		g.output("color", smooth["Smooth Color"], "vec3f", { label: "Smooth Color" });
-		g.output("point", smooth["Smooth Point"], t, { label: "Smooth Point" });
+		g.output("distance", smooth["Smooth Distance"], { label: "Smooth Distance" });
+		g.output("color", smooth["Smooth Color"], { label: "Smooth Color" });
+		g.output("point", smooth["Smooth Point"], { type: t, label: "Smooth Point" });
 	},
 });

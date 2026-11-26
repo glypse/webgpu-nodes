@@ -13,8 +13,6 @@ export const luma = group({
 	outputs: ["luma"],
 	build: (g) => {
 		const rgb = g.input("rgb", "vec3f", { label: "Linear RGB" });
-		g.output("luma", g.dot(rgb, { x: 0.2126, y: 0.7152, z: 0.0722 }), "f32", {
-			label: "Luma",
-		});
+		g.output("luma", g.dot(rgb, { x: 0.2126, y: 0.7152, z: 0.0722 }), { label: "Luma" });
 	},
 });

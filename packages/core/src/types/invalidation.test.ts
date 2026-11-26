@@ -20,12 +20,12 @@ const project: GraphProject = {
 			edges: [edge(["g", "r", "out", "color"])],
 		},
 		outer: {
-			outputs: [{ id: "r", label: "R", type: { inferred: true } }],
+			outputs: [{ id: "r", label: "R" }],
 			nodes: [instance("i", "inner"), node("go", "group-output")],
 			edges: [edge(["i", "r", "go", "r"])],
 		},
 		inner: {
-			outputs: [{ id: "r", label: "R", type: { inferred: true } }],
+			outputs: [{ id: "r", label: "R" }],
 			nodes: [
 				node("d", "declare", { types: { declare: "f32" } }),
 				node("go2", "group-output"),

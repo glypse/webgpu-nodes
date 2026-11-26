@@ -6,9 +6,9 @@
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-fractal-octave@009987a5825aa9",
-		"std-octave-shift@101eb3292ddc4f",
-		"std-opensimplex-noise@09aa98a1db9460"
+		"std-fractal-octave@02759e6b0725fe",
+		"std-octave-shift@133a2e898b6e53",
+		"std-opensimplex-noise@05e8259508e02e"
 	],
 	"definition": {
 		"nodes": [
@@ -63,7 +63,7 @@
 					"y": 2579
 				},
 				"group": {
-					"definitionRef": "std-fractal-octave@009987a5825aa9",
+					"definitionRef": "std-fractal-octave@02759e6b0725fe",
 					"locked": true
 				},
 				"frame": "6935b937-4fc5-4b6f-9336-6fa5f90e06cc"
@@ -121,7 +121,7 @@
 					"y": 1759
 				},
 				"group": {
-					"definitionRef": "std-fractal-octave@009987a5825aa9",
+					"definitionRef": "std-fractal-octave@02759e6b0725fe",
 					"locked": true
 				},
 				"frame": "6935b937-4fc5-4b6f-9336-6fa5f90e06cc"
@@ -145,7 +145,7 @@
 					"y": 2749
 				},
 				"group": {
-					"definitionRef": "std-octave-shift@101eb3292ddc4f",
+					"definitionRef": "std-octave-shift@133a2e898b6e53",
 					"locked": true
 				},
 				"frame": "6935b937-4fc5-4b6f-9336-6fa5f90e06cc"
@@ -159,7 +159,7 @@
 					"y": 3188
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-noise@09aa98a1db9460",
+					"definitionRef": "std-opensimplex-noise@05e8259508e02e",
 					"locked": true
 				},
 				"frame": "6935b937-4fc5-4b6f-9336-6fa5f90e06cc"
@@ -2069,8 +2069,7 @@
 		"outputs": [
 			{
 				"id": "16e31725-c639-4b0f-b0eb-15d9fcc36301",
-				"label": "Value",
-				"type": "f32"
+				"label": "Value"
 			}
 		],
 		"defaults": {

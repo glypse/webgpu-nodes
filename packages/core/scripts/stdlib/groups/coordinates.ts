@@ -41,7 +41,7 @@ const aspectUv = group({
 				});
 			},
 		);
-		g.output("coordinates", g.mul(g.fallback(coordinates, g.uv()), scale), "vec2f", {
+		g.output("coordinates", g.mul(g.fallback(coordinates, g.uv()), scale), {
 			label: "Coordinates",
 		});
 	},
@@ -62,7 +62,8 @@ const remap = group({
 		const toMin = g.input("to-min", t, { label: "To Min", default: 0 });
 		const toMax = g.input("to-max", t, { label: "To Max", default: 1 });
 		const ratio = g.div(g.sub(toMax, toMin), g.sub(fromMax, fromMin));
-		g.output("result", g.add(toMin, g.mul(g.sub(value, fromMin), ratio)), t, {
+		g.output("result", g.add(toMin, g.mul(g.sub(value, fromMin), ratio)), {
+			type: t,
 			label: "Result",
 		});
 	},

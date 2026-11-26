@@ -30,6 +30,7 @@ import {
 	type TypeOwner,
 	type TypeVariable,
 	type WgslType,
+	withType,
 	type ZoneItem,
 } from "../types";
 import { wouldCreateCycle } from "../zones";
@@ -1062,14 +1063,15 @@ export abstract class GroupModel extends ZoneModel {
 	// ── Boundary handles ────────────────────────────────────────────────────────
 
 	/**
-	 * Add an input or output to a group. An input can be an enum
+	 * Add an input or output to a group: an output is inferred for a null
+	 * type, an input an f32. An input can be an enum
 	 * (`variants`), or belong to a variant (`owner`): it then comes after the
 	 * inputs already under that enum.
 	 */
 	addHandle(
 		definitionRef: string,
 		side: GroupSide,
-		type: HandleType,
+		type: HandleType | null,
 		{ variants, owner }: { variants?: EnumVariant[]; owner?: InputOwner } = {},
 	): GroupHandleDef | undefined {
 		const def = this.project.definitions.get(definitionRef);
@@ -1081,15 +1083,15 @@ export abstract class GroupModel extends ZoneModel {
 		const labels = new Set(handles.map((h) => h.label));
 		let n = 1;
 		while (labels.has(`${prefix} ${String(n)}`)) n++;
-		// Only an output's type can be whatever reaches it.
-		const inferred = typeof type === "object" && "inferred" in type;
-		const handle: GroupHandleDef = {
-			id: this.newId(),
-			label: `${prefix} ${String(n)}`,
-			type: toggle ? "bool" : variants ? "u32" : isInput && inferred ? "f32" : type,
-			...(isInput && variants ? { variants } : {}),
-			...(isInput && ownerExists(handles, owner) && owner ? { owner } : {}),
-		};
+		const handle = withType<GroupHandleDef>(
+			{
+				id: this.newId(),
+				label: `${prefix} ${String(n)}`,
+				...(isInput && variants ? { variants } : {}),
+				...(isInput && ownerExists(handles, owner) && owner ? { owner } : {}),
+			},
+			toggle ? "bool" : variants ? "u32" : isInput ? (type ?? "f32") : type,
+		);
 		let at = handles.length;
 		if (handle.owner) {
 			const enumId = handle.owner.enumId;
@@ -1271,19 +1273,25 @@ export abstract class GroupModel extends ZoneModel {
 	}
 
 	/**
-	 * Change the type of a group's input or output. Links that no longer fit
-	 * (inside the definition, and on every instance of the group) are removed.
+	 * Change the type of a group's input or output (an output's to inferred
+	 * for null). Links that no longer fit (inside the definition, and on every
+	 * instance of the group) are removed.
 	 */
-	setHandleType(definitionRef: string, side: GroupSide, handleId: string, type: HandleType) {
+	setHandleType(
+		definitionRef: string,
+		side: GroupSide,
+		handleId: string,
+		type: HandleType | null,
+	) {
 		const def = this.project.definitions.get(definitionRef);
 		const handles = interfaceOf(def, side);
 		if (!def || !handles.some((h) => h.id === handleId)) return;
-		if (side === "input" && typeof type === "object" && "inferred" in type) return;
+		if (side === "input" && type === null) return;
 
 		// Retyped, only a u32 stays an enum; the inputs of a former enum's
 		// variants take its place.
 		const retyped = (h: GroupHandleDef): GroupHandleDef => {
-			const next = { ...h, type };
+			const next = withType(h, type);
 			if (type !== "u32") {
 				delete next.variants;
 				delete next.variantsBy;
@@ -1374,9 +1382,7 @@ export abstract class GroupModel extends ZoneModel {
 			);
 		}
 		const typedBy = (item: ZoneItem) =>
-			typeof item.type === "object" &&
-			"variable" in item.type &&
-			item.type.variable === variableId;
+			typeof item.type === "object" && item.type.variable === variableId;
 		if (def.nodes.some((n) => n.data.items?.some(typedBy))) {
 			def.nodes = def.nodes.map((n) =>
 				n.data.items?.some(typedBy)
@@ -1441,10 +1447,7 @@ export abstract class GroupModel extends ZoneModel {
 		);
 		return def.typeVariables.map((variable) => {
 			const inferable = def.inputs.some(
-				(h) =>
-					typeof h.type === "object" &&
-					"variable" in h.type &&
-					h.type.variable === variable.id,
+				(h) => typeof h.type === "object" && h.type.variable === variable.id,
 			);
 			const fallback = variable.types[0] ?? "f32";
 			return {
@@ -1470,12 +1473,7 @@ export abstract class GroupModel extends ZoneModel {
 	private handlesOfVariable(def: HydratedGraphDocument, variableId: string): Set<string> {
 		return new Set(
 			[...def.inputs, ...def.outputs]
-				.filter(
-					(h) =>
-						typeof h.type === "object" &&
-						"variable" in h.type &&
-						h.type.variable === variableId,
-				)
+				.filter((h) => typeof h.type === "object" && h.type.variable === variableId)
 				.map((h) => h.id),
 		);
 	}

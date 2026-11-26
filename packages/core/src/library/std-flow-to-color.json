@@ -4,7 +4,7 @@
 	"aliases": ["Flow Colour", "Motion Colour", "Direction Colour", "Flow Hue"],
 	"category": "color",
 	"section": ["Motion"],
-	"dependencies": ["std-flow-wheel@1b40293cc28090"],
+	"dependencies": ["std-flow-wheel@1ec27590112491"],
 	"definition": {
 		"nodes": [
 			{
@@ -152,7 +152,7 @@
 					"y": 648
 				},
 				"group": {
-					"definitionRef": "std-flow-wheel@1b40293cc28090",
+					"definitionRef": "std-flow-wheel@1ec27590112491",
 					"locked": true
 				}
 			},
@@ -307,8 +307,7 @@
 		"outputs": [
 			{
 				"id": "4581020a-edb4-4583-82c1-354c4d28dcf2",
-				"label": "Color",
-				"type": "vec3f"
+				"label": "Color"
 			}
 		],
 		"defaults": {

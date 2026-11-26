@@ -82,7 +82,7 @@ export const latticeGradient = group({
 			},
 		);
 		const gradient = g.widthSwitch(vertex, { 1: line, 2: plane, 3: space, 4: hyper });
-		g.output("gradient", gradient, t, { label: "Gradient" });
+		g.output("gradient", gradient, { type: t, label: "Gradient" });
 	},
 });
 
@@ -110,7 +110,7 @@ export const simplexKernel = group({
 			() => {
 				const falloff = g.max(g.sub(radius, sum(g.mul(offset, offset))), 0);
 				const squared = g.mul(falloff, falloff);
-				g.output("value", g.mul(squared, squared, sum(g.mul(gradient, offset))), "f32", {
+				g.output("value", g.mul(squared, squared, sum(g.mul(gradient, offset))), {
 					label: "Value",
 				});
 			},

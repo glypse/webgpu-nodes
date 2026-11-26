@@ -62,9 +62,9 @@ export const fractalOctave = group({
 			() => {
 				const weight = g.clamp(g.add(g.sub(detail, octave), 1), 0, 1);
 				const power = g.pow(roughness, octave);
-				g.output("scale", g.pow(lacunarity, octave), "f32", { label: "Scale" });
-				g.output("amplitude", g.mul(power, weight), "f32", { label: "Amplitude" });
-				g.output("power", power, "f32", { label: "Power" });
+				g.output("scale", g.pow(lacunarity, octave), { label: "Scale" });
+				g.output("amplitude", g.mul(power, weight), { label: "Amplitude" });
+				g.output("power", power, { label: "Power" });
 			},
 		);
 		g.frame(
@@ -79,7 +79,7 @@ export const fractalOctave = group({
 					g.max(g.ceil(g.div(g.log(g.mul(g.sub(1, r), INAUDIBLE)), g.log(r))), 1),
 				);
 				const fading = g.compare(roughness, 1, { op: "<" });
-				g.output("octaves", g.switch(fading, detailed, g.min(detailed, needed)), "i32", {
+				g.output("octaves", g.switch(fading, detailed, g.min(detailed, needed)), {
 					label: "Octaves",
 				});
 			},

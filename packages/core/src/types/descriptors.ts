@@ -69,10 +69,10 @@ export type TypeVariable = {
 };
 
 /**
- * What a group socket carries: a fixed type, the type of one of the
- * group's type variables, or (on an output) whatever reaches it inside.
+ * A type a group socket or zone item is given: a fixed one, or the type of
+ * one of the group's type variables. Without one, it's inferred.
  */
-export type HandleType = SocketType | { variable: string } | { inferred: true };
+export type HandleType = SocketType | { variable: string };
 
 /**
  * A zone item's type: a group socket's. Only a simulation zone's may be a
@@ -83,11 +83,11 @@ export type ItemType = HandleType;
 
 /**
  * A zone's state item: a fixed type; in a group, the type of one of its type
- * variables, so a loop carries values as wide as the group's; or (inferred)
- * the type of its initial value.
+ * variables, so a loop carries values as wide as the group's; or, without
+ * one, the type of its initial value.
  */
 export type ZoneItem = Omit<HandleDef, "type"> & {
-	type: ItemType;
+	type?: ItemType;
 	/** What it's kept in, where it isn't decided by its type. */
 	format?: TextureFormat;
 	/**
@@ -98,24 +98,36 @@ export type ZoneItem = Omit<HandleDef, "type"> & {
 	size?: "scale" | "pixels";
 };
 
-/** A socket of a group's boundary node: a handle whose type may be decided per group node. */
+/**
+ * A socket of a group's boundary node: a handle whose type may be decided per
+ * group node. An output without a type takes the type of what reaches it
+ * inside; an input always has one.
+ */
 export type GroupHandleDef = Omit<HandleDef, "type"> & {
-	type: HandleType;
+	type?: HandleType;
 	/** On a group output: added to preview a node inside the group, and removed by the next preview. */
 	viewer?: true;
 };
+
+/** `handle` with `type`, or with none (inferred) for null. */
+export function withType<T extends { type?: HandleType }>(handle: T, type: HandleType | null): T {
+	const next = { ...handle };
+	if (type === null) delete next.type;
+	else next.type = type;
+	return next;
+}
 
 /** The types a group's variables take for one group node, by variable id. */
 export type TypeBindings = Readonly<Record<string, WgslType>>;
 
 /** The type a socket has with `bindings`; an inferred one is undefined (it's resolved). */
 export function boundType(
-	type: HandleType,
+	type: HandleType | undefined,
 	variables: readonly TypeVariable[],
 	bindings: TypeBindings,
 ): SocketType | undefined {
+	if (type === undefined) return undefined;
 	if (typeof type === "string") return type;
-	if ("inferred" in type) return undefined;
 	return (
 		bindings[type.variable] ?? variables.find((v) => v.id === type.variable)?.types[0] ?? "f32"
 	);

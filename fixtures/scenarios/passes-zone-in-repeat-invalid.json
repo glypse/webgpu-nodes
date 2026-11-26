@@ -36,10 +36,7 @@
 							"items": [
 								{
 									"id": "z3",
-									"label": "Value",
-									"type": {
-										"inferred": true
-									}
+									"label": "Value"
 								}
 							]
 						},
@@ -70,10 +67,7 @@
 							"items": [
 								{
 									"id": "z7",
-									"label": "Value",
-									"type": {
-										"inferred": true
-									}
+									"label": "Value"
 								}
 							]
 						},

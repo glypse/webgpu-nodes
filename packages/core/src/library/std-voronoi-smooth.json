@@ -6,10 +6,10 @@
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-lattice-neighbor@00261a88c1423c",
-		"std-voronoi-point@0bfee95a7f94f4",
-		"std-voronoi-distance@0180c4aa500792",
-		"std-hash@195359940b5270"
+		"std-lattice-neighbor@0d089b4d4c96a4",
+		"std-voronoi-point@167d7ef6202908",
+		"std-voronoi-distance@005333aecb623c",
+		"std-hash@0b73cc3ab3f912"
 	],
 	"definition": {
 		"nodes": [
@@ -65,7 +65,7 @@
 					"y": 732
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
+					"definitionRef": "std-lattice-neighbor@0d089b4d4c96a4",
 					"locked": true
 				},
 				"frame": "9243e037-0a9a-4d9a-9839-af3e5ba82650"
@@ -142,7 +142,7 @@
 					"y": 208
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
+					"definitionRef": "std-lattice-neighbor@0d089b4d4c96a4",
 					"locked": true
 				},
 				"frame": "9243e037-0a9a-4d9a-9839-af3e5ba82650"
@@ -156,7 +156,7 @@
 					"y": 1279
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0bfee95a7f94f4",
+					"definitionRef": "std-voronoi-point@167d7ef6202908",
 					"locked": true
 				},
 				"frame": "9243e037-0a9a-4d9a-9839-af3e5ba82650"
@@ -170,7 +170,7 @@
 					"y": 1431
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0180c4aa500792",
+					"definitionRef": "std-voronoi-distance@005333aecb623c",
 					"locked": true
 				},
 				"frame": "9243e037-0a9a-4d9a-9839-af3e5ba82650"
@@ -424,7 +424,7 @@
 					"y": 124
 				},
 				"group": {
-					"definitionRef": "std-hash@195359940b5270",
+					"definitionRef": "std-hash@0b73cc3ab3f912",
 					"locked": true
 				},
 				"frame": "9243e037-0a9a-4d9a-9839-af3e5ba82650"
@@ -1170,13 +1170,11 @@
 		"outputs": [
 			{
 				"id": "9c8fda29-8299-474c-9f70-6e2b23b91109",
-				"label": "Smooth Distance",
-				"type": "f32"
+				"label": "Smooth Distance"
 			},
 			{
 				"id": "c1475732-8b2b-451b-8261-9d554eb06fb3",
-				"label": "Smooth Color",
-				"type": "vec3f"
+				"label": "Smooth Color"
 			},
 			{
 				"id": "73a93398-bbd1-4134-b7b1-8eeb96bd54ee",

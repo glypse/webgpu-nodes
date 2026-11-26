@@ -5,7 +5,7 @@
 	"category": "texture",
 	"section": ["Helpers", "OpenSimplex"],
 	"searchSection": "Helpers",
-	"dependencies": ["std-opensimplex-3d-half@026aed7d83f9a0"],
+	"dependencies": ["std-opensimplex-3d-half@132d335209f684"],
 	"definition": {
 		"nodes": [
 			{
@@ -71,7 +71,7 @@
 					"y": 504
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-3d-half@026aed7d83f9a0",
+					"definitionRef": "std-opensimplex-3d-half@132d335209f684",
 					"locked": true
 				},
 				"frame": "e9181282-883d-4fc9-b59f-7c90052e48c0"
@@ -145,7 +145,7 @@
 					"y": 737
 				},
 				"group": {
-					"definitionRef": "std-opensimplex-3d-half@026aed7d83f9a0",
+					"definitionRef": "std-opensimplex-3d-half@132d335209f684",
 					"locked": true
 				},
 				"frame": "e9181282-883d-4fc9-b59f-7c90052e48c0"
@@ -407,8 +407,7 @@
 		"outputs": [
 			{
 				"id": "5ec4145c-a3c7-4276-b595-f094b3335fb4",
-				"label": "Value",
-				"type": "f32"
+				"label": "Value"
 			}
 		],
 		"defaults": {

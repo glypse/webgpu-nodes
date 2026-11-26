@@ -52,10 +52,7 @@
 					"id2": {
 						"items": [
 							{
-								"label": "Value",
-								"type": {
-									"inferred": true
-								}
+								"label": "Value"
 							}
 						]
 					}

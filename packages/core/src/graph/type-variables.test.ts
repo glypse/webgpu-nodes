@@ -176,7 +176,7 @@ describe("type variables", () => {
 
 describe("inferred outputs", () => {
 	const infer = (graph: GraphModel) => {
-		graph.setHandleType(GROUP, "output", "sum", { inferred: true });
+		graph.setHandleType(GROUP, "output", "sum", null);
 	};
 
 	it("carry whatever reaches them inside, per group node", () => {
@@ -199,7 +199,7 @@ describe("inferred outputs", () => {
 
 	it("are only for outputs", () => {
 		const graph = new GraphModel(project());
-		graph.setHandleType(GROUP, "input", "a", { inferred: true });
+		graph.setHandleType(GROUP, "input", "a", null);
 		const handles = graph.project.definitions.get(GROUP)?.inputs;
 		expect(handles?.find((h) => h.id === "a")?.type).toEqual({ variable: T });
 	});

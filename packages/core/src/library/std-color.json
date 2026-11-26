@@ -12,7 +12,7 @@
 		"OKLch"
 	],
 	"category": "color",
-	"dependencies": ["std-oklch-gamut-map@1acc14cbea7282"],
+	"dependencies": ["std-oklch-gamut-map@0e6af553bf5b51"],
 	"definition": {
 		"nodes": [
 			{
@@ -448,7 +448,7 @@
 					"y": 1817
 				},
 				"group": {
-					"definitionRef": "std-oklch-gamut-map@1acc14cbea7282",
+					"definitionRef": "std-oklch-gamut-map@0e6af553bf5b51",
 					"locked": true
 				},
 				"frame": "84432c5b-5071-4ad8-a220-a001d165cdbb"
@@ -1025,13 +1025,11 @@
 		"outputs": [
 			{
 				"id": "e673a0bf-33a0-4a29-98d5-b2a772797138",
-				"label": "Color",
-				"type": "vec3f"
+				"label": "Color"
 			},
 			{
 				"id": "b7718dcf-ca68-42a0-9454-4f0153935342",
-				"label": "RGBA",
-				"type": "vec4f"
+				"label": "RGBA"
 			}
 		],
 		"defaults": {

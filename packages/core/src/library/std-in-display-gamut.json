@@ -132,8 +132,7 @@
 		"outputs": [
 			{
 				"id": "a4c59d73-9ba4-4de3-afb3-1cf80f4bae51",
-				"label": "In Gamut",
-				"type": "bool"
+				"label": "In Gamut"
 			}
 		]
 	}

@@ -784,8 +784,7 @@
 		"outputs": [
 			{
 				"id": "fa929e61-85ae-4653-8728-d9afbeeb0cde",
-				"label": "Coordinates",
-				"type": "vec2f"
+				"label": "Coordinates"
 			}
 		],
 		"defaults": {

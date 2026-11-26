@@ -34,6 +34,6 @@ export const noiseCoordinates = group({
 	...helpers(),
 	build: (g) => {
 		const { t, vector } = coordinatesInput(g);
-		g.output("coordinates", g.fallback(vector, g.uv()), t, { label: "Coordinates" });
+		g.output("coordinates", g.fallback(vector, g.uv()), { type: t, label: "Coordinates" });
 	},
 });

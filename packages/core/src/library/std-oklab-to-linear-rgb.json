@@ -435,8 +435,7 @@
 		"outputs": [
 			{
 				"id": "ec7a9a8b-bf8f-4e6e-8c8e-e9bd54492952",
-				"label": "Linear RGB",
-				"type": "vec3f"
+				"label": "Linear RGB"
 			}
 		]
 	}

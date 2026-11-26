@@ -225,6 +225,6 @@ export const simplexOrientation = group({
 				}),
 		);
 		const lattice = g.widthSwitch(vector, { 1: vector, 2: plane, 3: space, 4: fourD });
-		g.output("lattice", lattice, t, { label: "Lattice Position" });
+		g.output("lattice", lattice, { type: t, label: "Lattice Position" });
 	},
 });

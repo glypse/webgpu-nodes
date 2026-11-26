@@ -170,8 +170,7 @@
 		"outputs": [
 			{
 				"id": "e7100291-3e2a-4143-9141-fece454d9206",
-				"label": "Linear RGB",
-				"type": "vec3f"
+				"label": "Linear RGB"
 			}
 		]
 	}

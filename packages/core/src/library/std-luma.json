@@ -73,8 +73,7 @@
 		"outputs": [
 			{
 				"id": "b3dc9f63-6dd3-4cb3-a284-b799b4255c10",
-				"label": "Luma",
-				"type": "f32"
+				"label": "Luma"
 			}
 		]
 	}

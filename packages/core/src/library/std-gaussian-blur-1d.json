@@ -1580,8 +1580,7 @@
 		"outputs": [
 			{
 				"id": "5f8bc60e-c313-4c63-9b69-df302ab04d67",
-				"label": "Color",
-				"type": "vec4f"
+				"label": "Color"
 			}
 		],
 		"defaults": {

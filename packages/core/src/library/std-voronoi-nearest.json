@@ -6,9 +6,9 @@
 	"section": ["Helpers", "Voronoi"],
 	"searchSection": "Helpers",
 	"dependencies": [
-		"std-lattice-neighbor@00261a88c1423c",
-		"std-voronoi-point@0bfee95a7f94f4",
-		"std-voronoi-distance@0180c4aa500792"
+		"std-lattice-neighbor@0d089b4d4c96a4",
+		"std-voronoi-point@167d7ef6202908",
+		"std-voronoi-distance@005333aecb623c"
 	],
 	"definition": {
 		"nodes": [
@@ -37,7 +37,7 @@
 					"y": 1389
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
+					"definitionRef": "std-lattice-neighbor@0d089b4d4c96a4",
 					"locked": true
 				},
 				"frame": "fc786a34-ad02-41b7-8dd8-ff87df871454"
@@ -138,7 +138,7 @@
 					"y": 1061
 				},
 				"group": {
-					"definitionRef": "std-lattice-neighbor@00261a88c1423c",
+					"definitionRef": "std-lattice-neighbor@0d089b4d4c96a4",
 					"locked": true
 				},
 				"frame": "fc786a34-ad02-41b7-8dd8-ff87df871454"
@@ -152,7 +152,7 @@
 					"y": 1413
 				},
 				"group": {
-					"definitionRef": "std-voronoi-point@0bfee95a7f94f4",
+					"definitionRef": "std-voronoi-point@167d7ef6202908",
 					"locked": true
 				},
 				"frame": "fc786a34-ad02-41b7-8dd8-ff87df871454"
@@ -166,7 +166,7 @@
 					"y": 1575
 				},
 				"group": {
-					"definitionRef": "std-voronoi-distance@0180c4aa500792",
+					"definitionRef": "std-voronoi-distance@005333aecb623c",
 					"locked": true
 				},
 				"frame": "fc786a34-ad02-41b7-8dd8-ff87df871454"
@@ -907,13 +907,11 @@
 		"outputs": [
 			{
 				"id": "931bf68b-4578-475c-9eaa-24ace6488876",
-				"label": "F1 Distance",
-				"type": "f32"
+				"label": "F1 Distance"
 			},
 			{
 				"id": "c5c757ec-1452-4bc6-85bc-7911ec7d606f",
-				"label": "F2 Distance",
-				"type": "f32"
+				"label": "F2 Distance"
 			},
 			{
 				"id": "26346410-d926-462b-acd6-94f50f430796",

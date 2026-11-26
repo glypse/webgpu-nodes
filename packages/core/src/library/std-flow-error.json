@@ -4,7 +4,7 @@
 	"aliases": ["Motion Error", "Warp Error", "Temporal Error", "Compensation Error"],
 	"category": "texture",
 	"section": ["Motion"],
-	"dependencies": ["std-warp@1032f0ed094047", "std-luma@01c853ca51a3ec"],
+	"dependencies": ["std-warp@1ae0f46f1f8243", "std-luma@11912c7e6b42ff"],
 	"definition": {
 		"nodes": [
 			{
@@ -51,7 +51,7 @@
 					"y": 631
 				},
 				"group": {
-					"definitionRef": "std-warp@1032f0ed094047",
+					"definitionRef": "std-warp@1ae0f46f1f8243",
 					"locked": true
 				}
 			},
@@ -86,7 +86,7 @@
 					"y": 56
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -121,7 +121,7 @@
 					"y": 245
 				},
 				"group": {
-					"definitionRef": "std-luma@01c853ca51a3ec",
+					"definitionRef": "std-luma@11912c7e6b42ff",
 					"locked": true
 				}
 			},
@@ -303,8 +303,7 @@
 		"outputs": [
 			{
 				"id": "34fe5a63-4353-4d83-9af6-76c56c28f6b7",
-				"label": "Error",
-				"type": "f32"
+				"label": "Error"
 			}
 		]
 	}

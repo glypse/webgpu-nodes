@@ -4,7 +4,7 @@
 	"aliases": ["Blur", "Soften", "Defocus", "Gaussian"],
 	"category": "texture",
 	"section": ["Blur"],
-	"dependencies": ["std-gaussian-blur-1d@116c2bba6d8557", "std-gaussian-blur-2d@07103c56e2d7a4"],
+	"dependencies": ["std-gaussian-blur-1d@039a9c0df147c6", "std-gaussian-blur-2d@18513d18b6dbf3"],
 	"definition": {
 		"nodes": [
 			{
@@ -147,7 +147,7 @@
 					"y": 399
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-1d@116c2bba6d8557",
+					"definitionRef": "std-gaussian-blur-1d@039a9c0df147c6",
 					"locked": true
 				}
 			},
@@ -187,7 +187,7 @@
 					"y": 687
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-1d@116c2bba6d8557",
+					"definitionRef": "std-gaussian-blur-1d@039a9c0df147c6",
 					"locked": true
 				}
 			},
@@ -200,7 +200,7 @@
 					"y": 126
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-2d@07103c56e2d7a4",
+					"definitionRef": "std-gaussian-blur-2d@18513d18b6dbf3",
 					"locked": true
 				}
 			},
@@ -331,7 +331,7 @@
 					"y": 1052
 				},
 				"group": {
-					"definitionRef": "std-gaussian-blur-1d@116c2bba6d8557",
+					"definitionRef": "std-gaussian-blur-1d@039a9c0df147c6",
 					"locked": true
 				},
 				"frame": "b4450333-03ba-4907-a341-6edf35ad863f"
