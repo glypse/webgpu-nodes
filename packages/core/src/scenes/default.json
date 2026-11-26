@@ -7436,9 +7436,7 @@
 				{
 					"id": "f50aca12-5b61-4666-bc80-df1c21bdff54",
 					"type": "frag-output",
-					"data": {
-						"hideUnlinked": true
-					},
+					"data": {},
 					"position": {
 						"x": 7716,
 						"y": 483

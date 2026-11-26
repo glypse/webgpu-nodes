@@ -34,11 +34,19 @@ function documentOf(group: BuiltGroup, keys: ReadonlyMap<string, string>): Graph
 	};
 }
 
-/** The root group's document as a project's: its output is the frame. */
+/**
+ * The root group's document as a project's: its output is the frame, which
+ * shows its one socket whether linked or not.
+ */
 function rootDocument({ nodes, edges }: GraphDocument): GraphDocument {
 	const output = nodes.find((n) => n.type === "group-output");
 	return {
-		nodes: nodes.map((n) => (n === output ? { ...n, type: "frag-output" } : n)),
+		nodes: nodes.map((n) => {
+			if (n !== output) return n;
+			const data = { ...n.data };
+			delete data.hideUnlinked;
+			return { ...n, type: "frag-output", data };
+		}),
 		edges: edges.map((e) => (e.target === output?.id ? { ...e, targetHandle: "color" } : e)),
 	};
 }
