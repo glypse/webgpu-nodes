@@ -20,7 +20,7 @@ const pool: Worker[] = [];
 function worker(i: number): Worker {
 	let found = pool[i];
 	if (!found) {
-		found = new Worker(new URL("./cpu-reference.worker.ts", import.meta.url), {
+		found = new Worker(new URL("./cpu-reference.worker.js", import.meta.url), {
 			type: "module",
 		});
 		pool[i] = found;
