@@ -1,4 +1,4 @@
-import { MATCH, matchedCase, WIDTH_SWITCH, widthCase } from "../enums";
+import { MATCH, MATCH_SELECTOR, matchedCase, WIDTH_SWITCH, widthCase } from "../enums";
 import type { GraphEdge } from "../graph/document";
 import { TEXTURE_SIZE, TEXTURE_SIZE_LEVEL, VIDEO, VIDEO_METADATA } from "../nodes/texture";
 import { COMPONENT_COUNT } from "../nodes/vector";
@@ -110,7 +110,8 @@ export class FrameValueAnalysis {
 		switch (node.type) {
 			case MATCH: {
 				const picked = matchedCase(instance.enums, nodeId, instance.constants);
-				return picked === undefined ? ids : [picked];
+				// The node's CPU code picks its case by the selector, so it's read too.
+				return picked === undefined ? ids : [MATCH_SELECTOR, picked];
 			}
 			case WIDTH_SWITCH: {
 				const picked = widthCase(instance.enums, nodeId);
